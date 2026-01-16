@@ -1,5 +1,4 @@
-// constants/songs.ts - SIMPLIFIED TEST VERSION
-import { Platform } from 'react-native';
+// constants/songs.ts
 
 const songData = [
   { id: 1, title: 'Title Screen', file: 'Title Screen.mp3' },
@@ -11,18 +10,15 @@ const songData = [
   { id: 7, title: 'Viridian City', file: 'Viridian City.mp3' },
   { id: 8, title: 'Victory Road', file: 'Victory Road.mp3' },
   { id: 9, title: 'Ending Theme', file: 'Ending Theme.mp3' },
+  { id: 10, title: 'Littleroot Town', file: 'LittlerootTown.mp3' }
 ];
 
 export const SONG_LIST = songData.map((song) => {
-  if (Platform.OS === 'web') {
-    return {
-      ...song,
-      file: { uri: `/audio/${song.file}` },
-    };
-  }
+  // NOTE: We removed the "if (Platform.OS === 'web')" block.
+  // We now let the 'require' logic below handle Web as well. 
+  // This ensures the bundler processes the file and resolves the correct path 
+  // so you don't get 404 errors.
 
-  // For native, let's try using Asset.fromModule pattern
-  // This is more reliable than direct require paths
   try {
     let audioFile;
     
@@ -54,12 +50,17 @@ export const SONG_LIST = songData.map((song) => {
       case 9:
         audioFile = require('../app/assets/audio/Ending Theme.mp3');
         break;
+      case 10:
+        // Ensure this filename matches your file on disk exactly (case-sensitive)
+        audioFile = require('../app/assets/audio/LittlerootTown.mp3');
+        break;  
       default:
         audioFile = require('../app/assets/audio/Title Screen.mp3');
     }
     
-    console.log(`✅ Loaded module for song ${song.id}: ${song.title}`);
+    // On Web, 'require' returns a URI or module ID that Expo Audio handles automatically
     return { ...song, file: audioFile };
+
   } catch (error) {
     console.error(`❌ Failed to load module for song ${song.id}: ${song.title}`, error);
     // Return a fallback

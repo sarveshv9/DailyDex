@@ -10,9 +10,7 @@ interface RoutineCardProps {
 }
 
 const RoutineCard: React.FC<RoutineCardProps> = ({ item, onPress }) => {
-  // Use the theme hook to get the current theme
   const { theme } = useTheme();
-  // Create dynamic styles that will update when the theme changes
   const styles = useMemo(() => getStyles(theme), [theme]);
   
   const [touchPosition, setTouchPosition] = useState({ x: 0, y: 0 });
@@ -22,24 +20,13 @@ const RoutineCard: React.FC<RoutineCardProps> = ({ item, onPress }) => {
     (e: any) => {
       const { pageX, pageY } = e.nativeEvent;
       setTouchPosition({ x: pageX, y: pageY });
-
-      Animated.spring(scaleAnim, {
-        toValue: 0.96,
-        useNativeDriver: true,
-        tension: 300,
-        friction: 10,
-      }).start();
+      Animated.spring(scaleAnim, { toValue: 0.96, useNativeDriver: true, tension: 300, friction: 10 }).start();
     },
     [scaleAnim]
   );
 
   const handlePressOut = useCallback(() => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      useNativeDriver: true,
-      tension: 300,
-      friction: 10,
-    }).start();
+    Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, tension: 300, friction: 10 }).start();
   }, [scaleAnim]);
 
   return (
@@ -48,101 +35,125 @@ const RoutineCard: React.FC<RoutineCardProps> = ({ item, onPress }) => {
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         onPress={() => onPress(item, touchPosition.x, touchPosition.y)}
-        style={styles.enhancedRoutineCard}
+        style={styles.cardContainer}
       >
-        <View style={styles.cardGradient} />
-        <View style={styles.enhancedCardContent}>
-          <View style={styles.cardTimeContainer}>
-            <Text style={styles.enhancedCardTime}>{item.time}</Text>
+        {/* Minimalist Header */}
+        <View style={styles.cardHeader}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.pokemonName}>{item.task}</Text>
           </View>
-          <View style={styles.cardTaskContainer}>
-            <Text style={styles.enhancedCardTask}>{item.task}</Text>
-            <Text style={styles.cardPreview} numberOfLines={1}>
-              {item.description}
-            </Text>
+          <View style={styles.hpContainer}>
+            <Text style={styles.hpLabel}>TIME</Text>
+            <Text style={styles.hpValue}>{item.time.replace(" ", "")}</Text>
           </View>
-          <View style={styles.cardArrow}>
-            <Text style={styles.cardArrowText}>→</Text>
-          </View>
+        </View>
+
+        {/* Text Only - Lore/Description */}
+        <View style={styles.infoSection}>
+          <Text style={styles.loreText} numberOfLines={2}>
+            {item.description}
+          </Text>
+        </View>
+
+        {/* Footer */}
+        <View style={styles.cardFooter}>
+           <Text style={styles.idText}>NO. {item.id.padStart(3, '0')}</Text>
+           <View style={styles.miniButton}>
+              <Text style={styles.miniButtonText}>EDIT</Text>
+           </View>
         </View>
       </Pressable>
     </Animated.View>
   );
 };
 
-// Converted the static StyleSheet into a function that accepts a theme
 const getStyles = (theme: Theme) => StyleSheet.create({
-  enhancedRoutineCard: {
+  cardContainer: {
     backgroundColor: theme.colors.white,
-    borderRadius: theme.borderRadius.lg,
-    marginVertical: theme.spacing.xs,
+    borderRadius: theme.borderRadius.md,
+    marginVertical: 4, 
+    padding: 12, // Slightly increased padding since image is gone to let text breathe
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-    overflow: "hidden",
-    position: "relative",
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: `${theme.colors.primary}15`,
   },
-  cardGradient: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 4,
-    backgroundColor: theme.colors.primary,
-  },
-  enhancedCardContent: {
+  /* Header Styles */
+  cardHeader: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.lg,
+    marginBottom: 8,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: `${theme.colors.primary}08`, // Divider line similar to Trainer cards
   },
-  cardTimeContainer: {
-    backgroundColor: `${theme.colors.primary}1A`, // Use 1A for ~10% opacity
-    paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.sm,
-    borderRadius: theme.borderRadius.sm,
-    marginRight: theme.spacing.md,
-    minWidth: 70,
-    alignItems: "center",
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
-  enhancedCardTime: {
-    fontSize: 12,
-    color: theme.colors.primary,
+  pokemonName: {
+    fontSize: 15,
     fontWeight: "700",
-    textAlign: "center",
-  },
-  cardTaskContainer: {
-    flex: 1,
-    marginRight: theme.spacing.sm,
-  },
-  enhancedCardTask: {
-    fontSize: 18,
-    fontWeight: "600",
     color: theme.colors.primary,
-    marginBottom: theme.spacing.xs / 2,
-    lineHeight: 22,
+    letterSpacing: 0.3,
   },
-  cardPreview: {
-    fontSize: 13,
-    color: theme.colors.secondary,
-    opacity: 0.7,
-    lineHeight: 16,
+  hpContainer: {
+    flexDirection: "row",
+    alignItems: "baseline",
   },
-  cardArrow: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: `${theme.colors.primary}1A`,
-    alignItems: "center",
-    justifyContent: "center",
+  hpLabel: {
+    fontSize: 8,
+    fontWeight: "800",
+    color: theme.colors.primary,
+    opacity: 0.6,
+    marginRight: 3,
   },
-  cardArrowText: {
+  hpValue: {
     fontSize: 14,
+    fontWeight: "700",
     color: theme.colors.primary,
-    fontWeight: "600",
   },
+  /* Lore */
+  infoSection: {
+    marginBottom: 8,
+    paddingTop: 4,
+  },
+  loreText: {
+    fontSize: 11,
+    color: theme.colors.secondary,
+    lineHeight: 15,
+    fontStyle: 'italic',
+    opacity: 0.8,
+  },
+  /* Footer */
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  idText: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: theme.colors.secondary,
+    opacity: 0.4,
+  },
+  miniButton: {
+    paddingVertical: 1,
+    paddingHorizontal: 6,
+    borderRadius: 3,
+    backgroundColor: `${theme.colors.primary}08`,
+  },
+  miniButtonText: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: theme.colors.primary,
+  }
 });
 
 export default RoutineCard;

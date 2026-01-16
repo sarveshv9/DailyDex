@@ -2,6 +2,7 @@ import { router } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import { Alert, Animated, Dimensions, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
 import RoutineCard from "../components/RoutineCard";
 import TaskForm from "../components/TaskForm";
 import TaskModal from "../components/TaskModal";
@@ -15,21 +16,21 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 /* Initial routine preserved */
 const INITIAL_ROUTINE: RoutineItem[] = [
-  { id: "1", time: "6:00 AM", task: "🌞 Wake Up Slowly", description: "Start your day gently with deep breaths and soft music.", image: require("./assets/images/pixel/wakeup.png"), insertionOrder: 1 },
-  { id: "2", time: "6:30 AM", task: "💧 Drink Warm Water", description: "Rehydrate your body with a glass of warm water.", image: require("./assets/images/pixel/water.png"), insertionOrder: 2 },
-  { id: "3", time: "7:00 AM", task: "🧘 Light Stretching or Yoga", description: "Do light stretching to wake up your body and mind.", image: require("./assets/images/pixel/yoga.png"), insertionOrder: 3 },
-  { id: "4", time: "8:00 AM", task: "🍵 Herbal Tea & Journaling", description: "Sip calming tea and write down your morning thoughts.", image: require("./assets/images/pixel/tea_journal.png"), insertionOrder: 4 },
-  { id: "5", time: "9:00 AM", task: "🥣 Healthy Breakfast", description: "Enjoy a nutritious breakfast to energize your day.", image: require("./assets/images/pixel/breakfast.png"), insertionOrder: 5 },
-  { id: "6", time: "10:00 AM", task: "📚 Learn Something Calm", description: "Read or listen to something inspiring or informative.", image: require("./assets/images/pixel/study.png"), insertionOrder: 6 },
-  { id: "7", time: "1:00 PM", task: "🥗 Light Lunch", description: "Eat a balanced lunch to keep your energy steady.", image: require("./assets/images/pixel/lunch.png"), insertionOrder: 7 },
-  { id: "8", time: "3:00 PM", task: "🌿 Nature Walk or Break", description: "Take a peaceful walk or simply relax and breathe.", image: require("./assets/images/pixel/walk.png"), insertionOrder: 8 },
-  { id: "9", time: "5:00 PM", task: "📔 Reflect on the Day", description: "Take a moment to write or think about your day so far.", image: require("./assets/images/pixel/reflect.png"), insertionOrder: 9 },
-  { id: "10", time: "7:00 PM", task: "🍽 Light Dinner", description: "Have a light, comforting dinner to wind down.", image: require("./assets/images/pixel/dinner.png"), insertionOrder: 10 },
-  { id: "11", time: "9:00 PM", task: "🌙 Prepare for Sleep", description: "Dim the lights, calm your mind, and slow down.", image: require("./assets/images/pixel/prepare_sleep.png"), insertionOrder: 11 },
-  { id: "12", time: "10:00 PM", task: "🛌 Sleep Early", description: "Go to bed early for deep, restorative sleep.", image: require("./assets/images/pixel/sleep.png"), insertionOrder: 12 },
+  { id: "1", time: "6:00 AM", task: "Wake Up", description: "A wild day appears! Start gently.", image: require("./assets/images/pixel/wakeup.png"), insertionOrder: 1 },
+  { id: "2", time: "6:30 AM", task: "Hydrate", description: "It's super effective! Drink water.", image: require("./assets/images/pixel/water.png"), insertionOrder: 2 },
+  { id: "3", time: "7:00 AM", task: "Stretch", description: "Limber up to increase evasion.", image: require("./assets/images/pixel/yoga.png"), insertionOrder: 3 },
+  { id: "4", time: "8:00 AM", task: "Tea Time", description: "Restore PP and focus your mind.", image: require("./assets/images/pixel/tea_journal.png"), insertionOrder: 4 },
+  { id: "5", time: "9:00 AM", task: "Breakfast", description: "Boost Attack stat with nutrition.", image: require("./assets/images/pixel/breakfast.png"), insertionOrder: 5 },
+  { id: "6", time: "10:00 AM", task: "Study", description: "Gain XP in a new skill.", image: require("./assets/images/pixel/study.png"), insertionOrder: 6 },
+  { id: "7", time: "1:00 PM", task: "Lunch", description: "Refuel HP for the afternoon.", image: require("./assets/images/pixel/lunch.png"), insertionOrder: 7 },
+  { id: "8", time: "3:00 PM", task: "Walk", description: "Encounter nature in the tall grass.", image: require("./assets/images/pixel/walk.png"), insertionOrder: 8 },
+  { id: "9", time: "5:00 PM", task: "Reflect", description: "Check your progress badge.", image: require("./assets/images/pixel/reflect.png"), insertionOrder: 9 },
+  { id: "10", time: "7:00 PM", task: "Dinner", description: "Share a meal with your party.", image: require("./assets/images/pixel/dinner.png"), insertionOrder: 10 },
+  { id: "11", time: "9:00 PM", task: "Wind Down", description: "Lower defense, prepare to rest.", image: require("./assets/images/pixel/prepare_sleep.png"), insertionOrder: 11 },
+  { id: "12", time: "10:00 PM", task: "Sleep", description: "Save your game and recharge.", image: require("./assets/images/pixel/sleep.png"), insertionOrder: 12 },
 ];
 
-/* -------------------- Modal animation hook (kept) -------------------- */
+/* -------------------- Modal Hook -------------------- */
 const useModalAnimation = () => {
   const scaleAnim = React.useRef(new Animated.Value(0)).current;
   const translateX = React.useRef(new Animated.Value(0)).current;
@@ -42,15 +43,14 @@ const useModalAnimation = () => {
 
   const openAnimation = useCallback(
     (x: number, y: number) => {
-      // center from tap location
       translateX.setValue(x - SCREEN_WIDTH / 2);
       translateY.setValue(y - SCREEN_HEIGHT / 2);
       scaleAnim.setValue(0);
 
       Animated.parallel([
-        Animated.spring(translateX, { toValue: 0, useNativeDriver: false, tension: 100, friction: 8 }),
-        Animated.spring(translateY, { toValue: 0, useNativeDriver: true, tension: 100, friction: 8 }),
-        Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, tension: 100, friction: 8 }),
+        Animated.spring(translateX, { toValue: 0, useNativeDriver: false, tension: 100, friction: 9 }),
+        Animated.spring(translateY, { toValue: 0, useNativeDriver: true, tension: 100, friction: 9 }),
+        Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, tension: 100, friction: 9 }),
       ]).start();
     },
     [translateX, translateY, scaleAnim]
@@ -58,7 +58,7 @@ const useModalAnimation = () => {
 
   const closeAnimation = useCallback(
     (onComplete: () => void) => {
-      Animated.spring(scaleAnim, { toValue: 0, useNativeDriver: true, tension: 100, friction: 8 }).start(onComplete);
+      Animated.spring(scaleAnim, { toValue: 0, useNativeDriver: true, tension: 100, friction: 9 }).start(onComplete);
     },
     [scaleAnim]
   );
@@ -143,22 +143,17 @@ export default function RoutineScreen() {
   const handleDelete = useCallback(() => {
     if (!selectedTask) return;
     const taskToDelete = selectedTask;
-    Alert.alert(
-      "Delete Task",
-      `Remove "${taskToDelete.task}" from your routine?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => {
-            setRoutineItems((currentItems) => currentItems.filter((item) => item.id !== taskToDelete.id));
-            setTimeout(() => closeModal(), 50);
-          },
+    Alert.alert("Transfer", `Transfer ${taskToDelete.task} away?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Transfer",
+        style: "destructive",
+        onPress: () => {
+          setRoutineItems((currentItems) => currentItems.filter((item) => item.id !== taskToDelete.id));
+          setTimeout(() => closeModal(), 50);
         },
-      ],
-      { cancelable: true }
-    );
+      },
+    ]);
   }, [selectedTask, closeModal]);
 
   const handleEditFromModal = useCallback(() => {
@@ -172,59 +167,48 @@ export default function RoutineScreen() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   }, []);
 
-  const handleBackHome = useCallback(() => {
-    router.push("/");
-  }, []);
-
-  /* -------------------- Render -------------------- */
   return (
     <SafeAreaView style={styles.safeArea}>
+      <View style={styles.headerContainer}>
+        <Text style={styles.headerSubtitle}>TRAINER'S LOG</Text>
+        <Text style={styles.headerTitle}>Daily Deck</Text>
+      </View>
+
       <ScrollView
         style={styles.scrollContainer}
-        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.headerRow}>
-          <Text style={[sharedStyles.heading, styles.heading]}>🧘 Zen Routine</Text>
-
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Add new task"
-            hitSlop={styles.hitSlop}
-            android_ripple={{ color: "rgba(0,0,0,0.06)" }}
-            style={({ pressed }) => [
-              styles.addButton,
-              pressed && styles.addButtonPressed,
-            ]}
-            onPress={() => openForm()}
-          >
-            <Text style={styles.addButtonText}>+ Add New Task</Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.routineList}>
+        <View style={styles.cardList}>
           {sortedRoutineItems.map((item) => (
-            <RoutineCard
-              key={item.id}
-              item={item}
-              onPress={openModal}
-            />
+             <RoutineCard
+               key={item.id}
+               item={item}
+               onPress={openModal}
+             />
           ))}
         </View>
 
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Back to home"
-          hitSlop={styles.hitSlop}
-          android_ripple={{ color: "rgba(0,0,0,0.06)" }}
-          style={({ pressed }) => [sharedStyles.primaryButton, styles.backButton, pressed && styles.backButtonPressed]}
-          onPress={handleBackHome}
-        >
-          <Text style={sharedStyles.primaryButtonText}>← Back to Home</Text>
-        </Pressable>
+        {/* Bottom padding for scrolling past FAB */}
+        <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Task Modal (animated) */}
+      {/* Floating Action Button (FAB) - Minimalist Pokéball Style */}
+      <Pressable
+        style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
+        onPress={() => openForm()}
+      >
+        <View style={styles.fabTop} />
+        <View style={styles.fabBottom} />
+        <View style={styles.fabCenter} />
+        <View style={styles.fabButton} />
+      </Pressable>
+
+      {/* Back Button (Absolute Top Left) */}
+      <Pressable style={styles.backButtonAbsolute} onPress={() => router.push("/")}>
+        <Text style={styles.backButtonText}>←</Text>
+      </Pressable>
+
       <TaskModal
         visible={modalVisible}
         task={selectedTask}
@@ -234,7 +218,6 @@ export default function RoutineScreen() {
         onDelete={handleDelete}
       />
 
-      {/* Add/Edit Form */}
       <TaskForm
         visible={formVisible}
         isEditing={!!editingId}
@@ -247,99 +230,124 @@ export default function RoutineScreen() {
   );
 }
 
-/* -------------------- Themed Styles -------------------- */
+/* -------------------- Styles -------------------- */
 const getStyles = (theme: Theme) =>
   StyleSheet.create({
     safeArea: {
       flex: 1,
       backgroundColor: theme.colors.background,
     },
+    /* Header Area */
+    headerContainer: {
+      paddingHorizontal: theme.spacing.lg,
+      paddingTop: theme.spacing.md,
+      paddingBottom: theme.spacing.lg,
+      backgroundColor: theme.colors.background,
+      zIndex: 1,
+      alignItems: 'flex-start',
+    },
+    headerSubtitle: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: theme.colors.secondary,
+      textTransform: "uppercase",
+      letterSpacing: 2,
+      marginBottom: 2,
+      opacity: 0.7,
+    },
+    headerTitle: {
+      fontSize: 32,
+      fontWeight: "800",
+      color: theme.colors.primary,
+      letterSpacing: 0.5,
+    },
+    backButtonAbsolute: {
+      position: "absolute",
+      top: Platform.OS === 'ios' ? 60 : 40,
+      right: 20,
+      padding: 12,
+      zIndex: 10,
+      backgroundColor: theme.colors.white,
+      borderRadius: 30,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    backButtonText: {
+      fontSize: 20,
+      color: theme.colors.primary,
+      fontWeight: 'bold',
+    },
 
+    /* Scroll Area */
     scrollContainer: {
       flex: 1,
     },
-
     scrollContent: {
       paddingHorizontal: theme.spacing.lg,
-      paddingTop: 28,
-      paddingBottom: theme.spacing.xl,
-      alignItems: "stretch",
-      gap: theme.spacing.lg,
+      paddingTop: 10,
+    },
+    cardList: {
+      gap: 8, // Tighter gap for smaller cards
     },
 
-    headerRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      marginBottom: theme.spacing.sm,
-      gap: theme.spacing.md,
-    },
-
-    heading: {
-      marginBottom: 0,
-      letterSpacing: 0.6,
-      fontSize: 20,
-    },
-
-    /* Add button (refined) */
-    addButton: {
-      backgroundColor: theme.colors.white,
-      borderWidth: 1.5,
-      borderColor: theme.colors.secondary,
-      paddingVertical: theme.spacing.sm + 4,
-      paddingHorizontal: theme.spacing.lg,
-      borderRadius: theme.borderRadius.md,
-      alignItems: "center",
-      justifyContent: "center",
-      minWidth: 130,
+    /* Minimalist Pokéball FAB */
+    fab: {
+      position: "absolute",
+      bottom: 30,
+      right: 20,
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      overflow: 'hidden',
+      elevation: 8,
       shadowColor: "#000",
-      ...Platform.select({
-        ios: {
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: 0.06,
-          shadowRadius: 12,
-        },
-        android: {
-          elevation: 2,
-        },
-      }),
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.25,
+      shadowRadius: 6,
+      backgroundColor: theme.colors.white,
+      borderWidth: 2,
+      borderColor: theme.colors.primary,
     },
-    addButtonPressed: {
-      transform: [{ translateY: 1 }],
-      opacity: 0.95,
+    fabTop: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 30,
+        backgroundColor: theme.colors.primary,
     },
-    addButtonText: {
-      fontSize: 15,
-      color: theme.colors.primary,
-      fontFamily: theme.fonts.medium,
-      letterSpacing: 0.2,
+    fabBottom: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 30,
+        backgroundColor: theme.colors.white,
     },
-
-    /* Routine list */
-    routineList: {
-      marginTop: theme.spacing.sm,
-      marginBottom: theme.spacing.lg,
-      gap: theme.spacing.md,
+    fabCenter: {
+        width: 60,
+        height: 6,
+        backgroundColor: theme.colors.primary,
+        position: 'absolute',
+        top: 27, 
+        zIndex: 2,
     },
-
-    /* Back button refined */
-    backButton: {
-      marginTop: theme.spacing.md,
-      alignSelf: "center",
-      paddingVertical: theme.spacing.md,
-      paddingHorizontal: theme.spacing.xl,
-      borderRadius: theme.borderRadius.md,
+    fabButton: {
+        width: 18,
+        height: 18,
+        borderRadius: 9,
+        backgroundColor: theme.colors.white,
+        borderWidth: 2,
+        borderColor: theme.colors.primary,
+        position: 'absolute',
+        top: 21,
+        left: 21,
+        zIndex: 3,
     },
-    backButtonPressed: {
-      transform: [{ scale: 0.995 }],
-      opacity: 0.95,
-    },
-
-    /* Shared hitSlop */
-    hitSlop: {
-      top: 10,
-      bottom: 10,
-      left: 10,
-      right: 10,
+    fabPressed: {
+      transform: [{ scale: 0.95 }],
     },
   });
