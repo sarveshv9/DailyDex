@@ -157,8 +157,8 @@ export type ThemeName = HeavyThemeName | LightThemeName;
 // Shared styles (with the missing keys added)
 export const getSharedStyles = (theme: Theme) => {
   return StyleSheet.create({
-    container: { flex: 1, backgroundColor: theme.colors.background },
-    safeArea: { flex: 1, backgroundColor: theme.colors.background },
+    container: { flex: 1, width: '100%', height: '100%', backgroundColor: theme.colors.background },
+    safeArea: { flex: 1, width: '100%', height: '100%', backgroundColor: theme.colors.background },
     centeredContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: theme.spacing.xl },
     heading: { fontSize: 28, fontFamily: theme.fonts.bold, color: theme.colors.primary, textAlign: 'center' },
     headerContainer: {

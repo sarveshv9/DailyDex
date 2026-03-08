@@ -3,6 +3,7 @@ import {
   Animated,
   Dimensions,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -163,11 +164,20 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
     width: '90%',
     maxWidth: 320,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.25,
-    shadowRadius: 25,
-    elevation: 25,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 20 },
+        shadowOpacity: 0.25,
+        shadowRadius: 25,
+      },
+      android: {
+        elevation: 25,
+      },
+      web: {
+        boxShadow: '0px 20px 25px rgba(0,0,0,0.25)',
+      } as any,
+    }),
   },
   formModalOverlay: {
     flex: 1,

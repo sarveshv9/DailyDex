@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { Theme } from '../constants/shared';
 import { useTheme } from '../context/ThemeContext';
@@ -9,18 +9,23 @@ interface Tip {
   text: string;
 }
 
-const DEFAULT_TIP: Tip[] = [
-    { id: 'default-1', text: 'Take a moment to notice your breath. In and out.' }
+const FALLBACK_TIPS = [
+  "Take a moment to notice your breath. In and out.",
+  "You are doing your best, and that is enough.",
+  "Pause and drop your shoulders. Feel the tension melt away.",
+  "Just like a calm lake, let your mind settle.",
+  "Every small step is progress. Keep moving forward gently.",
+  "Embrace the present moment without judgment."
 ];
 
 const AiSuggestions: React.FC<{ currentTask?: string }> = ({ currentTask }) => {
   const { theme } = useTheme();
   const styles = useMemo(() => getStyles(theme), [theme]);
 
-  const [tips, setTips] = useState<Tip[]>(DEFAULT_TIP);
+  const [tips, setTips] = useState<Tip[]>([{ id: 'default-1', text: FALLBACK_TIPS[0] }]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // 1. ADD A REF to remember the last task we fetched.
   const lastFetchedTask = useRef<string | null>(null);
 
@@ -51,17 +56,18 @@ const AiSuggestions: React.FC<{ currentTask?: string }> = ({ currentTask }) => {
       const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
       if (!generatedText) throw new Error('No content received from AI');
-      
+
       const parsedTips: Tip[] = [{
-          id: `ai-tip-1`,
-          text: generatedText.trim().replace(/^["']|["']$/g, ''),
+        id: `ai-tip-1`,
+        text: generatedText.trim().replace(/^["']|["']$/g, ''),
       }];
 
       setTips(parsedTips);
     } catch (err: any) {
       console.error('Error fetching AI tip:', err.message);
       setError('Could not fetch a new tip.');
-      setTips(DEFAULT_TIP); 
+      const randomTip = FALLBACK_TIPS[Math.floor(Math.random() * FALLBACK_TIPS.length)];
+      setTips([{ id: `fallback-${Date.now()}`, text: randomTip }]);
     } finally {
       setIsLoading(false);
     }
@@ -117,11 +123,20 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     marginHorizontal: theme.spacing.lg,
     marginTop: theme.spacing.md,
     marginBottom: theme.spacing.xl,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 5,
+      },
+      web: {
+        boxShadow: '0px 4px 8px rgba(0,0,0,0.1)',
+      } as any,
+    }),
   },
   header: {
     flexDirection: 'row',

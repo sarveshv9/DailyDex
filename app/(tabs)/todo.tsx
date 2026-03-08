@@ -204,7 +204,14 @@ const TaskModal = ({
 
   const handleSave = () => {
     const trimmed = taskText.trim();
-    if (!trimmed) return Alert.alert("Error", "Enter a task description");
+    if (!trimmed) {
+      if (Platform.OS === 'web') {
+        window.alert("Enter a task description");
+      } else {
+        Alert.alert("Error", "Enter a task description");
+      }
+      return;
+    }
     onSave(trimmed, category);
   };
 
@@ -405,8 +412,13 @@ export default function TodoScreen() {
   /* NEW: show in-app confirm modal (more reliable cross-platform) */
   const handleClearCompleted = () => {
     if (completedCount === 0) {
-      // Slightly more informative message
-      return Alert.alert("No completed tasks", "There are no completed tasks to clear.");
+      const msg = "There are no completed tasks to clear.";
+      if (Platform.OS === 'web') {
+        window.alert(msg);
+      } else {
+        Alert.alert("No completed tasks", msg);
+      }
+      return;
     }
     setConfirmVisible(true);
   };

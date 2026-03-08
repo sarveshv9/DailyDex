@@ -143,17 +143,25 @@ export default function RoutineScreen() {
   const handleDelete = useCallback(() => {
     if (!selectedTask) return;
     const taskToDelete = selectedTask;
-    Alert.alert("Transfer", `Transfer ${taskToDelete.task} away?`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Transfer",
-        style: "destructive",
-        onPress: () => {
-          setRoutineItems((currentItems) => currentItems.filter((item) => item.id !== taskToDelete.id));
-          setTimeout(() => closeModal(), 50);
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Transfer ${taskToDelete.task} away?`)) {
+        setRoutineItems((currentItems) => currentItems.filter((item) => item.id !== taskToDelete.id));
+        setTimeout(() => closeModal(), 50);
+      }
+    } else {
+      Alert.alert("Transfer", `Transfer ${taskToDelete.task} away?`, [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Transfer",
+          style: "destructive",
+          onPress: () => {
+            setRoutineItems((currentItems) => currentItems.filter((item) => item.id !== taskToDelete.id));
+            setTimeout(() => closeModal(), 50);
+          },
         },
-      },
-    ]);
+      ]);
+    }
   }, [selectedTask, closeModal]);
 
   const handleEditFromModal = useCallback(() => {
@@ -181,11 +189,11 @@ export default function RoutineScreen() {
       >
         <View style={styles.cardList}>
           {sortedRoutineItems.map((item) => (
-             <RoutineCard
-               key={item.id}
-               item={item}
-               onPress={openModal}
-             />
+            <RoutineCard
+              key={item.id}
+              item={item}
+              onPress={openModal}
+            />
           ))}
         </View>
 
@@ -312,40 +320,40 @@ const getStyles = (theme: Theme) =>
       borderColor: theme.colors.primary,
     },
     fabTop: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: 30,
-        backgroundColor: theme.colors.primary,
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: 30,
+      backgroundColor: theme.colors.primary,
     },
     fabBottom: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: 30,
-        backgroundColor: theme.colors.white,
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: 30,
+      backgroundColor: theme.colors.white,
     },
     fabCenter: {
-        width: 60,
-        height: 6,
-        backgroundColor: theme.colors.primary,
-        position: 'absolute',
-        top: 27, 
-        zIndex: 2,
+      width: 60,
+      height: 6,
+      backgroundColor: theme.colors.primary,
+      position: 'absolute',
+      top: 27,
+      zIndex: 2,
     },
     fabButton: {
-        width: 18,
-        height: 18,
-        borderRadius: 9,
-        backgroundColor: theme.colors.white,
-        borderWidth: 2,
-        borderColor: theme.colors.primary,
-        position: 'absolute',
-        top: 21,
-        left: 21,
-        zIndex: 3,
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      backgroundColor: theme.colors.white,
+      borderWidth: 2,
+      borderColor: theme.colors.primary,
+      position: 'absolute',
+      top: 21,
+      left: 21,
+      zIndex: 3,
     },
     fabPressed: {
       transform: [{ scale: 0.95 }],

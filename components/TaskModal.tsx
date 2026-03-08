@@ -3,6 +3,7 @@ import {
   Animated,
   Image,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -91,7 +92,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
             },
           ]}
         >
-          <Pressable onPress={() => {}} style={{ alignItems: "center" }}>
+          <Pressable onPress={() => { }} style={{ alignItems: "center" }}>
             {/* Handle / Drag Indicator */}
             <View style={styles.dragHandle} />
 
@@ -180,12 +181,20 @@ const getStyles = (theme: Theme) =>
       paddingHorizontal: theme.spacing.xl,
       alignItems: "center",
 
-      // Modern shadow
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 12 },
-      shadowOpacity: 0.15,
-      shadowRadius: 22,
-      elevation: 18,
+      ...Platform.select({
+        ios: {
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 12 },
+          shadowOpacity: 0.15,
+          shadowRadius: 22,
+        },
+        android: {
+          elevation: 18,
+        },
+        web: {
+          boxShadow: '0px 12px 22px rgba(0,0,0,0.15)',
+        } as any,
+      }),
     },
 
     /* Drag handle */
