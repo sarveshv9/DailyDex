@@ -6,16 +6,21 @@ export interface ThemeContextType {
   theme: Theme;
   themeName: ThemeName;
   setThemeName: (name: ThemeName) => void;
+  isAutoTheme: boolean;
+  setIsAutoTheme: (val: boolean) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType>({
   theme: themes.default,
   themeName: 'default',
   setThemeName: () => { },
+  isAutoTheme: false,
+  setIsAutoTheme: () => { },
 });
 
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [themeName, setThemeNameState] = useState<ThemeName>('default');
+  const [isAutoTheme, setIsAutoThemeState] = useState<boolean>(false);
 
   useEffect(() => {
     const loadTheme = async () => {
@@ -23,6 +28,10 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
         const savedTheme = await AsyncStorage.getItem('@zen_theme');
         if (savedTheme) {
           setThemeNameState(savedTheme as ThemeName);
+        }
+        const autoTheme = await AsyncStorage.getItem('@zen_auto_theme');
+        if (autoTheme !== null) {
+          setIsAutoThemeState(autoTheme === 'true');
         }
       } catch (e) {
         console.error('Failed to load theme', e);
@@ -40,6 +49,15 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const setIsAutoTheme = async (val: boolean) => {
+    setIsAutoThemeState(val);
+    try {
+      await AsyncStorage.setItem('@zen_auto_theme', String(val));
+    } catch (e) {
+      console.error('Failed to save auto theme', e);
+    }
+  };
+
   const theme = useMemo<Theme>(() => {
     if (typeof themeName === 'string' && themeName.startsWith('light-')) {
       const light = lightThemes[themeName];
@@ -51,7 +69,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   }, [themeName]);
 
   return (
-    <ThemeContext.Provider value={{ theme, themeName, setThemeName }}>
+    <ThemeContext.Provider value={{ theme, themeName, setThemeName, isAutoTheme, setIsAutoTheme }}>
       {children}
     </ThemeContext.Provider>
   );

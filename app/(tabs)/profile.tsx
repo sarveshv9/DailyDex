@@ -180,7 +180,7 @@ const makeStyles = (theme: Theme) =>
 
 /* -------------------- Component -------------------- */
 export default function ProfileScreen() {
-  const { themeName, setThemeName } = useTheme();
+  const { themeName, setThemeName, isAutoTheme, setIsAutoTheme } = useTheme();
   const { selectedSong, setSelectedSong } = useAudio();
 
   // Resolve the base theme and theme object (keeps existing behavior)
@@ -281,11 +281,7 @@ export default function ProfileScreen() {
   const selectThemeMode = (mode: "light" | "heavy") => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (mode === "light") {
-      if (baseThemeName === "default") {
-        setThemeName("light-default" as ThemeName);
-      } else {
-        setThemeName(`light-${baseThemeName}` as ThemeName);
-      }
+      setThemeName(`light-${baseThemeName}` as ThemeName);
     } else {
       setThemeName(baseThemeName as ThemeName);
     }
@@ -497,9 +493,13 @@ export default function ProfileScreen() {
         visible={isAppearanceExpanded}
         onClose={() => setIsAppearanceExpanded(false)}
         currentTheme={theme}
-        userXp={userStats?.xp || 0}
+        activeThemeName={themeName}
+        isLightMode={isLightMode}
+        onToggleLightMode={(val) => selectThemeMode(val ? "light" : "heavy")}
+        isAutoTheme={isAutoTheme}
+        onToggleAutoTheme={setIsAutoTheme}
         onSelectTheme={(tName) => {
-          setThemeName(tName as ThemeName);
+          setThemeName((isLightMode ? `light-${tName}` : tName) as ThemeName);
         }}
       />
 

@@ -27,7 +27,7 @@ import {
   getSharedStyles,
   Theme,
   ThemeName,
-  themes,
+  themes
 } from "../../constants/shared";
 import { useTheme } from "../../context/ThemeContext";
 
@@ -266,7 +266,7 @@ function HomeScreen() {
   );
 
   const currentTime = useCurrentTime();
-  const { theme, themeName, setThemeName } = useTheme();
+  const { theme, themeName, setThemeName, isAutoTheme } = useTheme();
 
   const formattedTime = useMemo(() => formatTime(currentTime), [currentTime]);
   const currentTask = useMemo(() => getCurrentTask(currentTime), [currentTime]);
@@ -277,6 +277,7 @@ function HomeScreen() {
 
   /* sync theme base with task */
   useEffect(() => {
+    if (!isAutoTheme) return;
     const isLightMode = themeName.startsWith("light-");
     const newBaseTheme = TASK_THEME_MAP[currentTask] || "default";
     let newThemeName: ThemeName = newBaseTheme;
@@ -287,7 +288,8 @@ function HomeScreen() {
     if (newBaseTheme !== currentBaseTheme) {
       setThemeName(newThemeName);
     }
-  }, [currentTask, setThemeName, themeName]);
+  }, [currentTask, setThemeName, themeName, isAutoTheme]);
+
 
   /* breathing animation */
   const breatheScale = useSharedValue(1);
