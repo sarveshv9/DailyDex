@@ -7,8 +7,10 @@ import React, { useCallback, useMemo, useState } from "react";
 import {
   Alert,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Switch,
   Text,
@@ -24,7 +26,9 @@ import { StatsModal } from "../../components/profile/StatsModal";
 import { ThemeSelectionModal } from "../../components/profile/ThemeSelectionModal";
 import { useAudio } from "../../context/AudioContext";
 import { useTheme } from "../../context/ThemeContext";
+import { cancelAllRoutineNotifications, scheduleRoutineNotifications } from "../../utils/notifications";
 import { loadStats, UserStats } from "../../utils/stats";
+import { RoutineItem } from "../../utils/utils";
 
 import {
   getSharedStyles,
@@ -209,8 +213,6 @@ export default function ProfileScreen() {
   // Modal visibility
   const [editProfileModalOpen, setEditProfileModalOpen] = useState(false);
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
-  const [showPrivacySettings, setShowPrivacySettings] = useState(false);
-  const [showPreferencesModal, setShowPreferencesModal] = useState(false);
   const [showStatsModal, setShowStatsModal] = useState(false);
 
   // Profile setup state
@@ -226,6 +228,16 @@ export default function ProfileScreen() {
         try {
           const profileSetup = await AsyncStorage.getItem("@zen_profile_setup_complete");
           setProfileCreated(!!profileSetup);
+
+          const storedProfile = await AsyncStorage.getItem("@zen_user_profile");
+          if (storedProfile) {
+            setUser(JSON.parse(storedProfile));
+          }
+
+          const storedSettings = await AsyncStorage.getItem("@zen_user_settings");
+          if (storedSettings) {
+            setSettings(JSON.parse(storedSettings));
+          }
 
           const statsData = await loadStats();
           setUserStats(statsData);
@@ -262,17 +274,7 @@ export default function ProfileScreen() {
       dailySummary: true,
       achievements: false,
       news: false,
-    },
-    privacy: {
-      profileVisibility: "public",
-      showEmail: false,
-      allowMessages: true,
-    },
-    preferences: {
-      language: "English",
-      timezone: "UTC-5",
-      autoSave: true,
-    },
+    }
   });
 
   const [isMusicExpanded, setIsMusicExpanded] = useState(false);
@@ -280,21 +282,29 @@ export default function ProfileScreen() {
   /* -------------------- Handlers -------------------- */
   const selectThemeMode = (mode: "light" | "heavy") => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (mode === "light") {
+    if (mode === "light" && baseThemeName !== "default") {
       setThemeName(`light-${baseThemeName}` as ThemeName);
     } else {
       setThemeName(baseThemeName as ThemeName);
     }
   };
 
-  const handleBackup = () => {
+  const handleBackup = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    Alert.alert("Backup", "Your data is being backed up.", [
-      {
-        text: "OK",
-        onPress: () => console.log("Backup started"),
-      },
-    ]);
+    try {
+      const keys = await AsyncStorage.getAllKeys();
+      const items = await AsyncStorage.multiGet(keys);
+      const backupData = Object.fromEntries(items);
+      const dataString = JSON.stringify(backupData, null, 2);
+
+      await Share.share({
+        message: dataString,
+        title: 'Zen App Backup'
+      });
+    } catch (e) {
+      Alert.alert("Error", "Failed to create backup.");
+      console.error(e);
+    }
   };
 
   const handleSelectSong = (index: number) => {
@@ -305,44 +315,62 @@ export default function ProfileScreen() {
 
   const toggleNotification = (key: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSettings((prev) => ({
-      ...prev,
-      notifications: {
-        ...prev.notifications,
-        // TypeScript index access preserved at runtime
-        [key]: !((prev.notifications as any)[key]),
-      },
-    }));
+    setSettings((prev) => {
+      const newValue = !((prev.notifications as any)[key]);
+      const newSettings = {
+        ...prev,
+        notifications: {
+          ...prev.notifications,
+          [key]: newValue,
+        },
+      };
+
+      // Save to async storage
+      AsyncStorage.setItem("@zen_user_settings", JSON.stringify(newSettings))
+        .catch(e => console.error("Failed to save settings", e));
+
+      // If toggling taskReminders, schedule or cancel routine notifications
+      if (key === "taskReminders") {
+        if (newValue) {
+          AsyncStorage.getItem("@zen_routine").then((data) => {
+            if (data) {
+              const routines: RoutineItem[] = JSON.parse(data);
+              scheduleRoutineNotifications(routines);
+            }
+          }).catch(e => console.error("Failed to load routine for notifications", e));
+        } else {
+          cancelAllRoutineNotifications();
+        }
+      }
+
+      return newSettings;
+    });
   };
 
   const handleLogout = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    Alert.alert("Logout", "Are you sure you want to log out?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Logout", onPress: () => console.log("User logged out") },
-    ]);
-  };
 
-  const togglePrivacyOption = (key: keyof typeof settings.privacy) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSettings((prev) => ({
-      ...prev,
-      privacy: {
-        ...prev.privacy,
-        [key]: !prev.privacy[key],
-      },
-    }));
-  };
+    const performLogout = async () => {
+      try {
+        await AsyncStorage.removeItem("@zen_profile_setup_complete");
+        // Also clear profile so it resets to defaults
+        await AsyncStorage.removeItem("@zen_user_profile");
+        setProfileCreated(false);
+      } catch (e) {
+        console.error("Failed to logout", e);
+      }
+    };
 
-  const togglePreference = (key: keyof typeof settings.preferences) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSettings((prev) => ({
-      ...prev,
-      preferences: {
-        ...prev.preferences,
-        [key]: !((prev.preferences as any)[key]),
-      },
-    }));
+    if (Platform.OS === 'web') {
+      if (window.confirm("Are you sure you want to log out? This will reset your profile setup state.")) {
+        performLogout();
+      }
+    } else {
+      Alert.alert("Logout", "Are you sure you want to log out? This will reset your profile setup state.", [
+        { text: "Cancel", style: "cancel" },
+        { text: "Logout", style: "destructive", onPress: performLogout },
+      ]);
+    }
   };
 
   const handleSaveProfile = async () => {
@@ -351,6 +379,7 @@ export default function ProfileScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       await AsyncStorage.setItem("@zen_profile_setup_complete", "true");
+      await AsyncStorage.setItem("@zen_user_profile", JSON.stringify(user));
       setProfileCreated(true);
     } catch (e) {
       console.error("Failed to save profile flag", e);
@@ -457,8 +486,6 @@ export default function ProfileScreen() {
             selectThemeMode={selectThemeMode}
             settings={settings}
             setShowNotificationSettings={setShowNotificationSettings}
-            setShowPrivacySettings={setShowPrivacySettings}
-            setShowPreferencesModal={setShowPreferencesModal}
             handleBackup={handleBackup}
             selectedSong={selectedSong}
             setSelectedSong={handleSelectSong}
@@ -499,7 +526,11 @@ export default function ProfileScreen() {
         isAutoTheme={isAutoTheme}
         onToggleAutoTheme={setIsAutoTheme}
         onSelectTheme={(tName) => {
-          setThemeName((isLightMode ? `light-${tName}` : tName) as ThemeName);
+          if (isLightMode && tName !== "default") {
+            setThemeName(`light-${tName}` as ThemeName);
+          } else {
+            setThemeName(tName as ThemeName);
+          }
         }}
       />
 
@@ -556,129 +587,6 @@ export default function ProfileScreen() {
                   />
                 </View>
               ))}
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* -------------------- Privacy Modal -------------------- */}
-      <Modal
-        visible={showPrivacySettings}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowPrivacySettings(false)}
-      >
-        <Pressable style={styles.modalBackdrop} onPress={() => setShowPrivacySettings(false)}>
-          <Pressable onPress={() => { }} style={styles.modalCard} android_ripple={{ color: "rgba(0,0,0,0.02)" }}>
-            <View style={styles.modalHeaderRow}>
-              <Text style={styles.modalTitle}>Privacy & Security</Text>
-              <Pressable onPress={() => setShowPrivacySettings(false)} hitSlop={8}>
-                <Ionicons name="close" size={20} color={theme.colors.primary} />
-              </Pressable>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <View style={{ marginBottom: theme.spacing.lg }}>
-                <Text style={styles.sectionTitle}>Account Privacy</Text>
-
-                <Pressable
-                  onPress={() =>
-                    Alert.alert("Privacy", "Profile visibility settings (stub).")
-                  }
-                  style={{ paddingVertical: theme.spacing.sm }}
-                >
-                  <Text style={styles.rowLabel}>
-                    Profile Visibility: {settings.privacy.profileVisibility}
-                  </Text>
-                </Pressable>
-
-                <View style={[styles.row, { borderBottomWidth: 0 }]}>
-                  <Text style={styles.rowLabel}>Show Email</Text>
-                  <Switch
-                    value={settings.privacy.showEmail}
-                    onValueChange={() => togglePrivacyOption("showEmail")}
-                    trackColor={{ false: theme.colors.secondary, true: theme.colors.primary }}
-                    thumbColor={theme.colors.white}
-                  />
-                </View>
-
-                <View style={[styles.row, { borderBottomWidth: 0 }]}>
-                  <Text style={styles.rowLabel}>Allow Messages</Text>
-                  <Switch
-                    value={settings.privacy.allowMessages}
-                    onValueChange={() => togglePrivacyOption("allowMessages")}
-                    trackColor={{ false: theme.colors.secondary, true: theme.colors.primary }}
-                    thumbColor={theme.colors.white}
-                  />
-                </View>
-              </View>
-
-              <View>
-                <Text style={styles.sectionTitle}>Security</Text>
-
-                <Pressable
-                  onPress={() => Alert.alert("Security", "Change password (stub).")}
-                  style={[styles.row, { borderBottomWidth: 0 }]}
-                >
-                  <Text style={styles.rowLabel}>Change Password</Text>
-                </Pressable>
-
-                <Pressable
-                  onPress={() =>
-                    Alert.alert("Security", "Two-factor authentication settings (stub).")
-                  }
-                  style={[styles.row, { borderBottomWidth: 0 }]}
-                >
-                  <Text style={styles.rowLabel}>Two-Factor Authentication</Text>
-                </Pressable>
-              </View>
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* -------------------- Preferences Modal -------------------- */}
-      <Modal
-        visible={showPreferencesModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowPreferencesModal(false)}
-      >
-        <Pressable style={styles.modalBackdrop} onPress={() => setShowPreferencesModal(false)}>
-          <Pressable onPress={() => { }} style={styles.modalCard}>
-            <View style={styles.modalHeaderRow}>
-              <Text style={styles.modalTitle}>Preferences</Text>
-              <Pressable onPress={() => setShowPreferencesModal(false)} hitSlop={8}>
-                <Ionicons name="close" size={20} color={theme.colors.primary} />
-              </Pressable>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <Pressable
-                style={[styles.row, { borderBottomWidth: 0 }]}
-                onPress={() => Alert.alert("Language", "Language selection (stub)")}
-              >
-                <Text style={styles.rowLabel}>Language</Text>
-                <Text style={styles.rowValue}>{settings.preferences.language}</Text>
-              </Pressable>
-
-              <Pressable
-                style={[styles.row, { borderBottomWidth: 0 }]}
-                onPress={() => Alert.alert("Timezone", "Timezone selection (stub)")}
-              >
-                <Text style={styles.rowLabel}>Timezone</Text>
-                <Text style={styles.rowValue}>{settings.preferences.timezone}</Text>
-              </Pressable>
-
-              <View style={[styles.row, { borderBottomWidth: 0 }]}>
-                <Text style={styles.rowLabel}>Auto-Save</Text>
-                <Switch
-                  value={settings.preferences.autoSave}
-                  onValueChange={() => togglePreference("autoSave")}
-                  trackColor={{ false: theme.colors.secondary, true: theme.colors.primary }}
-                  thumbColor={theme.colors.white}
-                />
-              </View>
             </ScrollView>
           </Pressable>
         </Pressable>

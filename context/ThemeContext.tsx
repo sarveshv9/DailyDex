@@ -27,7 +27,12 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
       try {
         const savedTheme = await AsyncStorage.getItem('@zen_theme');
         if (savedTheme) {
-          setThemeNameState(savedTheme as ThemeName);
+          if (savedTheme === 'light-default') {
+            setThemeNameState('default');
+            await AsyncStorage.setItem('@zen_theme', 'default');
+          } else {
+            setThemeNameState(savedTheme as ThemeName);
+          }
         }
         const autoTheme = await AsyncStorage.getItem('@zen_auto_theme');
         if (autoTheme !== null) {

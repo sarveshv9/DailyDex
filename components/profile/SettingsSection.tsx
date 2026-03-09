@@ -51,8 +51,6 @@ interface SettingsSectionProps {
     notifications: Record<string, boolean>;
   };
   setShowNotificationSettings: (value: boolean) => void;
-  setShowPrivacySettings: (value: boolean) => void;
-  setShowPreferencesModal: (value: boolean) => void;
   handleBackup: () => void;
   selectedSong: number;
   setSelectedSong: (index: number) => void;
@@ -436,8 +434,6 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
   selectThemeMode,
   settings,
   setShowNotificationSettings,
-  setShowPrivacySettings,
-  setShowPreferencesModal,
   handleBackup,
   selectedSong,
   setSelectedSong,
@@ -461,16 +457,6 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
     console.log('Notification settings pressed');
     setShowNotificationSettings(true);
   }, [setShowNotificationSettings]);
-
-  const handlePrivacyPress = useCallback(() => {
-    console.log('Privacy settings pressed');
-    setShowPrivacySettings(true);
-  }, [setShowPrivacySettings]);
-
-  const handlePreferencesPress = useCallback(() => {
-    console.log('Preferences pressed');
-    setShowPreferencesModal(true);
-  }, [setShowPreferencesModal]);
 
   const handleBackupPress = useCallback(() => {
     console.log('Backup pressed');
@@ -508,20 +494,6 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
             // We use the existing isAppearanceExpanded to trigger the Modal in parent profile
             setIsAppearanceExpanded(true);
           }}
-        />
-
-        <SettingItem
-          theme={theme}
-          iconName="lock-closed-outline"
-          text="Privacy & Security"
-          onPress={handlePrivacyPress}
-        />
-
-        <SettingItem
-          theme={theme}
-          iconName="settings-outline"
-          text="Preferences"
-          onPress={handlePreferencesPress}
         />
 
         <SettingItem

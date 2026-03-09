@@ -7,8 +7,10 @@ import { View } from "react-native";
 import { ThemeProvider } from "../context/ThemeContext";
 
 // 1. ADD THIS IMPORT
+import { useEffect } from "react";
 import { AudioProvider } from "../context/AudioContext";
 import { TimerProvider } from "../context/TimerContext";
+import { requestNotificationPermissions } from "../utils/notifications";
 
 // import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -22,6 +24,10 @@ export default function RootLayout() {
     UbuntuRegular: require("./assets/fonts/Ubuntu-Regular.ttf"),
     UbuntuMedium: require("./assets/fonts/Ubuntu-Medium.ttf"),
   });
+
+  useEffect(() => {
+    requestNotificationPermissions();
+  }, []);
 
   if (!fontsLoaded) {
     return <View style={{ flex: 1, backgroundColor: "#F5F5F7" }} />;

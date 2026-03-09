@@ -102,48 +102,120 @@ export default function FocusScreen() {
 
                 {showDurationPicker ? (
                     <View style={styles.pickerContainer}>
-                        <Text style={styles.pickerTitle}>Select Duration</Text>
-                        <View style={styles.durationRow}>
-                            {DURATIONS.map((d) => (
-                                <Pressable
-                                    key={d.value}
-                                    style={[styles.durationChip, selectedDuration === d.value && styles.durationChipActive]}
-                                    onPress={() => {
-                                        Haptics.selectionAsync();
-                                        setSelectedDuration(d.value);
-                                    }}
-                                >
-                                    <Text style={[styles.durationChipText, selectedDuration === d.value && styles.durationChipTextActive]}>
-                                        {d.label}
-                                    </Text>
-                                </Pressable>
-                            ))}
+                        {/* Mode Selector */}
+                        <View style={styles.modeSelector}>
+                            <Pressable
+                                style={[styles.modeBtn, !timer.pomodoroMode && styles.modeBtnActive]}
+                                onPress={() => {
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                    timer.stopTimer(); // Reset if switching
+                                }}
+                            >
+                                <Text style={[styles.modeBtnText, !timer.pomodoroMode && styles.modeBtnTextActive]}>Free</Text>
+                            </Pressable>
+                            <Pressable
+                                style={[styles.modeBtn, timer.pomodoroMode && styles.modeBtnActive]}
+                                onPress={() => {
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                    timer.startPomodoro(paramTaskId, paramTaskName);
+                                }}
+                            >
+                                <Text style={[styles.modeBtnText, timer.pomodoroMode && styles.modeBtnTextActive]}>Pomodoro</Text>
+                            </Pressable>
                         </View>
-                        <Pressable style={styles.startButton} onPress={startNewTimer}>
-                            <Text style={styles.startButtonText}>Start Focus</Text>
-                        </Pressable>
+
+                        {!timer.pomodoroMode ? (
+                            <>
+                                <Text style={styles.pickerTitle}>Select Duration</Text>
+                                <View style={styles.durationRow}>
+                                    {DURATIONS.map((d) => (
+                                        <Pressable
+                                            key={d.value}
+                                            style={[styles.durationChip, selectedDuration === d.value && styles.durationChipActive]}
+                                            onPress={() => {
+                                                Haptics.selectionAsync();
+                                                setSelectedDuration(d.value);
+                                            }}
+                                        >
+                                            <Text style={[styles.durationChipText, selectedDuration === d.value && styles.durationChipTextActive]}>
+                                                {d.label}
+                                            </Text>
+                                        </Pressable>
+                                    ))}
+                                </View>
+                                <Pressable style={styles.startButton} onPress={startNewTimer}>
+                                    <Text style={styles.startButtonText}>Start Focus</Text>
+                                </Pressable>
+                            </>
+                        ) : (
+                            <View style={styles.pomodoroPreview}>
+                                <Text style={styles.pomodoroDesc}>
+                                    Classic 25/5/15 cycle.{"\n"}Focus 4 sessions for a long break.
+                                </Text>
+                                <Pressable style={styles.startButton} onPress={() => timer.startPomodoro(paramTaskId, paramTaskName)}>
+                                    <Text style={styles.startButtonText}>Begin Pomodoro</Text>
+                                </Pressable>
+                            </View>
+                        )}
                     </View>
                 ) : (
                     <View style={styles.controlsContainer}>
+                        {timer.pomodoroMode && (
+                            <View style={styles.phaseContainer}>
+                                <Text style={[styles.phaseLabel, { color: theme.colors.primary }]}>
+                                    {timer.pomodoroPhase === "work" ? "Work Session" : timer.pomodoroPhase === "shortBreak" ? "Short Break" : "Long Break"}
+                                </Text>
+                                <View style={styles.sessionDots}>
+                                    {[1, 2, 3, 4].map((s) => {
+                                        const isCompleted = s < timer.pomodoroSession || (s === timer.pomodoroSession && timer.pomodoroPhase !== "work");
+                                        const isActive = s === timer.pomodoroSession && timer.pomodoroPhase === "work";
+
+                                        return (
+                                            <View key={s} style={[styles.pokeDot, isActive && styles.pokeDotActive]}>
+                                                <View style={[styles.pokeDotTop, { backgroundColor: isCompleted ? theme.colors.primary : `${theme.colors.secondary}40` }]} />
+                                                <View style={styles.pokeDotBottom} />
+                                                <View style={[styles.pokeDotCenter, isActive && { borderColor: theme.colors.primary, backgroundColor: theme.colors.white }]} />
+                                            </View>
+                                        );
+                                    })}
+                                </View>
+                            </View>
+                        )}
+
                         {!isCompleted ? (
-                            <Pressable
-                                style={[styles.playButton, isActive && styles.pauseButton]}
-                                onPress={toggleTimer}
-                            >
-                                <Ionicons
-                                    name={isActive ? "pause" : "play"}
-                                    size={36}
-                                    color={theme.colors.white}
-                                    style={{ marginLeft: isActive ? 0 : 4 }}
-                                />
-                            </Pressable>
+                            <View style={styles.mainControls}>
+                                <Pressable
+                                    style={[styles.playButton, isActive && styles.pauseButton]}
+                                    onPress={toggleTimer}
+                                >
+                                    <Ionicons
+                                        name={isActive ? "pause" : "play"}
+                                        size={36}
+                                        color={theme.colors.white}
+                                        style={{ marginLeft: isActive ? 0 : 4 }}
+                                    />
+                                </Pressable>
+
+                                {timer.pomodoroMode && (
+                                    <Pressable
+                                        style={styles.skipBtn}
+                                        onPress={() => {
+                                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                            timer.advancePomodoroPhase();
+                                        }}
+                                    >
+                                        <Ionicons name="play-skip-forward" size={24} color={theme.colors.secondary} />
+                                        <Text style={styles.skipText}>Next Phase</Text>
+                                    </Pressable>
+                                )}
+                            </View>
                         ) : (
                             <Pressable style={styles.completeButton} onPress={handleComplete}>
                                 <Text style={styles.completeButtonText}>Great Job! Back</Text>
                             </Pressable>
                         )}
 
-                        {!isActive && timer.timeLeft < timer.duration && !isCompleted && (
+                        {!isActive && timer.timeLeft < timer.duration && !isCompleted && !timer.pomodoroMode && (
                             <Pressable style={styles.resetButton} onPress={() => {
                                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                 timer.resetTimer();
@@ -156,7 +228,7 @@ export default function FocusScreen() {
                             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                             timer.stopTimer();
                         }}>
-                            <Text style={styles.cancelButtonText}>Cancel Focus</Text>
+                            <Text style={styles.cancelButtonText}>End Session</Text>
                         </Pressable>
 
                     </View>
@@ -350,5 +422,126 @@ const getStyles = (theme: Theme) =>
             fontFamily: theme.fonts.bold,
             fontSize: 18,
             color: theme.colors.white,
+        },
+        /* Mode Selector */
+        modeSelector: {
+            flexDirection: "row",
+            backgroundColor: `${theme.colors.secondary}15`,
+            borderRadius: 25,
+            padding: 4,
+            marginBottom: 24,
+            width: "100%",
+        },
+        modeBtn: {
+            flex: 1,
+            paddingVertical: 10,
+            alignItems: "center",
+            borderRadius: 21,
+        },
+        modeBtnActive: {
+            backgroundColor: theme.colors.white,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+            elevation: 2,
+        },
+        modeBtnText: {
+            fontFamily: theme.fonts.bold,
+            fontSize: 14,
+            color: theme.colors.secondary,
+        },
+        modeBtnTextActive: {
+            color: theme.colors.primary,
+        },
+        /* Pomodoro UI */
+        pomodoroPreview: {
+            width: "100%",
+            alignItems: "center",
+            paddingBottom: 20,
+        },
+        pomodoroDesc: {
+            fontFamily: theme.fonts.medium,
+            fontSize: 15,
+            color: theme.colors.secondary,
+            textAlign: "center",
+            lineHeight: 22,
+            marginBottom: 30,
+            opacity: 0.8,
+        },
+        phaseContainer: {
+            alignItems: "center",
+            marginBottom: 30,
+        },
+        phaseLabel: {
+            fontFamily: theme.fonts.bold,
+            fontSize: 18,
+            marginBottom: 12,
+            letterSpacing: 1,
+        },
+        sessionDots: {
+            flexDirection: "row",
+            gap: 12,
+        },
+        pokeDot: {
+            width: 20,
+            height: 20,
+            borderRadius: 10,
+            borderWidth: 1.5,
+            borderColor: theme.colors.secondary,
+            overflow: "hidden",
+            backgroundColor: theme.colors.white,
+            opacity: 0.6,
+        },
+        pokeDotActive: {
+            opacity: 1,
+            transform: [{ scale: 1.2 }],
+            borderColor: theme.colors.primary,
+            borderWidth: 2,
+        },
+        pokeDotTop: {
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: "50%",
+        },
+        pokeDotBottom: {
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: "50%",
+            backgroundColor: theme.colors.white,
+        },
+        pokeDotCenter: {
+            position: "absolute",
+            top: "35%",
+            left: "35%",
+            width: "30%",
+            height: "30%",
+            borderRadius: 5,
+            backgroundColor: theme.colors.secondary,
+            borderWidth: 1,
+            borderColor: "transparent",
+            zIndex: 2,
+        },
+        mainControls: {
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "100%",
+            gap: 40,
+            marginBottom: 20,
+        },
+        skipBtn: {
+            alignItems: "center",
+            gap: 4,
+        },
+        skipText: {
+            fontFamily: theme.fonts.bold,
+            fontSize: 12,
+            color: theme.colors.secondary,
+            opacity: 0.8,
         },
     });

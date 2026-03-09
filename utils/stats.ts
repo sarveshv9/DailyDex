@@ -37,6 +37,25 @@ const getYesterdayString = () => {
     return d.toISOString().split("T")[0];
 };
 
+export const getWeeklyData = (stats: UserStats) => {
+    const data = [];
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split("T")[0];
+        const dayOfWeek = d.toLocaleDateString('en-US', { weekday: 'short' });
+
+        const dayStats = stats.history[dateStr] || { tasks: 0, focusMinutes: 0 };
+        data.push({
+            dateStr,
+            dayOfWeek,
+            tasks: dayStats.tasks,
+            focusMinutes: dayStats.focusMinutes,
+        });
+    }
+    return data;
+};
+
 export const loadStats = async (): Promise<UserStats> => {
     try {
         const data = await AsyncStorage.getItem(STATS_STORAGE_KEY);

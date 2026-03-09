@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Theme } from "../../constants/shared";
-import { getTodayString, UserStats } from "../../utils/stats";
+import { getTodayString, getWeeklyData, UserStats } from "../../utils/stats";
+import { ActivityChart } from "./ActivityChart";
 
 type StatsModalProps = {
     visible: boolean;
@@ -13,6 +14,7 @@ type StatsModalProps = {
 
 export function StatsModal({ visible, onClose, theme, stats }: StatsModalProps) {
     const styles = useMemo(() => getStyles(theme), [theme]);
+    const [chartMetric, setChartMetric] = useState<"tasks" | "focusMinutes">("tasks");
 
     if (!stats) return null;
 
@@ -88,6 +90,18 @@ export function StatsModal({ visible, onClose, theme, stats }: StatsModalProps) 
                                 <Text style={styles.statLabel}>Best Streak</Text>
                             </View>
                         </View>
+
+                        {/* Weekly Activity Chart */}
+                        <ActivityChart
+                            data={getWeeklyData(stats)}
+                            theme={theme}
+                            metric={chartMetric}
+                            onToggleMetric={() =>
+                                setChartMetric((m) =>
+                                    m === "tasks" ? "focusMinutes" : "tasks"
+                                )
+                            }
+                        />
 
                         {/* Today's Focus */}
                         <Text style={styles.sectionTitle}>Today&apos;s Focus</Text>

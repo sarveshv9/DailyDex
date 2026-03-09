@@ -4,12 +4,14 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Animated, Dimensions, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import CalendarEventCard from "../components/CalendarEventCard";
 import RoutineCard from "../components/RoutineCard";
 import TaskForm from "../components/TaskForm";
 import TaskModal from "../components/TaskModal";
 import { getSharedStyles, Theme } from "../constants/shared";
 import { useTheme } from "../context/ThemeContext";
-import { FormData, RoutineItem, sortRoutineItems } from "../utils/utils";
+import { CalendarEvent, getTodaysCalendarEvents } from "../utils/calendar";
+import { FormData, RoutineItem, sortRoutineItems, timeToMinutes } from "../utils/utils";
 
 /* -------------------- Assets & Constants -------------------- */
 const DEFAULT_IMAGE = require("./assets/images/pixel/breathe.png");
@@ -82,6 +84,7 @@ export default function RoutineScreen() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>({ time: "", task: "", description: "" });
   const [nextInsertionOrder, setNextInsertionOrder] = useState(13);
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
 
   const { animatedStyle, openAnimation, closeAnimation } = useModalAnimation();
   const sortedRoutineItems = useMemo(() => sortRoutineItems(routineItems), [routineItems]);
@@ -105,6 +108,11 @@ export default function RoutineScreen() {
       }
     };
     loadData();
+  }, []);
+
+  // Fetch today's device calendar events
+  useEffect(() => {
+    getTodaysCalendarEvents().then(setCalendarEvents).catch(() => { });
   }, []);
 
   const saveRoutines = async (newItems: RoutineItem[]) => {
@@ -222,19 +230,35 @@ export default function RoutineScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.cardList}>
-          {sortedRoutineItems.length === 0 ? (
+          {sortedRoutineItems.length === 0 && calendarEvents.length === 0 ? (
             <View style={styles.emptyStateContainer}>
               <Text style={styles.emptyStateTitle}>Your deck is empty!</Text>
               <Text style={styles.emptyStateSub}>Tap the Pokéball below to start building your routine.</Text>
             </View>
           ) : (
-            sortedRoutineItems.map((item) => (
-              <RoutineCard
-                key={item.id}
-                item={item}
-                onPress={openModal}
-              />
-            ))
+            (() => {
+              // Merge and sort routine items + calendar events chronologically
+              const allItems: Array<{ minutes: number; type: "routine" | "calendar"; data: RoutineItem | CalendarEvent }> = [
+                ...sortedRoutineItems.map(r => ({ minutes: timeToMinutes(r.time), type: "routine" as const, data: r })),
+                ...calendarEvents.map(e => ({ minutes: e.startMinutes, type: "calendar" as const, data: e })),
+              ].sort((a, b) => a.minutes - b.minutes);
+
+              return allItems.map((entry, idx) =>
+                entry.type === "routine" ? (
+                  <RoutineCard
+                    key={(entry.data as RoutineItem).id}
+                    item={entry.data as RoutineItem}
+                    onPress={openModal}
+                  />
+                ) : (
+                  <CalendarEventCard
+                    key={(entry.data as CalendarEvent).id}
+                    event={entry.data as CalendarEvent}
+                    theme={theme}
+                  />
+                )
+              );
+            })()
           )}
         </View>
 

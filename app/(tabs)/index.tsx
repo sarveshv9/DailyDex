@@ -5,13 +5,12 @@ import {
   AccessibilityRole,
   Dimensions,
   Image,
-  ImageSourcePropType,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  View,
+  View
 } from "react-native";
 import Animated, {
   Easing,
@@ -30,52 +29,22 @@ import {
   themes
 } from "../../constants/shared";
 import { useTheme } from "../../context/ThemeContext";
+import { getRoutineImage, RoutineItem, sortRoutineItems, timeToMinutes } from "../../utils/utils";
 
 /* ---------- Constants & Assets ---------- */
-const ROUTINE = [
-  { hour: 6, task: "🌞 Wake Up Slowly" },
-  { hour: 6.5, task: "💧 Drink Warm Water" },
-  { hour: 7, task: "🧘 Light Stretching or Yoga" },
-  { hour: 8, task: "🍵 Herbal Tea & Journaling" },
-  { hour: 9, task: "🥣 Healthy Breakfast" },
-  { hour: 10, task: "📚 Learn Something Calm" },
-  { hour: 13, task: "🥗 Light Lunch" },
-  { hour: 15, task: "🌿 Nature Walk or Break" },
-  { hour: 17, task: "📝 Reflect on the Day" },
-  { hour: 19, task: "🍽 Light Dinner" },
-  { hour: 21, task: "🌙 Prepare for Sleep" },
-  { hour: 22, task: "🛌 Sleep Early" },
-];
-const REVERSED_ROUTINE = [...ROUTINE].reverse();
-
-const TASK_IMAGES: Record<string, ImageSourcePropType> = {
-  "🌞 Wake Up Slowly": require("../assets/images/pixel/wakeup.png"),
-  "💧 Drink Warm Water": require("../assets/images/pixel/water.png"),
-  "🧘 Light Stretching or Yoga": require("../assets/images/pixel/yoga.png"),
-  "🍵 Herbal Tea & Journaling": require("../assets/images/pixel/tea_journal.png"),
-  "🥣 Healthy Breakfast": require("../assets/images/pixel/breakfast.png"),
-  "📚 Learn Something Calm": require("../assets/images/pixel/study.png"),
-  "🥗 Light Lunch": require("../assets/images/pixel/lunch.png"),
-  "🌿 Nature Walk or Break": require("../assets/images/pixel/walk.png"),
-  "📝 Reflect on the Day": require("../assets/images/pixel/reflect.png"),
-  "🍽 Light Dinner": require("../assets/images/pixel/dinner.png"),
-  "🌙 Prepare for Sleep": require("../assets/images/pixel/prepare_sleep.png"),
-  "🛌 Sleep Early": require("../assets/images/pixel/sleep.png"),
-};
-
 const TASK_THEME_MAP: Record<string, keyof typeof themes> = {
-  "🌞 Wake Up Slowly": "pikachu",
-  "💧 Drink Warm Water": "squirtle",
-  "🧘 Light Stretching or Yoga": "dragonite",
-  "🍵 Herbal Tea & Journaling": "mew",
-  "🥣 Healthy Breakfast": "slowpoke",
-  "📚 Learn Something Calm": "psyduck",
-  "🥗 Light Lunch": "charizard",
-  "🌿 Nature Walk or Break": "bulbasaur",
-  "📝 Reflect on the Day": "meowth",
-  "🍽 Light Dinner": "jigglypuff",
-  "🌙 Prepare for Sleep": "gengar",
-  "🛌 Sleep Early": "snorlax",
+  "wakeup": "pikachu",
+  "water": "squirtle",
+  "yoga": "dragonite",
+  "tea_journal": "mew",
+  "breakfast": "slowpoke",
+  "study": "psyduck",
+  "lunch": "charizard",
+  "walk": "bulbasaur",
+  "reflect": "meowth",
+  "dinner": "jigglypuff",
+  "prepare_sleep": "gengar",
+  "sleep": "snorlax",
 };
 
 /* ---------- Hooks & Helpers ---------- */
@@ -95,9 +64,24 @@ const formatTime = (date: Date): string =>
     hour12: true,
   });
 
-const getCurrentTask = (now: Date): string => {
-  const currentHour = now.getHours() + now.getMinutes() / 60;
-  return REVERSED_ROUTINE.find((r) => currentHour >= r.hour)?.task || "🌸 Just Breathe";
+const getCurrentTask = (now: Date, routines: RoutineItem[]): RoutineItem | null => {
+  if (routines.length === 0) return null;
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+  let current = routines[0];
+  for (let i = 0; i < routines.length; i++) {
+    const rMinutes = timeToMinutes(routines[i].time);
+    if (currentMinutes >= rMinutes) {
+      current = routines[i];
+    }
+  }
+
+  const firstMinutes = timeToMinutes(routines[0].time);
+  if (currentMinutes < firstMinutes) {
+    return routines[routines.length - 1]; // Before first task, use last task of previous day
+  }
+
+  return current;
 };
 
 /* ---------- Responsive helpers ---------- */
@@ -248,13 +232,23 @@ function HomeScreen() {
   const router = useRouter();
   const [isReady, setIsReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [routines, setRoutines] = useState<RoutineItem[]>([]);
 
   useFocusEffect(
     useCallback(() => {
       const checkSetup = async () => {
         try {
           const setupComplete = await AsyncStorage.getItem(SETUP_KEY);
-          setIsReady(!!setupComplete);
+          if (setupComplete) {
+            const routineData = await AsyncStorage.getItem("@zen_routine");
+            if (routineData) {
+              const parsedRoutines = JSON.parse(routineData);
+              setRoutines(sortRoutineItems(parsedRoutines));
+              setIsReady(true);
+              return;
+            }
+          }
+          setIsReady(false);
         } catch (e) {
           setIsReady(false);
         } finally {
@@ -269,8 +263,9 @@ function HomeScreen() {
   const { theme, themeName, setThemeName, isAutoTheme } = useTheme();
 
   const formattedTime = useMemo(() => formatTime(currentTime), [currentTime]);
-  const currentTask = useMemo(() => getCurrentTask(currentTime), [currentTime]);
-  const taskImage = useMemo(() => TASK_IMAGES[currentTask], [currentTask]);
+  const currentTaskItem = useMemo(() => getCurrentTask(currentTime, routines), [currentTime, routines]);
+  const currentTaskText = currentTaskItem?.task || "🌸 Just Breathe";
+  const taskImage = useMemo(() => getRoutineImage(currentTaskItem?.imageKey), [currentTaskItem]);
 
   const styles = useMemo(() => getStyles(theme), [theme]);
   const sharedStyles = useMemo(() => getSharedStyles(theme), [theme]);
@@ -279,16 +274,22 @@ function HomeScreen() {
   useEffect(() => {
     if (!isAutoTheme) return;
     const isLightMode = themeName.startsWith("light-");
-    const newBaseTheme = TASK_THEME_MAP[currentTask] || "default";
+    const newBaseTheme = TASK_THEME_MAP[currentTaskItem?.imageKey || ""] || "default";
+
+    // Calculate new theme name
     let newThemeName: ThemeName = newBaseTheme;
+    // Don't prefix "light-" to "default" because lightThemes doesn't have "light-default"
     if (isLightMode && newBaseTheme !== "default") {
-      newThemeName = `light-${newBaseTheme}`;
+      newThemeName = `light-${newBaseTheme}` as ThemeName;
     }
+
+    // Calculate current base theme
     const currentBaseTheme = isLightMode ? themeName.substring(6) : themeName;
+
     if (newBaseTheme !== currentBaseTheme) {
       setThemeName(newThemeName);
     }
-  }, [currentTask, setThemeName, themeName, isAutoTheme]);
+  }, [currentTaskItem, setThemeName, themeName, isAutoTheme]);
 
 
   /* breathing animation */
@@ -385,10 +386,10 @@ function HomeScreen() {
           <Animated.View entering={FadeIn.duration(700).delay(120)} style={styles.card}>
             <Text style={styles.cardLabel}>Current Focus</Text>
             <Text style={styles.taskText} accessibilityRole="header">
-              {currentTask}
+              {currentTaskText}
             </Text>
 
-            <View style={styles.artworkWrapper} accessible accessibilityLabel={currentTask}>
+            <View style={styles.artworkWrapper} accessible accessibilityLabel={currentTaskText}>
               {taskImage ? (
                 <Animated.Image
                   source={taskImage}
@@ -423,7 +424,7 @@ function HomeScreen() {
           </Animated.View>
 
           <View style={styles.suggestionsWrapper}>
-            <AiSuggestions currentTask={currentTask} />
+            <AiSuggestions currentTask={currentTaskText} />
           </View>
         </View>
       </ScrollView>
