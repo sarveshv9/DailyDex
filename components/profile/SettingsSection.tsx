@@ -58,6 +58,7 @@ interface SettingsSectionProps {
   setSelectedSong: (index: number) => void;
   isMusicExpanded: boolean;
   setIsMusicExpanded: (value: boolean) => void;
+  userXp?: number; // Added to pass to Modal
 }
 
 interface SettingItemProps {
@@ -442,6 +443,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
   setSelectedSong,
   isMusicExpanded,
   setIsMusicExpanded,
+  userXp = 0,
 }) => {
   // Calculate notification count
   const notificationCount = useMemo(() => {
@@ -498,12 +500,14 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
           setIsMusicExpanded={setIsMusicExpanded}
         />
 
-        <AppearanceSetting
+        <SettingItem
           theme={theme}
-          isLightMode={isLightMode}
-          isAppearanceExpanded={isAppearanceExpanded}
-          setIsAppearanceExpanded={setIsAppearanceExpanded}
-          selectThemeMode={selectThemeMode}
+          iconName="color-palette-outline"
+          text="Theme Selection"
+          onPress={() => {
+            // We use the existing isAppearanceExpanded to trigger the Modal in parent profile
+            setIsAppearanceExpanded(true);
+          }}
         />
 
         <SettingItem

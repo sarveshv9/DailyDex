@@ -488,7 +488,18 @@ export default function TodoScreen() {
 
   const handleToggleTask = (id: string) =>
     setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
+      prev.map((t) => {
+        if (t.id === id) {
+          const newlyCompleted = !t.completed;
+          if (newlyCompleted) {
+            import("../../utils/stats").then(({ addTaskCompleted }) => {
+              addTaskCompleted();
+            });
+          }
+          return { ...t, completed: newlyCompleted };
+        }
+        return t;
+      })
     );
 
   const handleDeleteTask = (id: string) =>

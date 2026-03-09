@@ -20,8 +20,11 @@ import { ProfileCard } from "../../components/profile/ProfileCard";
 import { SettingModal } from "../../components/profile/SettingModal";
 import { SettingsSection } from "../../components/profile/SettingsSection";
 import { StatCard } from "../../components/profile/StatCard";
+import { StatsModal } from "../../components/profile/StatsModal";
+import { ThemeSelectionModal } from "../../components/profile/ThemeSelectionModal";
 import { useAudio } from "../../context/AudioContext";
 import { useTheme } from "../../context/ThemeContext";
+import { loadStats, UserStats } from "../../utils/stats";
 
 import {
   getSharedStyles,
@@ -208,24 +211,31 @@ export default function ProfileScreen() {
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [showPrivacySettings, setShowPrivacySettings] = useState(false);
   const [showPreferencesModal, setShowPreferencesModal] = useState(false);
+  const [showStatsModal, setShowStatsModal] = useState(false);
 
   // Profile setup state
   const [profileCreated, setProfileCreated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Real user stats from utils/stats
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
+
   useFocusEffect(
     useCallback(() => {
-      const checkProfile = async () => {
+      const loadInitialData = async () => {
         try {
           const profileSetup = await AsyncStorage.getItem("@zen_profile_setup_complete");
           setProfileCreated(!!profileSetup);
+
+          const statsData = await loadStats();
+          setUserStats(statsData);
         } catch (e) {
           setProfileCreated(false);
         } finally {
           setIsLoading(false);
         }
       };
-      checkProfile();
+      loadInitialData();
     }, [])
   );
 
@@ -410,12 +420,36 @@ export default function ProfileScreen() {
           />
         </View>
 
-        {/* Stats */}
+        {/* Real Stats */}
         <View style={styles.statsRow}>
-          <StatCard label="Completed" value={`${user.stats.followers}`} theme={theme} />
-          <StatCard label="Active" value={`${user.stats.following}`} theme={theme} />
-          <StatCard label="Streak" value={`${user.stats.projects}`} theme={theme} />
+          <StatCard label="XP" value={userStats?.xp || 0} theme={theme} />
+          <StatCard label="Tasks Done" value={userStats?.tasksCompleted || 0} theme={theme} />
+          <StatCard label="Best Streak" value={userStats?.bestStreak || 0} theme={theme} />
         </View>
+
+        <Pressable
+          style={{
+            backgroundColor: `${theme.colors.primary}15`,
+            borderRadius: theme.borderRadius.md,
+            padding: theme.spacing.md,
+            marginTop: theme.spacing.md,
+            alignItems: 'center',
+            flexDirection: 'row',
+            justifyContent: 'center',
+            gap: theme.spacing.sm,
+            borderWidth: 1,
+            borderColor: `${theme.colors.primary}30`
+          }}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setShowStatsModal(true);
+          }}
+        >
+          <Ionicons name="bar-chart" size={20} color={theme.colors.primary} />
+          <Text style={{ fontFamily: theme.fonts.bold, color: theme.colors.primary, fontSize: 16 }}>
+            View Detailed Stats
+          </Text>
+        </Pressable>
 
         {/* Settings */}
         <View style={styles.sectionsContainer}>
@@ -434,6 +468,7 @@ export default function ProfileScreen() {
             setSelectedSong={handleSelectSong}
             isMusicExpanded={isMusicExpanded}
             setIsMusicExpanded={setIsMusicExpanded}
+            userXp={userStats?.xp || 0}
           />
         </View>
 
@@ -448,6 +483,25 @@ export default function ProfileScreen() {
           <Text style={sharedStyles.primaryButtonText}>Logout</Text>
         </Pressable>
       </ScrollView>
+
+      {/* -------------------- Stats Modal -------------------- */}
+      <StatsModal
+        visible={showStatsModal}
+        onClose={() => setShowStatsModal(false)}
+        theme={theme}
+        stats={userStats}
+      />
+
+      {/* -------------------- Theme Selection Modal -------------------- */}
+      <ThemeSelectionModal
+        visible={isAppearanceExpanded}
+        onClose={() => setIsAppearanceExpanded(false)}
+        currentTheme={theme}
+        userXp={userStats?.xp || 0}
+        onSelectTheme={(tName) => {
+          setThemeName(tName as ThemeName);
+        }}
+      />
 
       {/* -------------------- Edit Profile Modal -------------------- */}
       <SettingModal

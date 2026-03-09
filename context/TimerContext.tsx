@@ -38,6 +38,13 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
             setIsActive(false);
             setIsCompleted(true);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+            // Analytics Integration
+            if (duration > 0) {
+                import("../utils/stats").then(({ addFocusSession }) => {
+                    addFocusSession(Math.floor(duration / 60));
+                });
+            }
         }
 
         return () => {

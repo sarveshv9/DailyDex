@@ -73,13 +73,13 @@ function CustomTabBar({
   const onHandlerStateChange = (event: any) => {
     if (event.nativeEvent.state === GestureState.END) {
       const { translationX, velocityX } = event.nativeEvent;
-      
+
       // Determine if we should switch tabs based on swipe distance or velocity
       const shouldSwitch = Math.abs(translationX) > tabWidth / 3 || Math.abs(velocityX) > 500;
-      
+
       if (shouldSwitch) {
         let targetIndex = state.index;
-        
+
         if (translationX > 0 || velocityX > 0) {
           // Swipe right - go to previous tab
           targetIndex = Math.max(0, state.index - 1);
@@ -87,7 +87,7 @@ function CustomTabBar({
           // Swipe left - go to next tab
           targetIndex = Math.min(state.routes.length - 1, state.index + 1);
         }
-        
+
         if (targetIndex !== state.index) {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           navigation.navigate(state.routes[targetIndex].name, { merge: true });
@@ -119,8 +119,8 @@ function CustomTabBar({
             }) => React.ReactNode;
 
             return (
-              <View 
-                key={`bg-${route.key}`} 
+              <View
+                key={`bg-${route.key}`}
                 style={[styles.backgroundIconContainer, { left: index * tabWidth, width: tabWidth }]}
               >
                 <View style={styles.iconWrapper}>

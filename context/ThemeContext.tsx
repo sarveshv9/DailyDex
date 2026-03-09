@@ -1,5 +1,5 @@
-// context/ThemeContext.tsx
-import React, { createContext, ReactNode, useContext, useMemo, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 import { lightThemes, Theme, ThemeName, themes } from '../constants/shared';
 
 export interface ThemeContextType {
@@ -11,22 +11,42 @@ export interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType>({
   theme: themes.default,
   themeName: 'default',
-  setThemeName: () => {},
+  setThemeName: () => { },
 });
 
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
-  const [themeName, setThemeName] = useState<ThemeName>('default');
+  const [themeName, setThemeNameState] = useState<ThemeName>('default');
+
+  useEffect(() => {
+    const loadTheme = async () => {
+      try {
+        const savedTheme = await AsyncStorage.getItem('@zen_theme');
+        if (savedTheme) {
+          setThemeNameState(savedTheme as ThemeName);
+        }
+      } catch (e) {
+        console.error('Failed to load theme', e);
+      }
+    };
+    loadTheme();
+  }, []);
+
+  const setThemeName = async (name: ThemeName) => {
+    setThemeNameState(name);
+    try {
+      await AsyncStorage.setItem('@zen_theme', name);
+    } catch (e) {
+      console.error('Failed to save theme', e);
+    }
+  };
 
   const theme = useMemo<Theme>(() => {
-    // if it's a light- variant, prefer the lightThemes entry
     if (typeof themeName === 'string' && themeName.startsWith('light-')) {
       const light = lightThemes[themeName];
       if (light) return light;
-      // fallback: use heavy theme corresponding to suffix
       const suffix = themeName.replace('light-', '');
       return themes[suffix as keyof typeof themes] || themes.default;
     }
-    // normal heavy theme
     return themes[themeName as keyof typeof themes] || themes.default;
   }, [themeName]);
 
