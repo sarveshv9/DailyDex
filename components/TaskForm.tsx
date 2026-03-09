@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   Animated,
   Dimensions,
+  Image,
   Modal,
   Platform,
   Pressable,
@@ -13,7 +14,7 @@ import {
 } from "react-native";
 import { Theme } from "../constants/shared";
 import { useTheme } from "../context/ThemeContext";
-import { FormData } from "../utils/utils"; // Corrected import path
+import { FormData, getRoutineImage } from "../utils/utils";
 import { SimpleTimePicker } from "./SimpleTimePicker";
 
 interface TaskFormProps {
@@ -25,7 +26,22 @@ interface TaskFormProps {
   onClose: () => void;
 }
 
-const { height: SCREEN_HEIGHT } = Dimensions.get("window");
+const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get("window");
+
+const TEMPLATES = [
+  { task: "Wake Up", description: "A wild day appears! Start gently.", imageKey: "wakeup" },
+  { task: "Hydrate", description: "It's super effective! Drink water.", imageKey: "water" },
+  { task: "Stretch", description: "Limber up to increase evasion.", imageKey: "yoga" },
+  { task: "Tea Time", description: "Restore PP and focus your mind.", imageKey: "tea_journal" },
+  { task: "Breakfast", description: "Boost Attack stat with nutrition.", imageKey: "breakfast" },
+  { task: "Study", description: "Gain XP in a new skill.", imageKey: "study" },
+  { task: "Lunch", description: "Refuel HP for the afternoon.", imageKey: "lunch" },
+  { task: "Walk", description: "Encounter nature in the tall grass.", imageKey: "walk" },
+  { task: "Reflect", description: "Check your progress badge.", imageKey: "reflect" },
+  { task: "Dinner", description: "Share a meal with your party.", imageKey: "dinner" },
+  { task: "Wind Down", description: "Lower defense, prepare to rest.", imageKey: "prepare_sleep" },
+  { task: "Sleep", description: "Save your game and recharge.", imageKey: "sleep" },
+];
 
 const TaskForm: React.FC<TaskFormProps> = ({
   visible,
@@ -80,6 +96,28 @@ const TaskForm: React.FC<TaskFormProps> = ({
             </Pressable>
           </View>
           <ScrollView style={styles.formScrollView} showsVerticalScrollIndicator={false}>
+            {!isEditing && (
+              <View style={styles.templatesSection}>
+                <Text style={styles.inputLabel}>Quick Templates</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.templatesList}>
+                  {TEMPLATES.map((tmpl, idx) => (
+                    <Pressable
+                      key={idx}
+                      style={styles.templateChip}
+                      onPress={() => {
+                        onUpdateField("task", tmpl.task);
+                        onUpdateField("description", tmpl.description);
+                        onUpdateField("imageKey", tmpl.imageKey);
+                      }}
+                    >
+                      <Image source={getRoutineImage(tmpl.imageKey)} style={styles.templateIcon} resizeMode="contain" />
+                      <Text style={styles.templateText}>{tmpl.task}</Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
             <View style={styles.inputSection}>
               <Text style={styles.inputLabel}>Time</Text>
               <Pressable
@@ -257,6 +295,34 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(0, 0, 0, 0.06)",
     minHeight: 50,
+  },
+  templatesSection: {
+    marginBottom: theme.spacing.xl,
+  },
+  templatesList: {
+    paddingVertical: 5,
+    gap: 12,
+  },
+  templateChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: `${theme.colors.primary}08`,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: `${theme.colors.primary}15`,
+    marginRight: 8,
+  },
+  templateIcon: {
+    width: 20,
+    height: 20,
+    marginRight: 6,
+  },
+  templateText: {
+    fontSize: 14,
+    color: theme.colors.primary,
+    fontWeight: "600",
   },
   descriptionInput: {
     minHeight: 100,

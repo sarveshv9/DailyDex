@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -240,8 +241,28 @@ const getStyles = (theme: Theme) =>
   });
 
 /* ---------- Component ---------- */
+const SETUP_KEY = "@zen_setup_complete";
+
 function HomeScreen() {
   const router = useRouter();
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    const checkSetup = async () => {
+      try {
+        const setupComplete = await AsyncStorage.getItem(SETUP_KEY);
+        if (!setupComplete) {
+          router.replace("/setup");
+        } else {
+          setIsReady(true);
+        }
+      } catch (e) {
+        setIsReady(true);
+      }
+    };
+    checkSetup();
+  }, [router]);
+
   const currentTime = useCurrentTime();
   const { theme, themeName, setThemeName } = useTheme();
 
@@ -285,6 +306,10 @@ function HomeScreen() {
   /* accessibility roles */
   const buttonRole: AccessibilityRole = "button";
 
+  if (!isReady) {
+    return <View style={{ flex: 1, backgroundColor: theme.colors.background }} />;
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
@@ -304,7 +329,7 @@ function HomeScreen() {
             >
               {formattedTime}
             </Text>
-  
+
           </Animated.View>
 
           <Animated.View entering={FadeIn.duration(700).delay(120)} style={styles.card}>

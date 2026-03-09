@@ -4,14 +4,38 @@ export interface RoutineItem {
   time: string;
   task: string;
   description: string;
-  image: any;
+  imageKey?: string;
   insertionOrder?: number;
 }
+
+export const ROUTINE_IMAGES: Record<string, any> = {
+  wakeup: require("../app/assets/images/pixel/wakeup.png"),
+  water: require("../app/assets/images/pixel/water.png"),
+  yoga: require("../app/assets/images/pixel/yoga.png"),
+  tea_journal: require("../app/assets/images/pixel/tea_journal.png"),
+  breakfast: require("../app/assets/images/pixel/breakfast.png"),
+  study: require("../app/assets/images/pixel/study.png"),
+  lunch: require("../app/assets/images/pixel/lunch.png"),
+  walk: require("../app/assets/images/pixel/walk.png"),
+  reflect: require("../app/assets/images/pixel/reflect.png"),
+  dinner: require("../app/assets/images/pixel/dinner.png"),
+  prepare_sleep: require("../app/assets/images/pixel/prepare_sleep.png"),
+  sleep: require("../app/assets/images/pixel/sleep.png"),
+  breathe: require("../app/assets/images/pixel/breathe.png"),
+};
+
+export const getRoutineImage = (key?: string) => {
+  if (key && ROUTINE_IMAGES[key]) {
+    return ROUTINE_IMAGES[key];
+  }
+  return ROUTINE_IMAGES["breathe"];
+};
 
 export interface FormData {
   time: string;
   task: string;
   description: string;
+  imageKey?: string;
 }
 
 export const parseTime = (

@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { Theme } from "../constants/shared";
 import { useTheme } from "../context/ThemeContext";
-import { RoutineItem } from "../utils/utils";
+import { getRoutineImage, RoutineItem } from "../utils/utils";
 
 interface TaskModalProps {
   visible: boolean;
@@ -100,7 +100,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
             <View style={styles.imageWrapper}>
               <View style={styles.glow} />
               <Image
-                source={task.image}
+                source={getRoutineImage(task.imageKey)}
                 style={styles.image}
                 resizeMode="contain"
               />

@@ -1,5 +1,6 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Animated, Dimensions, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -16,19 +17,21 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 /* Initial routine preserved */
 const INITIAL_ROUTINE: RoutineItem[] = [
-  { id: "1", time: "6:00 AM", task: "Wake Up", description: "A wild day appears! Start gently.", image: require("./assets/images/pixel/wakeup.png"), insertionOrder: 1 },
-  { id: "2", time: "6:30 AM", task: "Hydrate", description: "It's super effective! Drink water.", image: require("./assets/images/pixel/water.png"), insertionOrder: 2 },
-  { id: "3", time: "7:00 AM", task: "Stretch", description: "Limber up to increase evasion.", image: require("./assets/images/pixel/yoga.png"), insertionOrder: 3 },
-  { id: "4", time: "8:00 AM", task: "Tea Time", description: "Restore PP and focus your mind.", image: require("./assets/images/pixel/tea_journal.png"), insertionOrder: 4 },
-  { id: "5", time: "9:00 AM", task: "Breakfast", description: "Boost Attack stat with nutrition.", image: require("./assets/images/pixel/breakfast.png"), insertionOrder: 5 },
-  { id: "6", time: "10:00 AM", task: "Study", description: "Gain XP in a new skill.", image: require("./assets/images/pixel/study.png"), insertionOrder: 6 },
-  { id: "7", time: "1:00 PM", task: "Lunch", description: "Refuel HP for the afternoon.", image: require("./assets/images/pixel/lunch.png"), insertionOrder: 7 },
-  { id: "8", time: "3:00 PM", task: "Walk", description: "Encounter nature in the tall grass.", image: require("./assets/images/pixel/walk.png"), insertionOrder: 8 },
-  { id: "9", time: "5:00 PM", task: "Reflect", description: "Check your progress badge.", image: require("./assets/images/pixel/reflect.png"), insertionOrder: 9 },
-  { id: "10", time: "7:00 PM", task: "Dinner", description: "Share a meal with your party.", image: require("./assets/images/pixel/dinner.png"), insertionOrder: 10 },
-  { id: "11", time: "9:00 PM", task: "Wind Down", description: "Lower defense, prepare to rest.", image: require("./assets/images/pixel/prepare_sleep.png"), insertionOrder: 11 },
-  { id: "12", time: "10:00 PM", task: "Sleep", description: "Save your game and recharge.", image: require("./assets/images/pixel/sleep.png"), insertionOrder: 12 },
+  { id: "1", time: "6:00 AM", task: "Wake Up", description: "A wild day appears! Start gently.", imageKey: "wakeup", insertionOrder: 1 },
+  { id: "2", time: "6:30 AM", task: "Hydrate", description: "It's super effective! Drink water.", imageKey: "water", insertionOrder: 2 },
+  { id: "3", time: "7:00 AM", task: "Stretch", description: "Limber up to increase evasion.", imageKey: "yoga", insertionOrder: 3 },
+  { id: "4", time: "8:00 AM", task: "Tea Time", description: "Restore PP and focus your mind.", imageKey: "tea_journal", insertionOrder: 4 },
+  { id: "5", time: "9:00 AM", task: "Breakfast", description: "Boost Attack stat with nutrition.", imageKey: "breakfast", insertionOrder: 5 },
+  { id: "6", time: "10:00 AM", task: "Study", description: "Gain XP in a new skill.", imageKey: "study", insertionOrder: 6 },
+  { id: "7", time: "1:00 PM", task: "Lunch", description: "Refuel HP for the afternoon.", imageKey: "lunch", insertionOrder: 7 },
+  { id: "8", time: "3:00 PM", task: "Walk", description: "Encounter nature in the tall grass.", imageKey: "walk", insertionOrder: 8 },
+  { id: "9", time: "5:00 PM", task: "Reflect", description: "Check your progress badge.", imageKey: "reflect", insertionOrder: 9 },
+  { id: "10", time: "7:00 PM", task: "Dinner", description: "Share a meal with your party.", imageKey: "dinner", insertionOrder: 10 },
+  { id: "11", time: "9:00 PM", task: "Wind Down", description: "Lower defense, prepare to rest.", imageKey: "prepare_sleep", insertionOrder: 11 },
+  { id: "12", time: "10:00 PM", task: "Sleep", description: "Save your game and recharge.", imageKey: "sleep", insertionOrder: 12 },
 ];
+
+const STORAGE_KEY = "@zen_routine";
 
 /* -------------------- Modal Hook -------------------- */
 const useModalAnimation = () => {
@@ -83,6 +86,36 @@ export default function RoutineScreen() {
   const { animatedStyle, openAnimation, closeAnimation } = useModalAnimation();
   const sortedRoutineItems = useMemo(() => sortRoutineItems(routineItems), [routineItems]);
 
+  /* -------------------- Data Fetching -------------------- */
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const stored = await AsyncStorage.getItem(STORAGE_KEY);
+        if (stored !== null) {
+          const parsed = JSON.parse(stored);
+          setRoutineItems(parsed);
+          setNextInsertionOrder(parsed.length > 0 ? Math.max(...parsed.map((i: RoutineItem) => i.insertionOrder || 0)) + 1 : 1);
+        } else {
+          // First launch
+          setRoutineItems(INITIAL_ROUTINE);
+          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_ROUTINE));
+        }
+      } catch (e) {
+        console.error("Failed to load routines.", e);
+      }
+    };
+    loadData();
+  }, []);
+
+  const saveRoutines = async (newItems: RoutineItem[]) => {
+    try {
+      setRoutineItems(newItems);
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newItems));
+    } catch (e) {
+      console.error("Failed to save routines.", e);
+    }
+  };
+
   /* -------------------- Handlers -------------------- */
   const openModal = useCallback((task: RoutineItem, x: number, y: number) => {
     setSelectedTask(task);
@@ -122,23 +155,22 @@ export default function RoutineScreen() {
     }
 
     if (editingId) {
-      setRoutineItems((prev) =>
-        prev.map((item) => (item.id === editingId ? { ...item, time: time.trim(), task: task.trim(), description: description.trim() } : item))
-      );
+      const updated = routineItems.map((item) => (item.id === editingId ? { ...item, time: time.trim(), task: task.trim(), description: description.trim(), imageKey: formData.imageKey || item.imageKey || "breathe" } : item));
+      saveRoutines(updated);
     } else {
       const newItem: RoutineItem = {
         id: Date.now().toString(),
         time: time.trim(),
         task: task.trim(),
         description: description.trim(),
-        image: DEFAULT_IMAGE,
+        imageKey: formData.imageKey || "breathe",
         insertionOrder: nextInsertionOrder,
       };
-      setRoutineItems((prev) => [...prev, newItem]);
+      saveRoutines([...routineItems, newItem]);
       setNextInsertionOrder((prev) => prev + 1);
     }
     closeForm();
-  }, [formData, editingId, nextInsertionOrder, closeForm]);
+  }, [formData, editingId, nextInsertionOrder, closeForm, routineItems, saveRoutines]);
 
   const handleDelete = useCallback(() => {
     if (!selectedTask) return;
@@ -146,7 +178,8 @@ export default function RoutineScreen() {
 
     if (Platform.OS === 'web') {
       if (window.confirm(`Transfer ${taskToDelete.task} away?`)) {
-        setRoutineItems((currentItems) => currentItems.filter((item) => item.id !== taskToDelete.id));
+        const remaining = routineItems.filter((item) => item.id !== taskToDelete.id);
+        saveRoutines(remaining);
         setTimeout(() => closeModal(), 50);
       }
     } else {
@@ -156,7 +189,8 @@ export default function RoutineScreen() {
           text: "Transfer",
           style: "destructive",
           onPress: () => {
-            setRoutineItems((currentItems) => currentItems.filter((item) => item.id !== taskToDelete.id));
+            const remaining = routineItems.filter((item) => item.id !== taskToDelete.id);
+            saveRoutines(remaining);
             setTimeout(() => closeModal(), 50);
           },
         },
@@ -188,13 +222,20 @@ export default function RoutineScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.cardList}>
-          {sortedRoutineItems.map((item) => (
-            <RoutineCard
-              key={item.id}
-              item={item}
-              onPress={openModal}
-            />
-          ))}
+          {sortedRoutineItems.length === 0 ? (
+            <View style={styles.emptyStateContainer}>
+              <Text style={styles.emptyStateTitle}>Your deck is empty!</Text>
+              <Text style={styles.emptyStateSub}>Tap the Pokéball below to start building your routine.</Text>
+            </View>
+          ) : (
+            sortedRoutineItems.map((item) => (
+              <RoutineCard
+                key={item.id}
+                item={item}
+                onPress={openModal}
+              />
+            ))
+          )}
         </View>
 
         {/* Bottom padding for scrolling past FAB */}
@@ -358,4 +399,25 @@ const getStyles = (theme: Theme) =>
     fabPressed: {
       transform: [{ scale: 0.95 }],
     },
+    /* Empty State */
+    emptyStateContainer: {
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 60,
+      paddingHorizontal: 20,
+    },
+    emptyStateTitle: {
+      fontSize: 20,
+      fontFamily: theme.fonts.bold,
+      color: theme.colors.primary,
+      marginBottom: 8,
+    },
+    emptyStateSub: {
+      fontSize: 15,
+      fontFamily: theme.fonts.medium,
+      color: theme.colors.secondary,
+      textAlign: "center",
+      lineHeight: 22,
+      opacity: 0.8,
+    }
   });
