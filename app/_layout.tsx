@@ -8,6 +8,12 @@ import { ThemeProvider } from "../context/ThemeContext";
 
 // 1. ADD THIS IMPORT
 import { AudioProvider } from "../context/AudioContext";
+import { TimerProvider } from "../context/TimerContext";
+
+// import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// // Temporary code to clear all data
+// AsyncStorage.clear().then(() => console.log('App Data Cleared!'));
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -25,12 +31,15 @@ export default function RootLayout() {
     <ThemeProvider>
       {/* 2. WRAP YOUR STACK WITH AUDIOPROVIDER */}
       <AudioProvider>
-        <StatusBar style="dark" />
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="routine" options={{ headerShown: false }} />
-          <Stack.Screen name="setup" options={{ headerShown: false }} />
-        </Stack>
+        <TimerProvider>
+          <StatusBar style="dark" />
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="routine" options={{ headerShown: false }} />
+            <Stack.Screen name="setup" options={{ headerShown: false }} />
+            <Stack.Screen name="focus" options={{ headerShown: false, presentation: "modal" }} />
+          </Stack>
+        </TimerProvider>
       </AudioProvider>
     </ThemeProvider>
   );

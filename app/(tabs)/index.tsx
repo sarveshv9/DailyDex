@@ -1,9 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AccessibilityRole,
   Dimensions,
+  Image,
   ImageSourcePropType,
   Platform,
   Pressable,
@@ -246,22 +247,23 @@ const SETUP_KEY = "@zen_setup_complete";
 function HomeScreen() {
   const router = useRouter();
   const [isReady, setIsReady] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const checkSetup = async () => {
-      try {
-        const setupComplete = await AsyncStorage.getItem(SETUP_KEY);
-        if (!setupComplete) {
-          router.replace("/setup");
-        } else {
-          setIsReady(true);
+  useFocusEffect(
+    useCallback(() => {
+      const checkSetup = async () => {
+        try {
+          const setupComplete = await AsyncStorage.getItem(SETUP_KEY);
+          setIsReady(!!setupComplete);
+        } catch (e) {
+          setIsReady(false);
+        } finally {
+          setIsLoading(false);
         }
-      } catch (e) {
-        setIsReady(true);
-      }
-    };
-    checkSetup();
-  }, [router]);
+      };
+      checkSetup();
+    }, [])
+  );
 
   const currentTime = useCurrentTime();
   const { theme, themeName, setThemeName } = useTheme();
@@ -306,8 +308,54 @@ function HomeScreen() {
   /* accessibility roles */
   const buttonRole: AccessibilityRole = "button";
 
-  if (!isReady) {
+  if (isLoading) {
     return <View style={{ flex: 1, backgroundColor: theme.colors.background }} />;
+  }
+
+  if (!isReady) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 20 }}>
+          <View style={styles.container}>
+            <Animated.View entering={FadeIn.duration(700).delay(120)} style={styles.card}>
+              <Text style={styles.cardLabel}>Welcome to Zen</Text>
+              <Text style={styles.taskText} accessibilityRole="header">
+                Setup Your Routine
+              </Text>
+
+              <View style={styles.artworkWrapper} accessible accessibilityLabel="Setup your routine">
+                <Image
+                  source={require("../assets/images/pixel/study.png")}
+                  style={styles.taskImage}
+                  resizeMode="contain"
+                  accessibilityIgnoresInvertColors
+                />
+              </View>
+
+              <Text style={styles.quote}>"A peaceful day begins with a plan."</Text>
+
+              <Pressable
+                accessibilityRole={buttonRole}
+                accessibilityLabel="Create Routine"
+                hitSlop={styles.touchableHitSlop}
+                android_ripple={{ color: "rgba(0,0,0,0.06)" }}
+                style={({ pressed }) => [
+                  {
+                    backgroundColor: theme.colors.primary,
+                    opacity: pressed ? 0.92 : 1,
+                    transform: [{ scale: pressed ? 0.995 : 1 }],
+                  },
+                  styles.primaryButton,
+                ]}
+                onPress={() => router.push("/setup")}
+              >
+                <Text style={styles.primaryButtonText}>Create Routine</Text>
+              </Pressable>
+            </Animated.View>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   return (

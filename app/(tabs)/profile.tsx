@@ -1,7 +1,9 @@
 // app/(tabs)/profile.tsx
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
-import React, { useMemo, useState } from "react";
+import { useFocusEffect } from "expo-router";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   Alert,
   Modal,
@@ -207,6 +209,26 @@ export default function ProfileScreen() {
   const [showPrivacySettings, setShowPrivacySettings] = useState(false);
   const [showPreferencesModal, setShowPreferencesModal] = useState(false);
 
+  // Profile setup state
+  const [profileCreated, setProfileCreated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      const checkProfile = async () => {
+        try {
+          const profileSetup = await AsyncStorage.getItem("@zen_profile_setup_complete");
+          setProfileCreated(!!profileSetup);
+        } catch (e) {
+          setProfileCreated(false);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      checkProfile();
+    }, [])
+  );
+
   // Profile state (keeps your existing defaults)
   const [user, setUser] = useState({
     name: "Ash Ketchum",
@@ -317,21 +339,65 @@ export default function ProfileScreen() {
     }));
   };
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     setIsEditingProfile(false);
     setEditProfileModalOpen(false);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      await AsyncStorage.setItem("@zen_profile_setup_complete", "true");
+      setProfileCreated(true);
+    } catch (e) {
+      console.error("Failed to save profile flag", e);
+    }
     console.log("Profile Saved:", user);
   };
 
   /* -------------------- Render -------------------- */
+  if (isLoading) {
+    return <View style={{ flex: 1, backgroundColor: theme.colors.background }} />;
+  }
+
+  if (!profileCreated) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 20 }}>
+          <View style={[styles.profileCardWrapper, { alignItems: "center", paddingVertical: 40, width: "100%", maxWidth: 400 }]}>
+            <Text style={[styles.screenTitle, { marginBottom: 16 }]}>Welcome to Zen</Text>
+            <Text style={{ fontFamily: theme.fonts.medium, color: theme.colors.secondary, textAlign: "center", marginBottom: 32 }}>
+              Create your profile to personalize your experience and track your progress.
+            </Text>
+
+            <Pressable
+              style={({ pressed }) => [
+                sharedStyles.primaryButton,
+                { opacity: pressed ? 0.9 : 1, width: "100%" }
+              ]}
+              onPress={() => setEditProfileModalOpen(true)}
+            >
+              <Text style={sharedStyles.primaryButtonText}>Create Profile</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {/* -------------------- Edit Profile Modal -------------------- */}
+        <SettingModal
+          visible={editProfileModalOpen}
+          onClose={() => setEditProfileModalOpen(false)}
+          theme={theme}
+          user={user}
+          setUser={setUser}
+          handleSaveProfile={handleSaveProfile}
+        />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-
 
         {/* Profile Card */}
         <View style={styles.profileCardWrapper}>
@@ -401,7 +467,7 @@ export default function ProfileScreen() {
       >
         <Pressable style={styles.modalBackdrop} onPress={() => setShowNotificationSettings(false)}>
           <Pressable
-            onPress={() => {}}
+            onPress={() => { }}
             style={styles.modalCard}
             android_ripple={{ color: "rgba(0,0,0,0.02)" }}
           >
@@ -449,7 +515,7 @@ export default function ProfileScreen() {
         onRequestClose={() => setShowPrivacySettings(false)}
       >
         <Pressable style={styles.modalBackdrop} onPress={() => setShowPrivacySettings(false)}>
-          <Pressable onPress={() => {}} style={styles.modalCard} android_ripple={{ color: "rgba(0,0,0,0.02)" }}>
+          <Pressable onPress={() => { }} style={styles.modalCard} android_ripple={{ color: "rgba(0,0,0,0.02)" }}>
             <View style={styles.modalHeaderRow}>
               <Text style={styles.modalTitle}>Privacy & Security</Text>
               <Pressable onPress={() => setShowPrivacySettings(false)} hitSlop={8}>
@@ -525,7 +591,7 @@ export default function ProfileScreen() {
         onRequestClose={() => setShowPreferencesModal(false)}
       >
         <Pressable style={styles.modalBackdrop} onPress={() => setShowPreferencesModal(false)}>
-          <Pressable onPress={() => {}} style={styles.modalCard}>
+          <Pressable onPress={() => { }} style={styles.modalCard}>
             <View style={styles.modalHeaderRow}>
               <Text style={styles.modalTitle}>Preferences</Text>
               <Pressable onPress={() => setShowPreferencesModal(false)} hitSlop={8}>

@@ -1,5 +1,6 @@
 // components/profile/SettingModal.tsx
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import React, { useState } from 'react';
 import { Alert, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Theme } from '../../constants/shared';
@@ -24,9 +25,10 @@ export type SettingModalProps = {
   theme: Theme;
   user: UserShape;
   setUser: React.Dispatch<React.SetStateAction<UserShape>>;
+  handleSaveProfile?: () => void;
 };
 
-export const SettingModal = ({ visible, onClose, theme, user, setUser }: SettingModalProps) => {
+export const SettingModal = ({ visible, onClose, theme, user, setUser, handleSaveProfile }: SettingModalProps) => {
   const [name, setName] = useState(user.name);
   const [role, setRole] = useState(user.role);
 
@@ -34,15 +36,20 @@ export const SettingModal = ({ visible, onClose, theme, user, setUser }: Setting
     // This spread operator (...) correctly preserves all fields
     // like email, bio, stats, etc., while only updating name and role.
     setUser(prev => ({ ...prev, name, role }));
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert('Saved', 'Profile updated');
-    onClose();
+    if (handleSaveProfile) {
+      handleSaveProfile();
+    } else {
+      onClose();
+    }
   };
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={{
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: 'rgba(0,0,0,0.35)',
         justifyContent: 'center',
         alignItems: 'center'
       }}>
@@ -63,7 +70,10 @@ export const SettingModal = ({ visible, onClose, theme, user, setUser }: Setting
             borderBottomColor: theme.colors.background
           }}>
             <Text style={{ fontSize: 18, fontFamily: theme.fonts.bold, color: theme.colors.primary }}>Edit Profile</Text>
-            <TouchableOpacity onPress={onClose}>
+            <TouchableOpacity onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              onClose();
+            }}>
               <Ionicons name="close" size={22} color={theme.colors.primary} />
             </TouchableOpacity>
           </View>

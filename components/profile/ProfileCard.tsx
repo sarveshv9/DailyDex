@@ -1,5 +1,6 @@
 // components/profile/ProfileCard.tsx
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import React, { useMemo } from "react";
 import {
   StyleSheet,
@@ -35,7 +36,10 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
       <TouchableOpacity
         style={styles.editButton}
         activeOpacity={0.7}
-        onPress={() => setIsEditingProfile(!isEditingProfile)}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          setIsEditingProfile(!isEditingProfile);
+        }}
       >
         <Ionicons
           name={isEditingProfile ? "checkmark" : "pencil"}
@@ -114,9 +118,9 @@ const getStyles = (theme: Theme) =>
       borderRadius: theme.borderRadius.lg,
       elevation: 6,
       shadowColor: "#000",
-      shadowOpacity: 0.1,
-      shadowRadius: 12,
-      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.06,
+      shadowRadius: 14,
+      shadowOffset: { width: 0, height: 6 },
       position: "relative",
       alignItems: "center",
     },

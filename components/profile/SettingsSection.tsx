@@ -1,19 +1,11 @@
 // components/profile/SettingsSection.tsx
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useMemo } from 'react';
-import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { SONG_LIST } from '../../constants/songs';
 
 // --- Constants ---
-const DEFAULT_COLORS = {
-  primary: '#007AFF',
-  secondary: '#8E8E93',
-  text: '#000',
-  card: '#fff',
-  border: '#E5E5EA',
-} as const;
-
 const APPEARANCE_MODES = {
   LIGHT: 'light',
   HEAVY: 'heavy',
@@ -23,16 +15,30 @@ const APPEARANCE_MODES = {
 type IconName = keyof typeof Ionicons.glyphMap;
 type AppearanceMode = typeof APPEARANCE_MODES[keyof typeof APPEARANCE_MODES];
 
-interface ThemeColors {
-  primary?: string;
-  secondary?: string;
-  text?: string;
-  card?: string;
-  border?: string;
-}
-
 interface Theme {
-  colors: ThemeColors;
+  colors: {
+    primary: string;
+    secondary: string;
+    background: string;
+    white: string;
+  };
+  spacing: {
+    xs: number;
+    sm: number;
+    md: number;
+    lg: number;
+    xl: number;
+  };
+  borderRadius: {
+    sm: number;
+    md: number;
+    lg: number;
+  };
+  fonts: {
+    regular: string;
+    medium: string;
+    bold: string;
+  };
 }
 
 interface SettingsSectionProps {
@@ -84,10 +90,6 @@ interface OptionItemProps {
 }
 
 // --- Utility Functions ---
-export const getThemeColor = (theme: Theme, key: keyof ThemeColors): string => {
-  return theme.colors[key] || DEFAULT_COLORS[key];
-};
-
 const createColorWithOpacity = (color: string, opacity: string): string => {
   return `${color}${opacity}`;
 };
@@ -105,10 +107,11 @@ const SettingItem = React.memo<SettingItemProps>(({
   valueText,
   isLast = false,
 }) => {
-  const primaryColor = getThemeColor(theme, 'primary');
-  const secondaryColor = getThemeColor(theme, 'secondary');
-  const textColor = getThemeColor(theme, 'text');
-  const cardColor = getThemeColor(theme, 'card');
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const primaryColor = theme.colors.primary;
+  const secondaryColor = theme.colors.secondary;
+  const textColor = theme.colors.primary;
+  const cardColor = theme.colors.white;
 
   const handlePress = useCallback(() => {
     console.log(`SettingItem "${text}" pressed`);
@@ -176,11 +179,12 @@ const ExpandableSetting = React.memo<ExpandableSettingProps>(({
   isLast = false,
   children,
 }) => {
-  const primaryColor = getThemeColor(theme, 'primary');
-  const secondaryColor = getThemeColor(theme, 'secondary');
-  const textColor = getThemeColor(theme, 'text');
-  const cardColor = getThemeColor(theme, 'card');
-  const borderColor = getThemeColor(theme, 'border');
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const primaryColor = theme.colors.primary;
+  const secondaryColor = theme.colors.secondary;
+  const textColor = theme.colors.primary;
+  const cardColor = theme.colors.white;
+  const borderColor = `${theme.colors.secondary}20`;
 
   return (
     <View style={[
@@ -222,7 +226,7 @@ const ExpandableSetting = React.memo<ExpandableSettingProps>(({
       </TouchableOpacity>
 
       {isExpanded && (
-        <View 
+        <View
           style={[styles.expandedContent, { borderTopColor: borderColor }]}
           accessibilityRole="list"
         >
@@ -246,8 +250,9 @@ const OptionItem = React.memo<OptionItemProps>(({
   isFirst = false,
   isLast = false,
 }) => {
-  const primaryColor = getThemeColor(theme, 'primary');
-  const textColor = getThemeColor(theme, 'text');
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const primaryColor = theme.colors.primary;
+  const textColor = theme.colors.primary;
 
   return (
     <TouchableOpacity
@@ -267,9 +272,9 @@ const OptionItem = React.memo<OptionItemProps>(({
         style={[
           styles.optionText,
           { color: textColor },
-          isSelected && { 
-            color: primaryColor, 
-            fontWeight: '600' 
+          isSelected && {
+            color: primaryColor,
+            fontWeight: '600'
           },
         ]}
         numberOfLines={1}
@@ -277,11 +282,11 @@ const OptionItem = React.memo<OptionItemProps>(({
         {label}
       </Text>
       {isSelected && (
-        <Ionicons 
-          name="checkmark" 
-          size={20} 
+        <Ionicons
+          name="checkmark"
+          size={20}
           color={primaryColor}
-          accessibilityLabel="Selected" 
+          accessibilityLabel="Selected"
         />
       )}
     </TouchableOpacity>
@@ -443,9 +448,11 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
     return Object.values(settings.notifications).filter(Boolean).length;
   }, [settings.notifications]);
 
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+
   // Get theme colors
-  const textColor = useMemo(() => getThemeColor(theme, 'text'), [theme]);
-  const cardColor = useMemo(() => getThemeColor(theme, 'card'), [theme]);
+  const textColor = useMemo(() => theme.colors.primary, [theme]);
+  const cardColor = useMemo(() => theme.colors.white, [theme]);
 
   // Event handlers - All fully functional and wired
   const handleNotificationPress = useCallback(() => {
@@ -527,43 +534,37 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
 
 // --- Styles ---
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: Theme) => StyleSheet.create({
   container: {
-    paddingHorizontal: 16,
-    paddingVertical: 24,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.lg,
   },
   sectionTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 16,
+    fontSize: 20,
+    fontFamily: 'SF-Pro-Rounded-Bold',
+    marginBottom: theme.spacing.md,
     letterSpacing: 0.3,
   },
   settingsCard: {
-    borderRadius: 12,
+    borderRadius: theme.borderRadius.lg,
     overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 14,
+    elevation: 6,
   },
   settingItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
     minHeight: 56,
   },
   settingItemBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#E5E5EA',
+    borderBottomColor: `${theme.colors.secondary}20`,
   },
   settingItemLeft: {
     flexDirection: 'row',
@@ -581,57 +582,57 @@ const styles = StyleSheet.create({
   iconContainer: {
     width: 36,
     height: 36,
-    borderRadius: 8,
+    borderRadius: theme.borderRadius.sm,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
   settingText: {
     fontSize: 16,
-    fontWeight: '500',
+    fontFamily: theme.fonts.medium,
     letterSpacing: 0.2,
     flexShrink: 1,
   },
   valueText: {
     fontSize: 15,
-    fontWeight: '400',
+    fontFamily: theme.fonts.regular,
     maxWidth: 120,
   },
   badge: {
-    paddingHorizontal: 10,
+    paddingHorizontal: theme.spacing.sm,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: theme.borderRadius.md,
   },
   badgeText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: theme.fonts.bold,
     letterSpacing: 0.3,
   },
   expandableContainer: {
     overflow: 'hidden',
   },
   expandedContent: {
-    paddingTop: 8,
-    paddingBottom: 8,
+    paddingTop: theme.spacing.sm,
+    paddingBottom: theme.spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   optionItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
+    paddingVertical: theme.spacing.md,
     paddingHorizontal: 52,
     minHeight: 48,
   },
   optionItemFirst: {
-    paddingTop: 8,
+    paddingTop: theme.spacing.sm,
   },
   optionItemLast: {
-    paddingBottom: 8,
+    paddingBottom: theme.spacing.sm,
   },
   optionText: {
     fontSize: 15,
-    fontWeight: '400',
+    fontFamily: theme.fonts.regular,
     letterSpacing: 0.2,
     flex: 1,
   },
