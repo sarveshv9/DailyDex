@@ -29,16 +29,15 @@ export const requestCalendarPermissions = async (): Promise<boolean> => {
     }
 };
 
-export const getTodaysCalendarEvents = async (): Promise<CalendarEvent[]> => {
+export const getCalendarEventsForDate = async (targetDate: Date = new Date()): Promise<CalendarEvent[]> => {
     try {
         const hasPermission = await requestCalendarPermissions();
         if (!hasPermission) return [];
 
         const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
 
-        const today = new Date();
-        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
-        const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+        const startOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0);
+        const endOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 23, 59, 59);
 
         const events = await Calendar.getEventsAsync(
             calendars.map((c) => c.id),

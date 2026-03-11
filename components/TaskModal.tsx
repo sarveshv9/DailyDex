@@ -91,6 +91,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
               ],
             },
           ]}
+          testID="task-modal-card"
         >
           <Pressable onPress={() => { }} style={{ alignItems: "center" }}>
             {/* Handle / Drag Indicator */}
@@ -109,7 +110,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
             {/* Task Info */}
             <View style={styles.info}>
               <Text style={styles.time}>{task.time}</Text>
-              <Text style={styles.title}>{task.task}</Text>
+              <Text style={styles.title} testID="task-modal-title">{task.task}</Text>
               <Text style={styles.description}>{task.description}</Text>
             </View>
 
@@ -123,6 +124,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 ]}
                 android_ripple={{ color: "rgba(0,0,0,0.06)" }}
                 onPress={onEdit}
+                testID="task-modal-edit-btn"
               >
                 <Text style={styles.actionText}>✏️ Edit</Text>
               </Pressable>

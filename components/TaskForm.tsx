@@ -82,6 +82,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
       <View style={styles.formModalOverlay}>
         <Animated.View
           style={[styles.enhancedFormContent, { transform: [{ translateY: slideAnim }] }]}
+          testID="task-form-content"
         >
           <View style={styles.formHandle} />
           <View style={styles.formHeader}>
@@ -91,7 +92,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
             <Text style={styles.enhancedFormTitle}>
               {isEditing ? "Edit Task" : "New Task"}
             </Text>
-            <Pressable onPress={onSave} style={styles.formSaveButton}>
+            <Pressable onPress={onSave} style={styles.formSaveButton} testID="task-form-save-btn">
               <Text style={styles.formSaveText}>Save</Text>
             </Pressable>
           </View>

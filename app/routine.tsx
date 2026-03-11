@@ -1,21 +1,36 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { router } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, Animated, Dimensions, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Alert,
+  Animated,
+  Dimensions,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import CalendarEventCard from "../components/CalendarEventCard";
-import RoutineCard from "../components/RoutineCard";
+import { DayTimelineView } from "../components/DayTimelineView";
 import TaskForm from "../components/TaskForm";
 import TaskModal from "../components/TaskModal";
-import { getSharedStyles, Theme } from "../constants/shared";
+import { TimelineEventCard } from "../components/TimelineEventCard";
+import { Theme } from "../constants/shared";
 import { useTheme } from "../context/ThemeContext";
-import { CalendarEvent, getTodaysCalendarEvents } from "../utils/calendar";
+import { CalendarEvent, getCalendarEventsForDate } from "../utils/calendar";
 import { FormData, RoutineItem, sortRoutineItems, timeToMinutes } from "../utils/utils";
 
 /* -------------------- Assets & Constants -------------------- */
-const DEFAULT_IMAGE = require("./assets/images/pixel/breathe.png");
+
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+
+/** Height of the timeline panel when fully expanded.
+ *  BODY_HEIGHT(320) + day header(~55) + peek card(~90) + padding(~30) */
+const PANEL_EXPANDED_HEIGHT = 510;
 
 /* Initial routine preserved */
 const INITIAL_ROUTINE: RoutineItem[] = [
@@ -75,7 +90,6 @@ const useModalAnimation = () => {
 export default function RoutineScreen() {
   const { theme } = useTheme();
   const styles = useMemo(() => getStyles(theme), [theme]);
-  const sharedStyles = useMemo(() => getSharedStyles(theme), [theme]);
 
   const [routineItems, setRoutineItems] = useState<RoutineItem[]>(INITIAL_ROUTINE);
   const [selectedTask, setSelectedTask] = useState<RoutineItem | null>(null);
@@ -85,9 +99,116 @@ export default function RoutineScreen() {
   const [formData, setFormData] = useState<FormData>({ time: "", task: "", description: "" });
   const [nextInsertionOrder, setNextInsertionOrder] = useState(13);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+
+  /* -------------------- Timeline panel state -------------------- */
+  const [panelOpen, setPanelOpen] = useState(false);
+  const panelAnim = useRef(new Animated.Value(0)).current;
+
+  // Track scroll position to only trigger swipe-down from the top
+  const scrollOffsetRef = useRef(0);
+  // Track last known drag direction from scroll events
+  const lastScrollY = useRef(0);
+
+  const openPanel = useCallback(() => {
+    setPanelOpen(true);
+    Animated.spring(panelAnim, {
+      toValue: 1,
+      useNativeDriver: false,
+      tension: 60,
+      friction: 12,
+    }).start();
+  }, [panelAnim]);
+
+  const closePanel = useCallback(() => {
+    Animated.spring(panelAnim, {
+      toValue: 0,
+      useNativeDriver: false,
+      tension: 80,
+      friction: 14,
+    }).start(() => setPanelOpen(false));
+  }, [panelAnim]);
+
+  const togglePanel = useCallback(() => {
+    if (panelOpen) closePanel();
+    else openPanel();
+  }, [panelOpen, openPanel, closePanel]);
+
+  // Animated panel height (fixed expanded height for the DayTimelineView part)
+  const panelHeight = panelAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [PANEL_EXPANDED_HEIGHT, PANEL_EXPANDED_HEIGHT], // Keep it constant for now, or use to hide it if needed
+  });
+
+  // Animation for the detail list expansion
+  const listAnim = useRef(new Animated.Value(1)).current;
+  const [listOpen, setListOpen] = useState(true);
+
+  const openList = useCallback(() => {
+    setListOpen(true);
+    Animated.spring(listAnim, {
+      toValue: 1,
+      useNativeDriver: false,
+      tension: 60,
+      friction: 12,
+    }).start();
+  }, [listAnim]);
+
+  const closeList = useCallback(() => {
+    Animated.spring(listAnim, {
+      toValue: 0,
+      useNativeDriver: false,
+      tension: 80,
+      friction: 14,
+    }).start(() => setListOpen(false));
+  }, [listAnim]);
+
+  const toggleList = useCallback(() => {
+    if (listOpen) closeList();
+    else openList();
+  }, [listOpen, openList, closeList]);
+
+  const scrollY = useRef(new Animated.Value(0)).current;
+
+  const listTranslateY = listAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [SCREEN_HEIGHT, 0],
+  });
+
+  const collapseTranslateY = scrollY.interpolate({
+    inputRange: [0, 90],
+    outputRange: [0, -90],
+    extrapolate: "clamp",
+  });
+
+  const listOpacity = listAnim.interpolate({
+    inputRange: [0, 0.2, 1],
+    outputRange: [0, 1, 1],
+  });
+
+  /* -------------------- Scroll-based reveal -------------------- */
+  // When the list is scrolled to the top AND the user over-scrolls downward,
+  // we interpret that as a "pull-down" to open the panel.
+  const handleScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+    {
+      useNativeDriver: false,
+      listener: (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+        const y = e.nativeEvent.contentOffset.y;
+        scrollOffsetRef.current = y;
+
+        // Pull down to close the list if scrolled to top
+        if (y < -60 && listOpen) {
+          closeList();
+        }
+        lastScrollY.current = y;
+      },
+    }
+  );
 
   const { animatedStyle, openAnimation, closeAnimation } = useModalAnimation();
   const sortedRoutineItems = useMemo(() => sortRoutineItems(routineItems), [routineItems]);
+
 
   /* -------------------- Data Fetching -------------------- */
   useEffect(() => {
@@ -99,7 +220,6 @@ export default function RoutineScreen() {
           setRoutineItems(parsed);
           setNextInsertionOrder(parsed.length > 0 ? Math.max(...parsed.map((i: RoutineItem) => i.insertionOrder || 0)) + 1 : 1);
         } else {
-          // First launch
           setRoutineItems(INITIAL_ROUTINE);
           await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_ROUTINE));
         }
@@ -110,10 +230,9 @@ export default function RoutineScreen() {
     loadData();
   }, []);
 
-  // Fetch today's device calendar events
   useEffect(() => {
-    getTodaysCalendarEvents().then(setCalendarEvents).catch(() => { });
-  }, []);
+    getCalendarEventsForDate(selectedDate).then(setCalendarEvents).catch(() => { });
+  }, [selectedDate]);
 
   const saveRoutines = async (newItems: RoutineItem[]) => {
     try {
@@ -163,7 +282,11 @@ export default function RoutineScreen() {
     }
 
     if (editingId) {
-      const updated = routineItems.map((item) => (item.id === editingId ? { ...item, time: time.trim(), task: task.trim(), description: description.trim(), imageKey: formData.imageKey || item.imageKey || "breathe" } : item));
+      const updated = routineItems.map((item) =>
+        item.id === editingId
+          ? { ...item, time: time.trim(), task: task.trim(), description: description.trim(), imageKey: formData.imageKey || item.imageKey || "breathe" }
+          : item
+      );
       saveRoutines(updated);
     } else {
       const newItem: RoutineItem = {
@@ -218,69 +341,99 @@ export default function RoutineScreen() {
   }, []);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.headerContainer}>
-        <Text style={styles.headerSubtitle}>TRAINER'S LOG</Text>
-        <Text style={styles.headerTitle}>Daily Deck</Text>
+    <SafeAreaView style={styles.safeArea} testID="routine-safe-area">
+      {/* ---- Day Timeline View (Unified with Calendar) ---- */}
+      <View style={styles.panelWrapper}>
+        <DayTimelineView
+          selectedDate={selectedDate}
+          onSelectDate={(date) => {
+            setSelectedDate(date);
+          }}
+          routineItems={sortedRoutineItems}
+          onPressPeek={toggleList}
+          scrollY={scrollY}
+          listAnim={listAnim}
+        />
       </View>
 
-      <ScrollView
-        style={styles.scrollContainer}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+      {/* ---- Detail Task List (Animated Reveal) ---- */}
+      <Animated.View
+        style={[
+          styles.listOverlay,
+          {
+            transform: [{ translateY: listTranslateY }],
+            opacity: listOpacity,
+          },
+        ]}
+        pointerEvents={listOpen ? "auto" : "none"}
       >
-        <View style={styles.cardList}>
-          {sortedRoutineItems.length === 0 && calendarEvents.length === 0 ? (
-            <View style={styles.emptyStateContainer}>
-              <Text style={styles.emptyStateTitle}>Your deck is empty!</Text>
-              <Text style={styles.emptyStateSub}>Tap the Pokéball below to start building your routine.</Text>
-            </View>
-          ) : (
-            (() => {
-              // Merge and sort routine items + calendar events chronologically
-              const allItems: Array<{ minutes: number; type: "routine" | "calendar"; data: RoutineItem | CalendarEvent }> = [
-                ...sortedRoutineItems.map(r => ({ minutes: timeToMinutes(r.time), type: "routine" as const, data: r })),
-                ...calendarEvents.map(e => ({ minutes: e.startMinutes, type: "calendar" as const, data: e })),
-              ].sort((a, b) => a.minutes - b.minutes);
-
-              return allItems.map((entry, idx) =>
-                entry.type === "routine" ? (
-                  <RoutineCard
-                    key={(entry.data as RoutineItem).id}
-                    item={entry.data as RoutineItem}
-                    onPress={openModal}
-                  />
-                ) : (
-                  <CalendarEventCard
-                    key={(entry.data as CalendarEvent).id}
-                    event={entry.data as CalendarEvent}
-                    theme={theme}
-                  />
-                )
-              );
-            })()
-          )}
+        <View style={styles.listHeader}>
+          <Pressable style={styles.closeBar} onPress={closeList} />
+          <Text style={styles.listTitle}>Daily Routine</Text>
         </View>
 
-        {/* Bottom padding for scrolling past FAB */}
-        <View style={{ height: 100 }} />
-      </ScrollView>
+        <ScrollView
+          style={styles.scrollContainer}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          bounces={true}
+          testID="routine-scroll-view"
+        >
+          <View style={styles.cardList}>
+            {sortedRoutineItems.length === 0 && calendarEvents.length === 0 ? (
+              <View style={styles.emptyStateContainer}>
+                <Text style={styles.emptyStateTitle}>Your deck is empty!</Text>
+                <Text style={styles.emptyStateSub}>Tap the Pokéball below to start building your routine.</Text>
+              </View>
+            ) : (
+              (() => {
+                const allItems: Array<{ minutes: number; type: "routine" | "calendar"; data: RoutineItem | CalendarEvent }> = [
+                  ...sortedRoutineItems.map(r => ({ minutes: timeToMinutes(r.time), type: "routine" as const, data: r })),
+                  ...calendarEvents.map(e => ({ minutes: e.startMinutes, type: "calendar" as const, data: e })),
+                ].sort((a, b) => a.minutes - b.minutes);
 
-      {/* Floating Action Button (FAB) - Minimalist Pokéball Style */}
-      <Pressable
-        style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
-        onPress={() => openForm()}
-      >
-        <View style={styles.fabTop} />
-        <View style={styles.fabBottom} />
-        <View style={styles.fabCenter} />
-        <View style={styles.fabButton} />
-      </Pressable>
+                return allItems.map((entry, idx) => {
+                  const prevMinutes = idx > 0 ? allItems[idx - 1].minutes : null;
+                  const showBreakBefore = prevMinutes !== null && (entry.minutes - prevMinutes) > 45;
+                  return (
+                    <TimelineEventCard
+                      key={`${entry.type}-${(entry.data as any).id}`}
+                      item={entry.data}
+                      type={entry.type}
+                      isFirst={idx === 0}
+                      isLast={idx === allItems.length - 1}
+                      showBreakBefore={showBreakBefore}
+                      onPress={entry.type === 'routine' ? () => openModal(entry.data as RoutineItem, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2) : undefined}
+                    />
+                  );
+                });
+              })()
+            )}
+          </View>
 
-      {/* Back Button (Absolute Top Left) */}
-      <Pressable style={styles.backButtonAbsolute} onPress={() => router.push("/")}>
-        <Text style={styles.backButtonText}>←</Text>
-      </Pressable>
+          {/* Bottom padding for scrolling past FAB */}
+          <View style={{ height: 100 }} />
+        </ScrollView>
+
+        {/* Floating Action Button (FAB) - Minimalist Pokéball Style */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.fab,
+            pressed && styles.fabPressed,
+            !listOpen && { opacity: 0, transform: [{ scale: 0 }] }
+          ]}
+          onPress={() => openForm()}
+          testID="routine-fab"
+          disabled={!listOpen}
+        >
+          <View style={styles.fabTop} />
+          <View style={styles.fabBottom} />
+          <View style={styles.fabCenter} />
+          <View style={styles.fabButton} />
+        </Pressable>
+      </Animated.View>
 
       <TaskModal
         visible={modalVisible}
@@ -299,9 +452,10 @@ export default function RoutineScreen() {
         onSave={handleSave}
         onClose={closeForm}
       />
-    </SafeAreaView>
+    </SafeAreaView >
   );
 }
+
 
 /* -------------------- Styles -------------------- */
 const getStyles = (theme: Theme) =>
@@ -310,48 +464,46 @@ const getStyles = (theme: Theme) =>
       flex: 1,
       backgroundColor: theme.colors.background,
     },
-    /* Header Area */
-    headerContainer: {
-      paddingHorizontal: theme.spacing.lg,
-      paddingTop: theme.spacing.md,
-      paddingBottom: theme.spacing.lg,
+
+    /* Animated timeline panel */
+    panelWrapper: {
+      flex: 1,
       backgroundColor: theme.colors.background,
-      zIndex: 1,
-      alignItems: 'flex-start',
     },
-    headerSubtitle: {
-      fontSize: 12,
-      fontWeight: "700",
-      color: theme.colors.secondary,
-      textTransform: "uppercase",
-      letterSpacing: 2,
-      marginBottom: 2,
-      opacity: 0.7,
-    },
-    headerTitle: {
-      fontSize: 32,
-      fontWeight: "800",
-      color: theme.colors.primary,
-      letterSpacing: 0.5,
-    },
-    backButtonAbsolute: {
-      position: "absolute",
-      top: Platform.OS === 'ios' ? 60 : 40,
-      right: 20,
-      padding: 12,
-      zIndex: 10,
-      backgroundColor: theme.colors.white,
-      borderRadius: 30,
+
+    listOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      top: 110, // Higher default state
+      backgroundColor: theme.colors.background,
+      borderTopLeftRadius: 30,
+      borderTopRightRadius: 30,
       shadowColor: "#000",
-      shadowOffset: { width: 0, height: 2 },
+      shadowOffset: { width: 0, height: -4 },
       shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 2,
+      shadowRadius: 10,
+      elevation: 20,
+      zIndex: 10,
     },
-    backButtonText: {
-      fontSize: 20,
-      color: theme.colors.primary,
-      fontWeight: 'bold',
+    listHeader: {
+      alignItems: "center",
+      paddingVertical: 16,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: `${theme.colors.text}12`,
+      backgroundColor: theme.colors.background,
+      borderTopLeftRadius: 30,
+      borderTopRightRadius: 30,
+    },
+    closeBar: {
+      width: 40,
+      height: 5,
+      borderRadius: 2.5,
+      backgroundColor: `${theme.colors.textSecondary}33`,
+      marginBottom: 8,
+    },
+    listTitle: {
+      fontSize: 16,
+      fontFamily: theme.fonts.bold,
+      color: theme.colors.text,
     },
 
     /* Scroll Area */
@@ -359,11 +511,10 @@ const getStyles = (theme: Theme) =>
       flex: 1,
     },
     scrollContent: {
-      paddingHorizontal: theme.spacing.lg,
       paddingTop: 10,
     },
     cardList: {
-      gap: 8, // Tighter gap for smaller cards
+      gap: 0,
     },
 
     /* Minimalist Pokéball FAB */
@@ -423,6 +574,7 @@ const getStyles = (theme: Theme) =>
     fabPressed: {
       transform: [{ scale: 0.95 }],
     },
+
     /* Empty State */
     emptyStateContainer: {
       alignItems: "center",
