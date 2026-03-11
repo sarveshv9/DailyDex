@@ -38,15 +38,27 @@ const TEMPLATES = [
 
 type DraftItem = Omit<RoutineItem, "id" | "insertionOrder">;
 
-// ─── Step 1: Pick activities ─────────────────────────────────────────────────
-function StepPick({
-    selected,
-    onToggle,
+// ─── Step 1 & 2: Time Set (Wake/Sleep) ────────────────────────────────────────
+function StepTime({
+    title,
+    subtitle,
+    imageKey,
+    time,
+    onUpdateTime,
     onNext,
+    onBack,
+    onSkip,
+    stepLabel,
 }: {
-    selected: string[];
-    onToggle: (task: string) => void;
+    title: string;
+    subtitle: string;
+    imageKey: string;
+    time: string;
+    onUpdateTime: (val: string) => void;
     onNext: () => void;
+    onBack?: () => void;
+    onSkip: () => void;
+    stepLabel: string;
 }) {
     const { theme } = useTheme();
     const styles = getStyles(theme);
@@ -54,10 +66,77 @@ function StepPick({
     return (
         <View style={{ flex: 1 }}>
             <View style={styles.stepHeader}>
-                <Text style={styles.stepEyebrow}>Step 1 of 2</Text>
-                <Text style={styles.stepTitle}>What's in{"\n"}your day?</Text>
+                <View style={styles.headerTop}>
+                    <Text style={styles.stepEyebrow}>{stepLabel}</Text>
+                    <Pressable onPress={onSkip} style={styles.skipBtn}>
+                        <Text style={styles.skipText}>Skip All</Text>
+                    </Pressable>
+                </View>
+                <Text style={styles.stepTitle}>{title}</Text>
+                <Text style={styles.stepSubtitle}>{subtitle}</Text>
+            </View>
+
+            <View style={styles.timePickerContainer}>
+                <View style={styles.largeIconWrap}>
+                    <Image
+                        source={getRoutineImage(imageKey)}
+                        style={styles.largeIcon}
+                        resizeMode="contain"
+                    />
+                </View>
+                <View style={styles.mainTimePicker}>
+                    <InlineTimePicker
+                        value={time}
+                        onChange={onUpdateTime}
+                    />
+                </View>
+            </View>
+
+            <View style={styles.bottomBar}>
+                {onBack ? (
+                    <Pressable style={styles.backBtn} onPress={onBack}>
+                        <Text style={styles.backBtnText}>← Back</Text>
+                    </Pressable>
+                ) : (
+                    <View style={{ flex: 1 }} />
+                )}
+                <Pressable style={styles.nextBtn} onPress={onNext}>
+                    <Text style={styles.nextBtnText}>Next Step →</Text>
+                </Pressable>
+            </View>
+        </View>
+    );
+}
+
+// ─── Step 3: Pick activities ─────────────────────────────────────────────────
+function StepPick({
+    selected,
+    onToggle,
+    onNext,
+    onBack,
+    onSkip,
+}: {
+    selected: string[];
+    onToggle: (task: string) => void;
+    onNext: () => void;
+    onBack: () => void;
+    onSkip: () => void;
+}) {
+    const { theme } = useTheme();
+    const styles = getStyles(theme);
+
+    return (
+        <View style={{ flex: 1 }}>
+            <View style={styles.stepHeader}>
+                <View style={styles.headerTop}>
+                    <Text style={styles.stepEyebrow}>Step 3 of 4</Text>
+                    <Pressable onPress={onSkip} style={styles.skipBtn}>
+                        <Text style={styles.skipText}>Skip All</Text>
+                    </Pressable>
+                </View>
+                <Text style={styles.stepTitle}>Add your{"\n"}activities</Text>
                 <Text style={styles.stepSubtitle}>
-                    Tap to add activities. You can reorder & set times next.
+                    Tap to add. You can reorder & set times next.
                 </Text>
             </View>
 
@@ -66,12 +145,14 @@ function StepPick({
                 showsVerticalScrollIndicator={false}
             >
                 {TEMPLATES.map((tmpl) => {
+                    // Disable toggling for Wake Up and Sleep as they are mandatory in this flow
+                    const isMandatory = tmpl.task === "Wake Up" || tmpl.task === "Sleep";
                     const isOn = selected.includes(tmpl.task);
                     return (
                         <Pressable
                             key={tmpl.task}
-                            style={[styles.gridCard, isOn && styles.gridCardOn]}
-                            onPress={() => onToggle(tmpl.task)}
+                            style={[styles.gridCard, isOn && styles.gridCardOn, isMandatory && styles.gridCardMandatory]}
+                            onPress={() => !isMandatory && onToggle(tmpl.task)}
                         >
                             <View style={[styles.gridIconWrap, isOn && styles.gridIconWrapOn]}>
                                 <Image
@@ -95,26 +176,21 @@ function StepPick({
             </ScrollView>
 
             <View style={styles.bottomBar}>
-                <View style={styles.selectionCount}>
-                    <Text style={styles.selectionCountText}>
-                        {selected.length === 0
-                            ? "Select at least one"
-                            : `${selected.length} selected`}
-                    </Text>
-                </View>
+                <Pressable style={styles.backBtn} onPress={onBack}>
+                    <Text style={styles.backBtnText}>← Back</Text>
+                </Pressable>
                 <Pressable
-                    style={[styles.nextBtn, selected.length === 0 && styles.nextBtnDisabled]}
+                    style={styles.nextBtn}
                     onPress={onNext}
-                    disabled={selected.length === 0}
                 >
-                    <Text style={styles.nextBtnText}>Set Times →</Text>
+                    <Text style={styles.nextBtnText}>Next ({selected.length}) →</Text>
                 </Pressable>
             </View>
         </View>
     );
 }
 
-// ─── Step 2: Set times (inline timeline) ─────────────────────────────────────
+// ─── Step 4: Set times (inline timeline) ─────────────────────────────────────
 function StepTimes({
     routines,
     onUpdateTime,
@@ -122,6 +198,7 @@ function StepTimes({
     onRemove,
     onSave,
     onBack,
+    onSkip,
     saving,
 }: {
     routines: DraftItem[];
@@ -130,6 +207,7 @@ function StepTimes({
     onRemove: (index: number) => void;
     onSave: () => void;
     onBack: () => void;
+    onSkip: () => void;
     saving: boolean;
 }) {
     const { theme } = useTheme();
@@ -139,10 +217,15 @@ function StepTimes({
     return (
         <View style={{ flex: 1 }}>
             <View style={styles.stepHeader}>
-                <Text style={styles.stepEyebrow}>Step 2 of 2</Text>
-                <Text style={styles.stepTitle}>Time{"\n"}to schedule</Text>
+                <View style={styles.headerTop}>
+                    <Text style={styles.stepEyebrow}>Step 4 of 4</Text>
+                    <Pressable onPress={onSkip} style={styles.skipBtn}>
+                        <Text style={styles.skipText}>Skip All</Text>
+                    </Pressable>
+                </View>
+                <Text style={styles.stepTitle}>Your Zen{"\n"}Routine</Text>
                 <Text style={styles.stepSubtitle}>
-                    Tap any activity to adjust its time or add notes.
+                    Review your schedule carefully. Precision is peace.
                 </Text>
             </View>
 
@@ -153,7 +236,6 @@ function StepTimes({
                 {/* Timeline */}
                 <View style={styles.timeline}>
                     {routines.map((item, index) => {
-                        const tmpl = TEMPLATES.find((t) => t.task === item.task)!;
                         const isOpen = expanded === index;
                         return (
                             <View key={index} style={styles.timelineRow}>
@@ -210,15 +292,17 @@ function StepTimes({
                                                 placeholderTextColor={theme.colors.secondary + "60"}
                                                 multiline
                                             />
-                                            <Pressable
-                                                style={styles.removeBtn}
-                                                onPress={() => {
-                                                    setExpanded(null);
-                                                    onRemove(index);
-                                                }}
-                                            >
-                                                <Text style={styles.removeBtnText}>Remove activity</Text>
-                                            </Pressable>
+                                            {item.task !== "Wake Up" && item.task !== "Sleep" && (
+                                                <Pressable
+                                                    style={styles.removeBtn}
+                                                    onPress={() => {
+                                                        setExpanded(null);
+                                                        onRemove(index);
+                                                    }}
+                                                >
+                                                    <Text style={styles.removeBtnText}>Remove activity</Text>
+                                                </Pressable>
+                                            )}
                                         </View>
                                     )}
                                 </View>
@@ -252,15 +336,13 @@ export default function SetupScreen() {
     const { theme } = useTheme();
     const styles = getStyles(theme);
 
-    const [step, setStep] = useState<1 | 2>(1);
+    const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
     const [saving, setSaving] = useState(false);
 
-    // Step 1 state: set of selected task names
-    const [selectedTasks, setSelectedTasks] = useState<string[]>([
-        "Wake Up", "Lunch", "Sleep",
-    ]);
-
-    // Step 2 state: full draft items (built when moving to step 2)
+    // Initial state with default wake/sleep times
+    const [wakeTime, setWakeTime] = useState("07:00 AM");
+    const [sleepTime, setSleepTime] = useState("10:00 PM");
+    const [selectedTasks, setSelectedTasks] = useState<string[]>(["Wake Up", "Sleep"]);
     const [routines, setRoutines] = useState<DraftItem[]>([]);
 
     const toggleTask = (task: string) => {
@@ -269,34 +351,55 @@ export default function SetupScreen() {
         );
     };
 
-    const goToStep2 = () => {
-        // Build draft items ordered by their default time, preserving any
-        // already-edited data if the user goes back and forth
-        const ordered = TEMPLATES.filter((t) => selectedTasks.includes(t.task));
-        const existing = new Map(routines.map((r) => [r.task, r]));
-        const merged: DraftItem[] = ordered.map((tmpl) =>
-            existing.has(tmpl.task)
-                ? existing.get(tmpl.task)!
-                : {
-                    task: tmpl.task,
-                    description: tmpl.description,
-                    imageKey: tmpl.imageKey,
-                    time: tmpl.defaultTime,
-                }
-        );
-        setRoutines(merged);
-        setStep(2);
+    const handleSkipAll = async () => {
+        setSaving(true);
+        // Save minimal routine if skipped (just Wake Up and Sleep)
+        const minimalItems: RoutineItem[] = [
+            { task: "Wake Up", description: "A wild day appears! Start gently.", imageKey: "wakeup", time: wakeTime, id: "skip-wakeup", insertionOrder: 1 },
+            { task: "Sleep", description: "Save your game and recharge.", imageKey: "sleep", time: sleepTime, id: "skip-sleep", insertionOrder: 2 },
+        ];
+        try {
+            await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(minimalItems));
+            await AsyncStorage.setItem(SETUP_KEY, "true");
+            router.replace("/(tabs)");
+        } catch (e) {
+            console.error("Failed to skip setup", e);
+            setSaving(false);
+        }
     };
 
-    const goToStep1 = () => setStep(1);
+    const goToStep3 = () => {
+        setStep(3);
+    };
 
-    const updateTime = (index: number, val: string) => {
+    const goToStep4 = () => {
+        const ordered = TEMPLATES.filter((t) => selectedTasks.includes(t.task));
+        const merged: DraftItem[] = ordered.map((tmpl) => {
+            let time = tmpl.defaultTime;
+            if (tmpl.task === "Wake Up") time = wakeTime;
+            if (tmpl.task === "Sleep") time = sleepTime;
+
+            return {
+                task: tmpl.task,
+                description: tmpl.description,
+                imageKey: tmpl.imageKey,
+                time: time,
+            };
+        });
+        setRoutines(merged);
+        setStep(4);
+    };
+
+    const updateRoutineTime = (index: number, val: string) => {
         const next = [...routines];
         next[index] = { ...next[index], time: val };
+        // Sync back to local wake/sleep state if applicable
+        if (next[index].task === "Wake Up") setWakeTime(val);
+        if (next[index].task === "Sleep") setSleepTime(val);
         setRoutines(next);
     };
 
-    const updateDesc = (index: number, val: string) => {
+    const updateRoutineDesc = (index: number, val: string) => {
         const next = [...routines];
         next[index] = { ...next[index], description: val };
         setRoutines(next);
@@ -328,25 +431,56 @@ export default function SetupScreen() {
 
     return (
         <SafeAreaView style={styles.safeArea}>
-            {/* Progress bar */}
             <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: step === 1 ? "50%" : "100%" }]} />
+                <View style={[styles.progressFill, { width: `${(step / 4) * 100}%` }]} />
             </View>
 
-            {step === 1 ? (
+            {step === 1 && (
+                <StepTime
+                    stepLabel="Step 1 of 4"
+                    title={"When do you\nwake up?"}
+                    subtitle="Setting a consistent wake time is the foundation of zen."
+                    imageKey="wakeup"
+                    time={wakeTime}
+                    onUpdateTime={setWakeTime}
+                    onNext={() => setStep(2)}
+                    onSkip={handleSkipAll}
+                />
+            )}
+
+            {step === 2 && (
+                <StepTime
+                    stepLabel="Step 2 of 4"
+                    title={"When do you\nsleep?"}
+                    subtitle="Rest is where your potential recharges."
+                    imageKey="sleep"
+                    time={sleepTime}
+                    onUpdateTime={setSleepTime}
+                    onNext={goToStep3}
+                    onBack={() => setStep(1)}
+                    onSkip={handleSkipAll}
+                />
+            )}
+
+            {step === 3 && (
                 <StepPick
                     selected={selectedTasks}
                     onToggle={toggleTask}
-                    onNext={goToStep2}
+                    onNext={goToStep4}
+                    onBack={() => setStep(2)}
+                    onSkip={handleSkipAll}
                 />
-            ) : (
+            )}
+
+            {step === 4 && (
                 <StepTimes
                     routines={routines}
-                    onUpdateTime={updateTime}
-                    onUpdateDesc={updateDesc}
+                    onUpdateTime={updateRoutineTime}
+                    onUpdateDesc={updateRoutineDesc}
                     onRemove={removeItem}
                     onSave={handleSave}
-                    onBack={goToStep1}
+                    onBack={() => setStep(3)}
+                    onSkip={handleSkipAll}
                     saving={saving}
                 />
             )}
@@ -361,8 +495,6 @@ const getStyles = (theme: Theme) =>
             flex: 1,
             backgroundColor: theme.colors.background,
         },
-
-        // Progress
         progressBar: {
             height: 3,
             backgroundColor: `${theme.colors.primary}18`,
@@ -372,12 +504,16 @@ const getStyles = (theme: Theme) =>
             backgroundColor: theme.colors.primary,
             borderRadius: 2,
         },
-
-        // Step headers
         stepHeader: {
             paddingHorizontal: 24,
             paddingTop: 28,
             paddingBottom: 20,
+        },
+        headerTop: {
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 6,
         },
         stepEyebrow: {
             fontSize: 12,
@@ -386,7 +522,16 @@ const getStyles = (theme: Theme) =>
             opacity: 0.45,
             letterSpacing: 1.5,
             textTransform: "uppercase",
-            marginBottom: 6,
+        },
+        skipBtn: {
+            padding: 8,
+            marginRight: -8,
+        },
+        skipText: {
+            fontSize: 13,
+            fontFamily: theme.fonts.medium,
+            color: theme.colors.primary,
+            opacity: 0.6,
         },
         stepTitle: {
             fontSize: 34,
@@ -402,8 +547,34 @@ const getStyles = (theme: Theme) =>
             opacity: 0.75,
             lineHeight: 21,
         },
-
-        // Grid (step 1)
+        timePickerContainer: {
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "center",
+            paddingBottom: 80,
+        },
+        largeIconWrap: {
+            width: 140,
+            height: 140,
+            borderRadius: 36,
+            backgroundColor: `${theme.colors.primary}0A`,
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 32,
+        },
+        largeIcon: {
+            width: 90,
+            height: 90,
+        },
+        mainTimePicker: {
+            width: "80%",
+            height: 80,
+            backgroundColor: `${theme.colors.primary}05`,
+            borderRadius: 20,
+            borderWidth: 2,
+            borderColor: `${theme.colors.primary}10`,
+            overflow: "hidden",
+        },
         gridContainer: {
             flexDirection: "row",
             flexWrap: "wrap",
@@ -425,6 +596,10 @@ const getStyles = (theme: Theme) =>
         gridCardOn: {
             borderColor: theme.colors.primary,
             backgroundColor: `${theme.colors.primary}08`,
+        },
+        gridCardMandatory: {
+            opacity: 0.8,
+            backgroundColor: `${theme.colors.primary}05`,
         },
         gridIconWrap: {
             width: 52,
@@ -469,8 +644,6 @@ const getStyles = (theme: Theme) =>
             fontSize: 11,
             fontFamily: theme.fonts.bold,
         },
-
-        // Selection count label
         selectionCount: {
             flex: 1,
             justifyContent: "center",
@@ -481,8 +654,6 @@ const getStyles = (theme: Theme) =>
             color: theme.colors.secondary,
             opacity: 0.65,
         },
-
-        // Bottom bar
         bottomBar: {
             position: "absolute",
             bottom: 0,
@@ -505,9 +676,6 @@ const getStyles = (theme: Theme) =>
             height: 52,
             justifyContent: "center",
             alignItems: "center",
-        },
-        nextBtnDisabled: {
-            opacity: 0.35,
         },
         nextBtnText: {
             color: theme.colors.white,
@@ -543,8 +711,6 @@ const getStyles = (theme: Theme) =>
             fontSize: 16,
             fontFamily: theme.fonts.bold,
         },
-
-        // Timeline (step 2)
         timeline: {
             paddingTop: 8,
         },
@@ -617,8 +783,6 @@ const getStyles = (theme: Theme) =>
             color: theme.colors.primary,
             opacity: 0.4,
         },
-
-        // Expanded content
         timelineExpanded: {
             paddingHorizontal: 14,
             paddingBottom: 14,
