@@ -12,7 +12,7 @@ interface RoutineCardProps {
 const RoutineCard: React.FC<RoutineCardProps> = ({ item, onPress }) => {
   const { theme } = useTheme();
   const styles = useMemo(() => getStyles(theme), [theme]);
-  
+
   const [touchPosition, setTouchPosition] = useState({ x: 0, y: 0 });
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
@@ -57,10 +57,10 @@ const RoutineCard: React.FC<RoutineCardProps> = ({ item, onPress }) => {
 
         {/* Footer */}
         <View style={styles.cardFooter}>
-           <Text style={styles.idText}>NO. {item.id.padStart(3, '0')}</Text>
-           <View style={styles.miniButton}>
-              <Text style={styles.miniButtonText}>EDIT</Text>
-           </View>
+          <Text style={styles.idText}>NO. {item.id.padStart(3, '0')}</Text>
+          <View style={styles.miniButton}>
+            <Text style={styles.miniButtonText}>EDIT</Text>
+          </View>
         </View>
       </Pressable>
     </Animated.View>
@@ -69,9 +69,9 @@ const RoutineCard: React.FC<RoutineCardProps> = ({ item, onPress }) => {
 
 const getStyles = (theme: Theme) => StyleSheet.create({
   cardContainer: {
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.card,
     borderRadius: theme.borderRadius.md,
-    marginVertical: 4, 
+    marginVertical: 4,
     padding: 12, // Slightly increased padding since image is gone to let text breathe
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -99,7 +99,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   pokemonName: {
     fontSize: 15,
     fontWeight: "700",
-    color: theme.colors.primary,
+    color: theme.colors.text,
     letterSpacing: 0.3,
   },
   hpContainer: {
@@ -109,14 +109,14 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   hpLabel: {
     fontSize: 8,
     fontWeight: "800",
-    color: theme.colors.primary,
+    color: theme.colors.text,
     opacity: 0.6,
     marginRight: 3,
   },
   hpValue: {
     fontSize: 14,
     fontWeight: "700",
-    color: theme.colors.primary,
+    color: theme.colors.text,
   },
   /* Lore */
   infoSection: {
@@ -125,7 +125,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   loreText: {
     fontSize: 11,
-    color: theme.colors.secondary,
+    color: theme.colors.textSecondary,
     lineHeight: 15,
     fontStyle: 'italic',
     opacity: 0.8,
@@ -140,7 +140,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   idText: {
     fontSize: 9,
     fontWeight: "700",
-    color: theme.colors.secondary,
+    color: theme.colors.textSecondary,
     opacity: 0.4,
   },
   miniButton: {
@@ -152,7 +152,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   miniButtonText: {
     fontSize: 9,
     fontWeight: "700",
-    color: theme.colors.primary,
+    color: theme.colors.text,
   }
 });
 

@@ -32,10 +32,7 @@ import { RoutineItem } from "../../utils/utils";
 
 import {
   getSharedStyles,
-  lightThemes,
-  Theme,
-  ThemeName,
-  themes,
+  Theme
 } from "../../constants/shared";
 
 /**
@@ -184,28 +181,8 @@ const makeStyles = (theme: Theme) =>
 
 /* -------------------- Component -------------------- */
 export default function ProfileScreen() {
-  const { themeName, setThemeName, isAutoTheme, setIsAutoTheme } = useTheme();
+  const { theme, themeName, setThemeName, isAutoTheme, setIsAutoTheme, isDarkMode, setIsDarkMode } = useTheme();
   const { selectedSong, setSelectedSong } = useAudio();
-
-  // Resolve the base theme and theme object (keeps existing behavior)
-  const isLightMode = useMemo(
-    () => typeof themeName === "string" && themeName.startsWith("light-"),
-    [themeName]
-  );
-
-  const baseThemeName = useMemo(() => {
-    if (isLightMode) return themeName.substring(6);
-    return themeName;
-  }, [isLightMode, themeName]);
-
-  const theme: Theme = useMemo(() => {
-    if (isLightMode) {
-      const lt = lightThemes[themeName as ThemeName];
-      if (lt) return lt;
-      return themes[baseThemeName as keyof typeof themes] || themes.default;
-    }
-    return themes[themeName as keyof typeof themes] || themes.default;
-  }, [themeName, isLightMode, baseThemeName]);
 
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const sharedStyles = useMemo(() => getSharedStyles(theme), [theme]);
@@ -280,13 +257,9 @@ export default function ProfileScreen() {
   const [isMusicExpanded, setIsMusicExpanded] = useState(false);
 
   /* -------------------- Handlers -------------------- */
-  const selectThemeMode = (mode: "light" | "heavy") => {
+  const selectThemeMode = (isDark: boolean) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (mode === "light" && baseThemeName !== "default") {
-      setThemeName(`light-${baseThemeName}` as ThemeName);
-    } else {
-      setThemeName(baseThemeName as ThemeName);
-    }
+    setIsDarkMode(isDark);
   };
 
   const handleBackup = async () => {
@@ -480,7 +453,7 @@ export default function ProfileScreen() {
         <View style={styles.sectionsContainer}>
           <SettingsSection
             theme={theme}
-            isLightMode={isLightMode}
+            isDarkMode={isDarkMode}
             isAppearanceExpanded={isAppearanceExpanded}
             setIsAppearanceExpanded={setIsAppearanceExpanded}
             selectThemeMode={selectThemeMode}
@@ -521,16 +494,12 @@ export default function ProfileScreen() {
         onClose={() => setIsAppearanceExpanded(false)}
         currentTheme={theme}
         activeThemeName={themeName}
-        isLightMode={isLightMode}
-        onToggleLightMode={(val) => selectThemeMode(val ? "light" : "heavy")}
+        isDarkMode={isDarkMode}
+        onToggleDarkMode={selectThemeMode}
         isAutoTheme={isAutoTheme}
         onToggleAutoTheme={setIsAutoTheme}
         onSelectTheme={(tName) => {
-          if (isLightMode && tName !== "default") {
-            setThemeName(`light-${tName}` as ThemeName);
-          } else {
-            setThemeName(tName as ThemeName);
-          }
+          setThemeName(tName);
         }}
       />
 

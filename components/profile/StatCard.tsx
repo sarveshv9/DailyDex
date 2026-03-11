@@ -14,7 +14,7 @@ export const StatCard: React.FC<StatCardProps> = ({ label, value, theme }) => {
       style={{
         flex: 1,
         marginHorizontal: 6,
-        backgroundColor: theme.colors.white,
+        backgroundColor: theme.colors.card,
         padding: theme.spacing.md,
         borderRadius: theme.borderRadius.md,
         alignItems: "center",
@@ -25,7 +25,7 @@ export const StatCard: React.FC<StatCardProps> = ({ label, value, theme }) => {
         style={{
           fontSize: 20,
           fontFamily: theme.fonts.bold,
-          color: theme.colors.primary,
+          color: theme.colors.text,
         }}
       >
         {String(value)} {/* ✅ Always converted to text safely */}
@@ -35,7 +35,7 @@ export const StatCard: React.FC<StatCardProps> = ({ label, value, theme }) => {
         style={{
           fontSize: 12,
           fontFamily: theme.fonts.regular,
-          color: theme.colors.secondary,
+          color: theme.colors.textSecondary,
           marginTop: theme.spacing.sm,
         }}
       >

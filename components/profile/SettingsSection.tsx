@@ -20,6 +20,9 @@ interface Theme {
     primary: string;
     secondary: string;
     background: string;
+    card: string;
+    text: string;
+    textSecondary: string;
     white: string;
   };
   spacing: {
@@ -43,10 +46,10 @@ interface Theme {
 
 interface SettingsSectionProps {
   theme: Theme;
-  isLightMode: boolean;
+  isDarkMode: boolean;
   isAppearanceExpanded: boolean;
   setIsAppearanceExpanded: (value: boolean) => void;
-  selectThemeMode: (mode: AppearanceMode) => void;
+  selectThemeMode: (isDark: boolean) => void;
   settings: {
     notifications: Record<string, boolean>;
   };
@@ -109,8 +112,8 @@ const SettingItem = React.memo<SettingItemProps>(({
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const primaryColor = theme.colors.primary;
   const secondaryColor = theme.colors.secondary;
-  const textColor = theme.colors.primary;
-  const cardColor = theme.colors.white;
+  const textColor = theme.colors.text;
+  const cardColor = theme.colors.card;
 
   const handlePress = useCallback(() => {
     console.log(`SettingItem "${text}" pressed`);
@@ -181,8 +184,8 @@ const ExpandableSetting = React.memo<ExpandableSettingProps>(({
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const primaryColor = theme.colors.primary;
   const secondaryColor = theme.colors.secondary;
-  const textColor = theme.colors.primary;
-  const cardColor = theme.colors.white;
+  const textColor = theme.colors.text;
+  const cardColor = theme.colors.card;
   const borderColor = `${theme.colors.secondary}20`;
 
   return (
@@ -251,7 +254,7 @@ const OptionItem = React.memo<OptionItemProps>(({
 }) => {
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const primaryColor = theme.colors.primary;
-  const textColor = theme.colors.primary;
+  const textColor = theme.colors.text;
 
   return (
     <TouchableOpacity
@@ -364,29 +367,29 @@ MusicSetting.displayName = 'MusicSetting';
  */
 const AppearanceSetting = React.memo<{
   theme: Theme;
-  isLightMode: boolean;
+  isDarkMode: boolean;
   isAppearanceExpanded: boolean;
   setIsAppearanceExpanded: (value: boolean) => void;
-  selectThemeMode: (mode: AppearanceMode) => void;
+  selectThemeMode: (isDark: boolean) => void;
   isLast?: boolean;
 }>(({
   theme,
-  isLightMode,
+  isDarkMode,
   isAppearanceExpanded,
   setIsAppearanceExpanded,
   selectThemeMode,
   isLast = false,
 }) => {
   const currentMode = useMemo(() => {
-    return isLightMode ? 'Light' : 'Heavy';
-  }, [isLightMode]);
+    return isDarkMode ? 'Dark' : 'Light';
+  }, [isDarkMode]);
 
   const handleToggle = useCallback(() => {
     setIsAppearanceExpanded(!isAppearanceExpanded);
   }, [isAppearanceExpanded, setIsAppearanceExpanded]);
 
-  const handleModeSelect = useCallback((mode: AppearanceMode) => {
-    selectThemeMode(mode);
+  const handleModeSelect = useCallback((isDark: boolean) => {
+    selectThemeMode(isDark);
   }, [selectThemeMode]);
 
   return (
@@ -401,16 +404,16 @@ const AppearanceSetting = React.memo<{
     >
       <OptionItem
         theme={theme}
-        label="Heavy"
-        isSelected={!isLightMode}
-        onPress={() => handleModeSelect(APPEARANCE_MODES.HEAVY)}
+        label="Light"
+        isSelected={!isDarkMode}
+        onPress={() => handleModeSelect(false)}
         isFirst
       />
       <OptionItem
         theme={theme}
-        label="Light"
-        isSelected={isLightMode}
-        onPress={() => handleModeSelect(APPEARANCE_MODES.LIGHT)}
+        label="Dark"
+        isSelected={isDarkMode}
+        onPress={() => handleModeSelect(true)}
         isLast
       />
     </ExpandableSetting>
@@ -428,7 +431,7 @@ AppearanceSetting.displayName = 'AppearanceSetting';
  */
 export const SettingsSection: React.FC<SettingsSectionProps> = ({
   theme,
-  isLightMode,
+  isDarkMode,
   isAppearanceExpanded,
   setIsAppearanceExpanded,
   selectThemeMode,
@@ -449,8 +452,8 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
   const styles = useMemo(() => makeStyles(theme), [theme]);
 
   // Get theme colors
-  const textColor = useMemo(() => theme.colors.primary, [theme]);
-  const cardColor = useMemo(() => theme.colors.white, [theme]);
+  const textColor = useMemo(() => theme.colors.text, [theme]);
+  const cardColor = useMemo(() => theme.colors.card, [theme]);
 
   // Event handlers - All fully functional and wired
   const handleNotificationPress = useCallback(() => {

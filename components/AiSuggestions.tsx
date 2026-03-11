@@ -117,7 +117,7 @@ const AiSuggestions: React.FC<{ currentTask?: string }> = ({ currentTask }) => {
 
 const getStyles = (theme: Theme) => StyleSheet.create({
   container: {
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.card,
     borderRadius: theme.borderRadius.lg,
     padding: theme.spacing.lg,
     marginHorizontal: theme.spacing.lg,
@@ -147,7 +147,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   title: {
     fontSize: 16,
     fontFamily: theme.fonts.bold,
-    color: theme.colors.primary,
+    color: theme.colors.text,
   },
   content: {
     minHeight: 60,
@@ -161,7 +161,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   loadingText: {
     fontSize: 14,
     fontFamily: theme.fonts.regular,
-    color: theme.colors.secondary,
+    color: theme.colors.textSecondary,
     marginLeft: theme.spacing.sm,
   },
   quoteContainer: {
@@ -171,7 +171,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   quoteText: {
     fontSize: 16,
     fontFamily: theme.fonts.regular,
-    color: theme.colors.primary,
+    color: theme.colors.text,
     lineHeight: 24,
     textAlign: 'center',
     fontStyle: 'italic',
@@ -184,7 +184,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   refreshButtonText: {
     fontSize: 18,
-    color: theme.colors.secondary,
+    color: theme.colors.textSecondary,
   },
 });
 

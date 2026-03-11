@@ -175,7 +175,7 @@ const getStyles = (theme: Theme) =>
     modalCard: {
       width: "100%",
       maxWidth: 360,
-      backgroundColor: theme.colors.white,
+      backgroundColor: theme.colors.card,
       borderRadius: 28,
       paddingVertical: theme.spacing.lg,
       paddingHorizontal: theme.spacing.xl,
@@ -238,7 +238,7 @@ const getStyles = (theme: Theme) =>
     time: {
       fontSize: 14,
       fontFamily: theme.fonts.medium,
-      color: theme.colors.primary,
+      color: theme.colors.text,
       backgroundColor: `${theme.colors.primary}15`,
       paddingVertical: 4,
       paddingHorizontal: 10,
@@ -249,7 +249,7 @@ const getStyles = (theme: Theme) =>
     title: {
       fontSize: 22,
       fontFamily: theme.fonts.bold,
-      color: theme.colors.primary,
+      color: theme.colors.text,
       textAlign: "center",
       marginBottom: theme.spacing.xs,
     },
@@ -257,7 +257,7 @@ const getStyles = (theme: Theme) =>
     description: {
       fontSize: 16,
       fontFamily: theme.fonts.regular,
-      color: theme.colors.secondary,
+      color: theme.colors.textSecondary,
       opacity: 0.9,
       textAlign: "center",
       lineHeight: 22,
@@ -315,7 +315,7 @@ const getStyles = (theme: Theme) =>
     closeLabel: {
       fontSize: 16,
       fontFamily: theme.fonts.medium,
-      color: theme.colors.secondary,
+      color: theme.colors.textSecondary,
       textAlign: "center",
     },
   });

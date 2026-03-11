@@ -79,7 +79,7 @@ const getStyles = (theme: Theme) =>
             flex: 1,
         },
         timeBlock: {
-            backgroundColor: theme.colors.white,
+            backgroundColor: theme.colors.background,
             paddingHorizontal: 8,
             paddingVertical: 4,
             borderRadius: 6,
@@ -87,13 +87,13 @@ const getStyles = (theme: Theme) =>
         timeText: {
             fontSize: 18,
             fontWeight: "700",
-            color: theme.colors.primary,
+            color: theme.colors.text,
             fontVariant: ["tabular-nums"],
         },
         colon: {
             fontSize: 18,
             fontWeight: "700",
-            color: theme.colors.primary,
+            color: theme.colors.text,
             marginHorizontal: 4,
         },
         periodBlock: {
@@ -105,6 +105,6 @@ const getStyles = (theme: Theme) =>
         periodText: {
             fontSize: 14,
             fontWeight: "700",
-            color: theme.colors.primary,
+            color: theme.colors.text,
         },
     });

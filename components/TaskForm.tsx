@@ -196,7 +196,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     alignItems: 'center',
   },
   timePickerModalContainer: {
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.card,
     borderRadius: 28,
     paddingVertical: theme.spacing.xl,
     paddingHorizontal: theme.spacing.lg,
@@ -254,13 +254,13 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   formCancelText: {
     fontSize: 16,
-    color: theme.colors.secondary,
+    color: theme.colors.textSecondary,
     fontWeight: "500",
   },
   enhancedFormTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: theme.colors.primary,
+    color: theme.colors.text,
   },
   formSaveButton: {
     paddingVertical: theme.spacing.xs,
@@ -268,7 +268,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   formSaveText: {
     fontSize: 16,
-    color: theme.colors.primary,
+    color: theme.colors.text,
     fontWeight: "600",
   },
   formScrollView: {
@@ -281,17 +281,17 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   inputLabel: {
     fontSize: 16,
     fontWeight: "600",
-    color: theme.colors.primary,
+    color: theme.colors.text,
     marginBottom: theme.spacing.sm,
     marginLeft: theme.spacing.xs,
   },
   enhancedInput: {
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.background,
     borderRadius: theme.borderRadius.lg,
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
     fontSize: 16,
-    color: theme.colors.primary,
+    color: theme.colors.text,
     borderWidth: 1,
     borderColor: "rgba(0, 0, 0, 0.06)",
     minHeight: 50,
@@ -321,7 +321,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   templateText: {
     fontSize: 14,
-    color: theme.colors.primary,
+    color: theme.colors.text,
     fontWeight: "600",
   },
   descriptionInput: {
@@ -330,7 +330,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     paddingTop: theme.spacing.md,
   },
   timeInput: {
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.background,
     borderRadius: theme.borderRadius.lg,
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
@@ -343,10 +343,10 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   timeInputText: {
     fontSize: 16,
-    color: theme.colors.primary,
+    color: theme.colors.text,
   },
   placeholderText: {
-    color: theme.colors.secondary,
+    color: theme.colors.textSecondary,
     opacity: 0.6,
   },
   timeInputIcon: {

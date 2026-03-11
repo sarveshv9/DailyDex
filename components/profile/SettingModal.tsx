@@ -56,7 +56,7 @@ export const SettingModal = ({ visible, onClose, theme, user, setUser, handleSav
         <View style={{
           width: '90%',
           maxHeight: '80%',
-          backgroundColor: theme.colors.white,
+          backgroundColor: theme.colors.card,
           borderRadius: theme.borderRadius.lg,
           overflow: 'hidden'
         }}>
@@ -69,46 +69,46 @@ export const SettingModal = ({ visible, onClose, theme, user, setUser, handleSav
             borderBottomWidth: 1,
             borderBottomColor: theme.colors.background
           }}>
-            <Text style={{ fontSize: 18, fontFamily: theme.fonts.bold, color: theme.colors.primary }}>Edit Profile</Text>
+            <Text style={{ fontSize: 18, fontFamily: theme.fonts.bold, color: theme.colors.text }}>Edit Profile</Text>
             <TouchableOpacity onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               onClose();
             }}>
-              <Ionicons name="close" size={22} color={theme.colors.primary} />
+              <Ionicons name="close" size={22} color={theme.colors.text} />
             </TouchableOpacity>
           </View>
 
           <ScrollView style={{ padding: theme.spacing.lg }}>
-            <Text style={{ fontSize: 14, fontFamily: theme.fonts.medium, color: theme.colors.secondary, marginBottom: theme.spacing.sm }}>Name</Text>
+            <Text style={{ fontSize: 14, fontFamily: theme.fonts.medium, color: theme.colors.textSecondary, marginBottom: theme.spacing.sm }}>Name</Text>
             <TextInput
               value={name}
               onChangeText={setName}
               placeholder="Name"
-              placeholderTextColor={theme.colors.secondary}
+              placeholderTextColor={theme.colors.textSecondary}
               style={{
                 borderWidth: 1,
                 borderColor: theme.colors.background,
                 padding: theme.spacing.md,
                 borderRadius: theme.borderRadius.sm,
                 marginBottom: theme.spacing.md,
-                color: theme.colors.primary,
+                color: theme.colors.text,
                 fontFamily: theme.fonts.regular
               }}
             />
 
-            <Text style={{ fontSize: 14, fontFamily: theme.fonts.medium, color: theme.colors.secondary, marginBottom: theme.spacing.sm }}>Role</Text>
+            <Text style={{ fontSize: 14, fontFamily: theme.fonts.medium, color: theme.colors.textSecondary, marginBottom: theme.spacing.sm }}>Role</Text>
             <TextInput
               value={role}
               onChangeText={setRole}
               placeholder="Role"
-              placeholderTextColor={theme.colors.secondary}
+              placeholderTextColor={theme.colors.textSecondary}
               style={{
                 borderWidth: 1,
                 borderColor: theme.colors.background,
                 padding: theme.spacing.md,
                 borderRadius: theme.borderRadius.sm,
                 marginBottom: theme.spacing.md,
-                color: theme.colors.primary,
+                color: theme.colors.text,
                 fontFamily: theme.fonts.regular
               }}
             />

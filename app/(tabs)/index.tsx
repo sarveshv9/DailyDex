@@ -25,7 +25,6 @@ import AiSuggestions from "../../components/AiSuggestions";
 import {
   getSharedStyles,
   Theme,
-  ThemeName,
   themes
 } from "../../constants/shared";
 import { useTheme } from "../../context/ThemeContext";
@@ -110,7 +109,7 @@ const getStyles = (theme: Theme) =>
     /* Time */
     time: {
       fontSize: Math.max(36, Math.round(WINDOW_WIDTH * 0.12)), // responsive
-      color: theme.colors.primary,
+      color: theme.colors.text,
       fontFamily: theme.fonts.bold,
       letterSpacing: -1,
       marginBottom: 8,
@@ -118,7 +117,7 @@ const getStyles = (theme: Theme) =>
     },
     timeSub: {
       fontSize: 14,
-      color: theme.colors.secondary,
+      color: theme.colors.textSecondary,
       fontFamily: theme.fonts.medium,
       marginTop: 18,
       opacity: 0.9,
@@ -127,7 +126,7 @@ const getStyles = (theme: Theme) =>
     /* Card */
     card: {
       width: "100%",
-      backgroundColor: theme.colors.white,
+      backgroundColor: theme.colors.card,
       borderRadius: 16,
       paddingVertical: 18,
       paddingHorizontal: 18,
@@ -149,7 +148,7 @@ const getStyles = (theme: Theme) =>
     cardLabel: {
       alignSelf: "flex-start",
       fontSize: 12,
-      color: theme.colors.secondary,
+      color: theme.colors.textSecondary,
       fontFamily: theme.fonts.medium,
       textTransform: "uppercase",
       letterSpacing: 0.8,
@@ -157,7 +156,7 @@ const getStyles = (theme: Theme) =>
     },
     taskText: {
       fontSize: 18,
-      color: theme.colors.primary,
+      color: theme.colors.text,
       fontFamily: theme.fonts.bold,
       textAlign: "center",
       lineHeight: 24,
@@ -186,7 +185,7 @@ const getStyles = (theme: Theme) =>
     /* Quote */
     quote: {
       fontSize: 15,
-      color: theme.colors.secondary,
+      color: theme.colors.textSecondary,
       fontFamily: theme.fonts.regular,
       fontStyle: "italic",
       textAlign: "center",
@@ -272,24 +271,16 @@ function HomeScreen() {
 
   /* sync theme base with task */
   useEffect(() => {
-    if (!isAutoTheme) return;
-    const isLightMode = themeName.startsWith("light-");
-    const newBaseTheme = TASK_THEME_MAP[currentTaskItem?.imageKey || ""] || "default";
+    if (!isAutoTheme || isLoading || !isReady) return;
 
-    // Calculate new theme name
-    let newThemeName: ThemeName = newBaseTheme;
-    // Don't prefix "light-" to "default" because lightThemes doesn't have "light-default"
-    if (isLightMode && newBaseTheme !== "default") {
-      newThemeName = `light-${newBaseTheme}` as ThemeName;
+    // Auto sync just matches the pokemon enum now.
+    // Dark mode state is independently handled in ThemeContext and layout.
+    const newThemeName = TASK_THEME_MAP[currentTaskItem?.imageKey || ""] || "default";
+
+    if (newThemeName !== themeName) {
+      setThemeName(String(newThemeName)); // newThemeName is a valid ThemeName
     }
-
-    // Calculate current base theme
-    const currentBaseTheme = isLightMode ? themeName.substring(6) : themeName;
-
-    if (newBaseTheme !== currentBaseTheme) {
-      setThemeName(newThemeName);
-    }
-  }, [currentTaskItem, setThemeName, themeName, isAutoTheme]);
+  }, [currentTaskItem, setThemeName, themeName, isAutoTheme, isLoading, isReady]);
 
 
   /* breathing animation */

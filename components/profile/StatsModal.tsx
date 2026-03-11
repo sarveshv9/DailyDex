@@ -178,14 +178,14 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     title: {
         fontSize: 24,
         fontFamily: theme.fonts.bold,
-        color: theme.colors.primary,
+        color: theme.colors.text,
     },
     closeButton: {
-        backgroundColor: theme.colors.white,
+        backgroundColor: theme.colors.card,
         padding: theme.spacing.xs,
         borderRadius: 9999,
         borderWidth: 1,
-        borderColor: `${theme.colors.secondary}20`,
+        borderColor: `${theme.colors.textSecondary}20`,
     },
     scrollContent: {
         paddingBottom: 40,
@@ -200,11 +200,11 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     },
     bannerText: {
         fontFamily: theme.fonts.bold,
-        color: theme.colors.primary,
+        color: theme.colors.text,
         fontSize: 16,
     },
     levelCard: {
-        backgroundColor: theme.colors.white,
+        backgroundColor: theme.colors.card,
         borderRadius: theme.borderRadius.lg,
         padding: theme.spacing.lg,
         borderWidth: 2,
@@ -240,12 +240,12 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     currentXpText: {
         fontFamily: theme.fonts.bold,
         fontSize: 24,
-        color: theme.colors.primary,
+        color: theme.colors.text,
     },
     targetXpText: {
         fontFamily: theme.fonts.medium,
         fontSize: 14,
-        color: theme.colors.secondary,
+        color: theme.colors.textSecondary,
     },
     progressBarBackground: {
         height: 12,
@@ -262,13 +262,13 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         marginTop: theme.spacing.sm,
         fontFamily: theme.fonts.medium,
         fontSize: 12,
-        color: theme.colors.secondary,
+        color: theme.colors.textSecondary,
         textAlign: "right",
     },
     sectionTitle: {
         fontSize: 18,
         fontFamily: theme.fonts.bold,
-        color: theme.colors.primary,
+        color: theme.colors.text,
         marginTop: theme.spacing.md,
         marginBottom: -4,
     },
@@ -278,12 +278,12 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     },
     statBox: {
         flex: 1,
-        backgroundColor: theme.colors.white,
+        backgroundColor: theme.colors.card,
         borderRadius: theme.borderRadius.lg,
         padding: theme.spacing.md,
         alignItems: "center",
         borderWidth: 1,
-        borderColor: `${theme.colors.secondary}20`,
+        borderColor: `${theme.colors.textSecondary}20`,
         shadowColor: "#000",
         shadowOffset: { width: 2, height: 2 },
         shadowOpacity: 0.1,
@@ -300,13 +300,13 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     statValue: {
         fontSize: 24,
         fontFamily: theme.fonts.bold,
-        color: theme.colors.primary,
+        color: theme.colors.text,
         marginTop: theme.spacing.xs, // Adjusted since icons now handle margins differently
     },
     statLabel: {
         fontSize: 13,
         fontFamily: theme.fonts.medium,
-        color: theme.colors.secondary,
+        color: theme.colors.textSecondary,
         marginTop: 2,
     },
     milestoneBox: {
@@ -319,6 +319,6 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     milestoneValue: {
         fontSize: 18,
         fontFamily: theme.fonts.bold,
-        color: theme.colors.primary,
+        color: theme.colors.text,
     }
 });

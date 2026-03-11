@@ -100,7 +100,7 @@ export const SimpleTimePicker: React.FC<SimpleTimePickerProps> = ({
     hour = hour % 12 || 12; // Converts 0h to 12h
     return { hour, minute: now.getMinutes(), period };
   };
-  
+
   const [hour, setHour] = useState(parseInitialTime().hour);
   const [minute, setMinute] = useState(parseInitialTime().minute);
   const [period, setPeriod] = useState<"AM" | "PM">(parseInitialTime().period);
@@ -188,7 +188,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     borderColor: 'rgba(0, 0, 0, 0.15)',
     borderRadius: 8,
     width: 60,
-    color: theme.colors.primary,
+    color: theme.colors.text,
     fontSize: 28,
     fontWeight: "700",
     textAlign: 'center',
@@ -196,7 +196,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   timePickerLabel: {
     fontSize: 18,
     fontWeight: "700",
-    color: theme.colors.primary,
+    color: theme.colors.text,
     marginBottom: theme.spacing.xl,
     fontFamily: theme.fonts.bold,
     textAlign: "center",
@@ -216,7 +216,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   selectedPickerText: {
     fontSize: 28,
-    color: theme.colors.primary,
+    color: theme.colors.text,
     fontWeight: "700",
     fontFamily: theme.fonts.bold,
     textAlign: 'center',
@@ -224,7 +224,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   pickerSeparator: {
     fontSize: 28,
     fontWeight: "600",
-    color: theme.colors.primary,
+    color: theme.colors.text,
     marginHorizontal: theme.spacing.xs,
     fontFamily: theme.fonts.bold,
     alignSelf: 'center',
@@ -234,7 +234,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   arrowText: {
     fontSize: 24,
-    color: theme.colors.secondary,
+    color: theme.colors.textSecondary,
   },
   timeConfirmButton: {
     backgroundColor: theme.colors.primary,

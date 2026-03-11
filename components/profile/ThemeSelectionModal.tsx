@@ -13,7 +13,7 @@ import {
     Text,
     View,
 } from "react-native";
-import { lightThemes, Theme, themes } from "../../constants/shared";
+import { darkThemes, lightThemes, Theme } from "../../constants/shared";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -22,8 +22,8 @@ type ThemeSelectionModalProps = {
     onClose: () => void;
     currentTheme: Theme;
     activeThemeName: string;
-    isLightMode: boolean;
-    onToggleLightMode: (value: boolean) => void;
+    isDarkMode: boolean;
+    onToggleDarkMode: (value: boolean) => void;
     isAutoTheme: boolean;
     onToggleAutoTheme: (value: boolean) => void;
     onSelectTheme: (themeName: string) => void;
@@ -54,18 +54,17 @@ const THEME_META: Record<string, { label: string; description: string }> = {
 
 export function ThemeSelectionModal({
     visible, onClose, currentTheme,
-    activeThemeName, isLightMode, onToggleLightMode,
+    activeThemeName, isDarkMode, onToggleDarkMode,
     isAutoTheme, onToggleAutoTheme, onSelectTheme,
 }: ThemeSelectionModalProps) {
     const baseActiveTheme = activeThemeName.replace("light-", "");
     const [previewTheme, setPreviewTheme] = useState(baseActiveTheme);
 
-    const isLightPreview = isLightMode && previewTheme !== "default" && previewTheme !== "dark";
-    const resolvedPreviewThemeName = isLightPreview ? `light-${previewTheme}` : previewTheme;
-    const previewThemeObj = isLightPreview ? lightThemes[resolvedPreviewThemeName] : (themes as any)[resolvedPreviewThemeName];
+    const palette = isDarkMode ? darkThemes : lightThemes;
+    const previewThemeObj = palette[previewTheme];
 
     const previewColors = previewThemeObj?.colors ?? currentTheme.colors;
-    const activeColors = (themes as any)[baseActiveTheme]?.colors ?? currentTheme.colors;
+    const activeColors = palette[baseActiveTheme]?.colors ?? currentTheme.colors;
 
     const pokeId = POKEMON_IDS[previewTheme];
     const spriteUrl = pokeId
@@ -77,7 +76,7 @@ export function ThemeSelectionModal({
         description: "",
     };
 
-    const themeList = Object.keys(themes);
+    const themeList = Object.keys(lightThemes);
 
     const fadeAnim = useRef(new Animated.Value(1)).current;
 
@@ -141,7 +140,7 @@ export function ThemeSelectionModal({
                         contentContainerStyle={styles.sidebarContent}
                     >
                         {themeList.map((tName) => {
-                            const tColors = (themes as any)[tName].colors;
+                            const tColors = palette[tName].colors;
                             const isApplied = baseActiveTheme === tName;
                             const isPreviewing = previewTheme === tName;
                             const tmeta = THEME_META[tName] ?? {
@@ -226,7 +225,7 @@ export function ThemeSelectionModal({
                             )}
                         </Animated.View>
 
-                        {/* Light mode toggle */}
+                        {/* Dark mode toggle */}
                         <Pressable
                             style={[styles.toggle, {
                                 backgroundColor: `${previewColors.primary}0E`,
@@ -234,22 +233,22 @@ export function ThemeSelectionModal({
                             }]}
                             onPress={() => {
                                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                onToggleLightMode(!isLightMode);
+                                onToggleDarkMode(!isDarkMode);
                             }}
                         >
                             <Ionicons
-                                name={isLightMode ? "sunny-outline" : "moon-outline"}
+                                name={isDarkMode ? "moon-outline" : "sunny-outline"}
                                 size={14}
                                 color={previewColors.primary}
                             />
                             <Text style={[styles.toggleLabel, { color: previewColors.primary }]}>
-                                {isLightMode ? "Light" : "Dark"}
+                                {isDarkMode ? "Dark" : "Light"}
                             </Text>
                             <Switch
-                                value={isLightMode}
+                                value={isDarkMode}
                                 onValueChange={(v) => {
                                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                    onToggleLightMode(v);
+                                    onToggleDarkMode(v);
                                 }}
                                 trackColor={{ false: `${previewColors.primary}25`, true: `${previewColors.primary}60` }}
                                 thumbColor={previewColors.primary}

@@ -110,7 +110,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
 const getStyles = (theme: Theme) =>
   StyleSheet.create({
     card: {
-      backgroundColor: theme.colors.white,
+      backgroundColor: theme.colors.card,
       marginHorizontal: theme.spacing.lg,
       marginTop: theme.spacing.xl,
       paddingVertical: theme.spacing.xl,
@@ -151,7 +151,7 @@ const getStyles = (theme: Theme) =>
       backgroundColor: theme.colors.primary,
       justifyContent: "center",
       alignItems: "center",
-      borderColor: "#fff",
+      borderColor: theme.colors.card,
       borderWidth: 4,
       elevation: 2,
     },
@@ -169,19 +169,19 @@ const getStyles = (theme: Theme) =>
     userName: {
       fontSize: 26,
       fontFamily: theme.fonts.bold,
-      color: theme.colors.primary,
+      color: theme.colors.text,
       marginBottom: 4,
     },
     userEmail: {
       fontSize: 16,
       fontFamily: theme.fonts.regular,
-      color: theme.colors.secondary,
+      color: theme.colors.textSecondary,
       marginBottom: theme.spacing.sm,
     },
     userBio: {
       textAlign: "center",
       fontSize: 15,
-      color: theme.colors.secondary,
+      color: theme.colors.textSecondary,
       lineHeight: 22,
       maxWidth: 260,
       opacity: 0.9,
@@ -197,10 +197,10 @@ const getStyles = (theme: Theme) =>
       borderRadius: theme.borderRadius.md,
       padding: theme.spacing.md,
       fontSize: 16,
-      color: theme.colors.primary,
+      color: theme.colors.text,
       fontFamily: theme.fonts.regular,
       borderWidth: 1,
-      borderColor: theme.colors.secondary + "55",
+      borderColor: theme.colors.textSecondary + "55",
       marginBottom: theme.spacing.md,
     },
     bioInput: {
