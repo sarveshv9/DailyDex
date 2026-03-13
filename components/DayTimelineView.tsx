@@ -133,11 +133,14 @@ interface DayTimelineViewProps {
 export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
     selectedDate,
     onSelectDate,
-    routineItems,
+    routineItems, // This is still used for the "selected day" highlights/peek card if we want, but let's call it allRoutines for clarity if we change it in the parent.
     onPressPeek,
     scrollY,
     listAnim,
 }) => {
+    // For clarity in migration, let's treat routineItems prop as all routines if passed that way.
+    // However, the parent currently passes only the selected day's items. 
+    // I will change the parent to pass all items.
     const { theme } = useTheme();
     const styles = useMemo(() => getStyles(theme), [theme]);
     const scrollRef = useRef<ScrollView>(null);
@@ -206,15 +209,43 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
         day: 'numeric',
     });
 
-    const sortedItems = useMemo(
-        () => [...routineItems].sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time)),
-        [routineItems]
-    );
+    // Map of date string -> sorted items for that date
+    const itemsByDate = useMemo(() => {
+        const map: Record<string, RoutineItem[]> = {};
+        routineItems.forEach(item => {
+            if (item.date) {
+                if (!map[item.date]) map[item.date] = [];
+                map[item.date].push(item);
+            }
+        });
+        // Sort each array
+        Object.keys(map).forEach(date => {
+            map[date].sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
+        });
+        return map;
+    }, [routineItems]);
 
-    const positionsSelected = useMemo(() => computePositions(sortedItems, CIRCLE_SEL), [sortedItems]);
-    const positionsOther = useMemo(() => computePositions(sortedItems, CIRCLE_OTHER), [sortedItems]);
+    // Positions for each day are computed on the fly in the render loop or pre-computed
+    // Pre-computing for the current view might be better
+    const positionsByDateSelected = useMemo(() => {
+        const map: Record<string, number[]> = {};
+        Object.keys(itemsByDate).forEach(date => {
+            map[date] = computePositions(itemsByDate[date], CIRCLE_SEL);
+        });
+        return map;
+    }, [itemsByDate]);
 
-    const firstItem = sortedItems[0] ?? null;
+    const positionsByDateOther = useMemo(() => {
+        const map: Record<string, number[]> = {};
+        Object.keys(itemsByDate).forEach(date => {
+            map[date] = computePositions(itemsByDate[date], CIRCLE_OTHER);
+        });
+        return map;
+    }, [itemsByDate]);
+
+    const selectedDateStr = useMemo(() => formatDateKey(selectedDate), [selectedDate]);
+    const currentDayItems = useMemo(() => itemsByDate[selectedDateStr] || [], [itemsByDate, selectedDateStr]);
+    const firstItem = currentDayItems[0] ?? null;
 
     const handleSelectDate = useCallback((date: Date) => {
         Haptics.selectionAsync();
@@ -265,7 +296,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                                 const isSelected = key === selectedKey;
                                 const isToday = key === todayKey;
                                 const circleSize = isSelected ? CIRCLE_SEL : CIRCLE_OTHER;
-                                const positions = isSelected ? positionsSelected : positionsOther;
+                                const positions = isSelected ? positionsByDateSelected[key] || [] : positionsByDateOther[key] || [];
 
                                 const lineColor = isSelected
                                     ? `${theme.colors.primary}60`
@@ -317,8 +348,8 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                                         {/* ── Column body: line + circles ── */}
                                         <View style={styles.columnBody}>
                                             <View style={[styles.centreLine, { backgroundColor: lineColor }]} />
-                                            {sortedItems.map((item, idx) => {
-                                                const top = positions[idx] ?? 0;
+                                            {(itemsByDate[key] || []).map((item, idx) => {
+                                                const top = (positions || [])[idx] ?? 0;
                                                 const leftOffset = (COL_WIDTH - circleSize) / 2;
                                                 return (
                                                     <View

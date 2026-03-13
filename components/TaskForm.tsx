@@ -29,7 +29,6 @@ interface TaskFormProps {
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const TEMPLATES = [
-  { task: "Wake Up", description: "A wild day appears! Start gently.", imageKey: "wakeup" },
   { task: "Hydrate", description: "It's super effective! Drink water.", imageKey: "water" },
   { task: "Stretch", description: "Limber up to increase evasion.", imageKey: "yoga" },
   { task: "Tea Time", description: "Restore PP and focus your mind.", imageKey: "tea_journal" },
@@ -40,7 +39,6 @@ const TEMPLATES = [
   { task: "Reflect", description: "Check your progress badge.", imageKey: "reflect" },
   { task: "Dinner", description: "Share a meal with your party.", imageKey: "dinner" },
   { task: "Wind Down", description: "Lower defense, prepare to rest.", imageKey: "prepare_sleep" },
-  { task: "Sleep", description: "Save your game and recharge.", imageKey: "sleep" },
 ];
 
 const TaskForm: React.FC<TaskFormProps> = ({
@@ -245,8 +243,8 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: theme.spacing.lg,
     paddingBottom: theme.spacing.lg,
-    borderBottomWidth: 0.5,
-    borderBottomColor: "rgba(0, 0, 0, 0.1)",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(0, 0, 0, 0.08)",
     marginBottom: theme.spacing.lg,
   },
   formCancelButton: {
@@ -256,7 +254,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   formCancelText: {
     fontSize: 16,
     color: theme.colors.textSecondary,
-    fontWeight: "500",
+    fontWeight: "600",
   },
   enhancedFormTitle: {
     fontSize: 18,
@@ -264,13 +262,20 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     color: theme.colors.text,
   },
   formSaveButton: {
-    paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 20,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   formSaveText: {
     fontSize: 16,
-    color: theme.colors.text,
-    fontWeight: "600",
+    color: theme.colors.white,
+    fontWeight: "700",
   },
   formScrollView: {
     flex: 1,

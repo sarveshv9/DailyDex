@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -22,7 +23,7 @@ import { TimelineEventCard } from "../components/TimelineEventCard";
 import { Theme } from "../constants/shared";
 import { useTheme } from "../context/ThemeContext";
 import { CalendarEvent, getCalendarEventsForDate } from "../utils/calendar";
-import { FormData, RoutineItem, sortRoutineItems, timeToMinutes } from "../utils/utils";
+import { FormData, getDateString, RoutineItem, sortRoutineItems, timeToMinutes } from "../utils/utils";
 
 /* -------------------- Assets & Constants -------------------- */
 
@@ -91,7 +92,7 @@ export default function RoutineScreen() {
   const { theme } = useTheme();
   const styles = useMemo(() => getStyles(theme), [theme]);
 
-  const [routineItems, setRoutineItems] = useState<RoutineItem[]>(INITIAL_ROUTINE);
+  const [allRoutines, setAllRoutines] = useState<RoutineItem[]>([]);
   const [selectedTask, setSelectedTask] = useState<RoutineItem | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [formVisible, setFormVisible] = useState(false);
@@ -100,6 +101,12 @@ export default function RoutineScreen() {
   const [nextInsertionOrder, setNextInsertionOrder] = useState(13);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
+
+  const routineItems = useMemo(() => {
+    const dateStr = getDateString(selectedDate);
+    // Show items match the date. Legacy items (no date) are treated as "today" for migration
+    return allRoutines.filter(item => item.date === dateStr);
+  }, [allRoutines, selectedDate]);
 
   /* -------------------- Timeline panel state -------------------- */
   const [panelOpen, setPanelOpen] = useState(false);
@@ -216,12 +223,23 @@ export default function RoutineScreen() {
       try {
         const stored = await AsyncStorage.getItem(STORAGE_KEY);
         if (stored !== null) {
-          const parsed = JSON.parse(stored);
-          setRoutineItems(parsed);
+          let parsed: RoutineItem[] = JSON.parse(stored);
+          const todayStr = getDateString(new Date());
+
+          // Migration: if items have no date, they are legacy. Assign them to "Today"
+          const needsMigration = parsed.some(item => !item.date);
+          if (needsMigration) {
+            parsed = parsed.map(item => item.date ? item : { ...item, date: todayStr });
+            await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+          }
+
+          setAllRoutines(parsed);
           setNextInsertionOrder(parsed.length > 0 ? Math.max(...parsed.map((i: RoutineItem) => i.insertionOrder || 0)) + 1 : 1);
         } else {
-          setRoutineItems(INITIAL_ROUTINE);
-          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_ROUTINE));
+          const todayStr = getDateString(new Date());
+          const initialWithDate = INITIAL_ROUTINE.map(item => ({ ...item, date: todayStr }));
+          setAllRoutines(initialWithDate);
+          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(initialWithDate));
         }
       } catch (e) {
         console.error("Failed to load routines.", e);
@@ -236,7 +254,7 @@ export default function RoutineScreen() {
 
   const saveRoutines = async (newItems: RoutineItem[]) => {
     try {
-      setRoutineItems(newItems);
+      setAllRoutines(newItems);
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newItems));
     } catch (e) {
       console.error("Failed to save routines.", e);
@@ -281,8 +299,24 @@ export default function RoutineScreen() {
       return;
     }
 
+    const dateStr = getDateString(selectedDate);
+    const normalizedTask = task.trim().toLowerCase();
+    const isSleepOrWake = normalizedTask === "sleep" || normalizedTask === "wake up";
+
+    if (isSleepOrWake) {
+      const existing = allRoutines.find(item =>
+        item.date === dateStr &&
+        item.task.toLowerCase() === normalizedTask &&
+        item.id !== editingId
+      );
+      if (existing) {
+        Alert.alert("Duplicate Task", `A "${task.trim()}" task already exists for this day!`);
+        return;
+      }
+    }
+
     if (editingId) {
-      const updated = routineItems.map((item) =>
+      const updated = allRoutines.map((item) =>
         item.id === editingId
           ? { ...item, time: time.trim(), task: task.trim(), description: description.trim(), imageKey: formData.imageKey || item.imageKey || "breathe" }
           : item
@@ -296,12 +330,13 @@ export default function RoutineScreen() {
         description: description.trim(),
         imageKey: formData.imageKey || "breathe",
         insertionOrder: nextInsertionOrder,
+        date: dateStr,
       };
-      saveRoutines([...routineItems, newItem]);
+      saveRoutines([...allRoutines, newItem]);
       setNextInsertionOrder((prev) => prev + 1);
     }
     closeForm();
-  }, [formData, editingId, nextInsertionOrder, closeForm, routineItems, saveRoutines]);
+  }, [formData, editingId, nextInsertionOrder, closeForm, allRoutines, saveRoutines, selectedDate]);
 
   const handleDelete = useCallback(() => {
     if (!selectedTask) return;
@@ -309,7 +344,7 @@ export default function RoutineScreen() {
 
     if (Platform.OS === 'web') {
       if (window.confirm(`Transfer ${taskToDelete.task} away?`)) {
-        const remaining = routineItems.filter((item) => item.id !== taskToDelete.id);
+        const remaining = allRoutines.filter((item) => item.id !== taskToDelete.id);
         saveRoutines(remaining);
         setTimeout(() => closeModal(), 50);
       }
@@ -320,14 +355,14 @@ export default function RoutineScreen() {
           text: "Transfer",
           style: "destructive",
           onPress: () => {
-            const remaining = routineItems.filter((item) => item.id !== taskToDelete.id);
+            const remaining = allRoutines.filter((item) => item.id !== taskToDelete.id);
             saveRoutines(remaining);
             setTimeout(() => closeModal(), 50);
           },
         },
       ]);
     }
-  }, [selectedTask, closeModal]);
+  }, [selectedTask, closeModal, allRoutines, saveRoutines]);
 
   const handleEditFromModal = useCallback(() => {
     if (selectedTask) {
@@ -349,7 +384,7 @@ export default function RoutineScreen() {
           onSelectDate={(date) => {
             setSelectedDate(date);
           }}
-          routineItems={sortedRoutineItems}
+          routineItems={allRoutines}
           onPressPeek={toggleList}
           scrollY={scrollY}
           listAnim={listAnim}
@@ -428,10 +463,7 @@ export default function RoutineScreen() {
           testID="routine-fab"
           disabled={!listOpen}
         >
-          <View style={styles.fabTop} />
-          <View style={styles.fabBottom} />
-          <View style={styles.fabCenter} />
-          <View style={styles.fabButton} />
+          <Ionicons name="add" size={32} color={theme.colors.white} />
         </Pressable>
       </Animated.View>
 
@@ -521,58 +553,23 @@ const getStyles = (theme: Theme) =>
     fab: {
       position: "absolute",
       bottom: 30,
-      right: 20,
-      width: 60,
-      height: 60,
-      borderRadius: 30,
-      overflow: 'hidden',
-      elevation: 8,
-      shadowColor: "#000",
+      right: 24,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: theme.colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+      elevation: 6,
+      shadowColor: theme.colors.primary,
       shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.25,
-      shadowRadius: 6,
-      backgroundColor: theme.colors.white,
-      borderWidth: 2,
-      borderColor: theme.colors.primary,
-    },
-    fabTop: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      height: 30,
-      backgroundColor: theme.colors.primary,
-    },
-    fabBottom: {
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      height: 30,
-      backgroundColor: theme.colors.white,
-    },
-    fabCenter: {
-      width: 60,
-      height: 6,
-      backgroundColor: theme.colors.primary,
-      position: 'absolute',
-      top: 27,
-      zIndex: 2,
-    },
-    fabButton: {
-      width: 18,
-      height: 18,
-      borderRadius: 9,
-      backgroundColor: theme.colors.white,
-      borderWidth: 2,
-      borderColor: theme.colors.primary,
-      position: 'absolute',
-      top: 21,
-      left: 21,
-      zIndex: 3,
+      shadowOpacity: 0.3,
+      shadowRadius: 10,
+      zIndex: 100,
     },
     fabPressed: {
-      transform: [{ scale: 0.95 }],
+      transform: [{ scale: 0.92 }],
+      opacity: 0.9,
     },
 
     /* Empty State */
