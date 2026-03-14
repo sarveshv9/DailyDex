@@ -97,15 +97,14 @@ export default function RoutineScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [formVisible, setFormVisible] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState<FormData>({ time: "", task: "", description: "" });
+  const [formData, setFormData] = useState<FormData>({ time: "", task: "", description: "", daysOfWeek: [] });
   const [nextInsertionOrder, setNextInsertionOrder] = useState(13);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   const routineItems = useMemo(() => {
-    const dateStr = getDateString(selectedDate);
-    // Show items match the date. Legacy items (no date) are treated as "today" for migration
-    return allRoutines.filter(item => item.date === dateStr);
+    const dayOfWeek = selectedDate.getDay(); // 0-6
+    return allRoutines.filter(item => item.daysOfWeek?.includes(dayOfWeek));
   }, [allRoutines, selectedDate]);
 
   /* -------------------- Timeline panel state -------------------- */
@@ -224,22 +223,43 @@ export default function RoutineScreen() {
         const stored = await AsyncStorage.getItem(STORAGE_KEY);
         if (stored !== null) {
           let parsed: RoutineItem[] = JSON.parse(stored);
-          const todayStr = getDateString(new Date());
 
-          // Migration: if items have no date, they are legacy. Assign them to "Today"
-          const needsMigration = parsed.some(item => !item.date);
+          // Migration: if items use `date` or have no `daysOfWeek`, convert them.
+          let needsMigration = false;
+          parsed = parsed.map(item => {
+            if (!item.daysOfWeek) {
+              needsMigration = true;
+              // If it's a sleep/wakeup task, apply to all days
+              const taskLo = item.task?.toLowerCase().trim();
+              if (taskLo === "sleep" || taskLo === "wake up") {
+                return { ...item, daysOfWeek: [0, 1, 2, 3, 4, 5, 6] };
+              }
+              // Otherwise, if it has a specific date, map to that day of the week, else today
+              if ((item as any).date) {
+                const parts = (item as any).date.split('-');
+                if (parts.length === 3) {
+                  const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                  return { ...item, daysOfWeek: [d.getDay()] };
+                }
+              }
+              return { ...item, daysOfWeek: [new Date().getDay()] };
+            }
+            return item;
+          });
+
           if (needsMigration) {
-            parsed = parsed.map(item => item.date ? item : { ...item, date: todayStr });
             await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
           }
 
           setAllRoutines(parsed);
           setNextInsertionOrder(parsed.length > 0 ? Math.max(...parsed.map((i: RoutineItem) => i.insertionOrder || 0)) + 1 : 1);
         } else {
-          const todayStr = getDateString(new Date());
-          const initialWithDate = INITIAL_ROUTINE.map(item => ({ ...item, date: todayStr }));
-          setAllRoutines(initialWithDate);
-          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(initialWithDate));
+          const initialWithDays = INITIAL_ROUTINE.map(item => {
+             const isDaily = item.task.toLowerCase() === "sleep" || item.task.toLowerCase() === "wake up";
+             return { ...item, daysOfWeek: isDaily ? [0, 1, 2, 3, 4, 5, 6] : [new Date().getDay()] };
+          });
+          setAllRoutines(initialWithDays);
+          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(initialWithDays));
         }
       } catch (e) {
         console.error("Failed to load routines.", e);
@@ -278,39 +298,45 @@ export default function RoutineScreen() {
   const openForm = useCallback((item?: RoutineItem) => {
     if (item) {
       setEditingId(item.id);
-      setFormData({ time: item.time, task: item.task, description: item.description });
+      setFormData({ 
+        time: item.time, 
+        task: item.task, 
+        description: item.description, 
+        daysOfWeek: item.daysOfWeek || [new Date().getDay()]
+      });
     } else {
       setEditingId(null);
-      setFormData({ time: "", task: "", description: "" });
+      setFormData({ time: "", task: "", description: "", daysOfWeek: [selectedDate.getDay()] });
     }
     setFormVisible(true);
-  }, []);
+  }, [selectedDate]);
 
   const closeForm = useCallback(() => {
     setFormVisible(false);
     setEditingId(null);
-    setFormData({ time: "", task: "", description: "" });
+    setFormData({ time: "", task: "", description: "", daysOfWeek: [] });
   }, []);
 
   const handleSave = useCallback(() => {
-    const { time, task, description } = formData;
-    if (!time.trim() || !task.trim() || !description.trim()) {
-      Alert.alert("Missing Information", "Please fill in all fields to continue");
+    const { time, task, description, daysOfWeek } = formData;
+    if (!time.trim() || !task.trim() || !description.trim() || !daysOfWeek || daysOfWeek.length === 0) {
+      Alert.alert("Missing Information", "Please fill in all fields and select days to continue");
       return;
     }
 
-    const dateStr = getDateString(selectedDate);
     const normalizedTask = task.trim().toLowerCase();
     const isSleepOrWake = normalizedTask === "sleep" || normalizedTask === "wake up";
+    const finalDays = isSleepOrWake ? [0, 1, 2, 3, 4, 5, 6] : daysOfWeek.sort();
 
     if (isSleepOrWake) {
-      const existing = allRoutines.find(item =>
-        item.date === dateStr &&
-        item.task.toLowerCase() === normalizedTask &&
-        item.id !== editingId
-      );
+      // Check if for ANY of the final days, a sleep/wake up task already exists (other than the editing one)
+      const existing = allRoutines.find(item => {
+        if (item.id === editingId) return false;
+        if (item.task.toLowerCase() !== normalizedTask) return false;
+        return item.daysOfWeek?.some(day => finalDays.includes(day));
+      });
       if (existing) {
-        Alert.alert("Duplicate Task", `A "${task.trim()}" task already exists for this day!`);
+        Alert.alert("Duplicate Task", `A "${task.trim()}" task already exists for one or more of these days!`);
         return;
       }
     }
@@ -318,7 +344,14 @@ export default function RoutineScreen() {
     if (editingId) {
       const updated = allRoutines.map((item) =>
         item.id === editingId
-          ? { ...item, time: time.trim(), task: task.trim(), description: description.trim(), imageKey: formData.imageKey || item.imageKey || "breathe" }
+          ? { 
+              ...item, 
+              time: time.trim(), 
+              task: task.trim(), 
+              description: description.trim(), 
+              imageKey: formData.imageKey || item.imageKey || "breathe",
+              daysOfWeek: finalDays
+            }
           : item
       );
       saveRoutines(updated);
@@ -330,13 +363,13 @@ export default function RoutineScreen() {
         description: description.trim(),
         imageKey: formData.imageKey || "breathe",
         insertionOrder: nextInsertionOrder,
-        date: dateStr,
+        daysOfWeek: finalDays,
       };
       saveRoutines([...allRoutines, newItem]);
       setNextInsertionOrder((prev) => prev + 1);
     }
     closeForm();
-  }, [formData, editingId, nextInsertionOrder, closeForm, allRoutines, saveRoutines, selectedDate]);
+  }, [formData, editingId, nextInsertionOrder, closeForm, allRoutines, saveRoutines]);
 
   const handleDelete = useCallback(() => {
     if (!selectedTask) return;

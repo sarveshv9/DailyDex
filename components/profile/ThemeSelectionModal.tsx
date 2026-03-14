@@ -30,13 +30,13 @@ type ThemeSelectionModalProps = {
 };
 
 const POKEMON_IDS: Record<string, number> = {
-    pikachu: 25, bulbasaur: 1, squirtle: 7, jigglypuff: 39,
+    default: 100, pikachu: 25, bulbasaur: 1, squirtle: 7, jigglypuff: 39,
     meowth: 52, psyduck: 54, slowpoke: 79, gengar: 94,
     snorlax: 143, charizard: 6, dragonite: 149, mew: 151,
 };
 
 const THEME_META: Record<string, { label: string; description: string }> = {
-    default: { label: "Classic", description: "Clean & timeless" },
+    default: { label: "Classic", description: "Iconic Red & White" },
     dark: { label: "Midnight", description: "Easy on the eyes" },
     pikachu: { label: "Pikachu", description: "Electric energy" },
     bulbasaur: { label: "Bulbasaur", description: "Fresh & natural" },

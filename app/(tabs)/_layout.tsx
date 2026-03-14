@@ -107,7 +107,7 @@ function CustomTabBar({
         <Animated.View
           style={[
             styles.tabBar,
-            { backgroundColor: theme.colors.white, width: tabBarWidth },
+            { backgroundColor: theme.colors.card, width: tabBarWidth },
           ]}
         >
           {/* Background icons (outlined) - each in their own position */}

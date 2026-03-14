@@ -25,16 +25,14 @@ const END_HOUR = 22;
 const TOTAL_MINUTES = (END_HOUR - START_HOUR) * 60;
 
 /** Column dimensions */
-const DAY_COLUMN_COUNT = 7;
-// We use a fixed column width that fits 7 days in the screen width
-const COL_WIDTH = (SCREEN_WIDTH - 32) / DAY_COLUMN_COUNT; // 32 for total horizontal padding
+// Column count and width are now calculated dynamically based on viewMode
 
 /** Icon circle sizes */
 const CIRCLE_SEL = 34;         // selected day – larger, fully opaque
 const CIRCLE_OTHER = 26;       // other days – smaller, muted
 
-/** Height of the column body (the part with the lines + circles) */
-const BODY_HEIGHT = 320;
+/** Height of the column body will be measured dynamically */
+const DEFAULT_BODY_HEIGHT = 320;
 
 /** Minimum gap (px) between top edges of consecutive circles to prevent overlap */
 const MIN_GAP_SEL = CIRCLE_SEL + 4;
@@ -63,13 +61,21 @@ const getWeekDates = (date: Date): Date[] => {
     });
 };
 
+const get3DayDates = (centerDate: Date): Date[] => {
+    return Array.from({ length: 3 }, (_, i) => {
+        const d = new Date(centerDate);
+        d.setDate(centerDate.getDate() + (i - 1));
+        return d;
+    });
+};
+
 /**
  * Given a list of RoutineItems (pre-sorted by time), compute the Y top-positions
  * for their circles, ensuring no two circles overlap.
  */
-const computePositions = (items: RoutineItem[], circleSize: number): number[] => {
+const computePositions = (items: RoutineItem[], circleSize: number, bodyHeight: number): number[] => {
     if (items.length === 0) return [];
-    const maxTop = BODY_HEIGHT - circleSize;
+    const maxTop = Math.max(0, bodyHeight - circleSize);
     const minGap = circleSize + 4;
     const startMin = START_HOUR * 60;
 
@@ -144,6 +150,20 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
     const { theme } = useTheme();
     const styles = useMemo(() => getStyles(theme), [theme]);
     const scrollRef = useRef<ScrollView>(null);
+    const [viewMode, setViewMode] = React.useState<'3-day' | '7-day'>('3-day');
+    const columnCount = viewMode === '7-day' ? 7 : 3;
+    const colWidth = (SCREEN_WIDTH - 32) / columnCount;
+
+    const [bodyHeight, setBodyHeight] = React.useState(DEFAULT_BODY_HEIGHT);
+
+    const circleSel = viewMode === '7-day' ? 34 : 72;
+    const circleOther = viewMode === '7-day' ? 26 : 56;
+
+    React.useEffect(() => {
+        if (scrollRef.current) {
+            scrollRef.current.scrollTo({ x: SCREEN_WIDTH * 2, animated: false });
+        }
+    }, [viewMode]);
 
     // Fade out everything except the date header when the list is expanded (listAnim -> 1) 
     // OR when the user scrolls inside the list (scrollY -> 90)
@@ -190,14 +210,19 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
         return t;
     }, []);
 
-    // We show 5 weeks total (prev 2 + current + next 2) centered on today
-    const weeks = useMemo(() => {
-        return Array.from({ length: 5 }, (_, wi) => {
+    // We show 5 pages total (prev 2 + current + next 2) centered on today
+    const pages = useMemo(() => {
+        return Array.from({ length: 5 }, (_, pi) => {
             const anchor = new Date(today);
-            anchor.setDate(anchor.getDate() + (wi - 2) * 7);
-            return getWeekDates(anchor);
+            if (viewMode === '7-day') {
+                anchor.setDate(anchor.getDate() + (pi - 2) * 7);
+                return getWeekDates(anchor);
+            } else {
+                anchor.setDate(anchor.getDate() + (pi - 2) * 3);
+                return get3DayDates(anchor);
+            }
         });
-    }, [today]);
+    }, [today, viewMode]);
 
     const selectedKey = formatDateKey(selectedDate);
     const todayKey = formatDateKey(today);
@@ -209,42 +234,43 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
         day: 'numeric',
     });
 
-    // Map of date string -> sorted items for that date
-    const itemsByDate = useMemo(() => {
-        const map: Record<string, RoutineItem[]> = {};
+    // Map of day index (0-6) -> sorted items for that day of week
+    const itemsByDayOfWeek = useMemo(() => {
+        const map: Record<number, RoutineItem[]> = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
         routineItems.forEach(item => {
-            if (item.date) {
-                if (!map[item.date]) map[item.date] = [];
-                map[item.date].push(item);
+            if (item.daysOfWeek) {
+                item.daysOfWeek.forEach(dayIndex => {
+                    if (map[dayIndex]) {
+                        map[dayIndex].push(item);
+                    }
+                });
             }
         });
         // Sort each array
-        Object.keys(map).forEach(date => {
-            map[date].sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
+        Object.keys(map).forEach(day => {
+            map[Number(day)].sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
         });
         return map;
     }, [routineItems]);
 
-    // Positions for each day are computed on the fly in the render loop or pre-computed
-    // Pre-computing for the current view might be better
-    const positionsByDateSelected = useMemo(() => {
-        const map: Record<string, number[]> = {};
-        Object.keys(itemsByDate).forEach(date => {
-            map[date] = computePositions(itemsByDate[date], CIRCLE_SEL);
+    const positionsByDayOfWeekSelected = useMemo(() => {
+        const map: Record<number, number[]> = {};
+        Object.keys(itemsByDayOfWeek).forEach(day => {
+            map[Number(day)] = computePositions(itemsByDayOfWeek[Number(day)], circleSel, bodyHeight);
         });
         return map;
-    }, [itemsByDate]);
+    }, [itemsByDayOfWeek, circleSel, bodyHeight]);
 
-    const positionsByDateOther = useMemo(() => {
-        const map: Record<string, number[]> = {};
-        Object.keys(itemsByDate).forEach(date => {
-            map[date] = computePositions(itemsByDate[date], CIRCLE_OTHER);
+    const positionsByDayOfWeekOther = useMemo(() => {
+        const map: Record<number, number[]> = {};
+        Object.keys(itemsByDayOfWeek).forEach(day => {
+            map[Number(day)] = computePositions(itemsByDayOfWeek[Number(day)], circleOther, bodyHeight);
         });
         return map;
-    }, [itemsByDate]);
+    }, [itemsByDayOfWeek, circleOther, bodyHeight]);
 
-    const selectedDateStr = useMemo(() => formatDateKey(selectedDate), [selectedDate]);
-    const currentDayItems = useMemo(() => itemsByDate[selectedDateStr] || [], [itemsByDate, selectedDateStr]);
+    const currentDayOfWeek = selectedDate.getDay();
+    const currentDayItems = useMemo(() => itemsByDayOfWeek[currentDayOfWeek] || [], [itemsByDayOfWeek, currentDayOfWeek]);
     const firstItem = currentDayItems[0] ?? null;
 
     const handleSelectDate = useCallback((date: Date) => {
@@ -275,6 +301,21 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                     <Animated.Text style={[styles.headerText, { fontSize: headerFontSize }]}>{dateHeader}</Animated.Text>
                     <Animated.Text style={[styles.headerArrow, { fontSize: headerFontSize }]}> ›</Animated.Text>
                 </Pressable>
+                
+                <Pressable
+                    onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setViewMode(prev => prev === '3-day' ? '7-day' : '3-day');
+                    }}
+                    style={styles.viewToggleBtn}
+                    testID="view-toggle-btn"
+                >
+                    <Ionicons 
+                        name={viewMode === '3-day' ? 'calendar-outline' : 'calendar'} 
+                        size={22} 
+                        color={theme.colors.primary} 
+                    />
+                </Pressable>
             </Animated.View>
 
             {/* ────────────────────── Columns ScrollView ────────────────────── */}
@@ -286,17 +327,23 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.columnsContent}
                     onLayout={() => {
-                        // Scroll to the current week center page if needed on mount
+                        // Scroll to the current week center page on mount
+                        if (scrollRef.current) {
+                            setTimeout(() => {
+                                scrollRef.current?.scrollTo({ x: SCREEN_WIDTH * 2, animated: false });
+                            }, 50);
+                        }
                     }}
                 >
-                    {weeks.map((weekDates, wi) => (
+                    {pages.map((pageDates, wi) => (
                         <View key={wi} style={styles.weekPage}>
-                            {weekDates.map((date, di) => {
+                            {pageDates.map((date, di) => {
                                 const key = formatDateKey(date);
+                                const dayIndex = date.getDay();
                                 const isSelected = key === selectedKey;
                                 const isToday = key === todayKey;
-                                const circleSize = isSelected ? CIRCLE_SEL : CIRCLE_OTHER;
-                                const positions = isSelected ? positionsByDateSelected[key] || [] : positionsByDateOther[key] || [];
+                                const circleSize = isSelected ? circleSel : circleOther;
+                                const positions = isSelected ? positionsByDayOfWeekSelected[dayIndex] || [] : positionsByDayOfWeekOther[dayIndex] || [];
 
                                 const lineColor = isSelected
                                     ? `${theme.colors.primary}60`
@@ -307,12 +354,12 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                                 const iconColor = isSelected
                                     ? theme.colors.white
                                     : `${theme.colors.textSecondary}80`;
-                                const iconSize = isSelected ? 15 : 11;
+                                const iconSize = isSelected ? (viewMode === '7-day' ? 15 : 34) : (viewMode === '7-day' ? 11 : 24);
 
                                 return (
                                     <View
                                         key={key}
-                                        style={styles.dayColumn}
+                                        style={[styles.dayColumn, { width: colWidth }]}
                                     >
                                         {/* ── Day label ── */}
                                         <Text
@@ -322,7 +369,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                                                 isToday && !isSelected && styles.dayLabelToday,
                                             ]}
                                         >
-                                            {DAY_LABELS[di]}
+                                            {DAY_LABELS[dayIndex]}
                                         </Text>
 
                                         {/* ── Date badge ── */}
@@ -346,11 +393,19 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                                         </Pressable>
 
                                         {/* ── Column body: line + circles ── */}
-                                        <View style={styles.columnBody}>
-                                            <View style={[styles.centreLine, { backgroundColor: lineColor }]} />
-                                            {(itemsByDate[key] || []).map((item, idx) => {
+                                        <View 
+                                            style={[styles.columnBody, { width: colWidth }]}
+                                            onLayout={(e) => {
+                                                const h = e.nativeEvent.layout.height;
+                                                if (h > 0 && Math.abs(h - bodyHeight) > 5) {
+                                                    setBodyHeight(h);
+                                                }
+                                            }}
+                                        >
+                                            <View style={[styles.centreLine, { backgroundColor: lineColor, left: (colWidth - 2) / 2 }]} />
+                                            {(itemsByDayOfWeek[dayIndex] || []).map((item, idx) => {
                                                 const top = (positions || [])[idx] ?? 0;
-                                                const leftOffset = (COL_WIDTH - circleSize) / 2;
+                                                const leftOffset = (colWidth - circleSize) / 2;
                                                 return (
                                                     <View
                                                         key={item.id}
@@ -462,22 +517,32 @@ const getStyles = (theme: Theme) =>
             color: theme.colors.primary,
             fontFamily: theme.fonts.bold,
         },
+        viewToggleBtn: {
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            backgroundColor: `${theme.colors.primary}15`,
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginLeft: 12,
+        },
 
         /* ── Columns ── */
         columnsWrapper: {
             flex: 1,
         },
         columnsContent: {
-            // Screen-width pages
+            flexGrow: 1,
         },
         weekPage: {
             width: SCREEN_WIDTH,
             flexDirection: 'row',
             paddingHorizontal: 16,
+            flex: 1,
         },
         dayColumn: {
-            width: COL_WIDTH,
             alignItems: 'center',
+            flex: 1,
         },
         dayLabel: {
             fontSize: 10,
@@ -514,15 +579,14 @@ const getStyles = (theme: Theme) =>
 
         /* ── Column body ── */
         columnBody: {
-            width: COL_WIDTH,
-            height: BODY_HEIGHT,
+            flex: 1,
             position: 'relative',
+            minHeight: 150,
         },
         centreLine: {
             position: 'absolute',
             top: 0,
             bottom: 0,
-            left: (COL_WIDTH - 2) / 2,
             width: 2,
             borderRadius: 1,
         },

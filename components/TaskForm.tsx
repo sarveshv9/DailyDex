@@ -10,7 +10,8 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  View
+  View,
+  TouchableOpacity
 } from "react-native";
 import { Theme } from "../constants/shared";
 import { useTheme } from "../context/ThemeContext";
@@ -27,6 +28,16 @@ interface TaskFormProps {
 }
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get("window");
+
+const DAYS_OF_WEEK = [
+  { label: 'S', value: 0 },
+  { label: 'M', value: 1 },
+  { label: 'T', value: 2 },
+  { label: 'W', value: 3 },
+  { label: 'T', value: 4 },
+  { label: 'F', value: 5 },
+  { label: 'S', value: 6 },
+];
 
 const TEMPLATES = [
   { task: "Hydrate", description: "It's super effective! Drink water.", imageKey: "water" },
@@ -68,6 +79,17 @@ const TaskForm: React.FC<TaskFormProps> = ({
   const handleConfirmTime = useCallback(() => {
     setShowTimePicker(false);
   }, []);
+
+  const toggleDay = useCallback((dayValue: number) => {
+    const currentDays = formData.daysOfWeek || [];
+    const newDays = currentDays.includes(dayValue)
+      ? currentDays.filter(d => d !== dayValue)
+      : [...currentDays, dayValue].sort();
+    
+    // Require at least one day to be selected initially to avoid empty states, 
+    // unless the user really insists (optional logic, but typically good UX).
+    onUpdateField("daysOfWeek", newDays as any);
+  }, [formData.daysOfWeek, onUpdateField]);
 
   return (
     <Modal
@@ -144,6 +166,53 @@ const TaskForm: React.FC<TaskFormProps> = ({
                 placeholderTextColor="rgba(60, 60, 67, 0.3)"
                 multiline
               />
+            </View>
+            <View style={styles.inputSection}>
+              <Text style={styles.inputLabel}>Repeat On</Text>
+              <View style={styles.daysContainer}>
+                {DAYS_OF_WEEK.map((day) => {
+                  const isSelected = (formData.daysOfWeek || []).includes(day.value);
+                  return (
+                    <TouchableOpacity
+                      key={day.value}
+                      style={[
+                        styles.dayChip,
+                        isSelected && { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }
+                      ]}
+                      onPress={() => toggleDay(day.value)}
+                    >
+                      <Text
+                        style={[
+                          styles.dayText,
+                          isSelected && { color: theme.colors.white }
+                        ]}
+                      >
+                        {day.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              <View style={styles.quickSelectContainer}>
+                <TouchableOpacity 
+                  style={styles.quickSelectChip}
+                  onPress={() => onUpdateField("daysOfWeek", [0, 1, 2, 3, 4, 5, 6] as any)}
+                >
+                  <Text style={styles.quickSelectText}>Everyday</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.quickSelectChip}
+                  onPress={() => onUpdateField("daysOfWeek", [1, 2, 3, 4, 5] as any)}
+                >
+                  <Text style={styles.quickSelectText}>Weekdays</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.quickSelectChip}
+                  onPress={() => onUpdateField("daysOfWeek", [0, 6] as any)}
+                >
+                  <Text style={styles.quickSelectText}>Weekends</Text>
+                </TouchableOpacity>
+              </View>
             </View>
             <View style={styles.inputSection}>
               <Text style={styles.inputLabel}>Description</Text>
@@ -358,6 +427,44 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   timeInputIcon: {
     fontSize: 18,
     opacity: 0.6,
+  },
+  daysContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+  },
+  dayChip: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.card,
+  },
+  dayText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+  },
+  quickSelectContainer: {
+    flexDirection: 'row',
+    marginTop: theme.spacing.sm,
+    gap: theme.spacing.sm,
+  },
+  quickSelectChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  quickSelectText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: theme.colors.textSecondary,
   },
 });
 
