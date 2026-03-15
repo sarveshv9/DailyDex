@@ -122,12 +122,12 @@ const TaskForm: React.FC<TaskFormProps> = ({
   );
 
   /* ── Duration helpers ── */
-  const currentDuration: number = (formData as any).duration ?? 30;
+  const currentDuration: number = formData.duration ?? 30;
 
   const setDuration = useCallback(
     (mins: number) => {
       Haptics.selectionAsync();
-      onUpdateField("duration" as any, mins);
+      onUpdateField("duration", mins);
     },
     [onUpdateField]
   );
@@ -136,7 +136,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
     (delta: number) => {
       const next = Math.max(5, Math.min(240, currentDuration + delta));
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      onUpdateField("duration" as any, next);
+      onUpdateField("duration", next);
     },
     [currentDuration, onUpdateField]
   );
@@ -475,6 +475,7 @@ const getStyles = (theme: Theme) =>
       borderTopRightRadius: 32,
       paddingTop: 10,
       paddingBottom: 40,
+      height: SCREEN_HEIGHT * 0.85,
       maxHeight: SCREEN_HEIGHT * 0.92,
       ...Platform.select({
         ios: {

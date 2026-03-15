@@ -29,26 +29,34 @@ const TOTAL_MINUTES = (END_HOUR - START_HOUR) * 60;
 /** Width reserved for the time-label column on the left */
 const TIME_AXIS_WIDTH = 44;
 
-/** Each of the 3 day columns gets equal width from the remaining space */
-const COLUMN_AREA_WIDTH = SCREEN_WIDTH - TIME_AXIS_WIDTH - 16; // 16 = right padding
-const COL_WIDTH = COLUMN_AREA_WIDTH / 3;
+/** Column count and width are computed dynamically inside the component based on viewMode */
+const COL_WIDTH_3DAY = (SCREEN_WIDTH - TIME_AXIS_WIDTH - 16) / 3;
+const COL_WIDTH_7DAY = (SCREEN_WIDTH - TIME_AXIS_WIDTH - 16) / 7;
 
 /** Circle sizes — selected day is larger */
 const CIRCLE_SEL = 48;
 const CIRCLE_OTHER = 32;
 
-const DEFAULT_BODY_HEIGHT = 600;
+const DEFAULT_BODY_HEIGHT = 1600;
 
 /** Hour marks to render in the time axis */
 const TIME_LABELS: { hour: number; label: string }[] = [
     { hour: 6, label: '6AM' },
+    { hour: 7, label: '7AM' },
     { hour: 8, label: '8AM' },
+    { hour: 9, label: '9AM' },
     { hour: 10, label: '10AM' },
+    { hour: 11, label: '11AM' },
     { hour: 12, label: '12PM' },
+    { hour: 13, label: '1PM' },
     { hour: 14, label: '2PM' },
+    { hour: 15, label: '3PM' },
     { hour: 16, label: '4PM' },
+    { hour: 17, label: '5PM' },
     { hour: 18, label: '6PM' },
+    { hour: 19, label: '7PM' },
     { hour: 20, label: '8PM' },
+    { hour: 21, label: '9PM' },
     { hour: 22, label: '10PM' },
 ];
 
@@ -65,6 +73,22 @@ const get3DayDates = (centerDate: Date): Date[] =>
         d.setDate(centerDate.getDate() + (i - 1));
         return d;
     });
+
+const getWeekStart = (date: Date): Date => {
+    const d = new Date(date);
+    d.setDate(d.getDate() - d.getDay());
+    d.setHours(0, 0, 0, 0);
+    return d;
+};
+
+const getWeekDates = (date: Date): Date[] => {
+    const sunday = getWeekStart(date);
+    return Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(sunday);
+        d.setDate(sunday.getDate() + i);
+        return d;
+    });
+};
 
 /**
  * Converts a time string (e.g. "14:30") to a Y pixel position
@@ -132,7 +156,7 @@ const TimeAxisItem = memo<{
     <View
         style={{
             position: 'absolute',
-            top: topY + circleHalf - 7,   // vertically align text mid-circle
+            top: topY - 7,   // center text on the hour mark
             right: 6,
             width: TIME_AXIS_WIDTH - 6,
             alignItems: 'flex-end',
@@ -151,7 +175,6 @@ const TimeAxisItem = memo<{
         </Text>
     </View>
 ));
-TimeAxisItem.displayName = 'TimeAxisItem';
 
 /* ─────────────────────────── TaskPill ──────────────────────────────── */
 /*
@@ -207,7 +230,6 @@ const TaskPill = memo<{
         </View>
     );
 });
-TaskPill.displayName = 'TaskPill';
 
 /* ─────────────────────────────── Component ──────────────────────────── */
 
@@ -221,6 +243,14 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
 }) => {
     const { theme } = useTheme();
     const styles = useMemo(() => getStyles(theme), [theme]);
+
+    const [viewMode, setViewMode] = React.useState<'3-day' | '7-day'>('3-day');
+    const is7Day = viewMode === '7-day';
+    const COL_WIDTH = is7Day ? COL_WIDTH_7DAY : COL_WIDTH_3DAY;
+
+    // Circle sizes — in 7-day view everything is smaller to fit
+    const circleSel = is7Day ? 28 : CIRCLE_SEL;
+    const circleOther = is7Day ? 18 : CIRCLE_OTHER;
 
     // We always show exactly 3 days centered on selectedDate
     const [bodyHeight, setBodyHeight] = React.useState(DEFAULT_BODY_HEIGHT);
@@ -273,23 +303,28 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
     const selectedKey = formatDateKey(selectedDate);
     const todayKey = formatDateKey(today);
 
-    // 5 pages of 3-day windows so user can swipe left/right
+    // 5 pages of day-windows so user can swipe left/right
     const scrollRef = useRef<ScrollView>(null);
     const pages = useMemo(() =>
         Array.from({ length: 5 }, (_, pi) => {
             const anchor = new Date(today);
-            anchor.setDate(anchor.getDate() + (pi - 2) * 3);
-            return get3DayDates(anchor);
+            if (is7Day) {
+                anchor.setDate(anchor.getDate() + (pi - 2) * 7);
+                return getWeekDates(anchor);
+            } else {
+                anchor.setDate(anchor.getDate() + (pi - 2) * 3);
+                return get3DayDates(anchor);
+            }
         }),
-        [today]
+        [today, is7Day]
     );
 
     React.useEffect(() => {
-        // Always start centered on today's page
+        // Snap back to current-week/3-day page whenever mode changes
         setTimeout(() => {
             scrollRef.current?.scrollTo({ x: SCREEN_WIDTH * 2, animated: false });
         }, 50);
-    }, []);
+    }, [viewMode]);
 
     // Split header date into weekday + rest
     const dateHeader = selectedDate.toLocaleDateString('en-US', {
@@ -365,10 +400,25 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                             {restStr}
                         </Animated.Text>
                     </View>
-                    <View style={styles.headerArrowContainer}>
-                        <Ionicons name="chevron-forward" size={14} color={theme.colors.primary} />
-                    </View>
                 </Pressable>
+
+                {/* ── View-mode toggle (calendar-outline = 3-day, calendar = 7-day) ── */}
+                <Animated.View style={{ opacity: collapseOpacity }}>
+                    <Pressable
+                        onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            setViewMode(prev => prev === '3-day' ? '7-day' : '3-day');
+                        }}
+                        style={styles.viewToggleBtn}
+                        testID="view-toggle-btn"
+                    >
+                        <Ionicons
+                            name={viewMode === '3-day' ? 'calendar-outline' : 'calendar'}
+                            size={22}
+                            color={theme.colors.primary}
+                        />
+                    </Pressable>
+                </Animated.View>
             </Animated.View>
 
             {/* ── Timeline (scrollable vertically + swipeable horizontally for pages) ── */}
@@ -454,7 +504,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                                             key={tl.hour}
                                             label={tl.label}
                                             topY={tl.topY}
-                                            circleHalf={CIRCLE_SEL / 2}
+                                            circleHalf={circleSel / 2}
                                             theme={theme}
                                         />
                                     ))}
@@ -466,7 +516,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                                     const dayIndex = date.getDay();
                                     const isSelected = key === selectedKey;
                                     const dayItems = itemsByDayOfWeek[dayIndex] ?? [];
-                                    const circleSize = isSelected ? CIRCLE_SEL : CIRCLE_OTHER;
+                                    const circleSize = isSelected ? circleSel : circleOther;
                                     const lineColor = isSelected
                                         ? `${theme.colors.primary}60`
                                         : `${theme.colors.primary}25`;
@@ -491,7 +541,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                                             {/* Pills — width = circleSize, height grows with duration, overlap is natural */}
                                             {dayItems.map(item => {
                                                 const topY = timeToY(item.time, bodyHeight);
-                                                const duration = (item as any).duration ?? DEFAULT_DURATION;
+                                                const duration = item.duration ?? DEFAULT_DURATION;
                                                 const pillHeight = durationToPillHeight(duration, bodyHeight, circleSize);
                                                 const leftOffset = (COL_WIDTH - circleSize) / 2;
 
@@ -500,7 +550,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                                                         key={item.id}
                                                         style={{
                                                             position: 'absolute',
-                                                            top: topY,
+                                                            top: topY - circleSize / 2, // center the top cap on the start time
                                                             left: leftOffset,
                                                         }}
                                                     >
@@ -602,49 +652,46 @@ const getStyles = (theme: Theme) =>
         header: {
             flexDirection: 'row',
             alignItems: 'center',
-            paddingHorizontal: 16,
-            paddingBottom: 8,
+            paddingHorizontal: 25,
+            height: 70, // Fixed height for iOS
+            backgroundColor: theme.colors.background,
+            zIndex: 100,
         },
         backButton: {
             marginRight: 10,
-            zIndex: 10,
         },
         backIconCircle: {
-            width: 38,
-            height: 38,
-            borderRadius: 19,
-            backgroundColor: theme.colors.card,
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            backgroundColor: `${theme.colors.text}08`, // Verifying color change
             alignItems: 'center',
             justifyContent: 'center',
-            borderWidth: 1,
-            borderColor: `${theme.colors.text}08`,
-            ...Platform.select({
-                ios: {
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.08,
-                    shadowRadius: 6,
-                },
-                android: { elevation: 2 },
-            }),
+            borderWidth: 1.5,
+            borderColor: `${theme.colors.text}10`,
         },
         headerDateBlock: {
+            flex: 1,
             flexDirection: 'row',
             alignItems: 'center',
-            flex: 1,
+            justifyContent: 'flex-start',
+            paddingLeft: 4,
         },
-        headerDateInner: { flex: 1 },
+        headerDateInner: {
+            alignItems: 'flex-start',
+            gap: 1,
+        },
         headerWeekday: {
             fontFamily: theme.fonts.bold,
             color: theme.colors.text,
-            lineHeight: 28,
-            letterSpacing: -0.3,
+            lineHeight: 36, // Slightly taller
+            letterSpacing: -0.5,
         },
         headerRest: {
             fontFamily: theme.fonts.medium,
             color: theme.colors.textSecondary,
             letterSpacing: 0.1,
-            marginTop: 1,
+            marginTop: 0,
         },
         headerArrowContainer: {
             width: 22,
@@ -654,6 +701,15 @@ const getStyles = (theme: Theme) =>
             alignItems: 'center',
             justifyContent: 'center',
             marginRight: 10,
+        },
+        viewToggleBtn: {
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            backgroundColor: `${theme.colors.primary}15`,
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginLeft: 4,
         },
 
         /* ── Timeline layout ── */
@@ -723,6 +779,7 @@ const getStyles = (theme: Theme) =>
         bodyRow: {
             flexDirection: 'row',
             paddingRight: 8,
+            paddingVertical: CIRCLE_SEL / 2, // space for pill caps at top/bottom
         },
 
         /* Left time axis */

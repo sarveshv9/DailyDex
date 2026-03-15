@@ -35,18 +35,18 @@ const PANEL_EXPANDED_HEIGHT = 510;
 
 /* Initial routine preserved */
 const INITIAL_ROUTINE: RoutineItem[] = [
-  { id: "1", time: "6:00 AM", task: "Wake Up", description: "A wild day appears! Start gently.", imageKey: "wakeup", insertionOrder: 1 },
-  { id: "2", time: "6:30 AM", task: "Hydrate", description: "It's super effective! Drink water.", imageKey: "water", insertionOrder: 2 },
-  { id: "3", time: "7:00 AM", task: "Stretch", description: "Limber up to increase evasion.", imageKey: "yoga", insertionOrder: 3 },
-  { id: "4", time: "8:00 AM", task: "Tea Time", description: "Restore PP and focus your mind.", imageKey: "tea_journal", insertionOrder: 4 },
-  { id: "5", time: "9:00 AM", task: "Breakfast", description: "Boost Attack stat with nutrition.", imageKey: "breakfast", insertionOrder: 5 },
-  { id: "6", time: "10:00 AM", task: "Study", description: "Gain XP in a new skill.", imageKey: "study", insertionOrder: 6 },
-  { id: "7", time: "1:00 PM", task: "Lunch", description: "Refuel HP for the afternoon.", imageKey: "lunch", insertionOrder: 7 },
-  { id: "8", time: "3:00 PM", task: "Walk", description: "Encounter nature in the tall grass.", imageKey: "walk", insertionOrder: 8 },
-  { id: "9", time: "5:00 PM", task: "Reflect", description: "Check your progress badge.", imageKey: "reflect", insertionOrder: 9 },
-  { id: "10", time: "7:00 PM", task: "Dinner", description: "Share a meal with your party.", imageKey: "dinner", insertionOrder: 10 },
-  { id: "11", time: "9:00 PM", task: "Wind Down", description: "Lower defense, prepare to rest.", imageKey: "prepare_sleep", insertionOrder: 11 },
-  { id: "12", time: "10:00 PM", task: "Sleep", description: "Save your game and recharge.", imageKey: "sleep", insertionOrder: 12 },
+  { id: "1", time: "6:00 AM", task: "Wake Up", description: "A wild day appears! Start gently.", imageKey: "wakeup", insertionOrder: 1, duration: 45 },
+  { id: "2", time: "6:30 AM", task: "Hydrate", description: "It's super effective! Drink water.", imageKey: "water", insertionOrder: 2, duration: 5 },
+  { id: "3", time: "7:00 AM", task: "Stretch", description: "Limber up to increase evasion.", imageKey: "yoga", insertionOrder: 3, duration: 20 },
+  { id: "4", time: "8:00 AM", task: "Tea Time", description: "Restore PP and focus your mind.", imageKey: "tea_journal", insertionOrder: 4, duration: 15 },
+  { id: "5", time: "9:00 AM", task: "Breakfast", description: "Boost Attack stat with nutrition.", imageKey: "breakfast", insertionOrder: 5, duration: 40 },
+  { id: "6", time: "10:00 AM", task: "Study", description: "Gain XP in a new skill.", imageKey: "study", insertionOrder: 6, duration: 120 },
+  { id: "7", time: "1:00 PM", task: "Lunch", description: "Refuel HP for the afternoon.", imageKey: "lunch", insertionOrder: 7, duration: 45 },
+  { id: "8", time: "3:00 PM", task: "Walk", description: "Encounter nature in the tall grass.", imageKey: "walk", insertionOrder: 8, duration: 30 },
+  { id: "9", time: "5:00 PM", task: "Reflect", description: "Check your progress badge.", imageKey: "reflect", insertionOrder: 9, duration: 15 },
+  { id: "10", time: "7:00 PM", task: "Dinner", description: "Share a meal with your party.", imageKey: "dinner", insertionOrder: 10, duration: 45 },
+  { id: "11", time: "9:00 PM", task: "Wind Down", description: "Lower defense, prepare to rest.", imageKey: "prepare_sleep", insertionOrder: 11, duration: 60 },
+  { id: "12", time: "10:00 PM", task: "Sleep", description: "Save your game and recharge.", imageKey: "sleep", insertionOrder: 12, duration: 480 },
 ];
 
 const STORAGE_KEY = "@zen_routine";
@@ -302,11 +302,13 @@ export default function RoutineScreen() {
         time: item.time, 
         task: item.task, 
         description: item.description, 
-        daysOfWeek: item.daysOfWeek || [new Date().getDay()]
+        daysOfWeek: item.daysOfWeek || [new Date().getDay()],
+        duration: item.duration || 30,
+        imageKey: item.imageKey
       });
     } else {
       setEditingId(null);
-      setFormData({ time: "", task: "", description: "", daysOfWeek: [selectedDate.getDay()] });
+      setFormData({ time: "", task: "", description: "", daysOfWeek: [selectedDate.getDay()], duration: 30 });
     }
     setFormVisible(true);
   }, [selectedDate]);
@@ -318,7 +320,7 @@ export default function RoutineScreen() {
   }, []);
 
   const handleSave = useCallback(() => {
-    const { time, task, description, daysOfWeek } = formData;
+    const { time, task, description, daysOfWeek, duration } = formData;
     if (!time.trim() || !task.trim() || !description.trim() || !daysOfWeek || daysOfWeek.length === 0) {
       Alert.alert("Missing Information", "Please fill in all fields and select days to continue");
       return;
@@ -350,7 +352,8 @@ export default function RoutineScreen() {
               task: task.trim(), 
               description: description.trim(), 
               imageKey: formData.imageKey || item.imageKey || "breathe",
-              daysOfWeek: finalDays
+              daysOfWeek: finalDays,
+              duration: duration || item.duration || 30
             }
           : item
       );
@@ -364,6 +367,7 @@ export default function RoutineScreen() {
         imageKey: formData.imageKey || "breathe",
         insertionOrder: nextInsertionOrder,
         daysOfWeek: finalDays,
+        duration: duration || 30,
       };
       saveRoutines([...allRoutines, newItem]);
       setNextInsertionOrder((prev) => prev + 1);
@@ -404,7 +408,7 @@ export default function RoutineScreen() {
     }
   }, [selectedTask, closeModal, openForm]);
 
-  const updateFormField = useCallback((field: keyof FormData, value: string) => {
+  const updateFormField = useCallback((field: keyof FormData, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   }, []);
 
@@ -485,20 +489,21 @@ export default function RoutineScreen() {
           <View style={{ height: 100 }} />
         </ScrollView>
 
-        {/* Floating Action Button (FAB) - Minimalist Pokéball Style */}
+      </Animated.View>
+
+      {/* Floating Action Button (FAB) - Minimalist Pokéball Style (Moved out of overlay) */}
+      {listOpen && (
         <Pressable
           style={({ pressed }) => [
             styles.fab,
             pressed && styles.fabPressed,
-            !listOpen && { opacity: 0, transform: [{ scale: 0 }] }
           ]}
           onPress={() => openForm()}
           testID="routine-fab"
-          disabled={!listOpen}
         >
           <Ionicons name="add" size={32} color={theme.colors.white} />
         </Pressable>
-      </Animated.View>
+      )}
 
       <TaskModal
         visible={modalVisible}
@@ -593,7 +598,7 @@ const getStyles = (theme: Theme) =>
       backgroundColor: theme.colors.primary,
       alignItems: "center",
       justifyContent: "center",
-      elevation: 6,
+      elevation: 25,
       shadowColor: theme.colors.primary,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.3,

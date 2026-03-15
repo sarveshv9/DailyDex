@@ -1,8 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { Theme } from "../constants/shared";
-import { CalendarEvent } from "../utils/calendar";
+import { Theme } from "../../constants/shared";
+import { CalendarEvent } from "../../utils/calendar";
 
 type Props = {
     event: CalendarEvent;

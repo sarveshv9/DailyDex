@@ -7,6 +7,7 @@ export interface RoutineItem {
   imageKey?: string;
   insertionOrder?: number;
   daysOfWeek?: number[]; // [0,1,2,3,4,5,6] (0 = Sunday)
+  duration?: number;
 }
 
 export const ROUTINE_IMAGES: Record<string, any> = {
@@ -38,6 +39,7 @@ export interface FormData {
   description: string;
   imageKey?: string;
   daysOfWeek: number[];
+  duration?: number;
 }
 
 export const parseTime = (
