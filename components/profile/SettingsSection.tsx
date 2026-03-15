@@ -25,6 +25,11 @@ interface Theme {
     textSecondary: string;
     white: string;
   };
+  glass: {
+    cardBg: string;
+    borderColor: string;
+    shadowOpacity: number;
+  };
   spacing: {
     xs: number;
     sm: number;
@@ -129,7 +134,6 @@ const SettingItem = React.memo<SettingItemProps>(({
       style={[
         styles.settingItem,
         !isLast && styles.settingItemBorder,
-        { backgroundColor: cardColor },
       ]}
       onPress={handlePress}
       activeOpacity={0.6}
@@ -192,7 +196,6 @@ const ExpandableSetting = React.memo<ExpandableSettingProps>(({
     <View style={[
       styles.expandableContainer,
       !isLast && styles.settingItemBorder,
-      { backgroundColor: cardColor },
     ]}>
       <TouchableOpacity
         style={styles.settingItem}
@@ -527,11 +530,12 @@ const makeStyles = (theme: Theme) => StyleSheet.create({
   settingsCard: {
     borderRadius: theme.borderRadius.lg,
     overflow: 'hidden',
+    backgroundColor: theme.colors.card,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
-    shadowRadius: 14,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 4,
   },
   settingItem: {
     flexDirection: 'row',

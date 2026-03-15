@@ -9,6 +9,7 @@ import {
     Text,
     View,
 } from "react-native";
+import { BlurView } from 'expo-blur';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Theme } from "../constants/shared";
 import { useTheme } from "../context/ThemeContext";
@@ -24,7 +25,7 @@ const DURATIONS = [
 ];
 
 export default function FocusScreen() {
-    const { theme } = useTheme();
+    const { theme, isDarkMode } = useTheme();
     const styles = useMemo(() => getStyles(theme), [theme]);
     const router = useRouter();
     const params = useLocalSearchParams();
@@ -96,6 +97,8 @@ export default function FocusScreen() {
 
                 <View style={styles.timerContainer}>
                     <View style={[styles.timerCircle, isActive && styles.timerCircleActive]}>
+                        <BlurView intensity={50} tint={isDarkMode ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
+                        <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.glass.cardBg }]} />
                         <Text style={styles.timerText}>{formatTime(displayTime)}</Text>
                     </View>
                 </View>
@@ -285,21 +288,21 @@ const getStyles = (theme: Theme) =>
             width: SCREEN_WIDTH * 0.75,
             height: SCREEN_WIDTH * 0.75,
             borderRadius: (SCREEN_WIDTH * 0.75) / 2,
-            borderWidth: 8,
-            borderColor: `${theme.colors.primary}20`,
+            borderWidth: 2,
+            borderColor: theme.glass.borderColor,
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: theme.colors.white,
+            overflow: 'hidden',
             shadowColor: theme.colors.primary,
-            shadowOffset: { width: 0, height: 10 },
-            shadowOpacity: 0.1,
-            shadowRadius: 30,
-            elevation: 5,
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.08,
+            shadowRadius: 20,
+            elevation: 4,
         },
         timerCircleActive: {
-            borderColor: theme.colors.primary,
-            shadowOpacity: 0.2,
-            elevation: 10,
+            borderColor: `${theme.colors.primary}60`,
+            shadowOpacity: 0.15,
+            elevation: 6,
         },
         timerText: {
             fontFamily: theme.fonts.bold,
@@ -426,7 +429,9 @@ const getStyles = (theme: Theme) =>
         /* Mode Selector */
         modeSelector: {
             flexDirection: "row",
-            backgroundColor: `${theme.colors.secondary}15`,
+            backgroundColor: `${theme.colors.secondary}12`,
+            borderWidth: 1,
+            borderColor: theme.glass.borderColor,
             borderRadius: 25,
             padding: 4,
             marginBottom: 24,

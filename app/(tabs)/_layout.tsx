@@ -11,6 +11,7 @@ import {
 } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { withLayoutContext } from 'expo-router';
+import { BlurView } from 'expo-blur';
 import React, { useEffect, useRef } from 'react';
 import {
   Animated,
@@ -107,9 +108,21 @@ function CustomTabBar({
         <Animated.View
           style={[
             styles.tabBar,
-            { backgroundColor: theme.colors.card, width: tabBarWidth },
+            {
+              width: tabBarWidth,
+              borderWidth: 1,
+              borderColor: theme.glass.borderColor,
+            },
           ]}
         >
+          {/* Blur background */}
+          <BlurView
+            intensity={60}
+            tint={theme.colors.background === '#FFFFFF' || theme.colors.background.startsWith('#F') ? 'light' : 'dark'}
+            style={StyleSheet.absoluteFill}
+          />
+          {/* Glass tint overlay */}
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.glass.cardBg }]} />
           {/* Background icons (outlined) - each in their own position */}
           {state.routes.map((route, index) => {
             const { options } = descriptors[route.key];
@@ -288,12 +301,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     height: '100%',
     borderRadius: 99,
-    elevation: 10,
+    elevation: 6,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    overflow: 'hidden', // Important for clipping the foreground icons
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    overflow: 'hidden',
   },
   tabBarButton: {
     flex: 1,
