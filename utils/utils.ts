@@ -10,19 +10,19 @@ export interface RoutineItem {
 }
 
 export const ROUTINE_IMAGES: Record<string, any> = {
-  wakeup: require("../app/assets/images/pixel/wakeup.png"),
-  water: require("../app/assets/images/pixel/water.png"),
-  yoga: require("../app/assets/images/pixel/yoga.png"),
-  tea_journal: require("../app/assets/images/pixel/tea_journal.png"),
-  breakfast: require("../app/assets/images/pixel/breakfast.png"),
-  study: require("../app/assets/images/pixel/study.png"),
-  lunch: require("../app/assets/images/pixel/lunch.png"),
-  walk: require("../app/assets/images/pixel/walk.png"),
-  reflect: require("../app/assets/images/pixel/reflect.png"),
-  dinner: require("../app/assets/images/pixel/dinner.png"),
-  prepare_sleep: require("../app/assets/images/pixel/prepare_sleep.png"),
-  sleep: require("../app/assets/images/pixel/sleep.png"),
-  breathe: require("../app/assets/images/pixel/breathe.png"),
+  wakeup: require("../assets/images/pixel/wakeup.png"),
+  water: require("../assets/images/pixel/water.png"),
+  yoga: require("../assets/images/pixel/yoga.png"),
+  tea_journal: require("../assets/images/pixel/tea_journal.png"),
+  breakfast: require("../assets/images/pixel/breakfast.png"),
+  study: require("../assets/images/pixel/study.png"),
+  lunch: require("../assets/images/pixel/lunch.png"),
+  walk: require("../assets/images/pixel/walk.png"),
+  reflect: require("../assets/images/pixel/reflect.png"),
+  dinner: require("../assets/images/pixel/dinner.png"),
+  prepare_sleep: require("../assets/images/pixel/prepare_sleep.png"),
+  sleep: require("../assets/images/pixel/sleep.png"),
+  breathe: require("../assets/images/pixel/breathe.png"),
 };
 
 export const getRoutineImage = (key?: string) => {

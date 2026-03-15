@@ -21,7 +21,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
-import AiSuggestions from "../../components/AiSuggestions";
+import AiSuggestions from "../../components/dashboard/AiSuggestions";
 import {
   getSharedStyles,
   Theme,
@@ -319,14 +319,14 @@ function HomeScreen() {
 
               <View style={styles.artworkWrapper} accessible accessibilityLabel="Setup your routine">
                 <Image
-                  source={require("../assets/images/pixel/study.png")}
+                  source={require("../../assets/images/pixel/study.png")}
                   style={styles.taskImage}
                   resizeMode="contain"
                   accessibilityIgnoresInvertColors
                 />
               </View>
 
-              <Text style={styles.quote}>"A peaceful day begins with a plan."</Text>
+              <Text style={styles.quote}>&quot;A peaceful day begins with a plan.&quot;</Text>
 
               <Pressable
                 accessibilityRole={buttonRole}
@@ -393,7 +393,7 @@ function HomeScreen() {
               )}
             </View>
 
-            <Text style={styles.quote}>"Start your day with calm"</Text>
+            <Text style={styles.quote}>&quot;Start your day with calm&quot;</Text>
 
             <Pressable
               accessibilityRole={buttonRole}

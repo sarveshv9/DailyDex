@@ -16,10 +16,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { DayTimelineView } from "../components/DayTimelineView";
-import TaskForm from "../components/TaskForm";
-import TaskModal from "../components/TaskModal";
-import { TimelineEventCard } from "../components/TimelineEventCard";
+import { DayTimelineView } from "../components/dashboard/DayTimelineView";
+import TaskForm from "../components/todo/TaskForm";
+import TaskModal from "../components/todo/TaskModal";
+import { TimelineEventCard } from "../components/dashboard/TimelineEventCard";
 import { Theme } from "../constants/shared";
 import { useTheme } from "../context/ThemeContext";
 import { CalendarEvent, getCalendarEventsForDate } from "../utils/calendar";
@@ -272,14 +272,14 @@ export default function RoutineScreen() {
     getCalendarEventsForDate(selectedDate).then(setCalendarEvents).catch(() => { });
   }, [selectedDate]);
 
-  const saveRoutines = async (newItems: RoutineItem[]) => {
+  const saveRoutines = useCallback(async (newItems: RoutineItem[]) => {
     try {
       setAllRoutines(newItems);
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newItems));
     } catch (e) {
       console.error("Failed to save routines.", e);
     }
-  };
+  }, []);
 
   /* -------------------- Handlers -------------------- */
   const openModal = useCallback((task: RoutineItem, x: number, y: number) => {

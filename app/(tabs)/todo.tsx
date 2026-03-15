@@ -4,6 +4,7 @@ import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Modal,
@@ -138,14 +139,10 @@ const TaskItem = ({
 
       <View style={styles.taskActions}>
         {isCurrentTimer && timer.timeLeft > 0 && (
-          <Text style={{
-            fontFamily: theme.fonts.bold,
-            fontSize: 14,
-            color: isTimerActive ? theme.colors.primary : theme.colors.secondary,
-            marginRight: 4,
-            alignSelf: 'center',
-            fontVariant: ["tabular-nums"]
-          }}>
+          <Text style={[
+            styles.timerText,
+            isTimerActive ? styles.timerTextActive : styles.timerTextPaused,
+          ]}>
             {formatTime(timer.timeLeft)}
           </Text>
         )}
@@ -396,6 +393,8 @@ const TaskSection = ({
 
   if (tasks.length === 0) return null;
 
+  const completedInSection = tasks.filter((t) => t.completed).length;
+
   return (
     <View style={styles.sectionContainer}>
       <View style={styles.sectionHeader}>
@@ -403,6 +402,11 @@ const TaskSection = ({
           <Ionicons name={icon} size={18} color={theme.colors.primary} />
         </View>
         <Text style={styles.sectionTitle}>{title}</Text>
+        <View style={styles.sectionBadge}>
+          <Text style={styles.sectionBadgeText}>
+            {completedInSection}/{tasks.length}
+          </Text>
+        </View>
       </View>
 
       <View style={styles.sectionTasks}>
@@ -429,9 +433,9 @@ const EmptyState = ({ styles, theme }: { styles: any, theme: Theme }) => (
     <View style={styles.emptyStateIconWrap}>
       <Ionicons name="leaf-outline" size={48} color={theme.colors.primary} />
     </View>
-    <Text style={styles.emptyStateTitle}>Your mind is clear</Text>
+    <Text style={styles.emptyStateTitle}>A blank slate.</Text>
     <Text style={styles.emptyStateSubtitle}>
-      Add a new task when you&apos;re ready to focus.
+      Every great day starts with intention.{"\n"}What do you want to make happen?
     </Text>
   </View>
 );
@@ -491,11 +495,9 @@ export default function TodoScreen() {
       prev.map((t) => {
         if (t.id === id) {
           const newlyCompleted = !t.completed;
-          if (newlyCompleted) {
             import("../../utils/stats").then(({ addTaskCompleted }) => {
               addTaskCompleted();
             });
-          }
           return { ...t, completed: newlyCompleted };
         }
         return t;
@@ -538,21 +540,68 @@ export default function TodoScreen() {
     return (
       <SafeAreaView style={sharedStyles.container}>
         <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       </SafeAreaView>
     );
   }
 
+  const hour = new Date().getHours();
+  const greeting =
+    hour < 5 ? "Still up?" :
+      hour < 12 ? "Good morning." :
+        hour < 17 ? "Good afternoon." :
+          hour < 21 ? "Good evening." :
+            "Late night grind.";
+
+  const subGreeting =
+    tasks.length === 0 ? "Nothing on the list yet." :
+      completedCount === tasks.length ? "All done — you crushed it." :
+        completedCount === 0 ? `${tasks.length} thing${tasks.length === 1 ? "" : "s"} waiting for you.` :
+          `${tasks.length - completedCount} left to go.`;
+
   return (
     <SafeAreaView style={sharedStyles.container}>
-      {/* Header Container */}
-      <View style={styles.headerArea}>
-        <Text style={styles.screenTitle}>My Tasks</Text>
-        {completedCount > 0 && (
-          <Pressable style={styles.clearButton} onPress={handleClearCompleted} hitSlop={8}>
-            <Text style={styles.clearButtonText}>Clear completed</Text>
-          </Pressable>
-        )}
+      {/* ── Hero Header ── */}
+      <View style={styles.heroHeader}>
+        {/* Decorative dot grid */}
+        <View style={styles.dotGrid} pointerEvents="none">
+          {Array.from({ length: 35 }).map((_, i) => (
+            <View key={i} style={styles.dot} />
+          ))}
+        </View>
+
+        <View style={styles.heroContent}>
+          <Text style={styles.greetingEyebrow}>
+            {new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }).toUpperCase()}
+          </Text>
+          <Text style={styles.greetingTitle}>{greeting}</Text>
+          <Text style={styles.greetingSubtitle}>{subGreeting}</Text>
+
+          {/* Progress pill */}
+          {tasks.length > 0 && (
+            <View style={styles.heroPillRow}>
+              <View style={styles.heroPill}>
+                <View style={styles.heroPillTrack}>
+                  <View
+                    style={[
+                      styles.heroPillFill,
+                      { width: `${Math.round((completedCount / tasks.length) * 100)}%` as any },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.heroPillLabel}>
+                  {Math.round((completedCount / tasks.length) * 100)}% complete
+                </Text>
+              </View>
+              {completedCount > 0 && (
+                <Pressable style={styles.clearButton} onPress={handleClearCompleted} hitSlop={8}>
+                  <Text style={styles.clearButtonText}>Clear done</Text>
+                </Pressable>
+              )}
+            </View>
+          )}
+        </View>
       </View>
 
       <ScrollView
@@ -569,8 +618,11 @@ export default function TodoScreen() {
           }}
           android_ripple={{ color: "rgba(0,0,0,0.05)" }}
         >
-          <Ionicons name="add-circle" size={24} color={theme.colors.primary} />
-          <Text style={styles.topAddButtonText}>Add New Task</Text>
+          <View style={styles.topAddButtonIcon}>
+            <Ionicons name="add" size={20} color={theme.colors.white} />
+          </View>
+          <Text style={styles.topAddButtonText}>New task</Text>
+          <Ionicons name="chevron-forward" size={16} color={`${theme.colors.primary}50`} style={{ marginLeft: 'auto' as any }} />
         </Pressable>
 
         <TaskSection
@@ -602,8 +654,6 @@ export default function TodoScreen() {
         {tasks.length === 0 && <EmptyState styles={styles} theme={theme} />}
       </ScrollView>
 
-
-
       <TaskModal
         visible={modalVisible}
         task={editingTask}
@@ -630,6 +680,35 @@ export default function TodoScreen() {
 /* ---------------------- STYLES ------------------------ */
 const getStyles = (theme: Theme) =>
   StyleSheet.create({
+    // Timer display
+    timerText: {
+      fontFamily: theme.fonts.bold,
+      fontSize: 13,
+      marginRight: 2,
+      alignSelf: 'center',
+      fontVariant: ["tabular-nums"] as any,
+    },
+    timerTextActive: {
+      color: theme.colors.primary,
+    },
+    timerTextPaused: {
+      color: theme.colors.secondary,
+    },
+
+    // Section badge
+    sectionBadge: {
+      marginLeft: 'auto' as any,
+      backgroundColor: `${theme.colors.primary}12`,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 10,
+    },
+    sectionBadgeText: {
+      fontFamily: theme.fonts.medium,
+      fontSize: 12,
+      color: theme.colors.primary,
+    },
+
     scrollContainer: { flex: 1 },
     scrollContent: {
       paddingHorizontal: theme.spacing.lg,
@@ -642,7 +721,87 @@ const getStyles = (theme: Theme) =>
       alignItems: "center",
     },
 
-    // Header
+    // ── Hero Header ──────────────────────────────────────────
+    heroHeader: {
+      paddingHorizontal: theme.spacing.lg,
+      paddingTop: theme.spacing.lg,
+      paddingBottom: theme.spacing.xl,
+      overflow: 'hidden',
+      position: 'relative',
+    },
+    dotGrid: {
+      position: 'absolute',
+      top: 0,
+      right: 0,
+      width: 140,
+      height: 120,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+      padding: theme.spacing.md,
+      opacity: 0.08,
+    },
+    dot: {
+      width: 3,
+      height: 3,
+      borderRadius: 1.5,
+      backgroundColor: theme.colors.primary,
+    },
+    heroContent: {
+      gap: 4,
+    },
+    greetingEyebrow: {
+      fontFamily: theme.fonts.medium,
+      fontSize: 11,
+      letterSpacing: 2,
+      color: theme.colors.secondary,
+      marginBottom: 2,
+    },
+    greetingTitle: {
+      fontFamily: theme.fonts.bold,
+      fontSize: 32,
+      lineHeight: 38,
+      color: theme.colors.primary,
+      letterSpacing: -0.5,
+    },
+    greetingSubtitle: {
+      fontFamily: theme.fonts.regular,
+      fontSize: 15,
+      color: theme.colors.secondary,
+      marginTop: 2,
+      marginBottom: theme.spacing.md,
+    },
+    heroPillRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.md,
+      marginTop: 4,
+    },
+    heroPill: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.sm,
+    },
+    heroPillTrack: {
+      flex: 1,
+      height: 3,
+      borderRadius: 2,
+      backgroundColor: `${theme.colors.secondary}20`,
+      overflow: 'hidden',
+    },
+    heroPillFill: {
+      height: '100%',
+      borderRadius: 2,
+      backgroundColor: theme.colors.primary,
+    },
+    heroPillLabel: {
+      fontFamily: theme.fonts.medium,
+      fontSize: 12,
+      color: theme.colors.secondary,
+    },
+
+    // Header (kept for clear button)
     headerArea: {
       paddingHorizontal: theme.spacing.lg,
       paddingTop: theme.spacing.lg,
@@ -670,27 +829,37 @@ const getStyles = (theme: Theme) =>
 
     // Top Add Button
     topAddButton: {
-      backgroundColor: `${theme.colors.primary}10`,
+      backgroundColor: theme.colors.card,
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: theme.spacing.lg,
+      paddingVertical: theme.spacing.md,
+      paddingHorizontal: theme.spacing.md,
       borderRadius: theme.borderRadius.lg,
       marginBottom: theme.spacing.lg,
-      gap: theme.spacing.sm,
-      borderWidth: 1,
-      borderColor: `${theme.colors.primary}20`,
-      borderStyle: 'dashed',
+      gap: theme.spacing.md,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.04,
+      shadowRadius: 8,
+      elevation: 2,
+    },
+    topAddButtonIcon: {
+      width: 32,
+      height: 32,
+      borderRadius: 10,
+      backgroundColor: theme.colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     topAddButtonText: {
       fontFamily: theme.fonts.bold,
-      fontSize: 16,
+      fontSize: 15,
       color: theme.colors.primary,
     },
 
     // Section 
     sectionContainer: {
-      backgroundColor: theme.colors.white,
+      backgroundColor: theme.colors.card,
       borderRadius: theme.borderRadius.lg,
       padding: theme.spacing.lg,
       marginBottom: theme.spacing.lg,
@@ -820,7 +989,7 @@ const getStyles = (theme: Theme) =>
       padding: theme.spacing.lg,
     },
     modalContainer: {
-      backgroundColor: theme.colors.white,
+      backgroundColor: theme.colors.card,
       borderRadius: theme.borderRadius.lg,
       padding: theme.spacing.xl,
       width: "100%",

@@ -24,38 +24,38 @@ export const SONG_LIST = songData.map((song) => {
     
     switch (song.id) {
       case 1:
-        audioFile = require('../app/assets/audio/Title Screen.mp3');
+        audioFile = require('../assets/audio/Title Screen.mp3');
         break;
       case 2:
-        audioFile = require('../app/assets/audio/Route 1.mp3');
+        audioFile = require('../assets/audio/Route 1.mp3');
         break;
       case 3:
-        audioFile = require('../app/assets/audio/Opening Movie.mp3');
+        audioFile = require('../assets/audio/Opening Movie.mp3');
         break;
       case 4:
-        audioFile = require('../app/assets/audio/Pallet Town.mp3');
+        audioFile = require('../assets/audio/Pallet Town.mp3');
         break;
       case 5:
-        audioFile = require('../app/assets/audio/Pokemon Center.mp3');
+        audioFile = require('../assets/audio/Pokemon Center.mp3');
         break;
       case 6:
-        audioFile = require('../app/assets/audio/Pokemon Gym.mp3');
+        audioFile = require('../assets/audio/Pokemon Gym.mp3');
         break;
       case 7:
-        audioFile = require('../app/assets/audio/Viridian City.mp3');
+        audioFile = require('../assets/audio/Viridian City.mp3');
         break;
       case 8:
-        audioFile = require('../app/assets/audio/Victory Road.mp3');
+        audioFile = require('../assets/audio/Victory Road.mp3');
         break;
       case 9:
-        audioFile = require('../app/assets/audio/Ending Theme.mp3');
+        audioFile = require('../assets/audio/Ending Theme.mp3');
         break;
       case 10:
         // Ensure this filename matches your file on disk exactly (case-sensitive)
-        audioFile = require('../app/assets/audio/LittlerootTown.mp3');
+        audioFile = require('../assets/audio/LittlerootTown.mp3');
         break;  
       default:
-        audioFile = require('../app/assets/audio/Title Screen.mp3');
+        audioFile = require('../assets/audio/Title Screen.mp3');
     }
     
     // On Web, 'require' returns a URI or module ID that Expo Audio handles automatically
@@ -64,6 +64,6 @@ export const SONG_LIST = songData.map((song) => {
   } catch (error) {
     console.error(`❌ Failed to load module for song ${song.id}: ${song.title}`, error);
     // Return a fallback
-    return { ...song, file: require('../app/assets/audio/Title Screen.mp3') };
+    return { ...song, file: require('../assets/audio/Title Screen.mp3') };
   }
 });

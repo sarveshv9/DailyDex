@@ -1,8 +1,8 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
-import { Theme } from "../constants/shared";
-import { useTheme } from "../context/ThemeContext";
-import { RoutineItem } from "../utils/utils";
+import { Theme } from "../../constants/shared";
+import { useTheme } from "../../context/ThemeContext";
+import { RoutineItem } from "../../utils/utils";
 
 interface RoutineCardProps {
   item: RoutineItem;

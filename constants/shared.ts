@@ -44,7 +44,7 @@ const baseTheme = {
 // Light versions have tinted bright backgrounds, vibrant pokemon brand colors,
 // and dark text for contrast.
 export const lightThemes: Record<string, Theme> = {
-  default: { ...baseTheme, colors: { primary: "#F91D1D", secondary: "#1A1A1A", background: "#FFFFFF", card: "#F3F4F6", text: "#1A1A1A", textSecondary: "#4B5563", white: "#FFFFFF" } },
+  default: { ...baseTheme, colors: { primary: "#FF4D4D", secondary: "#2D2D2D", background: "#FFFFFF", card: "#F8F8F8", text: "#1A1A1A", textSecondary: "#666666", white: "#FFFFFF" } },
   dark: { ...baseTheme, colors: { primary: "#E5E7EB", secondary: "#9CA3AF", background: "#0F172A", card: "#1E293B", text: "#F9FAFB", textSecondary: "#D1D5DB", white: "#FFFFFF" } }, // Kept for legacy fallback but we won't strictly use it as a standalone option in modal list. 'Classic' will handle light/dark.
   pikachu: { ...baseTheme, colors: { primary: "#D97706", secondary: "#B45309", background: "#FEF9C3", card: "#FFFFFF", text: "#451A03", textSecondary: "#78350F", white: "#FFFFFF" } },
   squirtle: { ...baseTheme, colors: { primary: "#0284C7", secondary: "#0369A1", background: "#E0F2FE", card: "#FFFFFF", text: "#0C4A6E", textSecondary: "#075985", white: "#FFFFFF" } },
@@ -64,7 +64,7 @@ export const lightThemes: Record<string, Theme> = {
 // Dark versions have deep dark backgrounds, subtle card overlays, bright popped primary accents,
 // and off-white text.
 export const darkThemes: Record<string, Theme> = {
-  default: { ...baseTheme, colors: { primary: "#FF4D4D", secondary: "#F2F2F2", background: "#111111", card: "#1A1A1A", text: "#F2F2F2", textSecondary: "#D1D5DB", white: "#FFFFFF" } },
+  default: { ...baseTheme, colors: { primary: "#FF4D4D", secondary: "#F2F2F2", background: "#0A0A0A", card: "#161616", text: "#F2F2F2", textSecondary: "#A0A0A0", white: "#FFFFFF" } },
   dark: { ...baseTheme, colors: { primary: "#6B7280", secondary: "#4B5563", background: "#030712", card: "#111827", text: "#E5E7EB", textSecondary: "#9CA3AF", white: "#FFFFFF" } }, // Legacy fallback
   pikachu: { ...baseTheme, colors: { primary: "#FBBF24", secondary: "#F59E0B", background: "#1C1917", card: "#292524", text: "#FEF3C7", textSecondary: "#FDE68A", white: "#000000" } }, // Since primary is bright yellow, text on primary btn should ideally be dark. Since we force 'white' on primary buttons, maybe make primary slighty dimmer to hold white text, or 'white' becomes black in pikachu dark. Let's make 'white' #171717 for contrast on bright buttons.
   squirtle: { ...baseTheme, colors: { primary: "#38BDF8", secondary: "#0EA5E9", background: "#082F49", card: "#0C4A6E", text: "#E0F2FE", textSecondary: "#BAE6FD", white: "#FFFFFF" } },

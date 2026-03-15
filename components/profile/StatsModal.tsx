@@ -158,7 +158,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         justifyContent: "flex-end", // Slide up from bottom
     },
     modalContent: {
-        backgroundColor: theme.colors.background,
+        backgroundColor: theme.colors.card,
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         padding: theme.spacing.lg,

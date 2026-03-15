@@ -15,10 +15,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Theme } from '../constants/shared';
-import { useTheme } from '../context/ThemeContext';
-import { CalendarEvent } from '../utils/calendar';
-import { RoutineItem } from '../utils/utils';
+import { Theme } from '../../constants/shared';
+import { useTheme } from '../../context/ThemeContext';
+import { CalendarEvent } from '../../utils/calendar';
+import { RoutineItem } from '../../utils/utils';
 
 export interface TimelineEventCardProps {
     item: RoutineItem | CalendarEvent;

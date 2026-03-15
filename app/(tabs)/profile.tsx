@@ -71,7 +71,7 @@ const makeStyles = (theme: Theme) =>
 
     /* Profile Card wrapper */
     profileCardWrapper: {
-      backgroundColor: theme.colors.white,
+      backgroundColor: theme.colors.card,
       borderRadius: theme.borderRadius.lg,
       padding: theme.spacing.lg,
       shadowColor: "#000",
@@ -125,7 +125,7 @@ const makeStyles = (theme: Theme) =>
     modalCard: {
       width: "100%",
       maxWidth: 640,
-      backgroundColor: theme.colors.white,
+      backgroundColor: theme.colors.card,
       borderRadius: theme.borderRadius.lg,
       padding: theme.spacing.xl,
       maxHeight: "85%",

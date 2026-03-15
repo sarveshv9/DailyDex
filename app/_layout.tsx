@@ -19,10 +19,10 @@ import { requestNotificationPermissions } from "../utils/notifications";
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    UbuntuLightI: require("./assets/fonts/Ubuntu-LightItalic.ttf"),
-    UbuntuBold: require("./assets/fonts/Ubuntu-Bold.ttf"),
-    UbuntuRegular: require("./assets/fonts/Ubuntu-Regular.ttf"),
-    UbuntuMedium: require("./assets/fonts/Ubuntu-Medium.ttf"),
+    UbuntuLightI: require("../assets/fonts/Ubuntu-LightItalic.ttf"),
+    UbuntuBold: require("../assets/fonts/Ubuntu-Bold.ttf"),
+    UbuntuRegular: require("../assets/fonts/Ubuntu-Regular.ttf"),
+    UbuntuMedium: require("../assets/fonts/Ubuntu-Medium.ttf"),
   });
 
   useEffect(() => {

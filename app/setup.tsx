@@ -12,7 +12,7 @@ import {
     View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { InlineTimePicker } from "../components/InlineTimePicker";
+import { InlineTimePicker } from "../components/common/InlineTimePicker";
 import { Theme } from "../constants/shared";
 import { useTheme } from "../context/ThemeContext";
 import { getRoutineImage, RoutineItem } from "../utils/utils";

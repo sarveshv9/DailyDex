@@ -6,8 +6,8 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { Theme } from "../constants/shared";
-import { useTheme } from "../context/ThemeContext";
+import { Theme } from "../../constants/shared";
+import { useTheme } from "../../context/ThemeContext";
 
 interface SimpleTimePickerProps {
   selectedTime: string;

@@ -9,9 +9,9 @@ import {
   Text,
   View
 } from "react-native";
-import { Theme } from "../constants/shared";
-import { useTheme } from "../context/ThemeContext";
-import { getRoutineImage, RoutineItem } from "../utils/utils";
+import { Theme } from "../../constants/shared";
+import { useTheme } from "../../context/ThemeContext";
+import { getRoutineImage, RoutineItem } from "../../utils/utils";
 
 interface TaskModalProps {
   visible: boolean;
@@ -66,7 +66,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
         }),
       ]).start();
     }
-  }, [visible]);
+  }, [visible, fadeAnim, slideAnim]);
 
   if (!task) return null;
 
