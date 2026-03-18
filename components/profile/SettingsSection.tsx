@@ -1,7 +1,7 @@
 // components/profile/SettingsSection.tsx
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useMemo } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { SONG_LIST } from '../../constants/songs';
 
@@ -130,13 +130,14 @@ const SettingItem = React.memo<SettingItemProps>(({
   }, [onPress, text]);
 
   return (
-    <TouchableOpacity
-      style={[
+    /* Pressable with scale feedback replaced TouchableOpacity — consistent with app pattern */
+    <Pressable
+      style={({ pressed }) => [
         styles.settingItem,
         !isLast && styles.settingItemBorder,
+        pressed && { opacity: 0.7, transform: [{ scale: 0.98 }] },
       ]}
       onPress={handlePress}
-      activeOpacity={0.6}
       accessibilityRole="button"
       accessibilityLabel={text}
       accessibilityHint={valueText ? `Current value: ${valueText}` : 'Tap to open settings'}
@@ -166,7 +167,7 @@ const SettingItem = React.memo<SettingItemProps>(({
         )}
         <Ionicons name="chevron-forward" size={20} color={secondaryColor} />
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 });
 
@@ -197,10 +198,12 @@ const ExpandableSetting = React.memo<ExpandableSettingProps>(({
       styles.expandableContainer,
       !isLast && styles.settingItemBorder,
     ]}>
-      <TouchableOpacity
-        style={styles.settingItem}
+      <Pressable
+        style={({ pressed }) => [
+          styles.settingItem,
+          pressed && { opacity: 0.7, transform: [{ scale: 0.98 }] },
+        ]}
         onPress={onToggle}
-        activeOpacity={0.6}
         accessibilityRole="button"
         accessibilityLabel={`${title} setting`}
         accessibilityState={{ expanded: isExpanded }}
@@ -228,7 +231,7 @@ const ExpandableSetting = React.memo<ExpandableSettingProps>(({
             color={secondaryColor}
           />
         </View>
-      </TouchableOpacity>
+      </Pressable>
 
       {isExpanded && (
         <View
@@ -260,14 +263,14 @@ const OptionItem = React.memo<OptionItemProps>(({
   const textColor = theme.colors.text;
 
   return (
-    <TouchableOpacity
-      style={[
+    <Pressable
+      style={({ pressed }) => [
         styles.optionItem,
         isFirst && styles.optionItemFirst,
         isLast && styles.optionItemLast,
+        pressed && { opacity: 0.7 },
       ]}
       onPress={onPress}
-      activeOpacity={0.6}
       accessibilityRole="radio"
       accessibilityState={{ checked: isSelected }}
       accessibilityLabel={label}
@@ -294,7 +297,7 @@ const OptionItem = React.memo<OptionItemProps>(({
           accessibilityLabel="Selected"
         />
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 });
 
@@ -528,14 +531,14 @@ const makeStyles = (theme: Theme) => StyleSheet.create({
     letterSpacing: 0.3,
   },
   settingsCard: {
-    borderRadius: theme.borderRadius.lg,
+    borderRadius: 20,
     overflow: 'hidden',
     backgroundColor: theme.colors.card,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 6,
   },
   settingItem: {
     flexDirection: 'row',

@@ -14,7 +14,7 @@
 
 import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Theme } from '../../constants/shared';
 import { useTheme } from '../../context/ThemeContext';
 import { CalendarEvent } from '../../utils/calendar';
@@ -101,11 +101,13 @@ export const TimelineEventCard: React.FC<TimelineEventCardProps> = ({
             )}
 
             {/* Main Event Row */}
-            <TouchableOpacity
-                style={styles.eventRow}
+            <Pressable
+                style={({ pressed }) => [
+                    styles.eventRow,
+                    pressed && onPress && { opacity: 0.8, transform: [{ scale: 0.98 }] }
+                ]}
                 onPress={onPress}
                 disabled={!onPress}
-                activeOpacity={0.75}
                 testID="timeline-event-card"
             >
                 {/* Column A: Time label */}
@@ -148,7 +150,7 @@ export const TimelineEventCard: React.FC<TimelineEventCardProps> = ({
                 <View style={styles.ringCol}>
                     <View style={[styles.completionRing, { borderColor: nodeColor }]} />
                 </View>
-            </TouchableOpacity>
+            </Pressable>
         </View>
     );
 };

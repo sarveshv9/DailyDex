@@ -10,7 +10,8 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  View
+  View,
+  ActivityIndicator
 } from "react-native";
 import { BlurView } from 'expo-blur';
 import Animated, {
@@ -579,19 +580,6 @@ function HomeScreen() {
     }
   }, [currentTaskItem, setThemeName, themeName, isAutoTheme, isLoading, isReady]);
 
-  /* breathing animation */
-  const breatheScale = useSharedValue(1);
-  useEffect(() => {
-    breatheScale.value = withRepeat(
-      withTiming(1.06, { duration: 2400, easing: Easing.inOut(Easing.sin) }),
-      -1,
-      true
-    );
-  }, [breatheScale]);
-  const animatedImageStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: breatheScale.value }],
-  }));
-
   /* actions */
   const handleStartDay = useCallback(() => router.push("/routine"), [router]);
 
@@ -599,7 +587,11 @@ function HomeScreen() {
   const buttonRole: AccessibilityRole = "button";
 
   if (isLoading) {
-    return <View style={{ flex: 1, backgroundColor: theme.colors.background }} />;
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.colors.background, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
+    );
   }
 
   /* ---------- Setup (no routine) ---------- */
@@ -692,9 +684,10 @@ function HomeScreen() {
               <View style={styles.focusRow}>
                 <View style={styles.focusImageWrap}>
                   {taskImage ? (
-                    <Animated.Image
+                    /* Decorative breathing animation removed to reduce cognitive load */
+                    <Image
                       source={taskImage}
-                      style={[styles.focusImage, animatedImageStyle]}
+                      style={styles.focusImage}
                       resizeMode="contain"
                       accessibilityIgnoresInvertColors
                     />
@@ -753,16 +746,14 @@ function HomeScreen() {
                 nextTasks.map((task, idx) => (
                   <React.Fragment key={task.id}>
                     {idx > 0 && <View style={styles.upNextSeparator} />}
-                    <Animated.View
-                      entering={FadeInDown.duration(400).delay(300 + idx * 80)}
-                      style={styles.upNextItem}
-                    >
+                    {/* Staggered entrance animation removed from static list items to reduce visual noise */}
+                    <View style={styles.upNextItem}>
                       <Text style={styles.upNextTime}>{formatTaskTime(task.time)}</Text>
                       <View style={styles.upNextDot} />
                       <Text style={styles.upNextTask} numberOfLines={1}>
                         {task.task}
                       </Text>
-                    </Animated.View>
+                    </View>
                   </React.Fragment>
                 ))
               ) : (

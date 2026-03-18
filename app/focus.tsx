@@ -82,7 +82,12 @@ export default function FocusScreen() {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <Pressable onPress={quitTimer} hitSlop={12}>
+                {/* Press feedback on close: acknowledges tap on a frequent navigation action */}
+                <Pressable
+                    onPress={quitTimer}
+                    hitSlop={12}
+                    style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1, transform: [{ scale: pressed ? 0.9 : 1 }] })}
+                >
                     <Ionicons name="close" size={28} color={theme.colors.primary} />
                 </Pressable>
             </View>
@@ -107,8 +112,13 @@ export default function FocusScreen() {
                     <View style={styles.pickerContainer}>
                         {/* Mode Selector */}
                         <View style={styles.modeSelector}>
+                            {/* Press feedback on mode toggles: confirms selection in segmented control */}
                             <Pressable
-                                style={[styles.modeBtn, !timer.pomodoroMode && styles.modeBtnActive]}
+                                style={({ pressed }) => [
+                                    styles.modeBtn,
+                                    !timer.pomodoroMode && styles.modeBtnActive,
+                                    pressed && { opacity: 0.7 },
+                                ]}
                                 onPress={() => {
                                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                     timer.stopTimer(); // Reset if switching
@@ -117,7 +127,11 @@ export default function FocusScreen() {
                                 <Text style={[styles.modeBtnText, !timer.pomodoroMode && styles.modeBtnTextActive]}>Free</Text>
                             </Pressable>
                             <Pressable
-                                style={[styles.modeBtn, timer.pomodoroMode && styles.modeBtnActive]}
+                                style={({ pressed }) => [
+                                    styles.modeBtn,
+                                    timer.pomodoroMode && styles.modeBtnActive,
+                                    pressed && { opacity: 0.7 },
+                                ]}
                                 onPress={() => {
                                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                     timer.startPomodoro(paramTaskId, paramTaskName);
@@ -131,10 +145,15 @@ export default function FocusScreen() {
                             <>
                                 <Text style={styles.pickerTitle}>Select Duration</Text>
                                 <View style={styles.durationRow}>
+                                    {/* Press feedback on chips: confirms selection among options */}
                                     {DURATIONS.map((d) => (
                                         <Pressable
                                             key={d.value}
-                                            style={[styles.durationChip, selectedDuration === d.value && styles.durationChipActive]}
+                                            style={({ pressed }) => [
+                                                styles.durationChip,
+                                                selectedDuration === d.value && styles.durationChipActive,
+                                                pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] },
+                                            ]}
                                             onPress={() => {
                                                 Haptics.selectionAsync();
                                                 setSelectedDuration(d.value);
@@ -146,7 +165,11 @@ export default function FocusScreen() {
                                         </Pressable>
                                     ))}
                                 </View>
-                                <Pressable style={styles.startButton} onPress={startNewTimer}>
+                                {/* Press feedback on primary CTA: confirms the most important action on screen */}
+                                <Pressable
+                                    style={({ pressed }) => [styles.startButton, pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] }]}
+                                    onPress={startNewTimer}
+                                >
                                     <Text style={styles.startButtonText}>Start Focus</Text>
                                 </Pressable>
                             </>
@@ -155,7 +178,10 @@ export default function FocusScreen() {
                                 <Text style={styles.pomodoroDesc}>
                                     Classic 25/5/15 cycle.{"\n"}Focus 4 sessions for a long break.
                                 </Text>
-                                <Pressable style={styles.startButton} onPress={() => timer.startPomodoro(paramTaskId, paramTaskName)}>
+                                <Pressable
+                                    style={({ pressed }) => [styles.startButton, pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] }]}
+                                    onPress={() => timer.startPomodoro(paramTaskId, paramTaskName)}
+                                >
                                     <Text style={styles.startButtonText}>Begin Pomodoro</Text>
                                 </Pressable>
                             </View>
@@ -187,8 +213,13 @@ export default function FocusScreen() {
 
                         {!isCompleted ? (
                             <View style={styles.mainControls}>
+                                {/* Press feedback on play/pause: larger scale for larger button */}
                                 <Pressable
-                                    style={[styles.playButton, isActive && styles.pauseButton]}
+                                    style={({ pressed }) => [
+                                        styles.playButton,
+                                        isActive && styles.pauseButton,
+                                        pressed && { transform: [{ scale: 0.9 }] },
+                                    ]}
                                     onPress={toggleTimer}
                                 >
                                     <Ionicons
@@ -201,7 +232,7 @@ export default function FocusScreen() {
 
                                 {timer.pomodoroMode && (
                                     <Pressable
-                                        style={styles.skipBtn}
+                                        style={({ pressed }) => [styles.skipBtn, pressed && { opacity: 0.6 }]}
                                         onPress={() => {
                                             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                                             timer.advancePomodoroPhase();
@@ -213,24 +244,34 @@ export default function FocusScreen() {
                                 )}
                             </View>
                         ) : (
-                            <Pressable style={styles.completeButton} onPress={handleComplete}>
+                            /* Press feedback on completion CTA */
+                            <Pressable
+                                style={({ pressed }) => [styles.completeButton, pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] }]}
+                                onPress={handleComplete}
+                            >
                                 <Text style={styles.completeButtonText}>Great Job! Back</Text>
                             </Pressable>
                         )}
 
                         {!isActive && timer.timeLeft < timer.duration && !isCompleted && !timer.pomodoroMode && (
-                            <Pressable style={styles.resetButton} onPress={() => {
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                timer.resetTimer();
-                            }}>
+                            <Pressable
+                                style={({ pressed }) => [styles.resetButton, pressed && { opacity: 0.6 }]}
+                                onPress={() => {
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                    timer.resetTimer();
+                                }}
+                            >
                                 <Text style={styles.resetButtonText}>Reset Timer</Text>
                             </Pressable>
                         )}
 
-                        <Pressable style={styles.cancelButton} onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                            timer.stopTimer();
-                        }}>
+                        <Pressable
+                            style={({ pressed }) => [styles.cancelButton, pressed && { opacity: 0.6 }]}
+                            onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                timer.stopTimer();
+                            }}
+                        >
                             <Text style={styles.cancelButtonText}>End Session</Text>
                         </Pressable>
 

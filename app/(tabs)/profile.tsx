@@ -14,7 +14,8 @@ import {
   StyleSheet,
   Switch,
   Text,
-  View
+  View,
+  ActivityIndicator
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -62,17 +63,20 @@ const makeStyles = (theme: Theme) =>
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
+      paddingHorizontal: theme.spacing.md,
+      marginBottom: theme.spacing.md,
     },
     screenTitle: {
       fontFamily: theme.fonts.bold,
-      fontSize: 20,
-      color: theme.colors.primary,
+      fontSize: 28,
+      letterSpacing: -0.5,
+      color: theme.colors.text,
     },
 
     /* Profile Card wrapper */
     profileCardWrapper: {
       backgroundColor: theme.colors.card,
-      borderRadius: theme.borderRadius.lg,
+      borderRadius: 20,
       padding: theme.spacing.lg,
       shadowColor: "#000",
       shadowOffset: { width: 0, height: 4 },
@@ -362,7 +366,11 @@ export default function ProfileScreen() {
 
   /* -------------------- Render -------------------- */
   if (isLoading) {
-    return <View style={{ flex: 1, backgroundColor: theme.colors.background }} />;
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.colors.background, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
+    );
   }
 
   if (!profileCreated) {
@@ -378,7 +386,7 @@ export default function ProfileScreen() {
             <Pressable
               style={({ pressed }) => [
                 sharedStyles.primaryButton,
-                { opacity: pressed ? 0.9 : 1, width: "100%" }
+                { opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.98 : 1 }], width: "100%" }
               ]}
               onPress={() => setEditProfileModalOpen(true)}
             >
@@ -406,6 +414,9 @@ export default function ProfileScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        <View style={styles.headerRow}>
+          <Text style={styles.screenTitle}>Profile</Text>
+        </View>
 
         {/* Profile Card */}
         <View style={styles.profileCardWrapper}>
@@ -426,7 +437,7 @@ export default function ProfileScreen() {
         </View>
 
         <Pressable
-          style={{
+          style={({ pressed }) => ({
             backgroundColor: `${theme.colors.primary}15`,
             borderRadius: theme.borderRadius.md,
             padding: theme.spacing.md,
@@ -436,8 +447,10 @@ export default function ProfileScreen() {
             justifyContent: 'center',
             gap: theme.spacing.sm,
             borderWidth: 1,
-            borderColor: `${theme.colors.primary}30`
-          }}
+            borderColor: `${theme.colors.primary}30`,
+            opacity: pressed ? 0.7 : 1,
+            transform: [{ scale: pressed ? 0.98 : 1 }],
+          })}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             setShowStatsModal(true);
@@ -470,13 +483,17 @@ export default function ProfileScreen() {
 
         {/* Logout */}
         <Pressable
-          style={[sharedStyles.primaryButton, styles.logoutButton]}
+          style={({ pressed }) => [
+            sharedStyles.destructiveButton,
+            styles.logoutButton,
+            pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }
+          ]}
           onPress={handleLogout}
           accessibilityRole="button"
           android_ripple={{ color: "rgba(0,0,0,0.06)" }}
           hitSlop={8}
         >
-          <Text style={sharedStyles.primaryButtonText}>Logout</Text>
+          <Text style={sharedStyles.destructiveButtonText}>Logout</Text>
         </Pressable>
       </ScrollView>
 

@@ -20,13 +20,13 @@ const RoutineCard: React.FC<RoutineCardProps> = ({ item, onPress }) => {
     (e: any) => {
       const { pageX, pageY } = e.nativeEvent;
       setTouchPosition({ x: pageX, y: pageY });
-      Animated.spring(scaleAnim, { toValue: 0.96, useNativeDriver: true, tension: 300, friction: 10 }).start();
+      Animated.spring(scaleAnim, { toValue: 0.96, useNativeDriver: true, tension: 200, friction: 12 }).start();
     },
     [scaleAnim]
   );
 
   const handlePressOut = useCallback(() => {
-    Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, tension: 300, friction: 10 }).start();
+    Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, tension: 200, friction: 12 }).start();
   }, [scaleAnim]);
 
   return (

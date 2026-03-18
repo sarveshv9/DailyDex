@@ -2,7 +2,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import React, { useState } from 'react';
-import { Alert, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Theme } from '../../constants/shared';
 
 export type UserShape = {
@@ -31,11 +31,13 @@ export type SettingModalProps = {
 export const SettingModal = ({ visible, onClose, theme, user, setUser, handleSaveProfile }: SettingModalProps) => {
   const [name, setName] = useState(user.name);
   const [role, setRole] = useState(user.role);
+  const [email, setEmail] = useState(user.email);
+  const [bio, setBio] = useState(user.bio);
 
   const save = () => {
     // This spread operator (...) correctly preserves all fields
-    // like email, bio, stats, etc., while only updating name and role.
-    setUser(prev => ({ ...prev, name, role }));
+    // like email, bio, stats, etc.
+    setUser(prev => ({ ...prev, name, role, email, bio }));
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert('Saved', 'Profile updated');
     if (handleSaveProfile) {
@@ -57,7 +59,7 @@ export const SettingModal = ({ visible, onClose, theme, user, setUser, handleSav
           width: '90%',
           maxHeight: '80%',
           backgroundColor: theme.colors.card,
-          borderRadius: theme.borderRadius.lg,
+          borderRadius: 20,
           overflow: 'hidden'
         }}>
           {/* Header */}
@@ -70,12 +72,15 @@ export const SettingModal = ({ visible, onClose, theme, user, setUser, handleSav
             borderBottomColor: theme.colors.background
           }}>
             <Text style={{ fontSize: 18, fontFamily: theme.fonts.bold, color: theme.colors.text }}>Edit Profile</Text>
-            <TouchableOpacity onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              onClose();
-            }}>
+            <Pressable
+              style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1, transform: [{ scale: pressed ? 0.9 : 1 }] })}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onClose();
+              }}
+            >
               <Ionicons name="close" size={22} color={theme.colors.text} />
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           <ScrollView style={{ padding: theme.spacing.lg }}>
@@ -113,17 +118,56 @@ export const SettingModal = ({ visible, onClose, theme, user, setUser, handleSav
               }}
             />
 
-            <TouchableOpacity
-              onPress={save}
+            <Text style={{ fontSize: 14, fontFamily: theme.fonts.medium, color: theme.colors.textSecondary, marginBottom: theme.spacing.sm }}>Email</Text>
+            <TextInput
+              value={email}
+              onChangeText={setEmail}
+              placeholder="Email"
+              placeholderTextColor={theme.colors.textSecondary}
               style={{
+                borderWidth: 1,
+                borderColor: theme.colors.background,
+                padding: theme.spacing.md,
+                borderRadius: theme.borderRadius.sm,
+                marginBottom: theme.spacing.md,
+                color: theme.colors.text,
+                fontFamily: theme.fonts.regular
+              }}
+            />
+
+            <Text style={{ fontSize: 14, fontFamily: theme.fonts.medium, color: theme.colors.textSecondary, marginBottom: theme.spacing.sm }}>Bio</Text>
+            <TextInput
+              value={bio}
+              onChangeText={setBio}
+              placeholder="Bio"
+              placeholderTextColor={theme.colors.textSecondary}
+              multiline
+              style={{
+                borderWidth: 1,
+                borderColor: theme.colors.background,
+                padding: theme.spacing.md,
+                borderRadius: theme.borderRadius.sm,
+                marginBottom: theme.spacing.md,
+                color: theme.colors.text,
+                fontFamily: theme.fonts.regular,
+                minHeight: 80,
+                textAlignVertical: "top",
+              }}
+            />
+
+            <Pressable
+              onPress={save}
+              style={({ pressed }) => ({
                 backgroundColor: theme.colors.primary,
                 padding: theme.spacing.md,
                 borderRadius: theme.borderRadius.md,
                 marginTop: theme.spacing.md,
-              }}
+                opacity: pressed ? 0.85 : 1,
+                transform: [{ scale: pressed ? 0.97 : 1 }],
+              })}
             >
               <Text style={{ textAlign: 'center', color: theme.colors.white, fontFamily: theme.fonts.bold }}>Save</Text>
-            </TouchableOpacity>
+            </Pressable>
           </ScrollView>
         </View>
       </View>

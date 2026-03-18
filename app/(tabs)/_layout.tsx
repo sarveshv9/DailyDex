@@ -15,8 +15,8 @@ import { BlurView } from 'expo-blur';
 import React, { useEffect, useRef } from 'react';
 import {
   Animated,
+  Pressable,
   StyleSheet,
-  TouchableOpacity,
   View,
   useWindowDimensions,
 } from 'react-native';
@@ -197,7 +197,10 @@ function CustomTabBar({
             const isFocused = state.index === index;
 
             const onPress = () => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              // Only fire haptic if we're actually switching tabs
+              if (!isFocused) {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
               const event = navigation.emit({
                 type: 'tabPress',
                 target: route.key,
@@ -212,16 +215,16 @@ function CustomTabBar({
               navigation.emit({ type: 'tabLongPress', target: route.key });
 
             return (
-              <TouchableOpacity
+              <Pressable
                 key={`touch-${route.key}`}
                 accessibilityRole="button"
                 accessibilityState={isFocused ? { selected: true } : {}}
                 onPress={onPress}
                 onLongPress={onLongPress}
-                style={styles.tabBarButton}
+                style={({ pressed }) => [styles.tabBarButton, { opacity: pressed ? 0.7 : 1 }]}
               >
                 <View style={styles.iconWrapper} />
-              </TouchableOpacity>
+              </Pressable>
             );
           })}
         </Animated.View>

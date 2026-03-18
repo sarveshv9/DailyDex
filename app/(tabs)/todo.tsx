@@ -16,12 +16,24 @@ import {
   TextInput,
   View,
 } from "react-native";
+import Animated, {
+  FadeIn,
+  FadeOut,
+  LinearTransition,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getSharedStyles, Theme } from "../../constants/shared";
 import { useTheme } from "../../context/ThemeContext";
 import { useTimer } from "../../context/TimerContext";
 
 const STORAGE_KEY = "@todo_tasks";
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 interface Task {
   id: string;
@@ -80,11 +92,26 @@ const TaskItem = ({
   const timer = useTimer();
   const styles = useMemo(() => getStyles(theme), [theme]);
 
+  const strikeWidth = useSharedValue(task.completed ? 100 : 0);
+  const textWidth = useSharedValue(0);
+
+  useEffect(() => {
+    if (task.completed) {
+      strikeWidth.value = withDelay(100, withTiming(100, { duration: 250 }));
+    } else {
+      strikeWidth.value = withTiming(0, { duration: 180 });
+    }
+  }, [task.completed, strikeWidth]);
+
+  const animatedStrikeStyle = useAnimatedStyle(() => ({
+    width: (strikeWidth.value / 100) * textWidth.value,
+    opacity: strikeWidth.value > 0 ? 0.55 : 0,
+  }));
+
   const isCurrentTimer = timer.taskId === task.id;
   const isTimerActive = isCurrentTimer && timer.isActive;
 
   const handleToggle = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onToggle(task.id);
   };
 
@@ -94,13 +121,10 @@ const TaskItem = ({
   };
 
   const handleEdit = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onEdit(task);
   };
 
   const handleFocus = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
     // Always open the modal to pick time or see the active timer details
     router.push({
       pathname: "/focus" as any,
@@ -114,6 +138,25 @@ const TaskItem = ({
     return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
+  const ActionButton = ({ onPress, icon, color }: { onPress: () => void, icon: any, color: string }) => {
+    const scale = useSharedValue(1);
+    const animStyle = useAnimatedStyle(() => ({
+      transform: [{ scale: scale.value }],
+    }));
+
+    return (
+      <AnimatedPressable
+        style={[styles.taskActionButton, animStyle]}
+        onPressIn={() => { scale.value = withSpring(0.85, { damping: 18, stiffness: 200 }); }}
+        onPressOut={() => { scale.value = withSpring(1, { damping: 14, stiffness: 180 }); }}
+        onPress={onPress}
+        hitSlop={8}
+      >
+        <Ionicons name={icon} size={18} color={color} />
+      </AnimatedPressable>
+    );
+  };
+
   return (
     <View style={styles.taskItemWrapper}>
       <Pressable
@@ -121,20 +164,28 @@ const TaskItem = ({
         onPress={handleToggle}
         android_ripple={{ color: "rgba(0,0,0,0.05)" }}
       >
-        <View style={[styles.checkbox, task.completed && styles.checkboxDone]}>
-          {task.completed && (
-            <Ionicons name="checkmark" size={16} color={theme.colors.white} />
-          )}
+        <View style={styles.checkboxWrapper}>
+          <View style={[styles.checkbox, task.completed && styles.checkboxDone]}>
+            {task.completed && (
+              <Ionicons name="checkmark" size={14} color={theme.colors.white} />
+            )}
+          </View>
         </View>
 
-        <Text
-          style={[
-            styles.taskItemText,
-            task.completed && styles.taskItemTextDone,
-          ]}
-        >
-          {task.text}
-        </Text>
+        <View style={styles.taskTextContainer}>
+          <View style={styles.strikeContainer}>
+            <Text
+              style={[
+                styles.taskItemText,
+                task.completed && styles.taskItemTextDone,
+              ]}
+              onLayout={(e) => { textWidth.value = e.nativeEvent.layout.width; }}
+            >
+              {task.text}
+            </Text>
+            <Animated.View style={[styles.strikeThrough, animatedStrikeStyle]} />
+          </View>
+        </View>
       </Pressable>
 
       <View style={styles.taskActions}>
@@ -146,33 +197,21 @@ const TaskItem = ({
             {formatTime(timer.timeLeft)}
           </Text>
         )}
-        <Pressable
-          style={styles.taskActionButton}
+        <ActionButton
           onPress={handleFocus}
-          hitSlop={8}
-        >
-          <Ionicons
-            name={isTimerActive ? "pause" : "play"}
-            size={18}
-            color={theme.colors.primary}
-          />
-        </Pressable>
-
-        <Pressable
-          style={styles.taskActionButton}
+          icon={isTimerActive ? "pause" : "play"}
+          color={theme.colors.primary}
+        />
+        <ActionButton
           onPress={handleEdit}
-          hitSlop={8}
-        >
-          <Ionicons name="pencil" size={18} color={theme.colors.secondary} />
-        </Pressable>
-
-        <Pressable
-          style={styles.taskActionButton}
+          icon="pencil"
+          color={theme.colors.secondary}
+        />
+        <ActionButton
           onPress={handleDelete}
-          hitSlop={8}
-        >
-          <Ionicons name="trash-outline" size={18} color={`${theme.colors.secondary}80`} />
-        </Pressable>
+          icon="trash-outline"
+          color={`${theme.colors.secondary}80`}
+        />
       </View>
     </View>
   );
@@ -195,6 +234,10 @@ const ConfirmModal = ({
   theme: Theme;
 }) => {
   const styles = useMemo(() => getStyles(theme), [theme]);
+  const cancelScale = useSharedValue(1);
+  const confirmScale = useSharedValue(1);
+  const cancelStyle = useAnimatedStyle(() => ({ transform: [{ scale: cancelScale.value }] }));
+  const confirmStyle = useAnimatedStyle(() => ({ transform: [{ scale: confirmScale.value }] }));
 
   if (!visible) return null;
 
@@ -213,19 +256,23 @@ const ConfirmModal = ({
             <Text style={styles.modalMessage}>{message}</Text>
 
             <View style={styles.modalButtons}>
-              <Pressable
-                style={[styles.modalButton, styles.cancelButton]}
+              <AnimatedPressable
+                style={[styles.modalButton, styles.cancelButton, cancelStyle]}
+                onPressIn={() => { cancelScale.value = withSpring(0.95, { damping: 18 }); }}
+                onPressOut={() => { cancelScale.value = withSpring(1, { damping: 12 }); }}
                 onPress={onCancel}
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
-              </Pressable>
+              </AnimatedPressable>
 
-              <Pressable
-                style={[styles.modalButton, styles.saveButton]}
+              <AnimatedPressable
+                style={[styles.modalButton, styles.saveButton, confirmStyle]}
+                onPressIn={() => { confirmScale.value = withSpring(0.95, { damping: 18 }); }}
+                onPressOut={() => { confirmScale.value = withSpring(1, { damping: 12 }); }}
                 onPress={onConfirm}
               >
                 <Text style={styles.saveButtonText}>Clear</Text>
-              </Pressable>
+              </AnimatedPressable>
             </View>
           </Pressable>
         </Pressable>
@@ -252,6 +299,14 @@ const TaskModal = ({
 
   const [taskText, setTaskText] = useState("");
   const [category, setCategory] = useState<TaskCategory>("today");
+
+  const todayBtnScale = useSharedValue(1);
+  const laterBtnScale = useSharedValue(1);
+  const saveBtnScale = useSharedValue(1);
+
+  const todayBtnStyle = useAnimatedStyle(() => ({ transform: [{ scale: todayBtnScale.value }] }));
+  const laterBtnStyle = useAnimatedStyle(() => ({ transform: [{ scale: laterBtnScale.value }] }));
+  const saveBtnStyle = useAnimatedStyle(() => ({ transform: [{ scale: saveBtnScale.value }] }));
 
   useEffect(() => {
     if (visible) {
@@ -315,11 +370,14 @@ const TaskModal = ({
             <Text style={styles.categoryLabel}>Focus Area</Text>
 
             <View style={styles.categoryContainer}>
-              <Pressable
+              <AnimatedPressable
                 style={[
                   styles.categoryButton,
                   category === "today" && styles.categoryButtonActive,
+                  todayBtnStyle,
                 ]}
+                onPressIn={() => { todayBtnScale.value = withSpring(0.95, { damping: 18 }); }}
+                onPressOut={() => { todayBtnScale.value = withSpring(1, { damping: 12 }); }}
                 onPress={() => {
                   Haptics.selectionAsync();
                   setCategory("today");
@@ -333,13 +391,16 @@ const TaskModal = ({
                 >
                   Priority (Today)
                 </Text>
-              </Pressable>
+              </AnimatedPressable>
 
-              <Pressable
+              <AnimatedPressable
                 style={[
                   styles.categoryButton,
                   category === "later" && styles.categoryButtonActive,
+                  laterBtnStyle,
                 ]}
+                onPressIn={() => { laterBtnScale.value = withSpring(0.95, { damping: 18 }); }}
+                onPressOut={() => { laterBtnScale.value = withSpring(1, { damping: 12 }); }}
                 onPress={() => {
                   Haptics.selectionAsync();
                   setCategory("later");
@@ -353,17 +414,19 @@ const TaskModal = ({
                 >
                   Later
                 </Text>
-              </Pressable>
+              </AnimatedPressable>
             </View>
 
-            <Pressable
-              style={styles.saveActionButton}
+            <AnimatedPressable
+              style={[styles.saveActionButton, saveBtnStyle]}
+              onPressIn={() => { saveBtnScale.value = withSpring(0.96, { damping: 18 }); }}
+              onPressOut={() => { saveBtnScale.value = withSpring(1, { damping: 12 }); }}
               onPress={handleSave}
             >
               <Text style={styles.saveActionButtonText}>
                 {task ? "Update Task" : "Save Task"}
               </Text>
-            </Pressable>
+            </AnimatedPressable>
           </Pressable>
         </Pressable>
       </KeyboardAvoidingView>
@@ -379,7 +442,8 @@ const TaskSection = ({
   onEdit,
   onDelete,
   theme,
-  icon
+  icon,
+  delayIndex = 0
 }: {
   title: string;
   tasks: Task[];
@@ -388,6 +452,7 @@ const TaskSection = ({
   onDelete: (id: string) => void;
   theme: Theme;
   icon: keyof typeof Ionicons.glyphMap;
+  delayIndex?: number;
 }) => {
   const styles = useMemo(() => getStyles(theme), [theme]);
 
@@ -396,7 +461,11 @@ const TaskSection = ({
   const completedInSection = tasks.filter((t) => t.completed).length;
 
   return (
-    <View style={styles.sectionContainer}>
+    <Animated.View
+      style={styles.sectionContainer}
+      entering={FadeIn.delay(delayIndex * 80 + 80).duration(200)}
+      layout={LinearTransition.duration(200)}
+    >
       <View style={styles.sectionHeader}>
         <View style={styles.sectionIconWrap}>
           <Ionicons name={icon} size={18} color={theme.colors.primary} />
@@ -411,7 +480,12 @@ const TaskSection = ({
 
       <View style={styles.sectionTasks}>
         {tasks.map((task, index) => (
-          <View key={task.id}>
+          <Animated.View
+            key={task.id}
+            entering={FadeIn.delay(index * 30).duration(180)}
+            exiting={FadeOut.duration(150)}
+            layout={LinearTransition.duration(200)}
+          >
             {index > 0 && <View style={styles.taskDivider} />}
             <TaskItem
               task={task}
@@ -420,16 +494,20 @@ const TaskSection = ({
               onDelete={onDelete}
               theme={theme}
             />
-          </View>
+          </Animated.View>
         ))}
       </View>
-    </View>
+    </Animated.View>
   );
 };
 
 /* ---------------------- EMPTY STATE ------------------------ */
 const EmptyState = ({ styles, theme }: { styles: any, theme: Theme }) => (
-  <View style={styles.emptyState}>
+  <Animated.View
+    style={styles.emptyState}
+    entering={FadeIn.delay(200).duration(250)}
+    layout={LinearTransition.duration(200)}
+  >
     <View style={styles.emptyStateIconWrap}>
       <Ionicons name="leaf-outline" size={48} color={theme.colors.primary} />
     </View>
@@ -437,14 +515,41 @@ const EmptyState = ({ styles, theme }: { styles: any, theme: Theme }) => (
     <Text style={styles.emptyStateSubtitle}>
       Every great day starts with intention.{"\n"}What do you want to make happen?
     </Text>
-  </View>
+  </Animated.View>
 );
+
+/* ---------------------- PROGRESS BAR ------------------------ */
+const ProgressFill = ({ progress, color, style }: { progress: number, color: string, style: any }) => {
+  const width = useSharedValue(0);
+
+  useEffect(() => {
+    width.value = withSpring(progress * 100, { damping: 20, stiffness: 60, mass: 0.8 });
+  }, [progress]);
+
+  const animStyle = useAnimatedStyle(() => ({
+    width: `${width.value}%`,
+  }));
+
+  return <Animated.View style={[style, { backgroundColor: color }, animStyle]} />;
+};
 
 /* ---------------------- MAIN SCREEN ------------------------ */
 export default function TodoScreen() {
   const { theme } = useTheme();
   const styles = useMemo(() => getStyles(theme), [theme]);
   const sharedStyles = useMemo(() => getSharedStyles(theme), [theme]);
+
+  const AnimatedSubGreeting = ({ text }: { text: string }) => {
+    return (
+      <Animated.View
+        key={text}
+        entering={FadeIn.duration(400)}
+        exiting={FadeOut.duration(400)}
+      >
+        <Text style={styles.greetingSubtitle}>{text}</Text>
+      </Animated.View>
+    );
+  };
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -495,9 +600,9 @@ export default function TodoScreen() {
       prev.map((t) => {
         if (t.id === id) {
           const newlyCompleted = !t.completed;
-            import("../../utils/stats").then(({ addTaskCompleted }) => {
-              addTaskCompleted();
-            });
+          import("../../utils/stats").then(({ addTaskCompleted }) => {
+            addTaskCompleted();
+          });
           return { ...t, completed: newlyCompleted };
         }
         return t;
@@ -506,6 +611,11 @@ export default function TodoScreen() {
 
   const handleDeleteTask = (id: string) =>
     setTasks((prev) => prev.filter((t) => t.id !== id));
+
+  const buttonScale = useSharedValue(1);
+  const buttonAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: buttonScale.value }],
+  }));
 
   /* show in-app confirm modal */
   const handleClearCompleted = () => {
@@ -576,18 +686,17 @@ export default function TodoScreen() {
             {new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }).toUpperCase()}
           </Text>
           <Text style={styles.greetingTitle}>{greeting}</Text>
-          <Text style={styles.greetingSubtitle}>{subGreeting}</Text>
+          <AnimatedSubGreeting text={subGreeting} />
 
           {/* Progress pill */}
           {tasks.length > 0 && (
             <View style={styles.heroPillRow}>
               <View style={styles.heroPill}>
                 <View style={styles.heroPillTrack}>
-                  <View
-                    style={[
-                      styles.heroPillFill,
-                      { width: `${Math.round((completedCount / tasks.length) * 100)}%` as any },
-                    ]}
+                  <ProgressFill
+                    progress={completedCount / tasks.length}
+                    color={theme.colors.primary}
+                    style={styles.heroPillFill}
                   />
                 </View>
                 <Text style={styles.heroPillLabel}>
@@ -609,10 +718,15 @@ export default function TodoScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <Pressable
-          style={styles.topAddButton}
+        <AnimatedPressable
+          style={[styles.topAddButton, buttonAnimatedStyle]}
+          onPressIn={() => {
+            buttonScale.value = withSpring(0.96, { damping: 18 });
+          }}
+          onPressOut={() => {
+            buttonScale.value = withSpring(1, { damping: 12 });
+          }}
           onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             setEditingTask(null);
             setModalVisible(true);
           }}
@@ -623,7 +737,7 @@ export default function TodoScreen() {
           </View>
           <Text style={styles.topAddButtonText}>New task</Text>
           <Ionicons name="chevron-forward" size={16} color={`${theme.colors.primary}50`} style={{ marginLeft: 'auto' as any }} />
-        </Pressable>
+        </AnimatedPressable>
 
         <TaskSection
           title="Priority (Today)"
@@ -636,6 +750,7 @@ export default function TodoScreen() {
           onDelete={handleDeleteTask}
           theme={theme}
           icon="star"
+          delayIndex={0}
         />
 
         <TaskSection
@@ -649,6 +764,7 @@ export default function TodoScreen() {
           onDelete={handleDeleteTask}
           theme={theme}
           icon="time"
+          delayIndex={1}
         />
 
         {tasks.length === 0 && <EmptyState styles={styles} theme={theme} />}
@@ -911,6 +1027,12 @@ const getStyles = (theme: Theme) =>
       paddingVertical: theme.spacing.xs,
       borderRadius: theme.borderRadius.sm,
     },
+    checkboxWrapper: {
+      position: 'relative',
+      marginRight: theme.spacing.md,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     checkbox: {
       width: 22,
       height: 22,
@@ -919,22 +1041,37 @@ const getStyles = (theme: Theme) =>
       borderColor: theme.colors.secondary,
       alignItems: 'center',
       justifyContent: 'center',
-      marginRight: theme.spacing.md,
+      backgroundColor: theme.colors.card,
     },
     checkboxDone: {
       backgroundColor: theme.colors.primary,
       borderColor: theme.colors.primary,
     },
-    taskItemText: {
+    taskTextContainer: {
       flex: 1,
+      justifyContent: 'center',
+      alignItems: 'flex-start',
+    },
+    strikeContainer: {
+      alignSelf: 'flex-start',
+      position: 'relative',
+    },
+    taskItemText: {
       fontSize: 16,
       fontFamily: theme.fonts.medium,
       color: theme.colors.primary,
     },
+    strikeThrough: {
+      position: 'absolute',
+      height: 1.5,
+      backgroundColor: theme.colors.secondary,
+      top: '52%',
+      left: 0,
+      borderRadius: 1,
+    },
     taskItemTextDone: {
-      textDecorationLine: "line-through",
       color: theme.colors.secondary,
-      opacity: 0.6,
+      opacity: 0.5,
     },
     taskActions: {
       flexDirection: "row",

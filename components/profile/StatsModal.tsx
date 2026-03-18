@@ -39,17 +39,18 @@ export function StatsModal({ visible, onClose, theme, stats }: StatsModalProps) 
 
     return (
         <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-            <Pressable style={styles.modalBackdrop} onPress={onClose}>
-                <Pressable style={styles.modalContent} onPress={() => { }}>
+            <View style={styles.modalBackdrop}>
+                <Pressable style={styles.backdropPressable} onPress={onClose} />
+                <View style={styles.modalContent}>
                     {/* Header */}
                     <View style={styles.header}>
                         <Text style={styles.title}>Your Zen Journey</Text>
-                        <Pressable onPress={onClose} hitSlop={8} style={styles.closeButton}>
+                        <Pressable onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} style={styles.closeButton}>
                             <Ionicons name="close" size={24} color={theme.colors.primary} />
                         </Pressable>
                     </View>
 
-                    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+                    <ScrollView style={{ flexShrink: 1, width: "100%" }} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
                         {/* Encouraging Banner */}
                         <View style={styles.banner}>
@@ -145,8 +146,8 @@ export function StatsModal({ visible, onClose, theme, stats }: StatsModalProps) 
                         </View>
 
                     </ScrollView>
-                </Pressable>
-            </Pressable>
+                </View>
+            </View>
         </Modal>
     );
 }
@@ -154,8 +155,11 @@ export function StatsModal({ visible, onClose, theme, stats }: StatsModalProps) 
 const getStyles = (theme: Theme) => StyleSheet.create({
     modalBackdrop: {
         flex: 1,
-        backgroundColor: "rgba(0,0,0,0.5)",
         justifyContent: "flex-end", // Slide up from bottom
+    },
+    backdropPressable: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: "rgba(0,0,0,0.5)",
     },
     modalContent: {
         backgroundColor: theme.colors.card,
@@ -163,6 +167,8 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         borderTopRightRadius: 24,
         padding: theme.spacing.lg,
         maxHeight: "90%", // Allow it to be tall, but not cover the whole screen
+        width: "100%",
+        flexShrink: 1,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: -5 },
         shadowOpacity: 0.1,
@@ -182,8 +188,11 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     },
     closeButton: {
         backgroundColor: theme.colors.card,
-        padding: theme.spacing.xs,
-        borderRadius: 9999,
+        width: 44,
+        height: 44,
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: 22,
         borderWidth: 1,
         borderColor: `${theme.colors.textSecondary}20`,
     },

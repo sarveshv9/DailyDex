@@ -3,10 +3,10 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React, { useMemo } from "react";
 import {
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View
 } from "react-native";
 import { Theme } from "../../constants/shared";
@@ -33,9 +33,12 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
   return (
     <View style={styles.card}>
       {/* Edit Button */}
-      <TouchableOpacity
-        style={styles.editButton}
-        activeOpacity={0.7}
+      {/* Pressable with scale feedback replaced TouchableOpacity — consistent with app pattern */}
+      <Pressable
+        style={({ pressed }) => [
+          styles.editButton,
+          pressed && { opacity: 0.7, transform: [{ scale: 0.9 }] },
+        ]}
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           setIsEditingProfile(!isEditingProfile);
@@ -46,7 +49,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
           size={20}
           color={theme.colors.white}
         />
-      </TouchableOpacity>
+      </Pressable>
 
       {/* Avatar */}
       <View style={styles.avatarContainer}>
@@ -89,9 +92,15 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
             multiline
           />
 
-          <TouchableOpacity style={styles.saveButton} onPress={handleSaveProfile}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.saveButton,
+              pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] },
+            ]}
+            onPress={handleSaveProfile}
+          >
             <Text style={styles.saveButtonText}>Save Changes</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       ) : (
         <View style={styles.viewModeContainer}>
@@ -115,12 +124,12 @@ const getStyles = (theme: Theme) =>
       marginTop: theme.spacing.xl,
       paddingVertical: theme.spacing.xl,
       paddingHorizontal: theme.spacing.lg,
-      borderRadius: theme.borderRadius.lg,
-      elevation: 4,
+      borderRadius: 20,
+      elevation: 6,
       shadowColor: "#000",
-      shadowOpacity: 0.05,
-      shadowRadius: 12,
-      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.08,
+      shadowRadius: 16,
+      shadowOffset: { width: 0, height: 6 },
       position: "relative",
       alignItems: "center",
     },
@@ -130,9 +139,9 @@ const getStyles = (theme: Theme) =>
       position: "absolute",
       top: 16,
       right: 16,
-      width: 34,
-      height: 34,
-      borderRadius: 17,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       backgroundColor: theme.colors.primary,
       alignItems: "center",
       justifyContent: "center",
@@ -210,7 +219,7 @@ const getStyles = (theme: Theme) =>
     saveButton: {
       backgroundColor: theme.colors.primary,
       paddingVertical: theme.spacing.md,
-      borderRadius: theme.borderRadius.md,
+      borderRadius: theme.borderRadius.lg,
       alignItems: "center",
       marginTop: theme.spacing.md,
     },
