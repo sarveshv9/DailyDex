@@ -25,6 +25,7 @@ import { SettingsSection } from "../../components/profile/SettingsSection";
 import { StatCard } from "../../components/profile/StatCard";
 import { StatsModal } from "../../components/profile/StatsModal";
 import { ThemeSelectionModal } from "../../components/profile/ThemeSelectionModal";
+import { BottomSheet } from "../../components/profile/BottomSheet";
 import { useAudio } from "../../context/AudioContext";
 import { useTheme } from "../../context/ThemeContext";
 import { cancelAllRoutineNotifications, scheduleRoutineNotifications } from "../../utils/notifications";
@@ -530,53 +531,39 @@ export default function ProfileScreen() {
       />
 
       {/* -------------------- Notification Modal -------------------- */}
-      <Modal
+      {/* Previously an inline centered modal. Changed to BottomSheet for UX consistency. */}
+      <BottomSheet
         visible={showNotificationSettings}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowNotificationSettings(false)}
+        onClose={() => setShowNotificationSettings(false)}
+        theme={theme}
+        title="Notifications"
       >
-        <Pressable style={styles.modalBackdrop} onPress={() => setShowNotificationSettings(false)}>
-          <Pressable
-            onPress={() => { }}
-            style={styles.modalCard}
-            android_ripple={{ color: "rgba(0,0,0,0.02)" }}
-          >
-            <View style={styles.modalHeaderRow}>
-              <Text style={styles.modalTitle}>Notifications</Text>
-              <Pressable onPress={() => setShowNotificationSettings(false)} hitSlop={8}>
-                <Ionicons name="close" size={20} color={theme.colors.primary} />
-              </Pressable>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {[
+            { key: "taskReminders", label: "Task Reminders" },
+            { key: "dailySummary", label: "Daily Summary" },
+            { key: "achievements", label: "Achievements" },
+            { key: "news", label: "News & Updates" },
+          ].map((opt, idx, arr) => (
+            <View
+              key={opt.key}
+              style={[
+                styles.row,
+                idx === arr.length - 1 && { borderBottomWidth: 0, paddingBottom: 0 },
+              ]}
+            >
+              <Text style={styles.rowLabel}>{opt.label}</Text>
+              <Switch
+                value={(settings.notifications as any)[opt.key]}
+                onValueChange={() => toggleNotification(opt.key)}
+                trackColor={{ false: theme.colors.secondary, true: theme.colors.primary }}
+                thumbColor={theme.colors.white}
+                accessibilityLabel={`Toggle ${opt.label}`}
+              />
             </View>
-
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {[
-                { key: "taskReminders", label: "Task Reminders" },
-                { key: "dailySummary", label: "Daily Summary" },
-                { key: "achievements", label: "Achievements" },
-                { key: "news", label: "News & Updates" },
-              ].map((opt, idx, arr) => (
-                <View
-                  key={opt.key}
-                  style={[
-                    styles.row,
-                    idx === arr.length - 1 && { borderBottomWidth: 0, paddingBottom: 0 },
-                  ]}
-                >
-                  <Text style={styles.rowLabel}>{opt.label}</Text>
-                  <Switch
-                    value={(settings.notifications as any)[opt.key]}
-                    onValueChange={() => toggleNotification(opt.key)}
-                    trackColor={{ false: theme.colors.secondary, true: theme.colors.primary }}
-                    thumbColor={theme.colors.white}
-                    accessibilityLabel={`Toggle ${opt.label}`}
-                  />
-                </View>
-              ))}
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
+          ))}
+        </ScrollView>
+      </BottomSheet>
     </SafeAreaView>
   );
 }

@@ -4,6 +4,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-nati
 import { Theme } from "../../constants/shared";
 import { getTodayString, getWeeklyData, UserStats } from "../../utils/stats";
 import { ActivityChart } from "./ActivityChart";
+import { BottomSheet } from "./BottomSheet";
 
 type StatsModalProps = {
     visible: boolean;
@@ -38,19 +39,9 @@ export function StatsModal({ visible, onClose, theme, stats }: StatsModalProps) 
     }
 
     return (
-        <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-            <View style={styles.modalBackdrop}>
-                <Pressable style={styles.backdropPressable} onPress={onClose} />
-                <View style={styles.modalContent}>
-                    {/* Header */}
-                    <View style={styles.header}>
-                        <Text style={styles.title}>Your Zen Journey</Text>
-                        <Pressable onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} style={styles.closeButton}>
-                            <Ionicons name="close" size={24} color={theme.colors.primary} />
-                        </Pressable>
-                    </View>
-
-                    <ScrollView style={{ flexShrink: 1, width: "100%" }} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <BottomSheet visible={visible} onClose={onClose} theme={theme} title="Your Zen Journey">
+            {/* Previously a custom slide-up modal; replaced with shared BottomSheet for UI consistency */}
+            <ScrollView style={{ flexShrink: 1, width: "100%" }} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
                         {/* Encouraging Banner */}
                         <View style={styles.banner}>
@@ -146,9 +137,7 @@ export function StatsModal({ visible, onClose, theme, stats }: StatsModalProps) 
                         </View>
 
                     </ScrollView>
-                </View>
-            </View>
-        </Modal>
+        </BottomSheet>
     );
 }
 

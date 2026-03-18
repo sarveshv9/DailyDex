@@ -4,6 +4,7 @@ import React, { useCallback, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { SONG_LIST } from '../../constants/songs';
+import { BottomSheet } from './BottomSheet';
 
 // --- Constants ---
 const APPEARANCE_MODES = {
@@ -328,41 +329,50 @@ const MusicSetting = React.memo<{
   }, [selectedSong]);
 
   const handleToggle = useCallback(() => {
-    setIsMusicExpanded(!isMusicExpanded);
-  }, [isMusicExpanded, setIsMusicExpanded]);
+    setIsMusicExpanded(true);
+  }, [setIsMusicExpanded]);
 
   const handleSongSelect = useCallback((songId: number) => {
     setSelectedSong(songId);
-  }, [setSelectedSong]);
+    setTimeout(() => setIsMusicExpanded(false), 300); // Close after brief delay
+  }, [setSelectedSong, setIsMusicExpanded]);
 
   return (
-    <ExpandableSetting
-      theme={theme}
-      iconName="musical-notes-outline"
-      title="Music"
-      currentValue={currentSongTitle}
-      isExpanded={isMusicExpanded}
-      onToggle={handleToggle}
-      isLast={isLast}
-    >
-      <OptionItem
+    <>
+      {/* Previously used ExpandableSetting (inline accordion); changed to pattern-consistent BottomSheet */}
+      <SettingItem
         theme={theme}
-        label="Off"
-        isSelected={selectedSong === 0}
-        onPress={() => handleSongSelect(0)}
-        isFirst
+        iconName="musical-notes-outline"
+        text="Music"
+        valueText={currentSongTitle}
+        onPress={handleToggle}
+        isLast={isLast}
       />
-      {SONG_LIST.map((song, index) => (
+      <BottomSheet
+        visible={isMusicExpanded}
+        onClose={() => setIsMusicExpanded(false)}
+        theme={theme}
+        title="Music Preferences"
+      >
         <OptionItem
-          key={song.id}
           theme={theme}
-          label={song.title}
-          isSelected={selectedSong === song.id}
-          onPress={() => handleSongSelect(song.id)}
-          isLast={index === SONG_LIST.length - 1}
+          label="Off"
+          isSelected={selectedSong === 0}
+          onPress={() => handleSongSelect(0)}
+          isFirst
         />
-      ))}
-    </ExpandableSetting>
+        {SONG_LIST.map((song, index) => (
+          <OptionItem
+            key={song.id}
+            theme={theme}
+            label={song.title}
+            isSelected={selectedSong === song.id}
+            onPress={() => handleSongSelect(song.id)}
+            isLast={index === SONG_LIST.length - 1}
+          />
+        ))}
+      </BottomSheet>
+    </>
   );
 });
 

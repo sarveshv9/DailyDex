@@ -1,11 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import React, { useRef, useState } from "react";
+import React, { useMemo } from "react";
 import {
-    Animated,
-    Dimensions,
     Image,
-    Modal,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -14,8 +11,7 @@ import {
     View,
 } from "react-native";
 import { darkThemes, lightThemes, Theme } from "../../constants/shared";
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+import { BottomSheet } from "./BottomSheet";
 
 type ThemeSelectionModalProps = {
     visible: boolean;
@@ -52,361 +48,196 @@ const THEME_META: Record<string, { label: string; description: string }> = {
     mew: { label: "Mew", description: "Mysterious" },
 };
 
+/**
+ * Theme Selection
+ * Previously a massive full-screen modal with custom sidebar styling.
+ * Now refactored to use the consistent BottomSheet pattern.
+ */
 export function ThemeSelectionModal({
     visible, onClose, currentTheme,
     activeThemeName, isDarkMode, onToggleDarkMode,
     isAutoTheme, onToggleAutoTheme, onSelectTheme,
 }: ThemeSelectionModalProps) {
-    const baseActiveTheme = activeThemeName.replace("light-", "");
-    const [previewTheme, setPreviewTheme] = useState(baseActiveTheme);
-
-    const palette = isDarkMode ? darkThemes : lightThemes;
-    const previewThemeObj = palette[previewTheme];
-
-    const previewColors = previewThemeObj?.colors ?? currentTheme.colors;
-    const activeColors = palette[baseActiveTheme]?.colors ?? currentTheme.colors;
-
-    const pokeId = POKEMON_IDS[previewTheme];
-    const spriteUrl = pokeId
-        ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokeId}.png`
-        : null;
-
-    const meta = THEME_META[previewTheme] ?? {
-        label: previewTheme.charAt(0).toUpperCase() + previewTheme.slice(1),
-        description: "",
-    };
-
+    const baseActiveTheme = activeThemeName.replace("light-", "").replace("dark-", "");
     const themeList = Object.keys(lightThemes);
-
-    const fadeAnim = useRef(new Animated.Value(1)).current;
-
-    const switchPreview = (name: string) => {
-        if (name === previewTheme) return;
-        Haptics.selectionAsync();
-        Animated.sequence([
-            Animated.timing(fadeAnim, { toValue: 0, duration: 80, useNativeDriver: true }),
-            Animated.timing(fadeAnim, { toValue: 1, duration: 160, useNativeDriver: true }),
-        ]).start();
-        setPreviewTheme(name);
-    };
-
-    const handleApply = () => {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        onSelectTheme(previewTheme);
-        if (isAutoTheme) onToggleAutoTheme(false); // Disable auto if user manually picks
-        onClose();
-    };
+    const styles = useMemo(() => getStyles(currentTheme), [currentTheme]);
 
     return (
-        <Modal visible={visible} transparent={false} animationType="slide" onRequestClose={onClose}>
-            <View style={[styles.screen, { backgroundColor: previewColors.background }]}>
-
-                {/* ── Top bar ── */}
-                <View style={styles.topBar}>
-                    <Pressable onPress={onClose} hitSlop={14} style={styles.closeBtn}>
-                        <Ionicons name="arrow-back" size={20} color={previewColors.primary} />
-                    </Pressable>
-                    <Text style={[styles.topTitle, { color: previewColors.primary }]}>Appearance</Text>
-
-                    {/* Auto theme toggle (Top Right) */}
-                    <Pressable
-                        style={[styles.topToggle, {
-                            backgroundColor: `${previewColors.primary}0E`,
-                            borderColor: `${previewColors.primary}20`,
-                        }]}
-                        onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                            onToggleAutoTheme(!isAutoTheme);
-                        }}
-                    >
-                        <Ionicons
-                            name={isAutoTheme ? "sync-outline" : "sync-circle-outline"}
-                            size={16}
-                            color={previewColors.primary}
+        <BottomSheet
+            visible={visible}
+            onClose={onClose}
+            theme={currentTheme}
+            title="Appearance"
+        >
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+                
+                {/* Mode Toggles */}
+                <View style={styles.togglesContainer}>
+                    <View style={styles.toggleRow}>
+                        <View style={styles.toggleLabelGroup}>
+                            <Ionicons name="moon" size={20} color={currentTheme.colors.primary} />
+                            <Text style={styles.toggleLabel}>Dark Mode</Text>
+                        </View>
+                        <Switch
+                            value={isDarkMode}
+                            onValueChange={(v) => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                onToggleDarkMode(v);
+                            }}
+                            trackColor={{ false: currentTheme.colors.secondary, true: currentTheme.colors.primary }}
+                            thumbColor={currentTheme.colors.white}
                         />
-                        <Text style={[styles.topToggleLabel, { color: previewColors.primary }]}>
-                            {isAutoTheme ? "Auto: ON" : "Auto: OFF"}
-                        </Text>
-                    </Pressable>
+                    </View>
+
+                    <View style={styles.separator} />
+
+                    <View style={styles.toggleRow}>
+                        <View style={styles.toggleLabelGroup}>
+                            <Ionicons name="sync" size={20} color={currentTheme.colors.primary} />
+                            <Text style={styles.toggleLabel}>Auto Theme</Text>
+                        </View>
+                        <Switch
+                            value={isAutoTheme}
+                            onValueChange={(v) => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                onToggleAutoTheme(v);
+                            }}
+                            trackColor={{ false: currentTheme.colors.secondary, true: currentTheme.colors.primary }}
+                            thumbColor={currentTheme.colors.white}
+                        />
+                    </View>
                 </View>
 
-                {/* ── Body: sidebar + preview ── */}
-                <View style={styles.body}>
+                {/* Theme List */}
+                <Text style={styles.sectionTitle}>Themes</Text>
+                <View style={styles.listContainer}>
+                    {themeList.map((tName, index) => {
+                        const tColors = lightThemes[tName].colors;
+                        const isApplied = baseActiveTheme === tName;
+                        const tmeta = THEME_META[tName] ?? {
+                            label: tName.charAt(0).toUpperCase() + tName.slice(1),
+                            description: ""
+                        };
+                        const pid = POKEMON_IDS[tName];
+                        const thumb = pid
+                            ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pid}.png`
+                            : null;
 
-                    {/* LEFT: theme list */}
-                    <ScrollView
-                        style={styles.sidebar}
-                        showsVerticalScrollIndicator={false}
-                        contentContainerStyle={styles.sidebarContent}
-                    >
-                        {themeList.map((tName) => {
-                            const tColors = palette[tName].colors;
-                            const isApplied = baseActiveTheme === tName;
-                            const isPreviewing = previewTheme === tName;
-                            const tmeta = THEME_META[tName] ?? {
-                                label: tName.charAt(0).toUpperCase() + tName.slice(1),
-                            };
-                            const pid = POKEMON_IDS[tName];
-                            const thumb = pid
-                                ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pid}.png`
-                                : null;
-
-                            return (
+                        return (
+                            <View key={tName}>
                                 <Pressable
-                                    key={tName}
-                                    onPress={() => switchPreview(tName)}
-                                    style={[
-                                        styles.row,
-                                        isPreviewing && {
-                                            backgroundColor: `${tColors.primary}15`,
-                                            borderColor: `${tColors.primary}30`,
-                                        },
+                                    onPress={() => {
+                                        if (isApplied) return;
+                                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                        onSelectTheme(tName);
+                                        if (isAutoTheme) onToggleAutoTheme(false);
+                                        // Auto-close on selection to correctly implement the pattern
+                                        setTimeout(() => onClose(), 300);
+                                    }}
+                                    style={({ pressed }) => [
+                                        styles.themeRow,
+                                        pressed && { opacity: 0.7 },
                                     ]}
                                 >
-                                    {/* Color dot */}
                                     <View style={[styles.dot, { backgroundColor: tColors.primary }]}>
-                                        {thumb ? (
+                                        {thumb && (
                                             <Image source={{ uri: thumb }} style={styles.dotSprite} resizeMode="contain" />
+                                        )}
+                                    </View>
+                                    
+                                    <View style={styles.themeInfo}>
+                                        <Text style={[styles.themeLabel, isApplied && { color: currentTheme.colors.primary, fontFamily: currentTheme.fonts.bold }]}>
+                                            {tmeta.label}
+                                        </Text>
+                                        {tmeta.description ? (
+                                            <Text style={styles.themeDesc}>{tmeta.description}</Text>
                                         ) : null}
                                     </View>
 
-                                    <Text
-                                        style={[
-                                            styles.rowLabel,
-                                            { color: isPreviewing ? tColors.primary : `${previewColors.primary}80` },
-                                            isPreviewing && { fontFamily: currentTheme.fonts.bold },
-                                        ]}
-                                        numberOfLines={1}
-                                    >
-                                        {tmeta.label}
-                                    </Text>
-
                                     {isApplied && (
-                                        <View style={[styles.appliedDot, { backgroundColor: tColors.primary }]} />
+                                        <Ionicons name="checkmark-circle" size={24} color={currentTheme.colors.primary} />
                                     )}
                                 </Pressable>
-                            );
-                        })}
-                    </ScrollView>
-
-                    {/* RIGHT: big preview panel */}
-                    <View style={styles.previewColumn}>
-                        <Animated.View
-                            style={[
-                                styles.previewCard,
-                                { backgroundColor: previewColors.primary, opacity: fadeAnim },
-                            ]}
-                        >
-                            {/* Decorative circles */}
-                            <View style={[styles.circle, styles.circleA, { backgroundColor: "rgba(255,255,255,0.07)" }]} />
-                            <View style={[styles.circle, styles.circleB, { backgroundColor: "rgba(255,255,255,0.05)" }]} />
-                            {previewColors.secondary && (
-                                <View style={[styles.circle, styles.circleC, { backgroundColor: previewColors.secondary, opacity: 0.2 }]} />
-                            )}
-
-                            {spriteUrl ? (
-                                <Image source={{ uri: spriteUrl }} style={styles.artwork} resizeMode="contain" />
-                            ) : (
-                                <Ionicons name="color-palette" size={72} color="rgba(255,255,255,0.5)" />
-                            )}
-
-                            {/* Name overlay at bottom */}
-                            <View style={styles.previewLabel}>
-                                <Text style={styles.previewName}>{meta.label}</Text>
-                                <Text style={styles.previewDesc}>{meta.description}</Text>
+                                {index < themeList.length - 1 && <View style={styles.separator} />}
                             </View>
-
-                            {/* Applied chip */}
-                            {baseActiveTheme === previewTheme && (
-                                <View style={styles.appliedChip}>
-                                    <Ionicons name="checkmark" size={10} color={previewColors.primary} />
-                                    <Text style={[styles.appliedChipText, { color: previewColors.primary }]}>Applied</Text>
-                                </View>
-                            )}
-                        </Animated.View>
-
-                        {/* Dark mode toggle */}
-                        <Pressable
-                            style={[styles.toggle, {
-                                backgroundColor: `${previewColors.primary}0E`,
-                                borderColor: `${previewColors.primary}20`,
-                            }]}
-                            onPress={() => {
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                onToggleDarkMode(!isDarkMode);
-                            }}
-                        >
-                            <Ionicons
-                                name={isDarkMode ? "moon-outline" : "sunny-outline"}
-                                size={14}
-                                color={previewColors.primary}
-                            />
-                            <Text style={[styles.toggleLabel, { color: previewColors.primary }]}>
-                                {isDarkMode ? "Dark" : "Light"}
-                            </Text>
-                            <Switch
-                                value={isDarkMode}
-                                onValueChange={(v) => {
-                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                    onToggleDarkMode(v);
-                                }}
-                                trackColor={{ false: `${previewColors.primary}25`, true: `${previewColors.primary}60` }}
-                                thumbColor={previewColors.primary}
-                                style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
-                            />
-                        </Pressable>
-
-                        {/* Apply button */}
-                        <Pressable
-                            style={[
-                                styles.applyBtn,
-                                { backgroundColor: previewColors.primary },
-                                baseActiveTheme === previewTheme && { opacity: 0.45 },
-                            ]}
-                            onPress={handleApply}
-                            disabled={baseActiveTheme === previewTheme}
-                        >
-                            <Text style={styles.applyText}>Apply</Text>
-                        </Pressable>
-                    </View>
+                        );
+                    })}
                 </View>
-            </View>
-        </Modal>
+            </ScrollView>
+        </BottomSheet>
     );
 }
 
-const SIDEBAR_W = 140;
-
-const styles = StyleSheet.create({
-    screen: {
-        flex: 1,
-        paddingTop: 56,
+const getStyles = (theme: Theme) => StyleSheet.create({
+    scrollContent: {
+        paddingBottom: 24,
     },
-    topBar: {
+    togglesContainer: {
+        backgroundColor: `${theme.colors.secondary}0D`,
+        borderRadius: theme.borderRadius.lg,
+        paddingHorizontal: theme.spacing.md,
+        marginBottom: theme.spacing.lg,
+    },
+    toggleRow: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        paddingHorizontal: 16,
-        paddingBottom: 12,
+        paddingVertical: theme.spacing.md,
     },
-    closeBtn: {
-        width: 36, height: 36, borderRadius: 18,
-        backgroundColor: "rgba(0,0,0,0.06)",
-        alignItems: "center", justifyContent: "center",
-    },
-    topTitle: {
-        fontSize: 17, fontWeight: "700", letterSpacing: 0.1,
-    },
-    topToggle: {
-        flexDirection: "row", alignItems: "center",
-        gap: 4, borderRadius: 10,
-        paddingHorizontal: 8, paddingVertical: 6,
-        borderWidth: 1,
-    },
-    topToggleLabel: { fontSize: 11, fontWeight: "700" },
-
-    body: {
-        flex: 1,
-        flexDirection: "row",
-    },
-
-    // ── Sidebar ──
-    sidebar: {
-        width: SIDEBAR_W,
-        borderRightWidth: 1,
-        borderRightColor: "rgba(0,0,0,0.06)",
-    },
-    sidebarContent: {
-        paddingVertical: 8,
-        paddingHorizontal: 8,
-        gap: 2,
-    },
-    row: {
+    toggleLabelGroup: {
         flexDirection: "row",
         alignItems: "center",
-        gap: 8,
-        paddingVertical: 9,
-        paddingHorizontal: 8,
-        borderRadius: 10,
-        borderWidth: 1,
-        borderColor: "transparent",
+        gap: theme.spacing.sm,
+    },
+    toggleLabel: {
+        fontFamily: theme.fonts.medium,
+        fontSize: 16,
+        color: theme.colors.text,
+    },
+    separator: {
+        height: StyleSheet.hairlineWidth,
+        backgroundColor: `${theme.colors.secondary}20`,
+    },
+    sectionTitle: {
+        fontFamily: theme.fonts.bold,
+        fontSize: 18,
+        color: theme.colors.text,
+        marginBottom: theme.spacing.md,
+        paddingHorizontal: 4,
+    },
+    listContainer: {
+        backgroundColor: `${theme.colors.secondary}0D`,
+        borderRadius: theme.borderRadius.lg,
+        paddingHorizontal: theme.spacing.md,
+    },
+    themeRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingVertical: theme.spacing.md,
+        gap: theme.spacing.md,
     },
     dot: {
-        width: 26, height: 26, borderRadius: 8,
+        width: 40, height: 40, borderRadius: 12,
         overflow: "hidden",
         alignItems: "center", justifyContent: "center",
         flexShrink: 0,
     },
     dotSprite: {
-        width: 26, height: 26,
+        width: 36, height: 36,
     },
-    rowLabel: {
-        flex: 1, fontSize: 13, fontWeight: "500",
-    },
-    appliedDot: {
-        width: 6, height: 6, borderRadius: 3, flexShrink: 0,
-    },
-
-    // ── Preview ──
-    previewColumn: {
+    themeInfo: {
         flex: 1,
-        padding: 14,
-        gap: 10,
-        justifyContent: "flex-start",
-    },
-    previewCard: {
-        borderRadius: 24,
-        height: SCREEN_HEIGHT * 0.42,
-        overflow: "hidden",
-        alignItems: "center",
         justifyContent: "center",
     },
-    circle: { position: "absolute", borderRadius: 9999 },
-    circleA: { width: 220, height: 220, top: -60, right: -60 },
-    circleB: { width: 160, height: 160, bottom: -40, left: -40 },
-    circleC: { width: 200, height: 200, bottom: -50, right: -30 },
-    artwork: {
-        width: "75%", height: "65%",
+    themeLabel: {
+        fontSize: 16,
+        fontFamily: theme.fonts.medium,
+        color: theme.colors.text,
     },
-    previewLabel: {
-        position: "absolute", bottom: 14, left: 14,
-    },
-    previewName: {
-        fontSize: 22, fontWeight: "800", color: "#fff",
-        letterSpacing: -0.5,
-        textShadowColor: "rgba(0,0,0,0.2)",
-        textShadowOffset: { width: 0, height: 1 },
-        textShadowRadius: 4,
-    },
-    previewDesc: {
-        fontSize: 12, color: "rgba(255,255,255,0.7)", fontWeight: "500", marginTop: 2,
-    },
-    appliedChip: {
-        position: "absolute", top: 12, right: 12,
-        backgroundColor: "#fff",
-        borderRadius: 20, paddingHorizontal: 9, paddingVertical: 4,
-        flexDirection: "row", alignItems: "center", gap: 4,
-    },
-    appliedChipText: {
-        fontSize: 11, fontWeight: "800",
-    },
-
-    toggle: {
-        flexDirection: "row", alignItems: "center",
-        gap: 6, borderRadius: 12,
-        paddingHorizontal: 10, paddingVertical: 8,
-        borderWidth: 1,
-    },
-    toggleLabel: { fontSize: 13, fontWeight: "600", flex: 1 },
-
-    applyBtn: {
-        borderRadius: 14, paddingVertical: 13,
-        alignItems: "center", justifyContent: "center",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.18, shadowRadius: 10, elevation: 6,
-    },
-    applyText: {
-        color: "#fff", fontSize: 15, fontWeight: "700", letterSpacing: 0.2,
+    themeDesc: {
+        fontSize: 13,
+        fontFamily: theme.fonts.regular,
+        color: theme.colors.textSecondary,
+        marginTop: 2,
     },
 });

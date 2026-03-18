@@ -4,6 +4,7 @@ import * as Haptics from 'expo-haptics';
 import React, { useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Theme } from '../../constants/shared';
+import { BottomSheet } from './BottomSheet';
 
 export type UserShape = {
   name: string;
@@ -48,42 +49,10 @@ export const SettingModal = ({ visible, onClose, theme, user, setUser, handleSav
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
-      <View style={{
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.35)',
-        justifyContent: 'center',
-        alignItems: 'center'
-      }}>
-        <View style={{
-          width: '90%',
-          maxHeight: '80%',
-          backgroundColor: theme.colors.card,
-          borderRadius: 20,
-          overflow: 'hidden'
-        }}>
-          {/* Header */}
-          <View style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: theme.spacing.lg,
-            borderBottomWidth: 1,
-            borderBottomColor: theme.colors.background
-          }}>
-            <Text style={{ fontSize: 18, fontFamily: theme.fonts.bold, color: theme.colors.text }}>Edit Profile</Text>
-            <Pressable
-              style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1, transform: [{ scale: pressed ? 0.9 : 1 }] })}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                onClose();
-              }}
-            >
-              <Ionicons name="close" size={22} color={theme.colors.text} />
-            </Pressable>
-          </View>
-
-          <ScrollView style={{ padding: theme.spacing.lg }}>
+    <>
+      {/* Previously a centered popup modal. Replaced with BottomSheet for consistent interactions. */}
+      <BottomSheet visible={visible} onClose={onClose} theme={theme} title="Edit Profile">
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24, paddingTop: 4 }}>
             <Text style={{ fontSize: 14, fontFamily: theme.fonts.medium, color: theme.colors.textSecondary, marginBottom: theme.spacing.sm }}>Name</Text>
             <TextInput
               value={name}
@@ -169,8 +138,7 @@ export const SettingModal = ({ visible, onClose, theme, user, setUser, handleSav
               <Text style={{ textAlign: 'center', color: theme.colors.white, fontFamily: theme.fonts.bold }}>Save</Text>
             </Pressable>
           </ScrollView>
-        </View>
-      </View>
-    </Modal>
+      </BottomSheet>
+    </>
   );
 };
