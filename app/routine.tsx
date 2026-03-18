@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActionSheetIOS,
   Alert,
   Animated,
   Dimensions,
@@ -17,8 +18,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { DayTimelineView } from "../components/dashboard/DayTimelineView";
-import TaskForm from "../components/todo/TaskForm";
-import TaskModal from "../components/todo/TaskModal";
+import TaskForm from "../components/dashboard/TaskForm";
+import TaskModal from "../components/dashboard/TaskModal";
 import { TimelineEventCard } from "../components/dashboard/TimelineEventCard";
 import { Theme } from "../constants/shared";
 import { useTheme } from "../context/ThemeContext";
@@ -69,7 +70,7 @@ const useModalAnimation = () => {
       scaleAnim.setValue(0);
 
       Animated.parallel([
-        Animated.spring(translateX, { toValue: 0, useNativeDriver: false, tension: 100, friction: 9 }),
+        Animated.spring(translateX, { toValue: 0, useNativeDriver: true, tension: 100, friction: 9 }),
         Animated.spring(translateY, { toValue: 0, useNativeDriver: true, tension: 100, friction: 9 }),
         Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, tension: 100, friction: 9 }),
       ]).start();
@@ -385,6 +386,23 @@ export default function RoutineScreen() {
         saveRoutines(remaining);
         setTimeout(() => closeModal(), 50);
       }
+    } else if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Cancel', 'Transfer Out'],
+          destructiveButtonIndex: 1,
+          cancelButtonIndex: 0,
+          title: 'Transfer Routine',
+          message: `Transfer ${taskToDelete.task} away?`,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) {
+            const remaining = allRoutines.filter((item) => item.id !== taskToDelete.id);
+            saveRoutines(remaining);
+            setTimeout(() => closeModal(), 50);
+          }
+        }
+      );
     } else {
       Alert.alert("Transfer", `Transfer ${taskToDelete.task} away?`, [
         { text: "Cancel", style: "cancel" },

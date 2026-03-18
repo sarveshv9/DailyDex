@@ -13,8 +13,10 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useColorScheme,
   View,
 } from "react-native";
+import { BlurView } from "expo-blur";
 import { Theme } from "../../constants/shared";
 import { useTheme } from "../../context/ThemeContext";
 import { FormData, getRoutineImage } from "../../utils/utils";
@@ -80,7 +82,9 @@ const TaskForm: React.FC<TaskFormProps> = ({
   onClose,
 }) => {
   const { theme } = useTheme();
-  const styles = useMemo(() => getStyles(theme), [theme]);
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+  const styles = useMemo(() => getStyles(theme, isDark), [theme, isDark]);
 
   const [showTimePicker, setShowTimePicker] = useState(false);
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
@@ -160,11 +164,38 @@ const TaskForm: React.FC<TaskFormProps> = ({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <View style={styles.overlay}>
+      <Animated.View 
+        style={[
+          StyleSheet.absoluteFill, 
+          { 
+            opacity: slideAnim.interpolate({
+              inputRange: [0, SCREEN_HEIGHT],
+              outputRange: [1, 0],
+              extrapolate: 'clamp'
+            }) 
+          }
+        ]}
+      >
+        <BlurView
+          style={StyleSheet.absoluteFill}
+          intensity={Platform.OS === 'ios' ? 20 : 40}
+          tint={isDark ? "dark" : "light"}
+          experimentalBlurMethod="dimezisBlurView"
+        />
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+      </Animated.View>
+
+      <View style={styles.overlay} pointerEvents="box-none">
         <Animated.View
           style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}
           testID="task-form-content"
         >
+          <BlurView
+            style={StyleSheet.absoluteFill}
+            intensity={Platform.OS === 'ios' ? 60 : 100}
+            tint={isDark ? "dark" : "light"}
+            experimentalBlurMethod="dimezisBlurView"
+          />
           {/* ── Handle ── */}
           <View style={styles.handle} />
 
@@ -460,23 +491,25 @@ const TaskForm: React.FC<TaskFormProps> = ({
 
 /* ─────────────────────────────── Styles ─────────────────────────────── */
 
-const getStyles = (theme: Theme) =>
+const getStyles = (theme: Theme, isDark: boolean) =>
   StyleSheet.create({
 
     /* ── Modal shell ── */
     overlay: {
       flex: 1,
-      backgroundColor: "rgba(0,0,0,0.55)",
       justifyContent: "flex-end",
     },
     sheet: {
-      backgroundColor: theme.colors.background,
-      borderTopLeftRadius: 32,
-      borderTopRightRadius: 32,
+      backgroundColor: isDark ? "rgba(30, 30, 30, 0.75)" : "rgba(255, 255, 255, 0.75)",
+      borderTopLeftRadius: 36,
+      borderTopRightRadius: 36,
       paddingTop: 10,
       paddingBottom: 40,
       height: SCREEN_HEIGHT * 0.85,
       maxHeight: SCREEN_HEIGHT * 0.92,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(255, 255, 255, 0.5)",
       ...Platform.select({
         ios: {
           shadowColor: "#000",
@@ -582,13 +615,13 @@ const getStyles = (theme: Theme) =>
     fieldCard: {
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: theme.colors.card,
-      borderRadius: 16,
+      backgroundColor: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.03)",
+      borderRadius: 18,
       paddingVertical: 14,
       paddingHorizontal: 16,
       borderWidth: 1,
-      borderColor: `${theme.colors.text}08`,
-      minHeight: 52,
+      borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.04)",
+      minHeight: 56,
     },
     fieldCardPadded: {
       flexDirection: "column",
@@ -639,10 +672,10 @@ const getStyles = (theme: Theme) =>
       letterSpacing: 0.1,
     },
     stepperBtn: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      backgroundColor: `${theme.colors.text}08`,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)",
       alignItems: "center",
       justifyContent: "center",
       flexShrink: 0,
@@ -681,12 +714,12 @@ const getStyles = (theme: Theme) =>
       marginTop: 12,
     },
     presetChip: {
-      paddingVertical: 7,
-      paddingHorizontal: 14,
+      paddingVertical: 8,
+      paddingHorizontal: 16,
       borderRadius: 20,
       borderWidth: 1,
-      borderColor: `${theme.colors.text}14`,
-      backgroundColor: theme.colors.card,
+      borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)",
+      backgroundColor: isDark ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.5)",
     },
     presetChipText: {
       fontSize: 13,
@@ -700,14 +733,14 @@ const getStyles = (theme: Theme) =>
       justifyContent: "space-between",
     },
     dayBtn: {
-      width: 38,
-      height: 38,
-      borderRadius: 19,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
       borderWidth: 1,
-      borderColor: `${theme.colors.text}14`,
+      borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)",
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: theme.colors.background,
+      backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.5)",
     },
     dayBtnText: {
       fontSize: 14,
@@ -785,12 +818,14 @@ const getStyles = (theme: Theme) =>
       alignItems: "center",
     },
     pickerCard: {
-      backgroundColor: theme.colors.card,
+      backgroundColor: isDark ? "rgba(30,30,30,0.9)" : "rgba(255,255,255,0.95)",
       borderRadius: 28,
       paddingVertical: 24,
       paddingHorizontal: 20,
       width: "90%",
       maxWidth: 320,
+      borderWidth: 1,
+      borderColor: isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.05)",
       ...Platform.select({
         ios: {
           shadowColor: "#000",

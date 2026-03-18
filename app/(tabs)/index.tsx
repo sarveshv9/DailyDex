@@ -601,7 +601,7 @@ function HomeScreen() {
         <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 20 }}>
           <View style={styles.container}>
             <Animated.View entering={FadeIn.duration(700).delay(120)} style={styles.setupCard}>
-              <BlurView intensity={50} tint={isDarkMode ? 'dark' : 'light'} style={styles.cardBlur} />
+              <BlurView intensity={100} tint={isDarkMode ? 'systemThickMaterialDark' : 'systemThickMaterialLight'} style={styles.cardBlur} pointerEvents="none" />
               <View style={styles.cardTint} />
               <Text style={styles.setupTitle}>Welcome to Zen</Text>
               <Text style={styles.setupSubtitle}>
@@ -676,7 +676,7 @@ function HomeScreen() {
 
           {/* ---- Current Focus Card ---- */}
           <Animated.View entering={FadeInDown.duration(600).delay(100)} style={styles.card}>
-            <BlurView intensity={50} tint={isDarkMode ? 'dark' : 'light'} style={styles.cardBlur} />
+            <BlurView intensity={100} tint={isDarkMode ? 'systemThickMaterialDark' : 'systemThickMaterialLight'} style={styles.cardBlur} pointerEvents="none" />
             <View style={styles.cardTint} />
             <View style={styles.cardInner}>
               <Text style={styles.cardLabel}>Current Focus</Text>
@@ -738,7 +738,7 @@ function HomeScreen() {
 
           {/* ---- Up Next ---- */}
           <Animated.View entering={FadeInDown.duration(600).delay(220)} style={styles.upNextCard}>
-            <BlurView intensity={40} tint={isDarkMode ? 'dark' : 'light'} style={styles.cardBlur} />
+            <BlurView intensity={100} tint={isDarkMode ? 'systemThickMaterialDark' : 'systemThickMaterialLight'} style={styles.cardBlur} pointerEvents="none" />
             <View style={styles.cardTint} />
             <View style={styles.upNextInner}>
               <Text style={styles.upNextLabel}>Up Next</Text>

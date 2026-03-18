@@ -117,9 +117,10 @@ function CustomTabBar({
         >
           {/* Blur background */}
           <BlurView
-            intensity={60}
-            tint={theme.colors.background === '#FFFFFF' || theme.colors.background.startsWith('#F') ? 'light' : 'dark'}
+            intensity={100}
+            tint={theme.colors.background === '#FFFFFF' || theme.colors.background.startsWith('#F') ? 'systemMaterialLight' : 'systemMaterialDark'}
             style={StyleSheet.absoluteFill}
+            pointerEvents="none"
           />
           {/* Glass tint overlay */}
           <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.glass.cardBg }]} />

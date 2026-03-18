@@ -4,6 +4,7 @@ import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  ActionSheetIOS,
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
@@ -609,8 +610,29 @@ export default function TodoScreen() {
       })
     );
 
-  const handleDeleteTask = (id: string) =>
-    setTasks((prev) => prev.filter((t) => t.id !== id));
+  const handleDeleteTask = (id: string) => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Cancel', 'Delete Task'],
+          destructiveButtonIndex: 1,
+          cancelButtonIndex: 0,
+          title: 'Delete Task?',
+          message: 'Are you sure you want to delete this task?',
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) {
+            setTasks((prev) => prev.filter((t) => t.id !== id));
+          }
+        }
+      );
+    } else {
+      Alert.alert('Delete Task?', 'Are you sure you want to delete this task?', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => setTasks((prev) => prev.filter((t) => t.id !== id)) }
+      ]);
+    }
+  };
 
   const buttonScale = useSharedValue(1);
   const buttonAnimatedStyle = useAnimatedStyle(() => ({

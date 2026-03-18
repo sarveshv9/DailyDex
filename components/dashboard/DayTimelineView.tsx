@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { memo, useCallback, useMemo, useRef } from 'react';
@@ -241,7 +242,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
     scrollY,
     listAnim,
 }) => {
-    const { theme } = useTheme();
+    const { theme, isDarkMode } = useTheme();
     const styles = useMemo(() => getStyles(theme), [theme]);
 
     const [viewMode, setViewMode] = React.useState<'3-day' | '7-day'>('3-day');
@@ -585,6 +586,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                         onPress={onPressPeek}
                         testID="peek-card"
                     >
+                        <BlurView intensity={100} tint={isDarkMode ? 'systemThickMaterialDark' : 'systemThickMaterialLight'} style={StyleSheet.absoluteFill} pointerEvents="none" />
                         <LinearGradient
                             colors={[`${theme.colors.primary}18`, `${theme.colors.primary}04`]}
                             style={StyleSheet.absoluteFill}

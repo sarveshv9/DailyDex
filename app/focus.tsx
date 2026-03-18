@@ -10,6 +10,7 @@ import {
     View,
 } from "react-native";
 import { BlurView } from 'expo-blur';
+import SegmentedControl from '@react-native-segmented-control/segmented-control';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Theme } from "../constants/shared";
 import { useTheme } from "../context/ThemeContext";
@@ -102,7 +103,7 @@ export default function FocusScreen() {
 
                 <View style={styles.timerContainer}>
                     <View style={[styles.timerCircle, isActive && styles.timerCircleActive]}>
-                        <BlurView intensity={50} tint={isDarkMode ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
+                        <BlurView intensity={100} tint={isDarkMode ? 'systemThickMaterialDark' : 'systemThickMaterialLight'} style={StyleSheet.absoluteFill} pointerEvents="none" />
                         <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.glass.cardBg }]} />
                         <Text style={styles.timerText}>{formatTime(displayTime)}</Text>
                     </View>
@@ -111,34 +112,22 @@ export default function FocusScreen() {
                 {showDurationPicker ? (
                     <View style={styles.pickerContainer}>
                         {/* Mode Selector */}
-                        <View style={styles.modeSelector}>
-                            {/* Press feedback on mode toggles: confirms selection in segmented control */}
-                            <Pressable
-                                style={({ pressed }) => [
-                                    styles.modeBtn,
-                                    !timer.pomodoroMode && styles.modeBtnActive,
-                                    pressed && { opacity: 0.7 },
-                                ]}
-                                onPress={() => {
-                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                    timer.stopTimer(); // Reset if switching
+                        <View style={styles.nativeSegmentContainer}>
+                            <SegmentedControl
+                                values={['Free', 'Pomodoro']}
+                                selectedIndex={timer.pomodoroMode ? 1 : 0}
+                                onChange={(event) => {
+                                    Haptics.selectionAsync();
+                                    if (event.nativeEvent.selectedSegmentIndex === 0) {
+                                        timer.stopTimer(); // Free
+                                    } else {
+                                        timer.startPomodoro(paramTaskId, paramTaskName); // Pomodoro
+                                    }
                                 }}
-                            >
-                                <Text style={[styles.modeBtnText, !timer.pomodoroMode && styles.modeBtnTextActive]}>Free</Text>
-                            </Pressable>
-                            <Pressable
-                                style={({ pressed }) => [
-                                    styles.modeBtn,
-                                    timer.pomodoroMode && styles.modeBtnActive,
-                                    pressed && { opacity: 0.7 },
-                                ]}
-                                onPress={() => {
-                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                    timer.startPomodoro(paramTaskId, paramTaskName);
-                                }}
-                            >
-                                <Text style={[styles.modeBtnText, timer.pomodoroMode && styles.modeBtnTextActive]}>Pomodoro</Text>
-                            </Pressable>
+                                tintColor={theme.colors.primary}
+                                fontStyle={{ fontFamily: theme.fonts.bold, color: theme.colors.secondary }}
+                                activeFontStyle={{ fontFamily: theme.fonts.bold, color: theme.colors.white }}
+                            />
                         </View>
 
                         {!timer.pomodoroMode ? (
@@ -499,6 +488,10 @@ const getStyles = (theme: Theme) =>
         },
         modeBtnTextActive: {
             color: theme.colors.primary,
+        },
+        nativeSegmentContainer: {
+            width: "100%",
+            marginBottom: 24,
         },
         /* Pomodoro UI */
         pomodoroPreview: {
