@@ -17,8 +17,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../../context/ThemeContext";
-import { RoutineItem, SubTask } from "../../utils/utils";
-import { SimpleTimePicker } from "../common/SimpleTimePicker";
+import { RoutineItem, SubTask, parseTime } from "../../utils/utils";
+import { TimePickerSheet } from "../common/TimePickerSheet";
 
 interface TaskModalProps {
   visible: boolean;
@@ -278,6 +278,23 @@ const TaskModal: React.FC<TaskModalProps> = ({
     </View>
   );
 
+  const getDisplayTime = () => {
+    const startStr = editedTask?.time || "1:00 AM";
+    const dur = editedTask?.duration;
+    if (!dur) return startStr;
+
+    const { hours, minutes, isValid } = parseTime(startStr);
+    if (!isValid) return startStr;
+
+    let endTotalMins = hours * 60 + minutes + dur;
+    let endH = Math.floor(endTotalMins / 60) % 24;
+    let endM = endTotalMins % 60;
+    const ampm = endH >= 12 ? 'PM' : 'AM';
+    endH = endH % 12 || 12;
+    
+    return `${startStr} - ${endH}:${String(endM).padStart(2, '0')} ${ampm}`;
+  };
+
   return (
     <Modal
       visible={visible}
@@ -343,7 +360,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
               </View>
 
               <View style={styles.titleDetails}>
-                <Text style={styles.timeTag}>{editedTask.time}</Text>
+                <Text style={styles.timeTag}>{getDisplayTime()}</Text>
                 <View style={styles.titleWithCheckRow}>
                   <View style={styles.titleBox}>
                     <TextInput
@@ -375,7 +392,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 <CardRow
                   icon="time-outline"
                   iconColor={theme.colors.primary}
-                  title={editedTask.time || "1:00 AM"}
+                  title={getDisplayTime()}
                   titleColor={theme.colors.text}
                   onPress={() => setShowTimePicker(true)}
                 />
@@ -470,15 +487,15 @@ const TaskModal: React.FC<TaskModalProps> = ({
 
           {/* Time Picker Overlay */}
           {showTimePicker && (
-            <Pressable style={styles.pickerOverlay} onPress={() => setShowTimePicker(false)}>
-              <Pressable onPress={(e) => e.stopPropagation()} style={[styles.pickerCard, { backgroundColor: theme.colors.card }]}>
-                <SimpleTimePicker
-                  selectedTime={editedTask.time}
+            <View style={styles.pickerOverlay}>
+               <TimePickerSheet
+                  initialTime={editedTask.time || "1:00 AM"}
+                  initialDuration={editedTask.duration}
                   onTimeChange={(time) => setEditedTask(prev => prev ? { ...prev, time } : null)}
-                  onConfirm={() => setShowTimePicker(false)}
-                />
-              </Pressable>
-            </Pressable>
+                  onDurationChange={(duration) => setEditedTask(prev => prev ? { ...prev, duration } : null)}
+                  onClose={() => setShowTimePicker(false)}
+               />
+            </View>
           )}
 
         </Animated.View>
@@ -548,6 +565,6 @@ const styles = StyleSheet.create({
   bottomBar: { alignItems: 'center', paddingTop: 16 },
   deletePillBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, paddingHorizontal: 24, backgroundColor: 'rgba(255, 69, 58, 0.15)', borderRadius: 24 },
   deleteText: { color: '#FF453A', fontSize: 16, fontWeight: '600' },
-  pickerOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", alignItems: "center", zIndex: 100 },
+  pickerOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end", alignItems: "center", zIndex: 100 },
   pickerCard: { borderRadius: 28, paddingVertical: 24, paddingHorizontal: 20, width: "90%", maxWidth: 320 },
 });

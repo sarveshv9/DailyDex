@@ -20,7 +20,7 @@ import { BlurView } from "expo-blur";
 import { Theme } from "../../constants/shared";
 import { useTheme } from "../../context/ThemeContext";
 import { FormData, getRoutineImage } from "../../utils/utils";
-import { SimpleTimePicker } from "../common/SimpleTimePicker";
+import { TimePickerSheet } from "../common/TimePickerSheet";
 
 /* ─────────────────────────────── Types ──────────────────────────────── */
 
@@ -471,18 +471,15 @@ const TaskForm: React.FC<TaskFormProps> = ({
 
         {/* ── Time picker overlay ── */}
         {showTimePicker && (
-          <Pressable style={styles.pickerOverlay} onPress={handleConfirmTime}>
-            <Pressable
-              onPress={(e) => e.stopPropagation()}
-              style={styles.pickerCard}
-            >
-              <SimpleTimePicker
-                selectedTime={formData.time}
-                onTimeChange={(time: string) => onUpdateField("time", time)}
-                onConfirm={handleConfirmTime}
-              />
-            </Pressable>
-          </Pressable>
+          <View style={styles.pickerOverlay}>
+            <TimePickerSheet
+              initialTime={formData.time || "1:00 AM"}
+              initialDuration={formData.duration}
+              onTimeChange={(time: string) => onUpdateField("time", time)}
+              onDurationChange={(duration: number) => onUpdateField("duration", duration)}
+              onClose={() => setShowTimePicker(false)}
+            />
+          </View>
         )}
       </View>
     </Modal>
@@ -814,7 +811,7 @@ const getStyles = (theme: Theme, isDark: boolean) =>
       position: "absolute",
       top: 0, left: 0, right: 0, bottom: 0,
       backgroundColor: "rgba(0,0,0,0.45)",
-      justifyContent: "center",
+      justifyContent: "flex-end",
       alignItems: "center",
     },
     pickerCard: {
