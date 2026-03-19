@@ -121,10 +121,6 @@ const timeToY = (timeStr: string, bodyHeight: number): number => {
 /** Default task duration in minutes when item.duration is absent */
 const DEFAULT_DURATION = 30;
 
-/**
- * Converts a duration in minutes to a pill height in pixels.
- * The result is always >= circleSize so a zero-duration task stays circular.
- */
 const durationToPillHeight = (
     durationMinutes: number,
     bodyHeight: number,
