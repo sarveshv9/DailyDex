@@ -36,12 +36,23 @@ export const SimpleTimePicker: React.FC<SimpleTimePickerProps> = ({
   const currentDate = getDateFromString(selectedTime);
 
   const handleChange = (event: any, selectedDate?: Date) => {
+    if (event.type === 'dismissed') {
+      if (Platform.OS === 'android') {
+        onConfirm();
+      }
+      return;
+    }
+
     if (selectedDate) {
       let h = selectedDate.getHours();
       const m = selectedDate.getMinutes();
       const ampm = h >= 12 ? "PM" : "AM";
       h = h % 12 || 12;
       onTimeChange(`${h}:${String(m).padStart(2, "0")} ${ampm}`);
+    }
+
+    if (Platform.OS === 'android') {
+      onConfirm();
     }
   };
 

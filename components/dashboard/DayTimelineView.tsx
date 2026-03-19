@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
 import { BlurView } from 'expo-blur';
+import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { memo, useCallback, useMemo, useRef } from 'react';
@@ -35,10 +35,27 @@ const COL_WIDTH_3DAY = (SCREEN_WIDTH - TIME_AXIS_WIDTH - 16) / 3;
 const COL_WIDTH_7DAY = (SCREEN_WIDTH - TIME_AXIS_WIDTH - 16) / 7;
 
 /** Circle sizes — selected day is larger */
-const CIRCLE_SEL = 48;
-const CIRCLE_OTHER = 32;
+const CIRCLE_SEL = 80;
+const CIRCLE_OTHER = 30;
 
 const DEFAULT_BODY_HEIGHT = 1600;
+
+/** Warm color palette for task types (sleep = dark, alarm = amber, etc.) */
+const TASK_COLORS: Record<string, string> = {
+    wakeup: '#E8975E',
+    sleep: '#5A5A7A',
+    water: '#4DA8DA',
+    tea_journal: '#B89B72',
+    breakfast: '#E8975E',
+    lunch: '#E8975E',
+    dinner: '#E8975E',
+    study: '#7B8CDE',
+    walk: '#6BCB77',
+    yoga: '#C084FC',
+    reflect: '#7B8CDE',
+    prepare_sleep: '#5A5A7A',
+    breathe: '#6BCB77',
+};
 
 /** Hour marks to render in the time axis */
 const TIME_LABELS: { hour: number; label: string }[] = [
@@ -158,18 +175,20 @@ const TimeAxisItem = memo<{
         style={{
             position: 'absolute',
             top: topY - 7,   // center text on the hour mark
-            right: 6,
-            width: TIME_AXIS_WIDTH - 6,
-            alignItems: 'flex-end',
+            left: 0,
+            width: TIME_AXIS_WIDTH,
+            alignItems: 'flex-start',
+            paddingLeft: 4,
         }}
     >
         <Text
             style={{
-                fontSize: 10,
+                fontSize: 9,
                 fontFamily: theme.fonts.medium,
                 color: theme.colors.textSecondary,
-                opacity: 0.5,
-                letterSpacing: 0.2,
+                opacity: 0.35,
+                letterSpacing: 0.4,
+                textTransform: 'uppercase',
             }}
         >
             {label}
@@ -194,7 +213,8 @@ const TaskPill = memo<{
     theme: Theme;
 }>(({ item, size, pillHeight, isSelected, theme }) => {
     const borderRadius = size / 2;                           // always half-width → rounded caps
-    const iconSize = isSelected ? Math.round(size * 0.44) : Math.round(size * 0.42);
+    const iconSize = isSelected ? Math.round(size * 0.46) : Math.round(size * 0.44);
+    const taskColor = TASK_COLORS[item.imageKey ?? ''] ?? theme.colors.primary;
 
     return (
         <View
@@ -204,29 +224,29 @@ const TaskPill = memo<{
                     height: pillHeight,
                     borderRadius,
                     backgroundColor: isSelected
-                        ? theme.colors.primary
-                        : `${theme.colors.primary}45`,
+                        ? `${taskColor}22`
+                        : `${theme.colors.text}0A`,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    borderWidth: isSelected ? 2.5 : 0,
-                    borderColor: isSelected ? `${theme.colors.primary}60` : 'transparent',
+                    borderWidth: isSelected ? 2 : 1.5,
+                    borderColor: isSelected ? `${taskColor}55` : `${theme.colors.text}15`,
                     overflow: 'hidden',
                 },
                 isSelected && Platform.select({
                     ios: {
-                        shadowColor: theme.colors.primary,
-                        shadowOffset: { width: 0, height: 3 },
-                        shadowOpacity: 0.45,
-                        shadowRadius: 8,
+                        shadowColor: taskColor,
+                        shadowOffset: { width: 0, height: 0 },
+                        shadowOpacity: 0.5,
+                        shadowRadius: 12,
                     },
-                    android: { elevation: 6 },
+                    android: { elevation: 8 },
                 }),
             ]}
         >
             <Ionicons
                 name={ICON_MAP[item.imageKey ?? ''] ?? 'ellipse-outline'}
                 size={iconSize}
-                color={isSelected ? theme.colors.white : `${theme.colors.primary}BB`}
+                color={isSelected ? taskColor : `${theme.colors.textSecondary}55`}
             />
         </View>
     );
@@ -459,8 +479,8 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                                         >
                                             <Text style={[
                                                 styles.dayLabel,
-                                                isSelected && { color: theme.colors.primary, opacity: 1 },
-                                                isToday && !isSelected && { color: theme.colors.primary, opacity: 0.7 },
+                                                isSelected && styles.dayLabelSelected,
+                                                isToday && !isSelected && { color: theme.colors.primary, opacity: 0.5 },
                                             ]}>
                                                 {DAY_LABELS[dayIndex]}
                                             </Text>
@@ -472,12 +492,12 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                                             ]}>
                                                 {isSelected ? (
                                                     <LinearGradient
-                                                        colors={[theme.colors.primary, `${theme.colors.primary}BB`]}
+                                                        colors={[theme.colors.primary, `${theme.colors.primary}CC`]}
                                                         style={styles.dateBadgeGradient}
-                                                        start={{ x: 0.2, y: 0 }}
-                                                        end={{ x: 1, y: 1 }}
+                                                        start={{ x: 0.3, y: 0 }}
+                                                        end={{ x: 0.8, y: 1 }}
                                                     >
-                                                        <Text style={[styles.dateNum, { color: theme.colors.white }]}>
+                                                        <Text style={[styles.dateNumSelected]}>
                                                             {date.getDate()}
                                                         </Text>
                                                     </LinearGradient>
@@ -511,6 +531,21 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                                     ))}
                                 </View>
 
+                                {/* ── Horizontal time reference lines ── */}
+                                {timeAxisPositions.map(tl => (
+                                    <View
+                                        key={`hline-${tl.hour}`}
+                                        style={{
+                                            position: 'absolute',
+                                            top: tl.topY + (CIRCLE_SEL / 2),
+                                            left: TIME_AXIS_WIDTH,
+                                            right: 8,
+                                            height: StyleSheet.hairlineWidth,
+                                            backgroundColor: `${theme.colors.text}08`,
+                                        }}
+                                    />
+                                ))}
+
                                 {/* ── 3 day columns ── */}
                                 {pageDates.map(date => {
                                     const key = formatDateKey(date);
@@ -519,13 +554,13 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                                     const dayItems = itemsByDayOfWeek[dayIndex] ?? [];
                                     const circleSize = isSelected ? circleSel : circleOther;
                                     const lineColor = isSelected
-                                        ? `${theme.colors.primary}60`
-                                        : `${theme.colors.primary}25`;
+                                        ? `${theme.colors.primary}35`
+                                        : `${theme.colors.text}0D`;
 
                                     return (
                                         <View
                                             key={key}
-                                            style={[styles.column, { width: COL_WIDTH }]}
+                                            style={[styles.column, { width: COL_WIDTH, opacity: isSelected ? 1 : 0.45 }]}
                                             onLayout={e => {
                                                 const h = e.nativeEvent.layout.height;
                                                 if (h > 0 && Math.abs(h - bodyHeight) > 5) {
@@ -534,10 +569,16 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                                             }}
                                         >
                                             {/* Vertical line */}
-                                            <View style={[
-                                                styles.centerLine,
-                                                { backgroundColor: lineColor },
-                                            ]} />
+                                            <View style={{
+                                                position: 'absolute',
+                                                top: 0,
+                                                bottom: 0,
+                                                left: '50%',
+                                                marginLeft: isSelected ? -4 : -3.5, // half the width
+                                                width: isSelected ? 2 : 1.5,
+                                                backgroundColor: lineColor,
+                                                borderRadius: 1,
+                                            }} />
 
                                             {/* Pills — width = circleSize, height grows with duration, overlap is natural */}
                                             {dayItems.map(item => {
@@ -545,14 +586,16 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                                                 const duration = item.duration ?? DEFAULT_DURATION;
                                                 const pillHeight = durationToPillHeight(duration, bodyHeight, circleSize);
                                                 const leftOffset = (COL_WIDTH - circleSize) / 2;
+                                                const taskColor = TASK_COLORS[item.imageKey ?? ''] ?? theme.colors.primary;
 
                                                 return (
                                                     <View
                                                         key={item.id}
                                                         style={{
                                                             position: 'absolute',
-                                                            top: topY - circleSize / 2, // center the top cap on the start time
+                                                            top: topY, // top edge aligns with the start time
                                                             left: leftOffset,
+                                                            alignItems: 'center',
                                                         }}
                                                     >
                                                         <TaskPill
@@ -562,6 +605,19 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                                                             isSelected={isSelected}
                                                             theme={theme}
                                                         />
+                                                        {/* Time label below icon on selected column */}
+                                                        {isSelected && (
+                                                            <Text style={{
+                                                                fontSize: 9,
+                                                                fontFamily: theme.fonts.medium,
+                                                                color: `${taskColor}AA`,
+                                                                marginTop: 3,
+                                                                letterSpacing: 0.3,
+                                                                textAlign: 'center',
+                                                            }}>
+                                                                {item.time}
+                                                            </Text>
+                                                        )}
                                                     </View>
                                                 );
                                             })}
@@ -723,23 +779,30 @@ const getStyles = (theme: Theme) =>
         dayHeaderRow: {
             flexDirection: 'row',
             alignItems: 'flex-end',
-            paddingRight: 8,
-            paddingBottom: 10,
+            paddingRight: 0, // Match bodyRow which has 0 paddingRight for columns
+            paddingBottom: 12,
             paddingTop: 4,
-            borderBottomWidth: StyleSheet.hairlineWidth,
-            borderBottomColor: `${theme.colors.text}0A`,
+            borderBottomWidth: 0,
+            borderBottomColor: 'transparent',
         },
         dayHeaderCell: {
             alignItems: 'center',
-            gap: 4,
+            gap: 6,
         },
         dayLabel: {
             fontSize: 10,
             fontFamily: theme.fonts.medium,
             color: theme.colors.textSecondary,
             textTransform: 'uppercase',
-            letterSpacing: 0.8,
-            opacity: 0.55,
+            letterSpacing: 1.2,
+            opacity: 0.35,
+        },
+        dayLabelSelected: {
+            color: theme.colors.primary,
+            opacity: 1,
+            fontSize: 12,
+            letterSpacing: 2,
+            fontFamily: theme.fonts.bold,
         },
         dateBadge: {
             width: 32,
@@ -750,37 +813,47 @@ const getStyles = (theme: Theme) =>
             overflow: 'hidden',
         },
         dateBadgeSelected: {
+            width: 52,
+            height: 52,
+            borderRadius: 26,
             ...Platform.select({
                 ios: {
                     shadowColor: theme.colors.primary,
-                    shadowOffset: { width: 0, height: 3 },
-                    shadowOpacity: 0.4,
-                    shadowRadius: 6,
+                    shadowOffset: { width: 0, height: 0 },
+                    shadowOpacity: 0.55,
+                    shadowRadius: 16,
                 },
-                android: { elevation: 4 },
+                android: { elevation: 10 },
             }),
         },
         dateBadgeGradient: {
-            width: 32,
-            height: 32,
-            borderRadius: 16,
+            width: 52,
+            height: 52,
+            borderRadius: 26,
             alignItems: 'center',
             justifyContent: 'center',
         },
         dateBadgeToday: {
             borderWidth: 1.5,
-            borderColor: theme.colors.primary,
+            borderColor: `${theme.colors.primary}50`,
         },
         dateNum: {
             fontSize: 13,
             fontFamily: theme.fonts.bold,
-            color: theme.colors.text,
+            color: theme.colors.textSecondary,
+            opacity: 0.6,
+        },
+        dateNumSelected: {
+            fontSize: 20,
+            fontFamily: theme.fonts.bold,
+            color: theme.colors.white,
+            letterSpacing: -0.5,
         },
 
         /* Body row = time axis + columns */
         bodyRow: {
             flexDirection: 'row',
-            paddingRight: 8,
+            paddingRight: 0, // Remove right padding so columns perfectly align with header cells
             paddingVertical: CIRCLE_SEL / 2, // space for pill caps at top/bottom
         },
 
@@ -796,15 +869,7 @@ const getStyles = (theme: Theme) =>
             position: 'relative',
             minHeight: DEFAULT_BODY_HEIGHT,
         },
-        centerLine: {
-            position: 'absolute',
-            top: 0,
-            bottom: 0,
-            width: 1.5,
-            left: '50%' as unknown as number,
-            marginLeft: -0.75,
-            borderRadius: 1,
-        },
+
 
         /* ── Peek card ── */
         peekWrapper: {

@@ -1,4 +1,10 @@
 // src/utils/utils.ts
+export interface SubTask {
+  id: string;
+  title: string;
+  completed: boolean;
+}
+
 export interface RoutineItem {
   id: string;
   time: string;
@@ -8,6 +14,7 @@ export interface RoutineItem {
   insertionOrder?: number;
   daysOfWeek?: number[]; // [0,1,2,3,4,5,6] (0 = Sunday)
   duration?: number;
+  subtasks?: SubTask[];
 }
 
 export const ROUTINE_IMAGES: Record<string, any> = {

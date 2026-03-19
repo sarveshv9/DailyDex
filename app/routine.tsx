@@ -8,6 +8,7 @@ import {
   Dimensions,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  PanResponder,
   Platform,
   Pressable,
   ScrollView,
@@ -103,8 +104,16 @@ export default function RoutineScreen() {
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
 
+  // Stable 3-slot page array: [prev, center, next]
+  const [pageDates, setPageDates] = useState<[Date, Date, Date]>(() => {
+    const c = new Date();
+    const p = new Date(c); p.setDate(p.getDate() - 1);
+    const n = new Date(c); n.setDate(n.getDate() + 1);
+    return [p, c, n];
+  });
+
   const routineItems = useMemo(() => {
-    const dayOfWeek = selectedDate.getDay(); // 0-6
+    const dayOfWeek = selectedDate.getDay();
     return allRoutines.filter(item => item.daysOfWeek?.includes(dayOfWeek));
   }, [allRoutines, selectedDate]);
 
@@ -116,6 +125,8 @@ export default function RoutineScreen() {
   const scrollOffsetRef = useRef(0);
   // Track last known drag direction from scroll events
   const lastScrollY = useRef(0);
+  // Pager container height (measured via onLayout)
+  const [pagerHeight, setPagerHeight] = useState(0);
 
   const openPanel = useCallback(() => {
     setPanelOpen(true);
@@ -176,6 +187,95 @@ export default function RoutineScreen() {
   }, [listOpen, openList, closeList]);
 
   const scrollY = useRef(new Animated.Value(0)).current;
+  // Horizontal pager offset — starts at 0 (center panel)
+  const pagerX = useRef(new Animated.Value(0)).current;
+  // Stable Animated.add node — never recreated on re-render
+  const pagerTranslateX = useRef(Animated.add(pagerX, new Animated.Value(-SCREEN_WIDTH))).current;
+  const isDraggingHorizontal = useRef(false);
+
+  const shiftDate = useCallback((delta: number) => {
+    // 1. Reset position SYNCHRONOUSLY before any state/re-render
+    pagerX.setValue(0);
+    // 2. Now update both selectedDate and pageDates atomically
+    setPageDates(prev => {
+      if (delta === 1) {
+        // Swiped left → next day. Slide previous slot out, make next the new right
+        const newRight = new Date(prev[2]); newRight.setDate(newRight.getDate() + 1);
+        return [prev[1], prev[2], newRight];
+      } else {
+        // Swiped right → prev day. Make prev the new left
+        const newLeft = new Date(prev[0]); newLeft.setDate(newLeft.getDate() - 1);
+        return [newLeft, prev[0], prev[1]];
+      }
+    });
+    setSelectedDate(prev => {
+      const d = new Date(prev);
+      d.setDate(d.getDate() + delta);
+      return d;
+    });
+  }, [pagerX]);
+
+  const pagerPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponderCapture: (_, g) => {
+        const isHoriz = Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5;
+        const isDown  = g.dy > 15 && scrollOffsetRef.current <= 1 && Math.abs(g.dy) > Math.abs(g.dx);
+        return isHoriz || isDown;
+      },
+      onMoveShouldSetPanResponder: (_, g) => {
+        const isHoriz = Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5;
+        const isDown  = g.dy > 15 && scrollOffsetRef.current <= 1 && Math.abs(g.dy) > Math.abs(g.dx);
+        return isHoriz || isDown;
+      },
+      onPanResponderGrant: () => {
+        isDraggingHorizontal.current = false;
+      },
+      onPanResponderMove: (_, g) => {
+        if (Math.abs(g.dx) > Math.abs(g.dy) && Math.abs(g.dx) > 8) {
+          isDraggingHorizontal.current = true;
+          pagerX.setValue(g.dx);
+        }
+      },
+      onPanResponderRelease: (_, g) => {
+        if (isDraggingHorizontal.current) {
+          const LEFT  = g.dx < -60 || g.vx < -0.8;
+          const RIGHT = g.dx > 60  || g.vx > 0.8;
+          if (LEFT || RIGHT) {
+            const target = LEFT ? -SCREEN_WIDTH : SCREEN_WIDTH;
+            Animated.timing(pagerX, {
+              toValue: target,
+              duration: 220,
+              useNativeDriver: false,
+            }).start(() => {
+              shiftDate(LEFT ? 1 : -1);
+              // pagerX already reset inside shiftDate
+            });
+          } else {
+            Animated.spring(pagerX, {
+              toValue: 0,
+              useNativeDriver: false,
+              tension: 80,
+              friction: 12,
+            }).start();
+          }
+        } else if (g.dy > 50 || g.vy > 1) {
+          closeList();
+        }
+        isDraggingHorizontal.current = false;
+      },
+    })
+  ).current;
+
+  const listHeaderPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dy) > 10,
+      onPanResponderRelease: (_, g) => {
+        if (g.dy > 50 || g.vy > 1) closeList();
+      },
+    })
+  ).current;
 
   const listTranslateY = listAnim.interpolate({
     inputRange: [0, 1],
@@ -193,7 +293,20 @@ export default function RoutineScreen() {
     outputRange: [0, 1, 1],
   });
 
-  /* -------------------- Scroll-based reveal -------------------- */
+  /* -------------------- Per-day items helper -------------------- */
+  const getItemsForDate = useCallback((date: Date) => {
+    const dow = date.getDay();
+    const items = allRoutines.filter(item => item.daysOfWeek?.includes(dow));
+    const sorted = sortRoutineItems(items);
+    let events: CalendarEvent[] = [];
+    try { events = calendarEvents.filter(e => getDateString(date) === getDateString(selectedDate) ? true : false); } catch {}
+    const all: Array<{ minutes: number; type: 'routine' | 'calendar'; data: RoutineItem | CalendarEvent }> = [
+      ...sorted.map(r => ({ minutes: timeToMinutes(r.time), type: 'routine' as const, data: r })),
+      ...events.map(e => ({ minutes: e.startMinutes, type: 'calendar' as const, data: e })),
+    ].sort((a, b) => a.minutes - b.minutes);
+    return all;
+  }, [allRoutines, calendarEvents, selectedDate]);
+
   // When the list is scrolled to the top AND the user over-scrolls downward,
   // we interpret that as a "pull-down" to open the panel.
   const handleScroll = Animated.event(
@@ -426,6 +539,12 @@ export default function RoutineScreen() {
     }
   }, [selectedTask, closeModal, openForm]);
 
+  const handleSaveFromModal = useCallback((updatedTask: RoutineItem) => {
+    const updated = allRoutines.map(item => item.id === updatedTask.id ? updatedTask : item);
+    saveRoutines(updated);
+    // Automatically close modal after save if desired, but here we let the Modal decide.
+  }, [allRoutines, saveRoutines]);
+
   const updateFormField = useCallback((field: keyof FormData, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   }, []);
@@ -446,7 +565,7 @@ export default function RoutineScreen() {
         />
       </View>
 
-      {/* ---- Detail Task List (Animated Reveal) ---- */}
+      {/* ---- Detail Task List (Pager) ---- */}
       <Animated.View
         style={[
           styles.listOverlay,
@@ -457,55 +576,72 @@ export default function RoutineScreen() {
         ]}
         pointerEvents={listOpen ? "auto" : "none"}
       >
-        <View style={styles.listHeader}>
+        <View style={styles.listHeader} {...listHeaderPanResponder.panHandlers}>
           <Pressable style={styles.closeBar} onPress={closeList} />
           <Text style={styles.listTitle}>Daily Routine</Text>
         </View>
 
-        <ScrollView
-          style={styles.scrollContainer}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          onScroll={handleScroll}
-          scrollEventThrottle={16}
-          bounces={true}
-          testID="routine-scroll-view"
+        {/* 3-panel infinite pager */}
+        <View
+          style={{ flex: 1, overflow: 'hidden' }}
+          onLayout={e => setPagerHeight(e.nativeEvent.layout.height)}
         >
-          <View style={styles.cardList}>
-            {sortedRoutineItems.length === 0 && calendarEvents.length === 0 ? (
-              <View style={styles.emptyStateContainer}>
-                <Text style={styles.emptyStateTitle}>Your deck is empty!</Text>
-                <Text style={styles.emptyStateSub}>Tap the Pokéball below to start building your routine.</Text>
-              </View>
-            ) : (
-              (() => {
-                const allItems: Array<{ minutes: number; type: "routine" | "calendar"; data: RoutineItem | CalendarEvent }> = [
-                  ...sortedRoutineItems.map(r => ({ minutes: timeToMinutes(r.time), type: "routine" as const, data: r })),
-                  ...calendarEvents.map(e => ({ minutes: e.startMinutes, type: "calendar" as const, data: e })),
-                ].sort((a, b) => a.minutes - b.minutes);
-
-                return allItems.map((entry, idx) => {
-                  const prevMinutes = idx > 0 ? allItems[idx - 1].minutes : null;
-                  const showBreakBefore = prevMinutes !== null && (entry.minutes - prevMinutes) > 45;
-                  return (
-                    <TimelineEventCard
-                      key={`${entry.type}-${(entry.data as any).id}`}
-                      item={entry.data}
-                      type={entry.type}
-                      isFirst={idx === 0}
-                      isLast={idx === allItems.length - 1}
-                      showBreakBefore={showBreakBefore}
-                      onPress={entry.type === 'routine' ? () => openModal(entry.data as RoutineItem, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2) : undefined}
-                    />
-                  );
-                });
-              })()
-            )}
-          </View>
-
-          {/* Bottom padding for scrolling past FAB */}
-          <View style={{ height: 100 }} />
-        </ScrollView>
+          <Animated.View
+            {...pagerPanResponder.panHandlers}
+            style={[
+              {
+                flexDirection: 'row',
+                width: SCREEN_WIDTH * 3,
+                height: pagerHeight || undefined,
+              },
+              { transform: [{ translateX: pagerTranslateX }] },
+            ]}
+          >
+            {([0, 1, 2] as const).map(idx => {
+              const date = pageDates[idx];
+              const pageItems = getItemsForDate(date);
+              return (
+                <ScrollView
+                  key={idx}
+                  style={{ width: SCREEN_WIDTH, height: pagerHeight || undefined }}
+                  contentContainerStyle={styles.scrollContent}
+                  showsVerticalScrollIndicator={false}
+                  onScroll={idx === 1 ? handleScroll : undefined}
+                  scrollEventThrottle={16}
+                  bounces={false}
+                >
+                  <View style={styles.cardList}>
+                    {pageItems.length === 0 ? (
+                      <View style={styles.emptyStateContainer}>
+                        <Text style={styles.emptyStateTitle}>Your deck is empty!</Text>
+                        <Text style={styles.emptyStateSub}>Tap the + below to start building your routine.</Text>
+                      </View>
+                    ) : (
+                      pageItems.map((entry, itemIdx) => {
+                        const prevMins = itemIdx > 0 ? pageItems[itemIdx - 1].minutes : null;
+                        const showBreakBefore = prevMins !== null && (entry.minutes - prevMins) > 45;
+                        return (
+                          <TimelineEventCard
+                            key={`${idx}-${entry.type}-${(entry.data as any).id}`}
+                            item={entry.data}
+                            type={entry.type}
+                            isFirst={itemIdx === 0}
+                            isLast={itemIdx === pageItems.length - 1}
+                            showBreakBefore={showBreakBefore}
+                            onPress={entry.type === 'routine' && idx === 1
+                              ? () => openModal(entry.data as RoutineItem, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
+                              : undefined}
+                          />
+                        );
+                      })
+                    )}
+                  </View>
+                  <View style={{ height: 100 }} />
+                </ScrollView>
+              );
+            })}
+          </Animated.View>
+        </View>
 
       </Animated.View>
 
@@ -529,6 +665,7 @@ export default function RoutineScreen() {
         animatedStyle={animatedStyle}
         onClose={closeModal}
         onEdit={handleEditFromModal}
+        onSaveTask={handleSaveFromModal}
         onDelete={handleDelete}
       />
 
@@ -594,7 +731,17 @@ const getStyles = (theme: Theme) =>
       color: theme.colors.text,
     },
 
-    /* Scroll Area */
+    /* Pager */
+    pagerStrip: {
+      flexDirection: 'row',
+      width: SCREEN_WIDTH * 3,
+      flex: 1,
+      overflow: 'hidden',
+    },
+    pagerPage: {
+      width: SCREEN_WIDTH,
+      flex: 1,
+    },
     scrollContainer: {
       flex: 1,
     },
