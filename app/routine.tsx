@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   ActionSheetIOS,
   Alert,
@@ -24,8 +24,7 @@ import TaskModal from "../components/dashboard/TaskModal";
 import { TimelineEventCard } from "../components/dashboard/TimelineEventCard";
 import { Theme } from "../constants/shared";
 import { useTheme } from "../context/ThemeContext";
-import { CalendarEvent, getCalendarEventsForDate } from "../utils/calendar";
-import { FormData, getDateString, RoutineItem, sortRoutineItems, timeToMinutes } from "../utils/utils";
+import { FormData, RoutineItem, sortRoutineItems, timeToMinutes } from "../utils/utils";
 
 /* -------------------- Assets & Constants -------------------- */
 
@@ -101,7 +100,6 @@ export default function RoutineScreen() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>({ time: "", task: "", description: "", daysOfWeek: [] });
   const [nextInsertionOrder, setNextInsertionOrder] = useState(13);
-  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   // Stable 3-slot page array: [prev, center, next]
@@ -192,11 +190,15 @@ export default function RoutineScreen() {
   // Stable Animated.add node — never recreated on re-render
   const pagerTranslateX = useRef(Animated.add(pagerX, new Animated.Value(-SCREEN_WIDTH))).current;
   const isDraggingHorizontal = useRef(false);
+  // Flag set when a swipe completes — tells useLayoutEffect to reset pagerX
+  // after the new pageDates have been committed, preventing the flicker.
+  const pendingReset = useRef(false);
 
   const shiftDate = useCallback((delta: number) => {
-    // 1. Reset position SYNCHRONOUSLY before any state/re-render
-    pagerX.setValue(0);
-    // 2. Now update both selectedDate and pageDates atomically
+    // Do NOT reset pagerX here — if we do it before React commits the new
+    // pageDates the center panel briefly shows stale content (the flicker).
+    // Instead, flag a reset and let useLayoutEffect do it after the commit.
+    pendingReset.current = true;
     setPageDates(prev => {
       if (delta === 1) {
         // Swiped left → next day. Slide previous slot out, make next the new right
@@ -213,19 +215,29 @@ export default function RoutineScreen() {
       d.setDate(d.getDate() + delta);
       return d;
     });
-  }, [pagerX]);
+  }, []);
+
+  // Reset pagerX AFTER React has committed the new pageDates to the tree.
+  // useLayoutEffect fires synchronously post-commit, before the browser paints,
+  // so the center panel already shows the correct new day when we snap back to 0.
+  useLayoutEffect(() => {
+    if (pendingReset.current) {
+      pendingReset.current = false;
+      pagerX.setValue(0);
+    }
+  }, [pageDates, pagerX]);
 
   const pagerPanResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponderCapture: (_, g) => {
         const isHoriz = Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5;
-        const isDown  = g.dy > 15 && scrollOffsetRef.current <= 1 && Math.abs(g.dy) > Math.abs(g.dx);
+        const isDown = g.dy > 15 && scrollOffsetRef.current <= 1 && Math.abs(g.dy) > Math.abs(g.dx);
         return isHoriz || isDown;
       },
       onMoveShouldSetPanResponder: (_, g) => {
         const isHoriz = Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5;
-        const isDown  = g.dy > 15 && scrollOffsetRef.current <= 1 && Math.abs(g.dy) > Math.abs(g.dx);
+        const isDown = g.dy > 15 && scrollOffsetRef.current <= 1 && Math.abs(g.dy) > Math.abs(g.dx);
         return isHoriz || isDown;
       },
       onPanResponderGrant: () => {
@@ -239,8 +251,8 @@ export default function RoutineScreen() {
       },
       onPanResponderRelease: (_, g) => {
         if (isDraggingHorizontal.current) {
-          const LEFT  = g.dx < -60 || g.vx < -0.8;
-          const RIGHT = g.dx > 60  || g.vx > 0.8;
+          const LEFT = g.dx < -60 || g.vx < -0.8;
+          const RIGHT = g.dx > 60 || g.vx > 0.8;
           if (LEFT || RIGHT) {
             const target = LEFT ? -SCREEN_WIDTH : SCREEN_WIDTH;
             Animated.timing(pagerX, {
@@ -298,14 +310,12 @@ export default function RoutineScreen() {
     const dow = date.getDay();
     const items = allRoutines.filter(item => item.daysOfWeek?.includes(dow));
     const sorted = sortRoutineItems(items);
-    let events: CalendarEvent[] = [];
-    try { events = calendarEvents.filter(e => getDateString(date) === getDateString(selectedDate) ? true : false); } catch {}
-    const all: Array<{ minutes: number; type: 'routine' | 'calendar'; data: RoutineItem | CalendarEvent }> = [
+
+    const all: Array<{ minutes: number; type: 'routine'; data: RoutineItem }> = [
       ...sorted.map(r => ({ minutes: timeToMinutes(r.time), type: 'routine' as const, data: r })),
-      ...events.map(e => ({ minutes: e.startMinutes, type: 'calendar' as const, data: e })),
     ].sort((a, b) => a.minutes - b.minutes);
     return all;
-  }, [allRoutines, calendarEvents, selectedDate]);
+  }, [allRoutines]);
 
   // When the list is scrolled to the top AND the user over-scrolls downward,
   // we interpret that as a "pull-down" to open the panel.
@@ -369,8 +379,8 @@ export default function RoutineScreen() {
           setNextInsertionOrder(parsed.length > 0 ? Math.max(...parsed.map((i: RoutineItem) => i.insertionOrder || 0)) + 1 : 1);
         } else {
           const initialWithDays = INITIAL_ROUTINE.map(item => {
-             const isDaily = item.task.toLowerCase() === "sleep" || item.task.toLowerCase() === "wake up";
-             return { ...item, daysOfWeek: isDaily ? [0, 1, 2, 3, 4, 5, 6] : [new Date().getDay()] };
+            const isDaily = item.task.toLowerCase() === "sleep" || item.task.toLowerCase() === "wake up";
+            return { ...item, daysOfWeek: isDaily ? [0, 1, 2, 3, 4, 5, 6] : [new Date().getDay()] };
           });
           setAllRoutines(initialWithDays);
           await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(initialWithDays));
@@ -381,10 +391,6 @@ export default function RoutineScreen() {
     };
     loadData();
   }, []);
-
-  useEffect(() => {
-    getCalendarEventsForDate(selectedDate).then(setCalendarEvents).catch(() => { });
-  }, [selectedDate]);
 
   const saveRoutines = useCallback(async (newItems: RoutineItem[]) => {
     try {
@@ -412,10 +418,10 @@ export default function RoutineScreen() {
   const openForm = useCallback((item?: RoutineItem) => {
     if (item) {
       setEditingId(item.id);
-      setFormData({ 
-        time: item.time, 
-        task: item.task, 
-        description: item.description, 
+      setFormData({
+        time: item.time,
+        task: item.task,
+        description: item.description,
         daysOfWeek: item.daysOfWeek || [new Date().getDay()],
         duration: item.duration || 30,
         imageKey: item.imageKey
@@ -460,15 +466,15 @@ export default function RoutineScreen() {
     if (editingId) {
       const updated = allRoutines.map((item) =>
         item.id === editingId
-          ? { 
-              ...item, 
-              time: time.trim(), 
-              task: task.trim(), 
-              description: description.trim(), 
-              imageKey: formData.imageKey || item.imageKey || "breathe",
-              daysOfWeek: finalDays,
-              duration: duration || item.duration || 30
-            }
+          ? {
+            ...item,
+            time: time.trim(),
+            task: task.trim(),
+            description: description.trim(),
+            imageKey: formData.imageKey || item.imageKey || "breathe",
+            daysOfWeek: finalDays,
+            duration: duration || item.duration || 30
+          }
           : item
       );
       saveRoutines(updated);
@@ -622,13 +628,12 @@ export default function RoutineScreen() {
                         const showBreakBefore = prevMins !== null && (entry.minutes - prevMins) > 45;
                         return (
                           <TimelineEventCard
-                            key={`${idx}-${entry.type}-${(entry.data as any).id}`}
+                            key={`${idx}-${(entry.data as any).id}`}
                             item={entry.data}
-                            type={entry.type}
                             isFirst={itemIdx === 0}
                             isLast={itemIdx === pageItems.length - 1}
                             showBreakBefore={showBreakBefore}
-                            onPress={entry.type === 'routine' && idx === 1
+                            onPress={idx === 1
                               ? () => openModal(entry.data as RoutineItem, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
                               : undefined}
                           />

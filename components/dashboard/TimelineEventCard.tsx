@@ -17,12 +17,10 @@ import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Theme } from '../../constants/shared';
 import { useTheme } from '../../context/ThemeContext';
-import { CalendarEvent } from '../../utils/calendar';
 import { RoutineItem } from '../../utils/utils';
 
 export interface TimelineEventCardProps {
-    item: RoutineItem | CalendarEvent;
-    type: 'routine' | 'calendar';
+    item: RoutineItem;
     onPress?: () => void;
     isFirst?: boolean;
     isLast?: boolean;
@@ -52,7 +50,6 @@ const NODE_COL_W = 60;
 
 export const TimelineEventCard: React.FC<TimelineEventCardProps> = ({
     item,
-    type,
     onPress,
     isFirst,
     isLast,
@@ -61,27 +58,17 @@ export const TimelineEventCard: React.FC<TimelineEventCardProps> = ({
     const { theme } = useTheme();
     const styles = useMemo(() => getStyles(theme), [theme]);
 
-    const isRoutine = type === 'routine';
-    const routineData = item as RoutineItem;
-    const calendarData = item as CalendarEvent;
+    const routineData = item;
 
-    const timeLabel = isRoutine
-        ? routineData.time.replace(' ', '\n') // break "6:00 AM" into two lines
-        : calendarData.startTime.replace(' ', '\n');
+    const timeLabel = routineData.time.replace(' ', '\n');
 
-    const subtitle = isRoutine
-        ? `${routineData.time}`
-        : `${calendarData.startTime} – ${calendarData.endTime}`;
+    const subtitle = `${routineData.time}`;
+    const title = routineData.task;
+    const description = routineData.description;
 
-    const title = isRoutine ? routineData.task : calendarData.title;
-    const description = isRoutine ? routineData.description : '';
+    const icon: keyof typeof Ionicons.glyphMap = ICON_MAP[routineData.imageKey ?? ''] ?? 'checkmark-circle-outline';
 
-    const icon: keyof typeof Ionicons.glyphMap = isRoutine
-        ? ICON_MAP[routineData.imageKey ?? ''] ?? 'checkmark-circle-outline'
-        : 'calendar-outline';
-
-
-    const nodeColor = isRoutine ? theme.colors.primary : theme.colors.secondary;
+    const nodeColor = theme.colors.primary;
     const lineColor = `${theme.colors.primary}35`;
 
     return (

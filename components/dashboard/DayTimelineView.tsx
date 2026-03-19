@@ -470,7 +470,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                                     return (
                                         <Pressable
                                             key={key}
-                                            style={[styles.dayHeaderCell, { width: COL_WIDTH }]}
+                                            style={[styles.dayHeaderCell, { flex: 1 }]}
                                             onPress={() => handleSelectDate(date)}
                                         >
                                             <Text style={[
@@ -556,7 +556,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                                     return (
                                         <View
                                             key={key}
-                                            style={[styles.column, { width: COL_WIDTH, opacity: isSelected ? 1 : 0.45 }]}
+                                            style={[styles.column, { flex: 1, opacity: isSelected ? 1 : 0.45 }]}
                                             onLayout={e => {
                                                 const h = e.nativeEvent.layout.height;
                                                 if (h > 0 && Math.abs(h - bodyHeight) > 5) {
@@ -569,12 +569,18 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                                                 position: 'absolute',
                                                 top: 0,
                                                 bottom: 0,
-                                                left: '50%',
-                                                marginLeft: isSelected ? -4 : -3.5, // half the width
-                                                width: isSelected ? 2 : 1.5,
-                                                backgroundColor: lineColor,
-                                                borderRadius: 1,
-                                            }} />
+                                                left: 0,
+                                                right: 0,
+                                                alignItems: 'center',
+                                                pointerEvents: 'none',
+                                            }}>
+                                                <View style={{
+                                                    flex: 1,
+                                                    width: isSelected ? 2 : 1.5,
+                                                    backgroundColor: lineColor,
+                                                    borderRadius: 1,
+                                                }} />
+                                            </View>
 
                                             {/* Pills — width = circleSize, height grows with duration, overlap is natural */}
                                             {dayItems.map(item => {
@@ -589,8 +595,9 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                                                         key={item.id}
                                                         style={{
                                                             position: 'absolute',
-                                                            top: topY, // top edge aligns with the start time
-                                                            left: leftOffset,
+                                                            top: topY,
+                                                            left: 0,
+                                                            right: 0,
                                                             alignItems: 'center',
                                                         }}
                                                     >
@@ -861,7 +868,6 @@ const getStyles = (theme: Theme) =>
 
         /* Day column */
         column: {
-            flex: 1,
             position: 'relative',
             minHeight: DEFAULT_BODY_HEIGHT,
         },
