@@ -24,7 +24,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 /** Visible time window shown in the timeline */
 const START_HOUR = 6;
-const END_HOUR = 22;
+const END_HOUR = 26; // up to 2AM
 const TOTAL_MINUTES = (END_HOUR - START_HOUR) * 60;
 
 /** Width reserved for the time-label column on the left */
@@ -37,9 +37,6 @@ const COL_WIDTH_7DAY = (SCREEN_WIDTH - TIME_AXIS_WIDTH - 16) / 7;
 /** Circle sizes — selected day is larger */
 const CIRCLE_SEL = 80;
 const CIRCLE_OTHER = 30;
-
-const DEFAULT_BODY_HEIGHT = 1600;
-
 /** Warm color palette for task types (sleep = dark, alarm = amber, etc.) */
 const TASK_COLORS: Record<string, string> = {
     wakeup: '#E8975E',
@@ -58,24 +55,28 @@ const TASK_COLORS: Record<string, string> = {
 };
 
 /** Hour marks to render in the time axis */
-const TIME_LABELS: { hour: number; label: string }[] = [
-    { hour: 6, label: '6AM' },
-    { hour: 7, label: '7AM' },
-    { hour: 8, label: '8AM' },
-    { hour: 9, label: '9AM' },
-    { hour: 10, label: '10AM' },
-    { hour: 11, label: '11AM' },
-    { hour: 12, label: '12PM' },
-    { hour: 13, label: '1PM' },
-    { hour: 14, label: '2PM' },
-    { hour: 15, label: '3PM' },
-    { hour: 16, label: '4PM' },
-    { hour: 17, label: '5PM' },
-    { hour: 18, label: '6PM' },
-    { hour: 19, label: '7PM' },
-    { hour: 20, label: '8PM' },
-    { hour: 21, label: '9PM' },
-    { hour: 22, label: '10PM' },
+const TIME_LABELS: { hour: number; num: string; ampm: string }[] = [
+    { hour: 6, num: '6', ampm: 'AM' },
+    { hour: 7, num: '7', ampm: 'AM' },
+    { hour: 8, num: '8', ampm: 'AM' },
+    { hour: 9, num: '9', ampm: 'AM' },
+    { hour: 10, num: '10', ampm: 'AM' },
+    { hour: 11, num: '11', ampm: 'AM' },
+    { hour: 12, num: '12', ampm: 'PM' },
+    { hour: 13, num: '1', ampm: 'PM' },
+    { hour: 14, num: '2', ampm: 'PM' },
+    { hour: 15, num: '3', ampm: 'PM' },
+    { hour: 16, num: '4', ampm: 'PM' },
+    { hour: 17, num: '5', ampm: 'PM' },
+    { hour: 18, num: '6', ampm: 'PM' },
+    { hour: 19, num: '7', ampm: 'PM' },
+    { hour: 20, num: '8', ampm: 'PM' },
+    { hour: 21, num: '9', ampm: 'PM' },
+    { hour: 22, num: '10', ampm: 'PM' },
+    { hour: 23, num: '11', ampm: 'PM' },
+    { hour: 24, num: '12', ampm: 'AM' },
+    { hour: 25, num: '1', ampm: 'AM' },
+    { hour: 26, num: '2', ampm: 'AM' },
 ];
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -108,26 +109,38 @@ const getWeekDates = (date: Date): Date[] => {
     });
 };
 
-/**
- * Converts a time string (e.g. "14:30") to a Y pixel position
- * within the column body. Pure time → position, no collision avoidance.
- */
-const timeToY = (timeStr: string, bodyHeight: number): number => {
-    const startMin = START_HOUR * 60;
-    const ratio = (timeToMinutes(timeStr) - startMin) / TOTAL_MINUTES;
-    return Math.max(0, Math.min(bodyHeight, ratio * bodyHeight));
-};
-
 /** Default task duration in minutes when item.duration is absent */
 const DEFAULT_DURATION = 30;
 
+const getTimelineMinute = (timeStr: string) => {
+    let m = timeToMinutes(timeStr);
+    if (m < START_HOUR * 60) m += 24 * 60;
+    return m - (START_HOUR * 60);
+};
+
+const timeToY = (timeStr: string, cumulativeY: number[]): number => {
+    const m = getTimelineMinute(timeStr);
+    if (m <= 0) return cumulativeY[0];
+    if (m >= TOTAL_MINUTES) return cumulativeY[TOTAL_MINUTES];
+    return cumulativeY[Math.floor(m)] || 0;
+};
+
 const durationToPillHeight = (
+    timeStr: string,
     durationMinutes: number,
-    bodyHeight: number,
+    cumulativeY: number[],
     circleSize: number,
 ): number => {
-    const raw = (durationMinutes / TOTAL_MINUTES) * bodyHeight;
-    return Math.max(circleSize, raw);
+    const m1 = getTimelineMinute(timeStr);
+    const m2 = m1 + durationMinutes;
+
+    const idx1 = Math.max(0, Math.min(TOTAL_MINUTES, Math.floor(m1)));
+    const idx2 = Math.max(0, Math.min(TOTAL_MINUTES, Math.floor(m2)));
+
+    const y1 = cumulativeY[idx1] || 0;
+    const y2 = cumulativeY[idx2] || 0;
+
+    return Math.max(circleSize, y2 - y1);
 };
 
 /* ─────────────────────────────── Icon map ───────────────────────────── */
@@ -162,32 +175,28 @@ interface DayTimelineViewProps {
 /* ───────────────────────────── TimeAxisItem ─────────────────────────── */
 
 const TimeAxisItem = memo<{
-    label: string;
+    num: string;
+    ampm: string;
     topY: number;
     circleHalf: number;
     theme: Theme;
-}>(({ label, topY, circleHalf, theme }) => (
+}>(({ num, ampm, topY, circleHalf, theme }) => (
     <View
         style={{
             position: 'absolute',
-            top: topY - 7,   // center text on the hour mark
+            top: topY - 8,
             left: 0,
-            width: TIME_AXIS_WIDTH,
+            width: TIME_AXIS_WIDTH - 6,
+            flexDirection: 'row',
+            justifyContent: 'flex-end',
             alignItems: 'flex-start',
-            paddingLeft: 4,
         }}
     >
-        <Text
-            style={{
-                fontSize: 9,
-                fontFamily: theme.fonts.medium,
-                color: theme.colors.textSecondary,
-                opacity: 0.35,
-                letterSpacing: 0.4,
-                textTransform: 'uppercase',
-            }}
-        >
-            {label}
+        <Text style={{ fontSize: 11, fontFamily: theme.fonts.bold, color: theme.colors.textSecondary, opacity: 0.6 }}>
+            {num}
+        </Text>
+        <Text style={{ fontSize: 7, fontFamily: theme.fonts.bold, color: theme.colors.textSecondary, opacity: 0.6, marginTop: 1, marginLeft: 1 }}>
+            {ampm}
         </Text>
     </View>
 ));
@@ -248,6 +257,238 @@ const TaskPill = memo<{
     );
 });
 
+/* ───────────────────────────── TimelinePage ─────────────────────────── */
+
+const TimelinePage = memo<{
+    pageDates: Date[];
+    itemsByDayOfWeek: Record<number, RoutineItem[]>;
+    selectedKey: string;
+    todayKey: string;
+    circleSel: number;
+    circleOther: number;
+    is7Day: boolean;
+    COL_WIDTH: number;
+    theme: Theme;
+    styles: any;
+    handleSelectDate: (date: Date) => void;
+}>(({ 
+    pageDates, itemsByDayOfWeek, selectedKey, todayKey, 
+    circleSel, circleOther, is7Day, COL_WIDTH, theme, styles, handleSelectDate 
+}) => {
+    const { cumY, dynamicBodyHeight, timeAxisPositions } = useMemo(() => {
+        const isOccupied = new Array(TOTAL_MINUTES).fill(false);
+        pageDates.forEach(date => {
+            const di = date.getDay();
+            const items = itemsByDayOfWeek[di] ?? [];
+            items.forEach(item => {
+                const itemStart = getTimelineMinute(item.time);
+                const duration = item.duration ?? DEFAULT_DURATION;
+                const itemEnd = itemStart + duration;
+                for (let m = itemStart; m < itemEnd; m++) {
+                    if (m >= 0 && m < TOTAL_MINUTES) {
+                        isOccupied[m] = true;
+                    }
+                }
+            });
+        });
+
+        const cY = new Array(TOTAL_MINUTES + 1).fill(0);
+        let currentY = 0;
+        const expandedMult = is7Day ? 0.9 : 1.5;
+        const compactMult = is7Day ? 0.35 : 0.5;
+
+        for (let i = 0; i < TOTAL_MINUTES; i++) {
+            cY[i] = currentY;
+            currentY += isOccupied[i] ? expandedMult : compactMult;
+        }
+        cY[TOTAL_MINUTES] = currentY;
+
+        const positions = TIME_LABELS.map(tl => {
+            const m = (tl.hour - START_HOUR) * 60;
+            const topY = cY[Math.max(0, Math.min(TOTAL_MINUTES, m))] || 0;
+            return { ...tl, topY };
+        });
+
+        return { cumY: cY, dynamicBodyHeight: currentY, timeAxisPositions: positions };
+    }, [pageDates, itemsByDayOfWeek, is7Day]);
+
+    return (
+        <ScrollView
+            style={{ width: SCREEN_WIDTH }}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 24 }}
+        >
+            {/* Day header row */}
+            <View style={styles.dayHeaderRow}>
+                {/* Spacer for time axis */}
+                <View style={{ width: TIME_AXIS_WIDTH }} />
+                {pageDates.map(date => {
+                    const key = formatDateKey(date);
+                    const dayIndex = date.getDay();
+                    const isSelected = key === selectedKey;
+                    const isToday = key === todayKey;
+                    return (
+                        <Pressable
+                            key={key}
+                            style={[styles.dayHeaderCell, { flex: 1 }]}
+                            onPress={() => handleSelectDate(date)}
+                        >
+                            <View style={{ height: 16, justifyContent: 'center' }}>
+                                <Text style={[
+                                    styles.dayLabel,
+                                    isSelected && styles.dayLabelSelected,
+                                    isToday && !isSelected && { color: theme.colors.primary, opacity: 0.5 },
+                                ]}>
+                                    {DAY_LABELS[dayIndex]}
+                                </Text>
+                            </View>
+                            {/* Date badge */}
+                            <View style={{ width: 52, height: 52, alignItems: 'center', justifyContent: 'center' }}>
+                                <View style={[
+                                    styles.dateBadge,
+                                    isSelected && styles.dateBadgeSelected,
+                                    isToday && !isSelected && styles.dateBadgeToday,
+                                ]}>
+                                    {isSelected ? (
+                                        <LinearGradient
+                                            colors={[theme.colors.primary, `${theme.colors.primary}CC`]}
+                                            style={styles.dateBadgeGradient}
+                                            start={{ x: 0.3, y: 0 }}
+                                            end={{ x: 0.8, y: 1 }}
+                                        >
+                                            <Text style={[styles.dateNumSelected]}>
+                                                {date.getDate()}
+                                            </Text>
+                                        </LinearGradient>
+                                    ) : (
+                                        <Text style={[
+                                            styles.dateNum,
+                                            isToday && { color: theme.colors.primary },
+                                        ]}>
+                                            {date.getDate()}
+                                        </Text>
+                                    )}
+                                </View>
+                            </View>
+                        </Pressable>
+                    );
+                })}
+            </View>
+
+            {/* Body row — time axis + columns */}
+            <View style={styles.bodyRow}>
+                {/* ── Left time axis ── */}
+                <View style={[styles.timeAxis, { height: dynamicBodyHeight }]}>
+                    {timeAxisPositions.map(tl => (
+                        <TimeAxisItem
+                            key={tl.hour}
+                            num={tl.num}
+                            ampm={tl.ampm}
+                            topY={tl.topY}
+                            circleHalf={circleSel / 2}
+                            theme={theme}
+                        />
+                    ))}
+                </View>
+
+                {/* ── Horizontal time reference lines ── */}
+                {timeAxisPositions.map(tl => (
+                    <View
+                        key={`hline-${tl.hour}`}
+                        style={{
+                            position: 'absolute',
+                            top: tl.topY,
+                            left: TIME_AXIS_WIDTH,
+                            right: 8,
+                            height: StyleSheet.hairlineWidth,
+                            backgroundColor: `${theme.colors.text}08`,
+                        }}
+                    />
+                ))}
+
+                {/* ── 3 day columns ── */}
+                {pageDates.map(date => {
+                    const key = formatDateKey(date);
+                    const dayIndex = date.getDay();
+                    const isSelected = key === selectedKey;
+                    const dayItems = itemsByDayOfWeek[dayIndex] ?? [];
+                    const circleSize = isSelected ? circleSel : circleOther;
+                    const lineColor = isSelected
+                        ? `${theme.colors.primary}35`
+                        : `${theme.colors.text}0D`;
+
+                    return (
+                        <View
+                            key={key}
+                            style={[styles.column, { flex: 1, opacity: isSelected ? 1 : 0.45, height: dynamicBodyHeight }]}
+                        >
+                            {/* Vertical line */}
+                            <View style={{
+                                position: 'absolute',
+                                top: 0,
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                alignItems: 'center',
+                                pointerEvents: 'none',
+                            }}>
+                                <View style={{
+                                    flex: 1,
+                                    width: isSelected ? 2 : 1.5,
+                                    backgroundColor: lineColor,
+                                    borderRadius: 1,
+                                }} />
+                            </View>
+
+                            {/* Pills — width = circleSize, height grows with duration, overlap is natural */}
+                            {dayItems.map(item => {
+                                const topY = timeToY(item.time, cumY);
+                                const duration = item.duration ?? DEFAULT_DURATION;
+                                const pillHeight = durationToPillHeight(item.time, duration, cumY, circleSize);
+                                const taskColor = TASK_COLORS[item.imageKey ?? ''] ?? theme.colors.primary;
+
+                                return (
+                                    <View
+                                        key={item.id}
+                                        style={{
+                                            position: 'absolute',
+                                            top: topY,
+                                            left: 0,
+                                            right: 0,
+                                            alignItems: 'center',
+                                        }}
+                                    >
+                                        <TaskPill
+                                            item={item}
+                                            size={circleSize}
+                                            pillHeight={pillHeight}
+                                            isSelected={isSelected}
+                                            theme={theme}
+                                        />
+                                        {/* Time label below icon on selected column */}
+                                        {isSelected && (
+                                            <Text style={{
+                                                fontSize: 9,
+                                                fontFamily: theme.fonts.medium,
+                                                color: `${taskColor}AA`,
+                                                marginTop: 3,
+                                                letterSpacing: 0.3,
+                                                textAlign: 'center',
+                                            }}>
+                                                {item.time}
+                                            </Text>
+                                        )}
+                                    </View>
+                                );
+                            })}
+                        </View>
+                    );
+                })}
+            </View>
+        </ScrollView>
+    );
+});
+
 /* ─────────────────────────────── Component ──────────────────────────── */
 
 export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
@@ -268,9 +509,6 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
     // Circle sizes — in 7-day view everything is smaller to fit
     const circleSel = is7Day ? 28 : CIRCLE_SEL;
     const circleOther = is7Day ? 18 : CIRCLE_OTHER;
-
-    // We always show exactly 3 days centered on selectedDate
-    const [bodyHeight, setBodyHeight] = React.useState(DEFAULT_BODY_HEIGHT);
 
     /* ── Collapse animations (header shrinks when list scrolls) ── */
     const headerCollapseAnim = useMemo(() => {
@@ -378,15 +616,6 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
 
     const router = useRouter();
 
-    /* ── Time axis Y positions (shared across all columns) ── */
-    const timeAxisPositions = useMemo(() =>
-        TIME_LABELS.map(tl => ({
-            ...tl,
-            topY: timeToY(`${tl.hour}:00`, bodyHeight),
-        })),
-        [bodyHeight]
-    );
-
     return (
         <View style={styles.outer} testID="day-timeline-view">
 
@@ -452,183 +681,20 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                     removeClippedSubviews
                 >
                     {pages.map((pageDates, wi) => (
-                        <ScrollView
+                        <TimelinePage
                             key={wi}
-                            style={{ width: SCREEN_WIDTH }}
-                            showsVerticalScrollIndicator={false}
-                            contentContainerStyle={{ paddingBottom: 24 }}
-                        >
-                            {/* Day header row */}
-                            <View style={styles.dayHeaderRow}>
-                                {/* Spacer for time axis */}
-                                <View style={{ width: TIME_AXIS_WIDTH }} />
-                                {pageDates.map(date => {
-                                    const key = formatDateKey(date);
-                                    const dayIndex = date.getDay();
-                                    const isSelected = key === selectedKey;
-                                    const isToday = key === todayKey;
-                                    return (
-                                        <Pressable
-                                            key={key}
-                                            style={[styles.dayHeaderCell, { flex: 1 }]}
-                                            onPress={() => handleSelectDate(date)}
-                                        >
-                                            <Text style={[
-                                                styles.dayLabel,
-                                                isSelected && styles.dayLabelSelected,
-                                                isToday && !isSelected && { color: theme.colors.primary, opacity: 0.5 },
-                                            ]}>
-                                                {DAY_LABELS[dayIndex]}
-                                            </Text>
-                                            {/* Date badge */}
-                                            <View style={[
-                                                styles.dateBadge,
-                                                isSelected && styles.dateBadgeSelected,
-                                                isToday && !isSelected && styles.dateBadgeToday,
-                                            ]}>
-                                                {isSelected ? (
-                                                    <LinearGradient
-                                                        colors={[theme.colors.primary, `${theme.colors.primary}CC`]}
-                                                        style={styles.dateBadgeGradient}
-                                                        start={{ x: 0.3, y: 0 }}
-                                                        end={{ x: 0.8, y: 1 }}
-                                                    >
-                                                        <Text style={[styles.dateNumSelected]}>
-                                                            {date.getDate()}
-                                                        </Text>
-                                                    </LinearGradient>
-                                                ) : (
-                                                    <Text style={[
-                                                        styles.dateNum,
-                                                        isToday && { color: theme.colors.primary },
-                                                    ]}>
-                                                        {date.getDate()}
-                                                    </Text>
-                                                )}
-                                            </View>
-                                        </Pressable>
-                                    );
-                                })}
-                            </View>
-
-                            {/* Body row — time axis + 3 columns */}
-                            <View style={styles.bodyRow}>
-
-                                {/* ── Left time axis ── */}
-                                <View style={[styles.timeAxis, { height: bodyHeight }]}>
-                                    {timeAxisPositions.map(tl => (
-                                        <TimeAxisItem
-                                            key={tl.hour}
-                                            label={tl.label}
-                                            topY={tl.topY}
-                                            circleHalf={circleSel / 2}
-                                            theme={theme}
-                                        />
-                                    ))}
-                                </View>
-
-                                {/* ── Horizontal time reference lines ── */}
-                                {timeAxisPositions.map(tl => (
-                                    <View
-                                        key={`hline-${tl.hour}`}
-                                        style={{
-                                            position: 'absolute',
-                                            top: tl.topY + (CIRCLE_SEL / 2),
-                                            left: TIME_AXIS_WIDTH,
-                                            right: 8,
-                                            height: StyleSheet.hairlineWidth,
-                                            backgroundColor: `${theme.colors.text}08`,
-                                        }}
-                                    />
-                                ))}
-
-                                {/* ── 3 day columns ── */}
-                                {pageDates.map(date => {
-                                    const key = formatDateKey(date);
-                                    const dayIndex = date.getDay();
-                                    const isSelected = key === selectedKey;
-                                    const dayItems = itemsByDayOfWeek[dayIndex] ?? [];
-                                    const circleSize = isSelected ? circleSel : circleOther;
-                                    const lineColor = isSelected
-                                        ? `${theme.colors.primary}35`
-                                        : `${theme.colors.text}0D`;
-
-                                    return (
-                                        <View
-                                            key={key}
-                                            style={[styles.column, { flex: 1, opacity: isSelected ? 1 : 0.45 }]}
-                                            onLayout={e => {
-                                                const h = e.nativeEvent.layout.height;
-                                                if (h > 0 && Math.abs(h - bodyHeight) > 5) {
-                                                    setBodyHeight(h);
-                                                }
-                                            }}
-                                        >
-                                            {/* Vertical line */}
-                                            <View style={{
-                                                position: 'absolute',
-                                                top: 0,
-                                                bottom: 0,
-                                                left: 0,
-                                                right: 0,
-                                                alignItems: 'center',
-                                                pointerEvents: 'none',
-                                            }}>
-                                                <View style={{
-                                                    flex: 1,
-                                                    width: isSelected ? 2 : 1.5,
-                                                    backgroundColor: lineColor,
-                                                    borderRadius: 1,
-                                                }} />
-                                            </View>
-
-                                            {/* Pills — width = circleSize, height grows with duration, overlap is natural */}
-                                            {dayItems.map(item => {
-                                                const topY = timeToY(item.time, bodyHeight);
-                                                const duration = item.duration ?? DEFAULT_DURATION;
-                                                const pillHeight = durationToPillHeight(duration, bodyHeight, circleSize);
-                                                const leftOffset = (COL_WIDTH - circleSize) / 2;
-                                                const taskColor = TASK_COLORS[item.imageKey ?? ''] ?? theme.colors.primary;
-
-                                                return (
-                                                    <View
-                                                        key={item.id}
-                                                        style={{
-                                                            position: 'absolute',
-                                                            top: topY,
-                                                            left: 0,
-                                                            right: 0,
-                                                            alignItems: 'center',
-                                                        }}
-                                                    >
-                                                        <TaskPill
-                                                            item={item}
-                                                            size={circleSize}
-                                                            pillHeight={pillHeight}
-                                                            isSelected={isSelected}
-                                                            theme={theme}
-                                                        />
-                                                        {/* Time label below icon on selected column */}
-                                                        {isSelected && (
-                                                            <Text style={{
-                                                                fontSize: 9,
-                                                                fontFamily: theme.fonts.medium,
-                                                                color: `${taskColor}AA`,
-                                                                marginTop: 3,
-                                                                letterSpacing: 0.3,
-                                                                textAlign: 'center',
-                                                            }}>
-                                                                {item.time}
-                                                            </Text>
-                                                        )}
-                                                    </View>
-                                                );
-                                            })}
-                                        </View>
-                                    );
-                                })}
-                            </View>
-                        </ScrollView>
+                            pageDates={pageDates}
+                            itemsByDayOfWeek={itemsByDayOfWeek}
+                            selectedKey={selectedKey}
+                            todayKey={todayKey}
+                            circleSel={circleSel}
+                            circleOther={circleOther}
+                            is7Day={is7Day}
+                            COL_WIDTH={COL_WIDTH}
+                            theme={theme}
+                            styles={styles}
+                            handleSelectDate={handleSelectDate}
+                        />
                     ))}
                 </ScrollView>
             </Animated.View>
@@ -781,8 +847,8 @@ const getStyles = (theme: Theme) =>
         /* Day header row (day labels + date badges) */
         dayHeaderRow: {
             flexDirection: 'row',
-            alignItems: 'flex-end',
-            paddingRight: 0, // Match bodyRow which has 0 paddingRight for columns
+            alignItems: 'center',
+            paddingRight: 0, 
             paddingBottom: 12,
             paddingTop: 4,
             borderBottomWidth: 0,
@@ -790,7 +856,7 @@ const getStyles = (theme: Theme) =>
         },
         dayHeaderCell: {
             alignItems: 'center',
-            gap: 6,
+            gap: 2,
         },
         dayLabel: {
             fontSize: 10,
@@ -857,7 +923,7 @@ const getStyles = (theme: Theme) =>
         bodyRow: {
             flexDirection: 'row',
             paddingRight: 0, // Remove right padding so columns perfectly align with header cells
-            paddingVertical: CIRCLE_SEL / 2, // space for pill caps at top/bottom
+            paddingBottom: CIRCLE_SEL / 2, // space for pill caps at top/bottom
         },
 
         /* Left time axis */
@@ -869,7 +935,6 @@ const getStyles = (theme: Theme) =>
         /* Day column */
         column: {
             position: 'relative',
-            minHeight: DEFAULT_BODY_HEIGHT,
         },
 
 
