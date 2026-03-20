@@ -7,6 +7,7 @@ import React, { memo, useCallback, useMemo, useRef } from 'react';
 import {
     Animated,
     Dimensions,
+    FlatList,
     Platform,
     Pressable,
     ScrollView,
@@ -548,45 +549,10 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
         extrapolate: 'clamp',
     });
 
-    /* ── Date helpers ── */
-    const today = useMemo(() => {
-        const t = new Date();
-        t.setHours(0, 0, 0, 0);
-        return t;
-    }, []);
-
-    const selectedKey = formatDateKey(selectedDate);
-    const todayKey = formatDateKey(today);
-
-    // 5 pages of day-windows so user can swipe left/right
-    const scrollRef = useRef<ScrollView>(null);
-    const pages = useMemo(() =>
-        Array.from({ length: 5 }, (_, pi) => {
-            const anchor = new Date(today);
-            if (is7Day) {
-                anchor.setDate(anchor.getDate() + (pi - 2) * 7);
-                return getWeekDates(anchor);
-            } else {
-                anchor.setDate(anchor.getDate() + (pi - 2) * 3);
-                return get3DayDates(anchor);
-            }
-        }),
-        [today, is7Day]
-    );
-
-    React.useEffect(() => {
-        // Snap back to current-week/3-day page whenever mode changes
-        setTimeout(() => {
-            scrollRef.current?.scrollTo({ x: SCREEN_WIDTH * 2, animated: false });
-        }, 50);
-    }, [viewMode]);
-
-    // Split header date into weekday + rest
-    const dateHeader = selectedDate.toLocaleDateString('en-US', {
-        weekday: 'long', month: 'long', day: 'numeric',
-    });
-    const [weekdayStr, ...restParts] = dateHeader.split(', ');
-    const restStr = restParts.join(', ');
+    const handleSelectDate = useCallback((date: Date) => {
+        Haptics.selectionAsync();
+        onSelectDate(date);
+    }, [onSelectDate]);
 
     /* ── Items grouped by day-of-week ── */
     const itemsByDayOfWeek = useMemo(() => {
@@ -609,10 +575,69 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
     );
     const firstItem = currentDayItems[0] ?? null;
 
-    const handleSelectDate = useCallback((date: Date) => {
-        Haptics.selectionAsync();
-        onSelectDate(date);
-    }, [onSelectDate]);
+    /* ── Date helpers ── */
+    const today = useMemo(() => {
+        const t = new Date();
+        t.setHours(0, 0, 0, 0);
+        return t;
+    }, []);
+
+    const selectedKey = formatDateKey(selectedDate);
+    const todayKey = formatDateKey(today);
+
+    // Number of pages around today (e.g. 260 weeks = 5 years)
+    const RANGE_PAGES = 260; 
+
+    // Compute the pages and initial index
+    const { pages, initialPageIndex } = useMemo(() => {
+        const p: Date[][] = [];
+        let todayIdx = 0;
+        
+        for (let i = -RANGE_PAGES; i <= RANGE_PAGES; i++) {
+            const anchor = new Date(today);
+            if (is7Day) {
+                anchor.setDate(anchor.getDate() + (i * 7));
+                p.push(getWeekDates(anchor));
+            } else {
+                anchor.setDate(anchor.getDate() + (i * 3));
+                p.push(get3DayDates(anchor));
+            }
+            if (i === 0) todayIdx = p.length - 1;
+        }
+        return { pages: p, initialPageIndex: todayIdx };
+    }, [today, is7Day]);
+
+    const flatListRef = useRef<FlatList>(null);
+
+    // Sync scroll when viewMode changes
+    React.useEffect(() => {
+        setTimeout(() => {
+            flatListRef.current?.scrollToIndex({ index: initialPageIndex, animated: false });
+        }, 50);
+    }, [viewMode, initialPageIndex]);
+
+    const renderPage = useCallback(({ item: pageDates }: { item: Date[] }) => (
+        <TimelinePage
+            pageDates={pageDates}
+            itemsByDayOfWeek={itemsByDayOfWeek}
+            selectedKey={selectedKey}
+            todayKey={todayKey}
+            circleSel={circleSel}
+            circleOther={circleOther}
+            is7Day={is7Day}
+            COL_WIDTH={COL_WIDTH}
+            theme={theme}
+            styles={styles}
+            handleSelectDate={handleSelectDate}
+        />
+    ), [itemsByDayOfWeek, selectedKey, todayKey, circleSel, circleOther, is7Day, COL_WIDTH, theme, styles, handleSelectDate]);
+
+    // Split header date into weekday + rest
+    const dateHeader = selectedDate.toLocaleDateString('en-US', {
+        weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
+    });
+    const [weekdayStr, ...restParts] = dateHeader.split(', ');
+    const restStr = restParts.join(', ');
 
     const router = useRouter();
 
@@ -667,36 +692,34 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                 </Animated.View>
             </Animated.View>
 
-            {/* ── Timeline (scrollable vertically + swipeable horizontally for pages) ── */}
+            {/* ── Timeline (virtualized FlatList for multi-year calendar) ── */}
             <Animated.View style={[styles.timelineWrapper, { opacity: collapseOpacity }]}>
-                {/*
-                 * Outer ScrollView = horizontal page swipe between 3-day windows.
-                 * Inner ScrollView = vertical scroll through the full day.
-                 */}
-                <ScrollView
-                    ref={scrollRef}
+                <FlatList
+                    ref={flatListRef}
+                    data={pages}
+                    renderItem={renderPage}
+                    keyExtractor={(_, index) => `page-${index}`}
                     horizontal
                     pagingEnabled
                     showsHorizontalScrollIndicator={false}
-                    removeClippedSubviews
-                >
-                    {pages.map((pageDates, wi) => (
-                        <TimelinePage
-                            key={wi}
-                            pageDates={pageDates}
-                            itemsByDayOfWeek={itemsByDayOfWeek}
-                            selectedKey={selectedKey}
-                            todayKey={todayKey}
-                            circleSel={circleSel}
-                            circleOther={circleOther}
-                            is7Day={is7Day}
-                            COL_WIDTH={COL_WIDTH}
-                            theme={theme}
-                            styles={styles}
-                            handleSelectDate={handleSelectDate}
-                        />
-                    ))}
-                </ScrollView>
+                    initialScrollIndex={initialPageIndex}
+                    getItemLayout={(_, index) => ({
+                        length: SCREEN_WIDTH,
+                        offset: SCREEN_WIDTH * index,
+                        index,
+                    })}
+                    // Performance optimizations
+                    windowSize={3}
+                    maxToRenderPerBatch={2}
+                    updateCellsBatchingPeriod={50}
+                    removeClippedSubviews={Platform.OS === 'android'}
+                    onScrollToIndexFailed={info => {
+                        flatListRef.current?.scrollToOffset({
+                            offset: info.averageItemLength * info.index,
+                            animated: false,
+                        });
+                    }}
+                />
             </Animated.View>
 
             {/* ── Peek card ── */}
