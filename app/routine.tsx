@@ -24,7 +24,7 @@ import TaskModal from "../components/dashboard/TaskModal";
 import { TimelineEventCard } from "../components/dashboard/TimelineEventCard";
 import { Theme } from "../constants/shared";
 import { useTheme } from "../context/ThemeContext";
-import { FormData, RoutineItem, sortRoutineItems, timeToMinutes } from "../utils/utils";
+import { FormData, RoutineItem, getDateString, sortRoutineItems, timeToMinutes } from "../utils/utils";
 
 /* -------------------- Assets & Constants -------------------- */
 
@@ -112,7 +112,10 @@ export default function RoutineScreen() {
 
   const routineItems = useMemo(() => {
     const dayOfWeek = selectedDate.getDay();
-    return allRoutines.filter(item => item.daysOfWeek?.includes(dayOfWeek));
+    const dateStr = getDateString(selectedDate);
+    return allRoutines.filter(item => 
+      item.daysOfWeek?.includes(dayOfWeek) || item.date === dateStr
+    );
   }, [allRoutines, selectedDate]);
 
   /* -------------------- Timeline panel state -------------------- */
@@ -308,7 +311,10 @@ export default function RoutineScreen() {
   /* -------------------- Per-day items helper -------------------- */
   const getItemsForDate = useCallback((date: Date) => {
     const dow = date.getDay();
-    const items = allRoutines.filter(item => item.daysOfWeek?.includes(dow));
+    const dateStr = getDateString(date);
+    const items = allRoutines.filter(item => 
+      item.daysOfWeek?.includes(dow) || item.date === dateStr
+    );
     const sorted = sortRoutineItems(items);
 
     const all: Array<{ minutes: number; type: 'routine'; data: RoutineItem }> = [
@@ -422,13 +428,21 @@ export default function RoutineScreen() {
         time: item.time,
         task: item.task,
         description: item.description,
-        daysOfWeek: item.daysOfWeek || [new Date().getDay()],
+        daysOfWeek: item.daysOfWeek || [],
+        date: item.date,
         duration: item.duration || 30,
         imageKey: item.imageKey
       });
     } else {
       setEditingId(null);
-      setFormData({ time: "", task: "", description: "", daysOfWeek: [selectedDate.getDay()], duration: 30 });
+      setFormData({ 
+        time: "", 
+        task: "", 
+        description: "", 
+        daysOfWeek: [], 
+        date: getDateString(selectedDate), 
+        duration: 30 
+      });
     }
     setFormVisible(true);
   }, [selectedDate]);
@@ -436,19 +450,23 @@ export default function RoutineScreen() {
   const closeForm = useCallback(() => {
     setFormVisible(false);
     setEditingId(null);
-    setFormData({ time: "", task: "", description: "", daysOfWeek: [] });
+    setFormData({ time: "", task: "", description: "", daysOfWeek: [], date: "" });
   }, []);
 
   const handleSave = useCallback(() => {
-    const { time, task, description, daysOfWeek, duration } = formData;
-    if (!time.trim() || !task.trim() || !description.trim() || !daysOfWeek || daysOfWeek.length === 0) {
-      Alert.alert("Missing Information", "Please fill in all fields and select days to continue");
+    const { time, task, description, daysOfWeek, duration, date } = formData;
+    if (!time.trim() || !task.trim()) {
+      Alert.alert("Missing Information", "Please enter a task name and time.");
       return;
     }
 
     const normalizedTask = task.trim().toLowerCase();
     const isSleepOrWake = normalizedTask === "sleep" || normalizedTask === "wake up";
-    const finalDays = isSleepOrWake ? [0, 1, 2, 3, 4, 5, 6] : daysOfWeek.sort();
+    
+    // If it's a sleep/wake task, it repeating every day.
+    // Otherwise, it's repeating if daysOfWeek is not empty, or one-off if it has a date.
+    let finalDays = isSleepOrWake ? [0, 1, 2, 3, 4, 5, 6] : (daysOfWeek || []).sort();
+    let finalDate = (finalDays.length > 0) ? undefined : date;
 
     if (isSleepOrWake) {
       // Check if for ANY of the final days, a sleep/wake up task already exists (other than the editing one)
@@ -473,6 +491,7 @@ export default function RoutineScreen() {
             description: description.trim(),
             imageKey: formData.imageKey || item.imageKey || "breathe",
             daysOfWeek: finalDays,
+            date: finalDate,
             duration: duration || item.duration || 30
           }
           : item
@@ -487,6 +506,7 @@ export default function RoutineScreen() {
         imageKey: formData.imageKey || "breathe",
         insertionOrder: nextInsertionOrder,
         daysOfWeek: finalDays,
+        date: finalDate,
         duration: duration || 30,
       };
       saveRoutines([...allRoutines, newItem]);

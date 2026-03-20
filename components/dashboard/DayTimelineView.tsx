@@ -262,7 +262,7 @@ const TaskPill = memo<{
 
 const TimelinePage = memo<{
     pageDates: Date[];
-    itemsByDayOfWeek: Record<number, RoutineItem[]>;
+    allRoutines: RoutineItem[];
     selectedKey: string;
     todayKey: string;
     circleSel: number;
@@ -273,14 +273,17 @@ const TimelinePage = memo<{
     styles: any;
     handleSelectDate: (date: Date) => void;
 }>(({ 
-    pageDates, itemsByDayOfWeek, selectedKey, todayKey, 
+    pageDates, allRoutines, selectedKey, todayKey, 
     circleSel, circleOther, is7Day, COL_WIDTH, theme, styles, handleSelectDate 
 }) => {
     const { cumY, dynamicBodyHeight, timeAxisPositions } = useMemo(() => {
         const isOccupied = new Array(TOTAL_MINUTES).fill(false);
         pageDates.forEach(date => {
             const di = date.getDay();
-            const items = itemsByDayOfWeek[di] ?? [];
+            const dateStr = formatDateKey(date);
+            const items = allRoutines.filter(item => 
+                item.daysOfWeek?.includes(di) || item.date === dateStr
+            );
             items.forEach(item => {
                 const itemStart = getTimelineMinute(item.time);
                 const duration = item.duration ?? DEFAULT_DURATION;
@@ -311,7 +314,7 @@ const TimelinePage = memo<{
         });
 
         return { cumY: cY, dynamicBodyHeight: currentY, timeAxisPositions: positions };
-    }, [pageDates, itemsByDayOfWeek, is7Day]);
+    }, [pageDates, allRoutines, is7Day]);
 
     return (
         <ScrollView
@@ -411,8 +414,11 @@ const TimelinePage = memo<{
                 {pageDates.map(date => {
                     const key = formatDateKey(date);
                     const dayIndex = date.getDay();
+                    const dateStr = formatDateKey(date);
                     const isSelected = key === selectedKey;
-                    const dayItems = itemsByDayOfWeek[dayIndex] ?? [];
+                    const dayItems = allRoutines.filter(item => 
+                        item.daysOfWeek?.includes(dayIndex) || item.date === dateStr
+                    ).sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
                     const circleSize = isSelected ? circleSel : circleOther;
                     const lineColor = isSelected
                         ? `${theme.colors.primary}35`
@@ -555,24 +561,15 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
     }, [onSelectDate]);
 
     /* ── Items grouped by day-of-week ── */
-    const itemsByDayOfWeek = useMemo(() => {
-        const map: Record<number, RoutineItem[]> = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
-        routineItems.forEach(item => {
-            (item.daysOfWeek ?? []).forEach(di => {
-                if (map[di]) map[di].push(item);
-            });
-        });
-        // Sort by time so z-order is chronological
-        Object.values(map).forEach(arr =>
-            arr.sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time))
-        );
-        return map;
-    }, [routineItems]);
 
-    const currentDayItems = useMemo(
-        () => itemsByDayOfWeek[selectedDate.getDay()] ?? [],
-        [itemsByDayOfWeek, selectedDate]
-    );
+
+    const currentDayItems = useMemo(() => {
+        const dow = selectedDate.getDay();
+        const dateStr = formatDateKey(selectedDate);
+        return routineItems.filter(item => 
+            item.daysOfWeek?.includes(dow) || item.date === dateStr
+        ).sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
+    }, [routineItems, selectedDate]);
     const firstItem = currentDayItems[0] ?? null;
 
     /* ── Date helpers ── */
@@ -619,7 +616,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
     const renderPage = useCallback(({ item: pageDates }: { item: Date[] }) => (
         <TimelinePage
             pageDates={pageDates}
-            itemsByDayOfWeek={itemsByDayOfWeek}
+            allRoutines={routineItems}
             selectedKey={selectedKey}
             todayKey={todayKey}
             circleSel={circleSel}
@@ -630,7 +627,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
             styles={styles}
             handleSelectDate={handleSelectDate}
         />
-    ), [itemsByDayOfWeek, selectedKey, todayKey, circleSel, circleOther, is7Day, COL_WIDTH, theme, styles, handleSelectDate]);
+    ), [routineItems, selectedKey, todayKey, circleSel, circleOther, is7Day, COL_WIDTH, theme, styles, handleSelectDate]);
 
     // Split header date into weekday + rest
     const dateHeader = selectedDate.toLocaleDateString('en-US', {
@@ -768,7 +765,9 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                                 />
                                 <Text style={styles.peekTime}>{firstItem.time}</Text>
                                 <View style={[styles.peekBadge, { backgroundColor: `${theme.colors.primary}14` }]}>
-                                    <Text style={[styles.peekBadgeText, { color: theme.colors.primary }]}>↺ Daily</Text>
+                                    <Text style={[styles.peekBadgeText, { color: theme.colors.primary }]}>
+                                        {firstItem.daysOfWeek?.length ? "↺ Daily" : "Once"}
+                                    </Text>
                                 </View>
                             </View>
                             <Text style={styles.peekTitle} numberOfLines={1} testID="peek-title">
