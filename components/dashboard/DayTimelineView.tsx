@@ -18,6 +18,7 @@ import {
 import { Theme } from '../../constants/shared';
 import { useTheme } from '../../context/ThemeContext';
 import { RoutineItem, timeToMinutes } from '../../utils/utils';
+import { MergedTaskChain } from './MergedTaskChain';
 
 /* ─────────────────────────────── Config ─────────────────────────────── */
 
@@ -202,61 +203,6 @@ const TimeAxisItem = memo<{
     </View>
 ));
 
-/* ─────────────────────────── TaskPill ──────────────────────────────── */
-/*
- * Width  = circleSize (fixed, same as the original circle diameter).
- * Height = max(circleSize, durationPx) — short task → circle, long → pill.
- * borderRadius is always circleSize/2, so the caps are always perfect
- * half-circles regardless of how tall the pill grows.
- * Overlapping tasks simply overlap on the Z axis (no collision avoidance).
- */
-
-const TaskPill = memo<{
-    item: RoutineItem;
-    size: number;      // circle diameter == pill width
-    pillHeight: number;      // computed from duration; >= size
-    isSelected: boolean;
-    theme: Theme;
-}>(({ item, size, pillHeight, isSelected, theme }) => {
-    const borderRadius = size / 2;                           // always half-width → rounded caps
-    const iconSize = isSelected ? Math.round(size * 0.46) : Math.round(size * 0.44);
-    const taskColor = TASK_COLORS[item.imageKey ?? ''] ?? theme.colors.primary;
-
-    return (
-        <View
-            style={[
-                {
-                    width: size,
-                    height: pillHeight,
-                    borderRadius,
-                    backgroundColor: isSelected
-                        ? `${taskColor}22`
-                        : `${theme.colors.text}0A`,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderWidth: isSelected ? 2 : 1.5,
-                    borderColor: isSelected ? `${taskColor}55` : `${theme.colors.text}15`,
-                    overflow: 'hidden',
-                },
-                isSelected && Platform.select({
-                    ios: {
-                        shadowColor: taskColor,
-                        shadowOffset: { width: 0, height: 0 },
-                        shadowOpacity: 0.5,
-                        shadowRadius: 12,
-                    },
-                    android: { elevation: 8 },
-                }),
-            ]}
-        >
-            <Ionicons
-                name={ICON_MAP[item.imageKey ?? ''] ?? 'ellipse-outline'}
-                size={iconSize}
-                color={isSelected ? taskColor : `${theme.colors.textSecondary}55`}
-            />
-        </View>
-    );
-});
 
 /* ───────────────────────────── TimelinePage ─────────────────────────── */
 
@@ -272,30 +218,53 @@ const TimelinePage = memo<{
     theme: Theme;
     styles: any;
     handleSelectDate: (date: Date) => void;
-}>(({ 
-    pageDates, allRoutines, selectedKey, todayKey, 
-    circleSel, circleOther, is7Day, COL_WIDTH, theme, styles, handleSelectDate 
+}>(({
+    pageDates, allRoutines, selectedKey, todayKey,
+    circleSel, circleOther, is7Day, COL_WIDTH, theme, styles, handleSelectDate
 }) => {
     const { cumY, dynamicBodyHeight, timeAxisPositions } = useMemo(() => {
+        // Occupied-minute map (union across all visible days)
         const isOccupied = new Array(TOTAL_MINUTES).fill(false);
+
+        // Per-column max tasks per hour — only expand when a SINGLE column
+        // genuinely has ≥2 tasks in the same hour
+        const TOTAL_HOURS = END_HOUR - START_HOUR;
+        const maxTasksPerHour = new Array(TOTAL_HOURS).fill(0);
+
         pageDates.forEach(date => {
             const di = date.getDay();
             const dateStr = formatDateKey(date);
-            const items = allRoutines.filter(item => 
+            const items = allRoutines.filter(item =>
                 item.daysOfWeek?.includes(di) || item.date === dateStr
             );
+
+            // Per-column hour counter (reset for every column)
+            const colTasksPerHour = new Array(TOTAL_HOURS).fill(0);
+
             items.forEach(item => {
                 const itemStart = getTimelineMinute(item.time);
                 const duration = item.duration ?? DEFAULT_DURATION;
                 const itemEnd = itemStart + duration;
+
                 for (let m = itemStart; m < itemEnd; m++) {
-                    if (m >= 0 && m < TOTAL_MINUTES) {
-                        isOccupied[m] = true;
-                    }
+                    if (m >= 0 && m < TOTAL_MINUTES) isOccupied[m] = true;
+                }
+
+                // Which hour slots does this task touch?
+                const startHour = Math.floor(itemStart / 60);
+                const endHour = Math.floor((itemEnd - 1) / 60);
+                for (let h = startHour; h <= endHour; h++) {
+                    if (h >= 0 && h < TOTAL_HOURS) colTasksPerHour[h]++;
                 }
             });
+
+            // Take the max across all columns
+            for (let h = 0; h < TOTAL_HOURS; h++) {
+                maxTasksPerHour[h] = Math.max(maxTasksPerHour[h], colTasksPerHour[h]);
+            }
         });
 
+        // ── First pass: build cumulative Y with expanded/compact rates ──
         const cY = new Array(TOTAL_MINUTES + 1).fill(0);
         let currentY = 0;
         const expandedMult = is7Day ? 0.9 : 1.5;
@@ -303,9 +272,107 @@ const TimelinePage = memo<{
 
         for (let i = 0; i < TOTAL_MINUTES; i++) {
             cY[i] = currentY;
-            currentY += isOccupied[i] ? expandedMult : compactMult;
+
+            const hourIdx = Math.floor(i / 60);
+            const busyHour = (maxTasksPerHour[hourIdx] ?? 0) >= 2;
+
+            if (isOccupied[i]) {
+                currentY += expandedMult;
+            } else if (busyHour) {
+                currentY += expandedMult;
+            } else {
+                currentY += compactMult;
+            }
         }
         cY[TOTAL_MINUTES] = currentY;
+
+        // ── Second pass: two-layer minimum-height guarantee ──
+        const selCircle = is7Day ? 28 : CIRCLE_SEL;
+        const minPillPx = selCircle + 4; // each pill needs at least this many px
+
+        // Helper to inflate a minute range [rangeStart..rangeEnd] in cY
+        const inflateRange = (rangeStart: number, rangeEnd: number, requiredSpan: number) => {
+            const s = Math.max(0, Math.min(TOTAL_MINUTES, Math.floor(rangeStart)));
+            const e = Math.max(0, Math.min(TOTAL_MINUTES, Math.floor(rangeEnd)));
+            const yStart = cY[s];
+            const yEnd = cY[e];
+            const currentSpan = yEnd - yStart;
+            if (currentSpan >= requiredSpan || currentSpan <= 0) return;
+
+            const scale = requiredSpan / currentSpan;
+            const delta = requiredSpan - currentSpan;
+            for (let m = s; m <= e; m++) {
+                cY[m] = yStart + (cY[m] - yStart) * scale;
+            }
+            for (let m = e + 1; m <= TOTAL_MINUTES; m++) {
+                cY[m] += delta;
+            }
+        };
+
+        // Layer 1: Per-task — ensure EVERY task's cumY span is at least
+        // minPillPx so that even short tasks get a full-sized pill and
+        // sequential pills within the same hour never visually overlap.
+        // Process tasks in chronological order so shifts propagate correctly.
+        const allTasks: { startMin: number; endMin: number }[] = [];
+        pageDates.forEach(date => {
+            const di = date.getDay();
+            const dateStr = formatDateKey(date);
+            allRoutines
+                .filter(item => item.daysOfWeek?.includes(di) || item.date === dateStr)
+                .forEach(item => {
+                    const start = getTimelineMinute(item.time);
+                    const dur = item.duration ?? DEFAULT_DURATION;
+                    allTasks.push({ startMin: start, endMin: start + dur });
+                });
+        });
+
+        // Deduplicate tasks that have the same time range (e.g. same repeating task on different days)
+        const seen = new Set<string>();
+        const uniqueTasks = allTasks.filter(t => {
+            const key = `${t.startMin}-${t.endMin}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+        uniqueTasks.sort((a, b) => a.startMin - b.startMin);
+
+        for (const task of uniqueTasks) {
+            inflateRange(task.startMin, task.endMin, minPillPx);
+        }
+
+        // Layer 2: Cluster-level — ensure overlapping tasks that merge
+        // into a single chain have enough room for N stacked pills.
+        pageDates.forEach(date => {
+            const di = date.getDay();
+            const dateStr = formatDateKey(date);
+            const items = allRoutines
+                .filter(item => item.daysOfWeek?.includes(di) || item.date === dateStr)
+                .sort((a, b) => getTimelineMinute(a.time) - getTimelineMinute(b.time));
+
+            type Cluster = { count: number; startMin: number; endMin: number };
+            const colClusters: Cluster[] = [];
+            items.forEach(item => {
+                const start = getTimelineMinute(item.time);
+                const dur = item.duration ?? DEFAULT_DURATION;
+                const end = start + dur;
+                if (colClusters.length === 0) {
+                    colClusters.push({ count: 1, startMin: start, endMin: end });
+                } else {
+                    const last = colClusters[colClusters.length - 1];
+                    if (start <= last.endMin) {
+                        last.count++;
+                        last.endMin = Math.max(last.endMin, end);
+                    } else {
+                        colClusters.push({ count: 1, startMin: start, endMin: end });
+                    }
+                }
+            });
+
+            colClusters
+                .filter(c => c.count >= 2)
+                .sort((a, b) => a.startMin - b.startMin)
+                .forEach(c => inflateRange(c.startMin, c.endMin, c.count * minPillPx));
+        });
 
         const positions = TIME_LABELS.map(tl => {
             const m = (tl.hour - START_HOUR) * 60;
@@ -313,7 +380,7 @@ const TimelinePage = memo<{
             return { ...tl, topY };
         });
 
-        return { cumY: cY, dynamicBodyHeight: currentY, timeAxisPositions: positions };
+        return { cumY: cY, dynamicBodyHeight: cY[TOTAL_MINUTES], timeAxisPositions: positions };
     }, [pageDates, allRoutines, is7Day]);
 
     return (
@@ -416,9 +483,9 @@ const TimelinePage = memo<{
                     const dayIndex = date.getDay();
                     const dateStr = formatDateKey(date);
                     const isSelected = key === selectedKey;
-                    const dayItems = allRoutines.filter(item => 
+                    const dayItems = allRoutines.filter(item =>
                         item.daysOfWeek?.includes(dayIndex) || item.date === dateStr
-                    ).sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
+                    ).sort((a, b) => getTimelineMinute(a.time) - getTimelineMinute(b.time));
                     const circleSize = isSelected ? circleSel : circleOther;
                     const lineColor = isSelected
                         ? `${theme.colors.primary}35`
@@ -447,47 +514,61 @@ const TimelinePage = memo<{
                                 }} />
                             </View>
 
-                            {/* Pills — width = circleSize, height grows with duration, overlap is natural */}
-                            {dayItems.map(item => {
-                                const topY = timeToY(item.time, cumY);
-                                const duration = item.duration ?? DEFAULT_DURATION;
-                                const pillHeight = durationToPillHeight(item.time, duration, cumY, circleSize);
-                                const taskColor = TASK_COLORS[item.imageKey ?? ''] ?? theme.colors.primary;
+                            {/* Clustering overlapping items to visually merge them into chained capsules */}
+                            {(() => {
+                                const clusters: { items: RoutineItem[]; startMins: number; endMins: number }[] = [];
+                                dayItems.forEach(item => {
+                                    const start = getTimelineMinute(item.time);
+                                    const dur = item.duration ?? DEFAULT_DURATION;
+                                    const end = start + dur;
 
-                                return (
-                                    <View
-                                        key={item.id}
-                                        style={{
-                                            position: 'absolute',
-                                            top: topY,
-                                            left: 0,
-                                            right: 0,
-                                            alignItems: 'center',
-                                        }}
-                                    >
-                                        <TaskPill
-                                            item={item}
-                                            size={circleSize}
-                                            pillHeight={pillHeight}
-                                            isSelected={isSelected}
-                                            theme={theme}
-                                        />
-                                        {/* Time label below icon on selected column */}
-                                        {isSelected && (
-                                            <Text style={{
-                                                fontSize: 9,
-                                                fontFamily: theme.fonts.medium,
-                                                color: `${taskColor}AA`,
-                                                marginTop: 3,
-                                                letterSpacing: 0.3,
-                                                textAlign: 'center',
-                                            }}>
-                                                {item.time}
-                                            </Text>
-                                        )}
-                                    </View>
-                                );
-                            })}
+                                    if (clusters.length === 0) {
+                                        clusters.push({ items: [item], startMins: start, endMins: end });
+                                    } else {
+                                        const lastCluster = clusters[clusters.length - 1];
+                                        if (start <= lastCluster.endMins) {
+                                            lastCluster.items.push(item);
+                                            lastCluster.endMins = Math.max(lastCluster.endMins, end);
+                                        } else {
+                                            clusters.push({ items: [item], startMins: start, endMins: end });
+                                        }
+                                    }
+                                });
+
+                                const getCumY = (m: number) => {
+                                    if (m <= 0) return cumY[0];
+                                    if (m >= TOTAL_MINUTES) return cumY[TOTAL_MINUTES];
+                                    return cumY[Math.floor(m)] || 0;
+                                };
+
+                                return clusters.map((cluster, idx) => {
+                                    const topY = getCumY(cluster.startMins);
+                                    const bottomY = getCumY(cluster.endMins);
+                                    const totalHeight = Math.max(circleSize, bottomY - topY);
+
+                                    return (
+                                        <View
+                                            key={`cluster-${idx}`}
+                                            style={{
+                                                position: 'absolute',
+                                                top: topY,
+                                                left: 0,
+                                                right: 0,
+                                                alignItems: 'center',
+                                            }}
+                                        >
+                                            <MergedTaskChain
+                                                cluster={cluster.items}
+                                                size={circleSize}
+                                                isSelected={isSelected}
+                                                theme={theme}
+                                                cumY={cumY}
+                                                TOTAL_MINUTES={TOTAL_MINUTES}
+                                            />
+                                        </View>
+                                    );
+                                });
+                            })()}
                         </View>
                     );
                 })}
@@ -566,9 +647,9 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
     const currentDayItems = useMemo(() => {
         const dow = selectedDate.getDay();
         const dateStr = formatDateKey(selectedDate);
-        return routineItems.filter(item => 
+        return routineItems.filter(item =>
             item.daysOfWeek?.includes(dow) || item.date === dateStr
-        ).sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
+        ).sort((a, b) => getTimelineMinute(a.time) - getTimelineMinute(b.time));
     }, [routineItems, selectedDate]);
     const firstItem = currentDayItems[0] ?? null;
 
@@ -583,13 +664,13 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
     const todayKey = formatDateKey(today);
 
     // Number of pages around today (e.g. 260 weeks = 5 years)
-    const RANGE_PAGES = 260; 
+    const RANGE_PAGES = 260;
 
     // Compute the pages and initial index
     const { pages, initialPageIndex } = useMemo(() => {
         const p: Date[][] = [];
         let todayIdx = 0;
-        
+
         for (let i = -RANGE_PAGES; i <= RANGE_PAGES; i++) {
             const anchor = new Date(today);
             if (is7Day) {
@@ -870,7 +951,7 @@ const getStyles = (theme: Theme) =>
         dayHeaderRow: {
             flexDirection: 'row',
             alignItems: 'center',
-            paddingRight: 0, 
+            paddingRight: 0,
             paddingBottom: 12,
             paddingTop: 4,
             borderBottomWidth: 0,
