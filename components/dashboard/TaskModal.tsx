@@ -477,12 +477,19 @@ const TaskModal: React.FC<TaskModalProps> = ({
 
             </ScrollView>
 
-            <View style={[styles.bottomBar, { backgroundColor: theme.colors.background, paddingBottom: Math.max(insets.bottom, 20) }]}>
-              <TouchableOpacity style={styles.deletePillBtn} onPress={() => { onDelete(); closeWithoutSave(); }} activeOpacity={0.7}>
-                <Ionicons name="trash-outline" size={18} color="#FF453A" style={{ marginRight: 6 }} />
-                <Text style={styles.deleteText}>Delete Task</Text>
-              </TouchableOpacity>
-            </View>
+            {(() => {
+              const taskName = editedTask?.task?.toLowerCase().trim();
+              const isProtected = taskName === "wake up" || taskName === "sleep";
+              if (isProtected) return null;
+              return (
+                <View style={[styles.bottomBar, { backgroundColor: theme.colors.background, paddingBottom: Math.max(insets.bottom, 20) }]}>
+                  <TouchableOpacity style={styles.deletePillBtn} onPress={() => { onDelete(); closeWithoutSave(); }} activeOpacity={0.7}>
+                    <Ionicons name="trash-outline" size={18} color="#FF453A" style={{ marginRight: 6 }} />
+                    <Text style={styles.deleteText}>Delete Task</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })()}
           </View>
 
           {/* Time Picker Overlay */}

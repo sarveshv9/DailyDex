@@ -333,6 +333,8 @@ export default function ProfileScreen() {
         await AsyncStorage.removeItem("@zen_profile_setup_complete");
         // Also clear profile so it resets to defaults
         await AsyncStorage.removeItem("@zen_user_profile");
+        // Clear routine data to completely reset the timeline
+        await AsyncStorage.removeItem("@zen_routine");
         setProfileCreated(false);
       } catch (e) {
         console.error("Failed to logout", e);
@@ -363,6 +365,52 @@ export default function ProfileScreen() {
       console.error("Failed to save profile flag", e);
     }
     console.log("Profile Saved:", user);
+  };
+
+  const handleResetTasks = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    Alert.alert("Reset All Tasks", "Are you sure you want to reset all tasks? This action cannot be undone.", [
+      { text: "Cancel", style: "cancel" },
+      { 
+        text: "Yes, Reset", 
+        style: "destructive", 
+        onPress: () => {
+          // Second step confirmation
+          setTimeout(() => {
+            Alert.alert(
+              "Final Confirmation", 
+              "This is your last chance. Do you really want to permanently delete all your tasks?", 
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Reset Everything",
+                  style: "destructive",
+                  onPress: async () => {
+                    try {
+                      const data = await AsyncStorage.getItem("@zen_routine");
+                      if (data) {
+                        const routines: RoutineItem[] = JSON.parse(data);
+                        // Preserve Wake Up and Sleep tasks
+                        const preserved = routines.filter(r => {
+                          const taskLo = r.task?.toLowerCase().trim();
+                          return taskLo === "wake up" || taskLo === "sleep";
+                        });
+                        await AsyncStorage.setItem("@zen_routine", JSON.stringify(preserved));
+                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        Alert.alert("Success", "All tasks have been reset except Wake Up and Sleep.");
+                      }
+                    } catch (e) {
+                      console.error("Failed to reset tasks", e);
+                      Alert.alert("Error", "Could not reset tasks.");
+                    }
+                  }
+                }
+              ]
+            );
+          }, 500);
+        } 
+      },
+    ]);
   };
 
   /* -------------------- Render -------------------- */
@@ -479,6 +527,7 @@ export default function ProfileScreen() {
             isMusicExpanded={isMusicExpanded}
             setIsMusicExpanded={setIsMusicExpanded}
             userXp={userStats?.xp || 0}
+            handleResetTasks={handleResetTasks}
           />
         </View>
 

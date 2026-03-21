@@ -568,12 +568,13 @@ const getStyles = (theme: Theme) =>
         },
         mainTimePicker: {
             width: "80%",
-            height: 80,
+            height: 180,
             backgroundColor: `${theme.colors.primary}05`,
             borderRadius: 20,
             borderWidth: 2,
             borderColor: `${theme.colors.primary}10`,
             overflow: "hidden",
+            justifyContent: "center",
         },
         gridContainer: {
             flexDirection: "row",

@@ -66,6 +66,7 @@ interface SettingsSectionProps {
   isMusicExpanded: boolean;
   setIsMusicExpanded: (value: boolean) => void;
   userXp?: number; // Added to pass to Modal
+  handleResetTasks: () => void;
 }
 
 interface SettingItemProps {
@@ -75,6 +76,7 @@ interface SettingItemProps {
   onPress: () => void;
   valueText?: string;
   isLast?: boolean;
+  isDestructive?: boolean;
 }
 
 interface ExpandableSettingProps {
@@ -114,11 +116,12 @@ const SettingItem = React.memo<SettingItemProps>(({
   onPress,
   valueText,
   isLast = false,
+  isDestructive = false,
 }) => {
   const styles = useMemo(() => makeStyles(theme), [theme]);
-  const primaryColor = theme.colors.primary;
+  const primaryColor = isDestructive ? '#FF453A' : theme.colors.primary;
   const secondaryColor = theme.colors.secondary;
-  const textColor = theme.colors.text;
+  const textColor = isDestructive ? '#FF453A' : theme.colors.text;
   const cardColor = theme.colors.card;
 
   const handlePress = useCallback(() => {
@@ -459,6 +462,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
   isMusicExpanded,
   setIsMusicExpanded,
   userXp = 0,
+  handleResetTasks,
 }) => {
   // Calculate notification count
   const notificationCount = useMemo(() => {
@@ -520,7 +524,15 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
           iconName="cloud-upload-outline"
           text="Backup & Export"
           onPress={handleBackupPress}
+        />
+
+        <SettingItem
+          theme={theme}
+          iconName="warning-outline"
+          text="Reset All Tasks"
+          onPress={handleResetTasks}
           isLast
+          isDestructive
         />
       </View>
     </View>

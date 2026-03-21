@@ -1,17 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { memo } from 'react';
-import { Platform, View } from 'react-native';
+import { Platform, View, Pressable } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { Theme } from '../../constants/shared';
 import { RoutineItem, timeToMinutes } from '../../utils/utils';
 
-const START_HOUR = 6;
-
-const getTimelineMinute = (timeStr: string) => {
+export const getTimelineMinute = (timeStr: string, startHour: number) => {
     let m = timeToMinutes(timeStr);
-    if (m < START_HOUR * 60) m += 24 * 60;
-    return m - START_HOUR * 60;
+    if (m < startHour * 60) m += 24 * 60;
+    return m - startHour * 60;
 };
 
 const DURATION_DEFAULT = 30;
@@ -56,14 +54,16 @@ export const TaskPill = memo<{
     pillHeight: number;
     isSelected: boolean;
     theme: Theme;
-}>(({ item, size, pillHeight, isSelected, theme }) => {
+    onPressTask?: (item: RoutineItem) => void;
+}>(({ item, size, pillHeight, isSelected, theme, onPressTask }) => {
     const borderRadius = size / 2;
     const iconSize = Math.round(size * 0.42);
     const taskColor = TASK_COLORS[item.imageKey ?? ''] ?? theme.colors.primary;
     const accentBarHeight = Math.min(pillHeight * 0.28, size * 0.6);
 
     return (
-        <View
+        <Pressable
+            onPress={() => onPressTask?.(item)}
             style={[
                 {
                     width: size,
@@ -102,7 +102,7 @@ export const TaskPill = memo<{
                     color={isSelected ? taskColor : `${theme.colors.textSecondary}88`}
                 />
             </View>
-        </View>
+        </Pressable>
     );
 });
 
@@ -126,12 +126,14 @@ export const MergedTaskChain = memo<{
     theme: Theme;
     cumY: number[];
     TOTAL_MINUTES: number;
-}>(({ cluster, size, isSelected, theme, cumY, TOTAL_MINUTES }) => {
+    startHour: number;
+    onPressTask?: (item: RoutineItem) => void;
+}>(({ cluster, size, isSelected, theme, cumY, TOTAL_MINUTES, startHour, onPressTask }) => {
 
     const clampSingle = (m: number) => Math.max(0, Math.min(TOTAL_MINUTES, Math.floor(m)));
 
     const durationToHeight = (timeStr: string, durationMins: number): number => {
-        const m1 = getTimelineMinute(timeStr);
+        const m1 = getTimelineMinute(timeStr, startHour);
         const m2 = m1 + durationMins;
         const y1 = cumY[clampSingle(m1)] || 0;
         const y2 = cumY[clampSingle(m2)] || 0;
@@ -143,12 +145,12 @@ export const MergedTaskChain = memo<{
         const item = cluster[0];
         const pillHeight = durationToHeight(item.time, item.duration ?? DURATION_DEFAULT);
         return (
-            <TaskPill item={item} size={size} pillHeight={pillHeight} isSelected={isSelected} theme={theme} />
+            <TaskPill item={item} size={size} pillHeight={pillHeight} isSelected={isSelected} theme={theme} onPressTask={onPressTask} />
         );
     }
 
     const clamp = (m: number) => Math.max(0, Math.min(TOTAL_MINUTES, Math.floor(m)));
-    const itemMinute = (item: RoutineItem) => getTimelineMinute(item.time);
+    const itemMinute = (item: RoutineItem) => getTimelineMinute(item.time, startHour);
     const itemEndMinute = (item: RoutineItem) => itemMinute(item) + (item.duration ?? DURATION_DEFAULT);
 
     // Cluster's real timeline slot: first start → last end
@@ -210,7 +212,7 @@ export const MergedTaskChain = memo<{
                     key={item.id}
                     style={{ position: 'absolute', top, left: 0, right: 0, alignItems: 'center', zIndex: i + 1 }}
                 >
-                    <TaskPill item={item} size={size} pillHeight={height} isSelected={isSelected} theme={theme} />
+                    <TaskPill item={item} size={size} pillHeight={height} isSelected={isSelected} theme={theme} onPressTask={onPressTask} />
                 </View>
             ))}
 

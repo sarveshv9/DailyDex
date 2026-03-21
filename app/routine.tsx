@@ -518,6 +518,8 @@ export default function RoutineScreen() {
   const handleDelete = useCallback(() => {
     if (!selectedTask) return;
     const taskToDelete = selectedTask;
+    const taskNameLower = taskToDelete.task?.toLowerCase().trim();
+    if (taskNameLower === "wake up" || taskNameLower === "sleep") return;
 
     if (Platform.OS === 'web') {
       if (window.confirm(`Transfer ${taskToDelete.task} away?`)) {
@@ -588,6 +590,7 @@ export default function RoutineScreen() {
           onPressPeek={toggleList}
           scrollY={scrollY}
           listAnim={listAnim}
+          onPressTask={(item) => openModal(item, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)}
         />
       </View>
 

@@ -45,9 +45,10 @@ export const InlineTimePicker: React.FC<InlineTimePickerProps> = ({ value, onCha
             <DateTimePicker
                 value={currentDate}
                 mode="time"
-                display="compact"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                 onChange={handleChange}
                 textColor={theme.colors.text}
+                style={{ height: 160, width: "100%" }}
             />
         </View>
     );

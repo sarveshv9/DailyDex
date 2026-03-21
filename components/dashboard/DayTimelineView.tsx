@@ -24,11 +24,6 @@ import { MergedTaskChain } from './MergedTaskChain';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-/** Visible time window shown in the timeline */
-const START_HOUR = 6;
-const END_HOUR = 26; // up to 2AM
-const TOTAL_MINUTES = (END_HOUR - START_HOUR) * 60;
-
 /** Width reserved for the time-label column on the left */
 const TIME_AXIS_WIDTH = 44;
 
@@ -55,31 +50,6 @@ const TASK_COLORS: Record<string, string> = {
     prepare_sleep: '#5A5A7A',
     breathe: '#6BCB77',
 };
-
-/** Hour marks to render in the time axis */
-const TIME_LABELS: { hour: number; num: string; ampm: string }[] = [
-    { hour: 6, num: '6', ampm: 'AM' },
-    { hour: 7, num: '7', ampm: 'AM' },
-    { hour: 8, num: '8', ampm: 'AM' },
-    { hour: 9, num: '9', ampm: 'AM' },
-    { hour: 10, num: '10', ampm: 'AM' },
-    { hour: 11, num: '11', ampm: 'AM' },
-    { hour: 12, num: '12', ampm: 'PM' },
-    { hour: 13, num: '1', ampm: 'PM' },
-    { hour: 14, num: '2', ampm: 'PM' },
-    { hour: 15, num: '3', ampm: 'PM' },
-    { hour: 16, num: '4', ampm: 'PM' },
-    { hour: 17, num: '5', ampm: 'PM' },
-    { hour: 18, num: '6', ampm: 'PM' },
-    { hour: 19, num: '7', ampm: 'PM' },
-    { hour: 20, num: '8', ampm: 'PM' },
-    { hour: 21, num: '9', ampm: 'PM' },
-    { hour: 22, num: '10', ampm: 'PM' },
-    { hour: 23, num: '11', ampm: 'PM' },
-    { hour: 24, num: '12', ampm: 'AM' },
-    { hour: 25, num: '1', ampm: 'AM' },
-    { hour: 26, num: '2', ampm: 'AM' },
-];
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -114,35 +84,10 @@ const getWeekDates = (date: Date): Date[] => {
 /** Default task duration in minutes when item.duration is absent */
 const DEFAULT_DURATION = 30;
 
-const getTimelineMinute = (timeStr: string) => {
+export const getTimelineMinute = (timeStr: string, startHour: number) => {
     let m = timeToMinutes(timeStr);
-    if (m < START_HOUR * 60) m += 24 * 60;
-    return m - (START_HOUR * 60);
-};
-
-const timeToY = (timeStr: string, cumulativeY: number[]): number => {
-    const m = getTimelineMinute(timeStr);
-    if (m <= 0) return cumulativeY[0];
-    if (m >= TOTAL_MINUTES) return cumulativeY[TOTAL_MINUTES];
-    return cumulativeY[Math.floor(m)] || 0;
-};
-
-const durationToPillHeight = (
-    timeStr: string,
-    durationMinutes: number,
-    cumulativeY: number[],
-    circleSize: number,
-): number => {
-    const m1 = getTimelineMinute(timeStr);
-    const m2 = m1 + durationMinutes;
-
-    const idx1 = Math.max(0, Math.min(TOTAL_MINUTES, Math.floor(m1)));
-    const idx2 = Math.max(0, Math.min(TOTAL_MINUTES, Math.floor(m2)));
-
-    const y1 = cumulativeY[idx1] || 0;
-    const y2 = cumulativeY[idx2] || 0;
-
-    return Math.max(circleSize, y2 - y1);
+    if (m < startHour * 60) m += 24 * 60;
+    return m - (startHour * 60);
 };
 
 /* ─────────────────────────────── Icon map ───────────────────────────── */
@@ -172,6 +117,7 @@ interface DayTimelineViewProps {
     onPressPeek?: () => void;
     scrollY?: Animated.Value;
     listAnim?: Animated.Value;
+    onPressTask?: (item: RoutineItem) => void;
 }
 
 /* ───────────────────────────── TimeAxisItem ─────────────────────────── */
@@ -218,17 +164,22 @@ const TimelinePage = memo<{
     theme: Theme;
     styles: any;
     handleSelectDate: (date: Date) => void;
+    startHour: number;
+    totalMinutes: number;
+    timeLabels: { hour: number; num: string; ampm: string }[];
+    onPressTask?: (item: RoutineItem) => void;
 }>(({
     pageDates, allRoutines, selectedKey, todayKey,
-    circleSel, circleOther, is7Day, COL_WIDTH, theme, styles, handleSelectDate
+    circleSel, circleOther, is7Day, COL_WIDTH, theme, styles, handleSelectDate,
+    startHour, totalMinutes, timeLabels, onPressTask
 }) => {
     const { cumY, dynamicBodyHeight, timeAxisPositions } = useMemo(() => {
         // Occupied-minute map (union across all visible days)
-        const isOccupied = new Array(TOTAL_MINUTES).fill(false);
+        const isOccupied = new Array(totalMinutes).fill(false);
 
         // Per-column max tasks per hour — only expand when a SINGLE column
         // genuinely has ≥2 tasks in the same hour
-        const TOTAL_HOURS = END_HOUR - START_HOUR;
+        const TOTAL_HOURS = totalMinutes / 60;
         const maxTasksPerHour = new Array(TOTAL_HOURS).fill(0);
 
         pageDates.forEach(date => {
@@ -242,18 +193,18 @@ const TimelinePage = memo<{
             const colTasksPerHour = new Array(TOTAL_HOURS).fill(0);
 
             items.forEach(item => {
-                const itemStart = getTimelineMinute(item.time);
+                const itemStart = getTimelineMinute(item.time, startHour);
                 const duration = item.duration ?? DEFAULT_DURATION;
                 const itemEnd = itemStart + duration;
 
                 for (let m = itemStart; m < itemEnd; m++) {
-                    if (m >= 0 && m < TOTAL_MINUTES) isOccupied[m] = true;
+                    if (m >= 0 && m < totalMinutes) isOccupied[m] = true;
                 }
 
                 // Which hour slots does this task touch?
-                const startHour = Math.floor(itemStart / 60);
-                const endHour = Math.floor((itemEnd - 1) / 60);
-                for (let h = startHour; h <= endHour; h++) {
+                const startHourIdx = Math.floor(itemStart / 60);
+                const endHourIdx = Math.floor((itemEnd - 1) / 60);
+                for (let h = startHourIdx; h <= endHourIdx; h++) {
                     if (h >= 0 && h < TOTAL_HOURS) colTasksPerHour[h]++;
                 }
             });
@@ -265,12 +216,12 @@ const TimelinePage = memo<{
         });
 
         // ── First pass: build cumulative Y with expanded/compact rates ──
-        const cY = new Array(TOTAL_MINUTES + 1).fill(0);
+        const cY = new Array(totalMinutes + 1).fill(0);
         let currentY = 0;
         const expandedMult = is7Day ? 0.9 : 1.5;
         const compactMult = is7Day ? 0.35 : 0.5;
 
-        for (let i = 0; i < TOTAL_MINUTES; i++) {
+        for (let i = 0; i < totalMinutes; i++) {
             cY[i] = currentY;
 
             const hourIdx = Math.floor(i / 60);
@@ -284,7 +235,7 @@ const TimelinePage = memo<{
                 currentY += compactMult;
             }
         }
-        cY[TOTAL_MINUTES] = currentY;
+        cY[totalMinutes] = currentY;
 
         // ── Second pass: two-layer minimum-height guarantee ──
         const selCircle = is7Day ? 28 : CIRCLE_SEL;
@@ -292,8 +243,8 @@ const TimelinePage = memo<{
 
         // Helper to inflate a minute range [rangeStart..rangeEnd] in cY
         const inflateRange = (rangeStart: number, rangeEnd: number, requiredSpan: number) => {
-            const s = Math.max(0, Math.min(TOTAL_MINUTES, Math.floor(rangeStart)));
-            const e = Math.max(0, Math.min(TOTAL_MINUTES, Math.floor(rangeEnd)));
+            const s = Math.max(0, Math.min(totalMinutes, Math.floor(rangeStart)));
+            const e = Math.max(0, Math.min(totalMinutes, Math.floor(rangeEnd)));
             const yStart = cY[s];
             const yEnd = cY[e];
             const currentSpan = yEnd - yStart;
@@ -304,7 +255,7 @@ const TimelinePage = memo<{
             for (let m = s; m <= e; m++) {
                 cY[m] = yStart + (cY[m] - yStart) * scale;
             }
-            for (let m = e + 1; m <= TOTAL_MINUTES; m++) {
+            for (let m = e + 1; m <= totalMinutes; m++) {
                 cY[m] += delta;
             }
         };
@@ -320,7 +271,7 @@ const TimelinePage = memo<{
             allRoutines
                 .filter(item => item.daysOfWeek?.includes(di) || item.date === dateStr)
                 .forEach(item => {
-                    const start = getTimelineMinute(item.time);
+                    const start = getTimelineMinute(item.time, startHour);
                     const dur = item.duration ?? DEFAULT_DURATION;
                     allTasks.push({ startMin: start, endMin: start + dur });
                 });
@@ -347,12 +298,12 @@ const TimelinePage = memo<{
             const dateStr = formatDateKey(date);
             const items = allRoutines
                 .filter(item => item.daysOfWeek?.includes(di) || item.date === dateStr)
-                .sort((a, b) => getTimelineMinute(a.time) - getTimelineMinute(b.time));
+                .sort((a, b) => getTimelineMinute(a.time, startHour) - getTimelineMinute(b.time, startHour));
 
             type Cluster = { count: number; startMin: number; endMin: number };
             const colClusters: Cluster[] = [];
             items.forEach(item => {
-                const start = getTimelineMinute(item.time);
+                const start = getTimelineMinute(item.time, startHour);
                 const dur = item.duration ?? DEFAULT_DURATION;
                 const end = start + dur;
                 if (colClusters.length === 0) {
@@ -374,14 +325,14 @@ const TimelinePage = memo<{
                 .forEach(c => inflateRange(c.startMin, c.endMin, c.count * minPillPx));
         });
 
-        const positions = TIME_LABELS.map(tl => {
-            const m = (tl.hour - START_HOUR) * 60;
-            const topY = cY[Math.max(0, Math.min(TOTAL_MINUTES, m))] || 0;
+        const positions = timeLabels.map(tl => {
+            const m = (tl.hour - startHour) * 60;
+            const topY = cY[Math.max(0, Math.min(totalMinutes, m))] || 0;
             return { ...tl, topY };
         });
 
-        return { cumY: cY, dynamicBodyHeight: cY[TOTAL_MINUTES], timeAxisPositions: positions };
-    }, [pageDates, allRoutines, is7Day]);
+        return { cumY: cY, dynamicBodyHeight: cY[totalMinutes], timeAxisPositions: positions };
+    }, [pageDates, allRoutines, is7Day, startHour, totalMinutes, timeLabels]);
 
     return (
         <ScrollView
@@ -485,7 +436,7 @@ const TimelinePage = memo<{
                     const isSelected = key === selectedKey;
                     const dayItems = allRoutines.filter(item =>
                         item.daysOfWeek?.includes(dayIndex) || item.date === dateStr
-                    ).sort((a, b) => getTimelineMinute(a.time) - getTimelineMinute(b.time));
+                    ).sort((a, b) => getTimelineMinute(a.time, startHour) - getTimelineMinute(b.time, startHour));
                     const circleSize = isSelected ? circleSel : circleOther;
                     const lineColor = isSelected
                         ? `${theme.colors.primary}35`
@@ -518,7 +469,7 @@ const TimelinePage = memo<{
                             {(() => {
                                 const clusters: { items: RoutineItem[]; startMins: number; endMins: number }[] = [];
                                 dayItems.forEach(item => {
-                                    const start = getTimelineMinute(item.time);
+                                    const start = getTimelineMinute(item.time, startHour);
                                     const dur = item.duration ?? DEFAULT_DURATION;
                                     const end = start + dur;
 
@@ -537,7 +488,7 @@ const TimelinePage = memo<{
 
                                 const getCumY = (m: number) => {
                                     if (m <= 0) return cumY[0];
-                                    if (m >= TOTAL_MINUTES) return cumY[TOTAL_MINUTES];
+                                    if (m >= totalMinutes) return cumY[totalMinutes];
                                     return cumY[Math.floor(m)] || 0;
                                 };
 
@@ -563,7 +514,9 @@ const TimelinePage = memo<{
                                                 isSelected={isSelected}
                                                 theme={theme}
                                                 cumY={cumY}
-                                                TOTAL_MINUTES={TOTAL_MINUTES}
+                                                TOTAL_MINUTES={totalMinutes}
+                                                startHour={startHour}
+                                                onPressTask={onPressTask}
                                             />
                                         </View>
                                     );
@@ -586,6 +539,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
     onPressPeek,
     scrollY,
     listAnim,
+    onPressTask,
 }) => {
     const { theme, isDarkMode } = useTheme();
     const styles = useMemo(() => getStyles(theme), [theme]);
@@ -641,6 +595,44 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
         onSelectDate(date);
     }, [onSelectDate]);
 
+    /* ── Dynamic Bounds based on Wake Up / Sleep tasks ── */
+    const { startHour, endHour, totalMinutes, timeLabels } = useMemo(() => {
+        let minH = 6;
+        let maxH = 26;
+
+        const wakeUps = routineItems.filter(i => i.task?.toLowerCase().trim() === 'wake up' || i.imageKey === 'wakeup');
+        const sleeps = routineItems.filter(i => i.task?.toLowerCase().trim() === 'sleep' || i.imageKey === 'sleep');
+
+        if (wakeUps.length > 0) {
+            minH = Math.min(...wakeUps.map(i => Math.floor(timeToMinutes(i.time) / 60)));
+        }
+
+        if (sleeps.length > 0) {
+            maxH = Math.max(...sleeps.map(i => {
+                let m = timeToMinutes(i.time);
+                if (m < minH * 60) m += 24 * 60;
+                const dur = i.duration ?? DEFAULT_DURATION;
+                return Math.ceil((m + dur) / 60);
+            }));
+        } else if (wakeUps.length > 0) {
+            maxH = minH + 16;
+        }
+
+        if (maxH <= minH) maxH = minH + 12;
+
+        const tMins = (maxH - minH) * 60;
+        const labels = [];
+        for (let h = minH; h <= maxH; h++) {
+            const displayH = h % 24;
+            const ampm = displayH < 12 ? 'AM' : 'PM';
+            let num = displayH % 12;
+            if (num === 0) num = 12;
+            labels.push({ hour: h, num: num.toString(), ampm });
+        }
+
+        return { startHour: minH, endHour: maxH, totalMinutes: tMins, timeLabels: labels };
+    }, [routineItems]);
+
     /* ── Items grouped by day-of-week ── */
 
 
@@ -649,8 +641,8 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
         const dateStr = formatDateKey(selectedDate);
         return routineItems.filter(item =>
             item.daysOfWeek?.includes(dow) || item.date === dateStr
-        ).sort((a, b) => getTimelineMinute(a.time) - getTimelineMinute(b.time));
-    }, [routineItems, selectedDate]);
+        ).sort((a, b) => getTimelineMinute(a.time, startHour) - getTimelineMinute(b.time, startHour));
+    }, [routineItems, selectedDate, startHour]);
     const firstItem = currentDayItems[0] ?? null;
 
     /* ── Date helpers ── */
@@ -707,8 +699,12 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
             theme={theme}
             styles={styles}
             handleSelectDate={handleSelectDate}
+            startHour={startHour}
+            totalMinutes={totalMinutes}
+            timeLabels={timeLabels}
+            onPressTask={onPressTask}
         />
-    ), [routineItems, selectedKey, todayKey, circleSel, circleOther, is7Day, COL_WIDTH, theme, styles, handleSelectDate]);
+    ), [routineItems, selectedKey, todayKey, circleSel, circleOther, is7Day, COL_WIDTH, theme, styles, handleSelectDate, startHour, totalMinutes, timeLabels, onPressTask]);
 
     // Split header date into weekday + rest
     const dateHeader = selectedDate.toLocaleDateString('en-US', {
