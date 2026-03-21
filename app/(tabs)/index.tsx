@@ -502,6 +502,7 @@ function HomeScreen() {
   const [isReady, setIsReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [routines, setRoutines] = useState<RoutineItem[]>([]);
+  const [todoTasks, setTodoTasks] = useState<any[]>([]);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
 
   useFocusEffect(
@@ -522,6 +523,11 @@ function HomeScreen() {
             setIsReady(false);
           }
 
+          const todoData = await AsyncStorage.getItem("@todo_tasks");
+          if (todoData) {
+            setTodoTasks(JSON.parse(todoData));
+          }
+          
           const statsData = await loadStats();
           setUserStats(statsData);
         } catch (e) {
@@ -559,14 +565,21 @@ function HomeScreen() {
     });
   }, [routines, currentTime]);
 
-  // Daily progress: tasks done today vs total today routines
+  // Daily progress: tasks done today vs total intentions
   const todayTasksDone = useMemo(() => {
     const todayStr = currentTime.toISOString().split("T")[0];
     return userStats?.history?.[todayStr]?.tasks || 0;
   }, [userStats, currentTime]);
 
-  const dailyProgressFraction = todayRoutines.length > 0
-    ? todayTasksDone / todayRoutines.length
+  // Include priority todos in the daily progress denominator
+  const todayPriorityTodosCount = useMemo(() => {
+    return todoTasks.filter((t) => t.category === "today").length;
+  }, [todoTasks]);
+
+  const totalIntentions = todayRoutines.length + todayPriorityTodosCount;
+
+  const dailyProgressFraction = totalIntentions > 0
+    ? todayTasksDone / totalIntentions
     : 0;
 
   const styles = useMemo(() => getStyles(theme), [theme]);

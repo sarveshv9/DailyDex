@@ -601,8 +601,12 @@ export default function TodoScreen() {
       prev.map((t) => {
         if (t.id === id) {
           const newlyCompleted = !t.completed;
-          import("../../utils/stats").then(({ addTaskCompleted }) => {
-            addTaskCompleted();
+          import("../../utils/stats").then(({ addTaskCompleted, removeTaskCompleted }) => {
+            if (newlyCompleted) {
+              addTaskCompleted();
+            } else {
+              removeTaskCompleted();
+            }
           });
           return { ...t, completed: newlyCompleted };
         }
@@ -622,14 +626,34 @@ export default function TodoScreen() {
         },
         (buttonIndex) => {
           if (buttonIndex === 1) {
-            setTasks((prev) => prev.filter((t) => t.id !== id));
+            setTasks((prev) => {
+              const taskToDelete = prev.find((t) => t.id === id);
+              if (taskToDelete?.completed) {
+                import("../../utils/stats").then(({ removeTaskCompleted }) =>
+                  removeTaskCompleted(1)
+                );
+              }
+              return prev.filter((t) => t.id !== id);
+            });
           }
         }
       );
     } else {
       Alert.alert('Delete Task?', 'Are you sure you want to delete this task?', [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => setTasks((prev) => prev.filter((t) => t.id !== id)) }
+        { 
+          text: 'Delete', 
+          style: 'destructive', 
+          onPress: () => setTasks((prev) => {
+            const taskToDelete = prev.find((t) => t.id === id);
+            if (taskToDelete?.completed) {
+              import("../../utils/stats").then(({ removeTaskCompleted }) =>
+                removeTaskCompleted(1)
+              );
+            }
+            return prev.filter((t) => t.id !== id);
+          }) 
+        }
       ]);
     }
   };
@@ -658,6 +682,12 @@ export default function TodoScreen() {
   const performClearCompleted = () => {
     // Use functional update and immediately persist
     setTasks((prev) => {
+      const completedTasks = prev.filter((t) => t.completed);
+      if (completedTasks.length > 0) {
+        import("../../utils/stats").then(({ removeTaskCompleted }) =>
+          removeTaskCompleted(completedTasks.length)
+        );
+      }
       const next = prev.filter((t) => !t.completed);
       // persist immediately to avoid races
       saveTasks(next).catch((e) => console.error("saveTasks:", e));

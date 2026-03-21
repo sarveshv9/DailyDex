@@ -132,3 +132,21 @@ export const addTaskCompleted = async (): Promise<UserStats> => {
     await saveStats(stats);
     return stats;
 };
+export const removeTaskCompleted = async (count: number = 1): Promise<UserStats> => {
+    const stats = await loadStats();
+    const today = getTodayString();
+
+    if (stats.history[today] && stats.history[today].tasks > 0) {
+        stats.history[today].tasks = Math.max(0, stats.history[today].tasks - count);
+    }
+    
+    if (stats.tasksCompleted > 0) {
+        stats.tasksCompleted = Math.max(0, stats.tasksCompleted - count);
+    }
+
+    // Deduct XP = 50 per task (but keep >= 0)
+    stats.xp = Math.max(0, stats.xp - (50 * count));
+
+    await saveStats(stats);
+    return stats;
+};
