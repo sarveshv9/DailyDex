@@ -291,7 +291,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
     let endM = endTotalMins % 60;
     const ampm = endH >= 12 ? 'PM' : 'AM';
     endH = endH % 12 || 12;
-    
+
     return `${startStr} - ${endH}:${String(endM).padStart(2, '0')} ${ampm}`;
   };
 
@@ -495,13 +495,13 @@ const TaskModal: React.FC<TaskModalProps> = ({
           {/* Time Picker Overlay */}
           {showTimePicker && (
             <View style={styles.pickerOverlay}>
-               <TimePickerSheet
-                  initialTime={editedTask.time || "1:00 AM"}
-                  initialDuration={editedTask.duration}
-                  onTimeChange={(time) => setEditedTask(prev => prev ? { ...prev, time } : null)}
-                  onDurationChange={(duration) => setEditedTask(prev => prev ? { ...prev, duration } : null)}
-                  onClose={() => setShowTimePicker(false)}
-               />
+              <TimePickerSheet
+                initialTime={editedTask.time || "1:00 AM"}
+                initialDuration={editedTask.duration}
+                onTimeChange={(time) => setEditedTask(prev => prev ? { ...prev, time } : null)}
+                onDurationChange={(duration) => setEditedTask(prev => prev ? { ...prev, duration } : null)}
+                onClose={() => setShowTimePicker(false)}
+              />
             </View>
           )}
 
@@ -539,8 +539,8 @@ const styles = StyleSheet.create({
   topActions: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   iconBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(0,0,0,0.25)', justifyContent: 'center', alignItems: 'center' },
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', marginTop: 10, position: 'relative' },
-  dashedLineContainer: { position: 'absolute', top: -200, bottom: '100%', left: 45, width: 2, alignItems: 'center', overflow: 'hidden' },
-  dashedLine: { height: 1000, width: 2, borderWidth: 1, borderColor: 'rgba(0,0,0,0.3)', borderStyle: 'dashed', borderRadius: 1 },
+  dashedLineContainer: { position: 'absolute', top: -200, bottom: '100%', left: 39, width: 4, alignItems: 'center', overflow: 'hidden' },
+  dashedLine: { height: 1000, width: 4, borderWidth: 2, borderColor: 'rgba(0,0,0,0.3)', borderStyle: 'dashed', borderRadius: 1 },
   iconPill: { width: 80, height: 154, borderRadius: 40, backgroundColor: '#4A4A4A', borderWidth: 3, borderColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', marginRight: 20, position: 'relative' },
   paletteBadge: { position: 'absolute', bottom: -6, left: -10, width: 34, height: 34, borderRadius: 17, backgroundColor: '#1F3C5E', justifyContent: 'center', alignItems: 'center', borderWidth: 2 },
   titleDetails: { flex: 1, justifyContent: 'center', paddingTop: 15 },

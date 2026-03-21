@@ -41,6 +41,7 @@ export default function FocusScreen() {
 
     // Local state for picking duration before starting
     const [selectedDuration, setSelectedDuration] = useState(25 * 60);
+    const [selectedMode, setSelectedMode] = useState<"Free" | "Pomodoro">("Free");
 
     const startNewTimer = () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -70,7 +71,9 @@ export default function FocusScreen() {
     // Determine what to show
     const showDurationPicker = !isCurrentTimer || (timer.timeLeft === 0 && !timer.isCompleted);
 
-    const displayTime = showDurationPicker ? selectedDuration : timer.timeLeft;
+    const displayTime = showDurationPicker 
+        ? (selectedMode === "Pomodoro" ? 25 * 60 : selectedDuration) 
+        : timer.timeLeft;
     const isActive = isCurrentTimer && timer.isActive;
     const isCompleted = isCurrentTimer && timer.isCompleted;
 
@@ -115,14 +118,10 @@ export default function FocusScreen() {
                         <View style={styles.nativeSegmentContainer}>
                             <SegmentedControl
                                 values={['Free', 'Pomodoro']}
-                                selectedIndex={timer.pomodoroMode ? 1 : 0}
+                                selectedIndex={selectedMode === "Pomodoro" ? 1 : 0}
                                 onChange={(event) => {
                                     Haptics.selectionAsync();
-                                    if (event.nativeEvent.selectedSegmentIndex === 0) {
-                                        timer.stopTimer(); // Free
-                                    } else {
-                                        timer.startPomodoro(paramTaskId, paramTaskName); // Pomodoro
-                                    }
+                                    setSelectedMode(event.nativeEvent.selectedSegmentIndex === 0 ? "Free" : "Pomodoro");
                                 }}
                                 tintColor={theme.colors.primary}
                                 fontStyle={{ fontFamily: theme.fonts.bold, color: theme.colors.secondary }}
@@ -130,7 +129,7 @@ export default function FocusScreen() {
                             />
                         </View>
 
-                        {!timer.pomodoroMode ? (
+                        {selectedMode === "Free" ? (
                             <>
                                 <Text style={styles.pickerTitle}>Select Duration</Text>
                                 <View style={styles.durationRow}>
@@ -163,17 +162,37 @@ export default function FocusScreen() {
                                 </Pressable>
                             </>
                         ) : (
-                            <View style={styles.pomodoroPreview}>
-                                <Text style={styles.pomodoroDesc}>
-                                    Classic 25/5/15 cycle.{"\n"}Focus 4 sessions for a long break.
-                                </Text>
+                            <>
+                                <Text style={styles.pickerTitle}>Pomodoro (25/5 Cycle)</Text>
+                                <View style={styles.durationRow}>
+                                    {DURATIONS.map((d) => {
+                                        const isPomoDefault = d.value === 25 * 60;
+                                        return (
+                                            <View
+                                                key={d.value}
+                                                style={[
+                                                    styles.durationChip,
+                                                    isPomoDefault && styles.durationChipActive,
+                                                    !isPomoDefault && { opacity: 0.3 }
+                                                ]}
+                                            >
+                                                <Text style={[styles.durationChipText, isPomoDefault && styles.durationChipTextActive]}>
+                                                    {d.label}
+                                                </Text>
+                                            </View>
+                                        );
+                                    })}
+                                </View>
                                 <Pressable
                                     style={({ pressed }) => [styles.startButton, pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] }]}
-                                    onPress={() => timer.startPomodoro(paramTaskId, paramTaskName)}
+                                    onPress={() => {
+                                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                                        timer.startPomodoro(paramTaskId, paramTaskName);
+                                    }}
                                 >
                                     <Text style={styles.startButtonText}>Begin Pomodoro</Text>
                                 </Pressable>
-                            </View>
+                            </>
                         )}
                     </View>
                 ) : (
@@ -456,58 +475,11 @@ const getStyles = (theme: Theme) =>
             fontSize: 18,
             color: theme.colors.white,
         },
-        /* Mode Selector */
-        modeSelector: {
-            flexDirection: "row",
-            backgroundColor: `${theme.colors.secondary}12`,
-            borderWidth: 1,
-            borderColor: theme.glass.borderColor,
-            borderRadius: 25,
-            padding: 4,
-            marginBottom: 24,
-            width: "100%",
-        },
-        modeBtn: {
-            flex: 1,
-            paddingVertical: 10,
-            alignItems: "center",
-            borderRadius: 21,
-        },
-        modeBtnActive: {
-            backgroundColor: theme.colors.white,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 4,
-            elevation: 2,
-        },
-        modeBtnText: {
-            fontFamily: theme.fonts.bold,
-            fontSize: 14,
-            color: theme.colors.secondary,
-        },
-        modeBtnTextActive: {
-            color: theme.colors.primary,
-        },
         nativeSegmentContainer: {
             width: "100%",
             marginBottom: 24,
         },
         /* Pomodoro UI */
-        pomodoroPreview: {
-            width: "100%",
-            alignItems: "center",
-            paddingBottom: 20,
-        },
-        pomodoroDesc: {
-            fontFamily: theme.fonts.medium,
-            fontSize: 15,
-            color: theme.colors.secondary,
-            textAlign: "center",
-            lineHeight: 22,
-            marginBottom: 30,
-            opacity: 0.8,
-        },
         phaseContainer: {
             alignItems: "center",
             marginBottom: 30,
