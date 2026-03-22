@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useRef } from "react";
+import { Pressable, StyleSheet, Text, View, ScrollView } from "react-native";
 import Animated, {
     useAnimatedStyle,
     useSharedValue,
@@ -17,12 +17,23 @@ type ActivityData = {
 type Props = {
     data: ActivityData[];
     theme: Theme;
+    timeframe: "week" | "month" | "year";
     metric: "tasks" | "focusMinutes";
     onToggleMetric: () => void;
 };
 
-export function ActivityChart({ data, theme, metric, onToggleMetric }: Props) {
+export function ActivityChart({ data, theme, timeframe, metric, onToggleMetric }: Props) {
     const isTasks = metric === "tasks";
+    const scrollViewRef = useRef<ScrollView>(null);
+
+    // Scroll to the end (right) when data changes, so we always see the most recent
+    useEffect(() => {
+        if (scrollViewRef.current) {
+            setTimeout(() => {
+                scrollViewRef.current?.scrollToEnd({ animated: true });
+            }, 100);
+        }
+    }, [data, timeframe]);
 
     const maxValue = Math.max(
         ...data.map((d) => (isTasks ? d.tasks : d.focusMinutes)),
@@ -33,7 +44,7 @@ export function ActivityChart({ data, theme, metric, onToggleMetric }: Props) {
         <View style={styles.container}>
             <View style={styles.header}>
                 <Text style={[styles.title, { color: theme.colors.primary }]}>
-                    Weekly Activity
+                    Activity Summary
                 </Text>
 
                 <Pressable
@@ -52,34 +63,44 @@ export function ActivityChart({ data, theme, metric, onToggleMetric }: Props) {
                 </Pressable>
             </View>
 
-            <View style={styles.chartArea}>
+            <ScrollView 
+                ref={scrollViewRef}
+                horizontal 
+                showsHorizontalScrollIndicator={false} 
+                style={styles.scrollContainer}
+                contentContainerStyle={[styles.chartArea, timeframe === 'week' && { flex: 1, justifyContent: "space-between" }]}
+            >
                 {data.map((day, idx) => {
                     const value = isTasks ? day.tasks : day.focusMinutes;
                     const heightPercent = (value / maxValue) * 100;
+                    
+                    // Compact columns for month to fit nicely
+                    const columnStyle = timeframe === 'month' ? styles.barColumnCompact : styles.barColumn;
+                    const trackStyle = timeframe === 'month' ? styles.barTrackCompact : styles.barTrack;
 
                     return (
-                        <View key={day.dateStr} style={styles.barColumn}>
+                        <View key={`${day.dateStr}-${idx}`} style={columnStyle}>
                             {/* Value label */}
                             <Text style={styles.valueLabel}>
                                 {value > 0 ? value : ""}
                             </Text>
 
-                            <View style={[styles.barTrack, { backgroundColor: `${theme.colors.secondary}15` }]}>
+                            <View style={[trackStyle, { backgroundColor: `${theme.colors.secondary}15` }]}>
                                 {/* Animated Bar */}
                                 <AnimatedBar
                                     heightPercent={heightPercent}
                                     color={theme.colors.primary}
-                                    delay={idx * 50}
+                                    delay={Math.min(idx * 20, 500)} // cap delay so month view doesn't take 2s
                                 />
                             </View>
 
-                            <Text style={[styles.dayLabel, { color: theme.colors.secondary }]}>
+                            <Text style={[styles.dayLabel, { color: theme.colors.secondary }]} numberOfLines={1}>
                                 {day.dayOfWeek}
                             </Text>
                         </View>
                     );
                 })}
-            </View>
+            </ScrollView>
         </View>
     );
 }
@@ -142,20 +163,36 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: "600",
     },
+    scrollContainer: {
+        width: "100%",
+    },
     chartArea: {
         flexDirection: "row",
-        justifyContent: "space-between",
         alignItems: "flex-end",
         height: 160,
+        gap: 8, 
+        paddingRight: 8,
     },
     barColumn: {
         alignItems: "center",
         flex: 1,
+        minWidth: 35,
+    },
+    barColumnCompact: {
+        alignItems: "center",
+        width: 25,
     },
     barTrack: {
         width: 14,
         height: 110,
         borderRadius: 7,
+        justifyContent: "flex-end",
+        overflow: "hidden",
+    },
+    barTrackCompact: {
+        width: 10,
+        height: 110,
+        borderRadius: 5,
         justifyContent: "flex-end",
         overflow: "hidden",
     },

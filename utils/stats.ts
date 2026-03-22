@@ -13,7 +13,6 @@ export interface UserStats {
     sessionsCompleted: number;
     currentStreak: number;
     bestStreak: number;
-    xp: number;
     history: Record<string, DailyStats>; // "YYYY-MM-DD" -> DailyStats
 }
 
@@ -23,7 +22,6 @@ const DEFAULT_STATS: UserStats = {
     sessionsCompleted: 0,
     currentStreak: 0,
     bestStreak: 0,
-    xp: 0,
     history: {},
 };
 
@@ -51,6 +49,53 @@ export const getWeeklyData = (stats: UserStats) => {
             dayOfWeek,
             tasks: dayStats.tasks,
             focusMinutes: dayStats.focusMinutes,
+        });
+    }
+    return data;
+};
+
+export const getMonthlyData = (stats: UserStats) => {
+    const data = [];
+    for (let i = 29; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split("T")[0];
+        const dayOfWeek = d.getDate().toString();
+
+        const dayStats = stats.history[dateStr] || { tasks: 0, focusMinutes: 0 };
+        data.push({
+            dateStr,
+            dayOfWeek,
+            tasks: dayStats.tasks,
+            focusMinutes: dayStats.focusMinutes,
+        });
+    }
+    return data;
+};
+
+export const getYearlyData = (stats: UserStats) => {
+    const data = [];
+    const now = new Date();
+    for (let i = 11; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        const monthLabel = d.toLocaleDateString('en-US', { month: 'short' });
+        
+        let tasks = 0;
+        let focusMinutes = 0;
+        
+        Object.keys(stats.history).forEach(dateStr => {
+            if (dateStr.startsWith(monthKey)) {
+                tasks += stats.history[dateStr].tasks;
+                focusMinutes += stats.history[dateStr].focusMinutes;
+            }
+        });
+        
+        data.push({
+            dateStr: monthKey,
+            dayOfWeek: monthLabel,
+            tasks,
+            focusMinutes,
         });
     }
     return data;
@@ -104,9 +149,6 @@ export const addFocusSession = async (minutes: number): Promise<UserStats> => {
     stats.totalFocusMinutes += minutes;
     stats.sessionsCompleted += 1;
 
-    // Base XP = 10 per minute focused
-    stats.xp += minutes * 10;
-
     await saveStats(stats);
     return stats;
 };
@@ -126,9 +168,6 @@ export const addTaskCompleted = async (): Promise<UserStats> => {
     stats.history[today].tasks += 1;
     stats.tasksCompleted += 1;
 
-    // Base XP = 50 per task done
-    stats.xp += 50;
-
     await saveStats(stats);
     return stats;
 };
@@ -144,8 +183,6 @@ export const removeTaskCompleted = async (count: number = 1): Promise<UserStats>
         stats.tasksCompleted = Math.max(0, stats.tasksCompleted - count);
     }
 
-    // Deduct XP = 50 per task (but keep >= 0)
-    stats.xp = Math.max(0, stats.xp - (50 * count));
 
     await saveStats(stats);
     return stats;

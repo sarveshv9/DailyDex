@@ -65,7 +65,7 @@ interface SettingsSectionProps {
   setSelectedSong: (index: number) => void;
   isMusicExpanded: boolean;
   setIsMusicExpanded: (value: boolean) => void;
-  userXp?: number; // Added to pass to Modal
+
   handleResetTasks: () => void;
 }
 
@@ -461,7 +461,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
   setSelectedSong,
   isMusicExpanded,
   setIsMusicExpanded,
-  userXp = 0,
+
   handleResetTasks,
 }) => {
   // Calculate notification count

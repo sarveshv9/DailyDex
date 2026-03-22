@@ -19,6 +19,7 @@ import { Theme } from '../../constants/shared';
 import { useTheme } from '../../context/ThemeContext';
 import { RoutineItem, timeToMinutes } from '../../utils/utils';
 import { MergedTaskChain } from './MergedTaskChain';
+import { MonthCalendarView } from './MonthCalendarView';
 
 /* ─────────────────────────────── Config ─────────────────────────────── */
 
@@ -544,7 +545,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
     const { theme, isDarkMode } = useTheme();
     const styles = useMemo(() => getStyles(theme), [theme]);
 
-    const [viewMode, setViewMode] = React.useState<'3-day' | '7-day'>('3-day');
+    const [viewMode, setViewMode] = React.useState<'3-day' | '7-day' | 'month'>('3-day');
     const is7Day = viewMode === '7-day';
     const COL_WIDTH = is7Day ? COL_WIDTH_7DAY : COL_WIDTH_3DAY;
 
@@ -681,10 +682,16 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
 
     // Sync scroll when viewMode changes
     React.useEffect(() => {
+        if (viewMode === 'month') return;
+        
+        const dateStr = formatDateKey(selectedDate);
+        const targetIndex = pages.findIndex(page => page.some(d => formatDateKey(d) === dateStr));
+        const indexToScroll = targetIndex !== -1 ? targetIndex : initialPageIndex;
+
         setTimeout(() => {
-            flatListRef.current?.scrollToIndex({ index: initialPageIndex, animated: false });
+            flatListRef.current?.scrollToIndex({ index: indexToScroll, animated: false });
         }, 50);
-    }, [viewMode, initialPageIndex]);
+    }, [viewMode, is7Day]);
 
     const renderPage = useCallback(({ item: pageDates }: { item: Date[] }) => (
         <TimelinePage
@@ -747,18 +754,22 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                     </View>
                 </Pressable>
 
-                {/* ── View-mode toggle (calendar-outline = 3-day, calendar = 7-day) ── */}
+                {/* ── View-mode toggle (calendar-outline = 3-day, calendar = 7-day, grid = month) ── */}
                 <Animated.View style={{ opacity: collapseOpacity }}>
                     <Pressable
                         onPress={() => {
                             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                            setViewMode(prev => prev === '3-day' ? '7-day' : '3-day');
+                            setViewMode(prev => {
+                                if (prev === '3-day') return '7-day';
+                                if (prev === '7-day') return 'month';
+                                return '3-day';
+                            });
                         }}
                         style={styles.viewToggleBtn}
                         testID="view-toggle-btn"
                     >
                         <Ionicons
-                            name={viewMode === '3-day' ? 'calendar-outline' : 'calendar'}
+                            name={viewMode === '3-day' ? 'calendar-outline' : viewMode === '7-day' ? 'calendar' : 'grid'}
                             size={22}
                             color={theme.colors.primary}
                         />
@@ -766,7 +777,19 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                 </Animated.View>
             </Animated.View>
 
-            {/* ── Timeline (virtualized FlatList for multi-year calendar) ── */}
+            {viewMode === 'month' ? (
+                <MonthCalendarView 
+                    currentDate={selectedDate || today} 
+                    routineItems={routineItems} 
+                    onSelectDate={(date) => {
+                        handleSelectDate(date);
+                        setViewMode('3-day');
+                    }} 
+                    theme={theme} 
+                />
+            ) : (
+                <>
+                {/* ── Timeline (virtualized FlatList for multi-year calendar) ── */}
             <Animated.View style={[styles.timelineWrapper, { opacity: collapseOpacity }]}>
                 <FlatList
                     ref={flatListRef}
@@ -860,6 +883,8 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                         </View>
                     </Pressable>
                 </Animated.View>
+            )}
+                </>
             )}
         </View>
     );

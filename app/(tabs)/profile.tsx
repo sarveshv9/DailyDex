@@ -480,7 +480,7 @@ export default function ProfileScreen() {
 
         {/* Real Stats */}
         <View style={styles.statsRow}>
-          <StatCard label="XP" value={userStats?.xp || 0} theme={theme} />
+          <StatCard label="Focus (h)" value={Math.floor((userStats?.totalFocusMinutes || 0) / 60)} theme={theme} />
           <StatCard label="Tasks Done" value={userStats?.tasksCompleted || 0} theme={theme} />
           <StatCard label="Best Streak" value={userStats?.bestStreak || 0} theme={theme} />
         </View>
@@ -526,7 +526,7 @@ export default function ProfileScreen() {
             setSelectedSong={handleSelectSong}
             isMusicExpanded={isMusicExpanded}
             setIsMusicExpanded={setIsMusicExpanded}
-            userXp={userStats?.xp || 0}
+
             handleResetTasks={handleResetTasks}
           />
         </View>

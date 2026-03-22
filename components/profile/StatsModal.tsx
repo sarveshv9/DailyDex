@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { useMemo, useState } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Theme } from "../../constants/shared";
-import { getTodayString, getWeeklyData, UserStats } from "../../utils/stats";
+import { getTodayString, getWeeklyData, getMonthlyData, getYearlyData, UserStats } from "../../utils/stats";
 import { ActivityChart } from "./ActivityChart";
 import { BottomSheet } from "./BottomSheet";
 
@@ -16,17 +16,22 @@ type StatsModalProps = {
 export function StatsModal({ visible, onClose, theme, stats }: StatsModalProps) {
     const styles = useMemo(() => getStyles(theme), [theme]);
     const [chartMetric, setChartMetric] = useState<"tasks" | "focusMinutes">("tasks");
+    const [timeframe, setTimeframe] = useState<"week" | "month" | "year">("week");
+
+    const chartData = useMemo(() => {
+        if (!stats) return [];
+        switch (timeframe) {
+            case "month": return getMonthlyData(stats);
+            case "year": return getYearlyData(stats);
+            case "week":
+            default: return getWeeklyData(stats);
+        }
+    }, [stats, timeframe]);
 
     if (!stats) return null;
 
     const todayString = getTodayString();
     const todayStats = stats.history[todayString] || { tasks: 0, focusMinutes: 0 };
-
-    // Calculate Level based on XP (e.g., 500 XP per level)
-    const XP_PER_LEVEL = 500;
-    const currentLevel = Math.floor(stats.xp / XP_PER_LEVEL) + 1;
-    const xpForNextLevel = currentLevel * XP_PER_LEVEL;
-    const progressPercent = (stats.xp % XP_PER_LEVEL) / XP_PER_LEVEL;
 
     // Encouraging messages
     let encouragingMessage = "Every step counts. Keep going!";
@@ -34,7 +39,7 @@ export function StatsModal({ visible, onClose, theme, stats }: StatsModalProps) 
         encouragingMessage = "You're on a magnificent streak!🔥";
     } else if (todayStats.tasks > 5) {
         encouragingMessage = "Incredible productivity today! 🚀";
-    } else if (stats.xp > 0) {
+    } else if (stats.tasksCompleted > 0) {
         encouragingMessage = "Great job building momentum! 🌟";
     }
 
@@ -48,25 +53,7 @@ export function StatsModal({ visible, onClose, theme, stats }: StatsModalProps) 
                             <Text style={styles.bannerText}>{encouragingMessage}</Text>
                         </View>
 
-                        {/* Level / Progress Card */}
-                        <View style={styles.levelCard}>
-                            <View style={styles.levelHeader}>
-                                <View style={styles.levelBadge}>
-                                    <Text style={styles.levelBadgeText}>Lv. {currentLevel}</Text>
-                                </View>
-                                <View style={styles.xpTextContainer}>
-                                    <Text style={styles.currentXpText}>{stats.xp.toLocaleString()} XP</Text>
-                                    <Text style={styles.targetXpText}>/ {xpForNextLevel.toLocaleString()} XP</Text>
-                                </View>
-                            </View>
 
-                            <View style={styles.progressBarBackground}>
-                                <View style={[styles.progressBarFill, { width: `${progressPercent * 100}%` }]} />
-                            </View>
-                            <Text style={styles.progressHint}>
-                                {xpForNextLevel - stats.xp} XP to next level
-                            </Text>
-                        </View>
 
                         {/* Streaks */}
                         <Text style={styles.sectionTitle}>Momentum</Text>
@@ -83,10 +70,34 @@ export function StatsModal({ visible, onClose, theme, stats }: StatsModalProps) 
                             </View>
                         </View>
 
-                        {/* Weekly Activity Chart */}
+                        {/* Timeframe Toggles */}
+                        <View style={styles.timeframeContainer}>
+                            {(["week", "month", "year"] as const).map((tf) => (
+                                <Pressable
+                                    key={tf}
+                                    style={[
+                                        styles.timeframeBtn,
+                                        timeframe === tf && { backgroundColor: theme.colors.primary },
+                                    ]}
+                                    onPress={() => setTimeframe(tf)}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.timeframeText,
+                                            { color: timeframe === tf ? "white" : theme.colors.textSecondary },
+                                        ]}
+                                    >
+                                        {tf.charAt(0).toUpperCase() + tf.slice(1)}
+                                    </Text>
+                                </Pressable>
+                            ))}
+                        </View>
+
+                        {/* Activity Chart */}
                         <ActivityChart
-                            data={getWeeklyData(stats)}
+                            data={chartData}
                             theme={theme}
+                            timeframe={timeframe}
                             metric={chartMetric}
                             onToggleMetric={() =>
                                 setChartMetric((m) =>
@@ -164,6 +175,24 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         shadowRadius: 20,
         elevation: 10,
     },
+    timeframeContainer: {
+        flexDirection: "row",
+        backgroundColor: `${theme.colors.textSecondary}15`,
+        borderRadius: 12,
+        padding: 4,
+        marginTop: theme.spacing.lg,
+        marginBottom: theme.spacing.sm,
+    },
+    timeframeBtn: {
+        flex: 1,
+        paddingVertical: 8,
+        alignItems: "center",
+        borderRadius: 8,
+    },
+    timeframeText: {
+        fontSize: 13,
+        fontFamily: theme.fonts.medium,
+    },
     header: {
         flexDirection: "row",
         alignItems: "center",
@@ -201,68 +230,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         color: theme.colors.text,
         fontSize: 16,
     },
-    levelCard: {
-        backgroundColor: theme.colors.card,
-        borderRadius: theme.borderRadius.lg,
-        padding: theme.spacing.lg,
-        borderWidth: 2,
-        borderColor: theme.colors.primary,
-        shadowColor: theme.colors.primary,
-        shadowOffset: { width: 4, height: 4 },
-        shadowOpacity: 1,
-        shadowRadius: 0,
-        elevation: 0, // Neobrutalism flat shadow
-    },
-    levelHeader: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: theme.spacing.md,
-    },
-    levelBadge: {
-        backgroundColor: theme.colors.primary,
-        paddingHorizontal: theme.spacing.md,
-        paddingVertical: theme.spacing.xs,
-        borderRadius: 9999,
-    },
-    levelBadgeText: {
-        color: theme.colors.white,
-        fontFamily: theme.fonts.bold,
-        fontSize: 14,
-    },
-    xpTextContainer: {
-        flexDirection: "row",
-        alignItems: "baseline",
-        gap: 4,
-    },
-    currentXpText: {
-        fontFamily: theme.fonts.bold,
-        fontSize: 24,
-        color: theme.colors.text,
-    },
-    targetXpText: {
-        fontFamily: theme.fonts.medium,
-        fontSize: 14,
-        color: theme.colors.textSecondary,
-    },
-    progressBarBackground: {
-        height: 12,
-        backgroundColor: `${theme.colors.secondary}20`,
-        borderRadius: 9999,
-        overflow: "hidden",
-    },
-    progressBarFill: {
-        height: "100%",
-        backgroundColor: theme.colors.primary,
-        borderRadius: 9999,
-    },
-    progressHint: {
-        marginTop: theme.spacing.sm,
-        fontFamily: theme.fonts.medium,
-        fontSize: 12,
-        color: theme.colors.textSecondary,
-        textAlign: "right",
-    },
+
     sectionTitle: {
         fontSize: 18,
         fontFamily: theme.fonts.bold,
