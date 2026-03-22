@@ -598,6 +598,9 @@ export default function RoutineScreen() {
           selectedDate={selectedDate}
           onSelectDate={(date) => {
             setSelectedDate(date);
+            const p = new Date(date); p.setDate(p.getDate() - 1);
+            const n = new Date(date); n.setDate(n.getDate() + 1);
+            setPageDates([p, date, n]);
           }}
           routineItems={allRoutines}
           onPressPeek={toggleList}

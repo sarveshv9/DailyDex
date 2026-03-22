@@ -1,7 +1,7 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Theme } from '../../constants/shared';
-import { RoutineItem } from '../../utils/utils';
+import { RoutineItem, timeToMinutes } from '../../utils/utils';
 
 interface Props {
     currentDate: Date;
@@ -10,124 +10,381 @@ interface Props {
     theme: Theme;
 }
 
-export function MonthCalendarView({ currentDate, routineItems, onSelectDate, theme }: Props) {
-    const styles = useMemo(() => getStyles(theme), [theme]);
+const PX_PER_HOUR = 110;
+const PILL_W = 90;   // fixed pill width so content width is predictable
+const PILL_H = 27;
+const PILL_GAP = 5;
 
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
+const TASK_COLORS: Record<string, string> = {
+    wakeup: '#E8975E',
+    sleep: '#5A5A7A',
+    water: '#4DA8DA',
+    tea_journal: '#B89B72',
+    breakfast: '#E8975E',
+    lunch: '#E8975E',
+    dinner: '#E8975E',
+    study: '#7B8CDE',
+    walk: '#6BCB77',
+    yoga: '#C084FC',
+    reflect: '#7B8CDE',
+    prepare_sleep: '#5A5A7A',
+    breathe: '#6BCB77',
+};
+
+const CARD_TINTS = [
+    '#7B8CDE', '#C084FC', '#E8975E',
+    '#4DA8DA', '#6BCB77', '#B89B72', '#5A5A7A',
+];
+
+const MONTH_NAMES = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+const fmtDateKey = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+export function MonthCalendarView({ currentDate, routineItems, onSelectDate, theme }: Props) {
+    const [year, setYear] = useState(currentDate.getFullYear());
+    const [month, setMonth] = useState(currentDate.getMonth());
 
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const firstDayOfWeek = new Date(year, month, 1).getDay(); // 0 is Sunday
+    const todayStr = fmtDateKey(new Date());
+    const selectedStr = fmtDateKey(currentDate);
 
-    const days = [];
-    for (let i = 0; i < firstDayOfWeek; i++) {
-        days.push(null); // empty slots before the 1st
-    }
-    for (let i = 1; i <= daysInMonth; i++) {
-        days.push(new Date(year, month, i));
-    }
-
-    const todayString = new Date().toISOString().split('T')[0];
-
-    // Build a set of days that have active history or routines
-    // Since we're looking at routines for ANY day vs TODAY
-    // Usually routineItems contains all items, but we only know their repeats
-    // Let's do a quick determination if there's any valid tasks falling on this day.
-    // For simplicity of visualization in the context of the prototype, we assume if `repeatOnDays` includes the day's weekday, it has a task. Or if it has no repeat but its time is this day (actually RoutineItem doesn't store full Date, just hours).
-    const isDayActive = (date: Date) => {
-        const weekdayAbbr = date.toLocaleDateString('en-US', { weekday: 'short' });
-        // Return true if any task repeats on this weekday or doesn't have repeatDays but is active.
-        return routineItems.some(req => 
-            req.daysOfWeek?.includes(date.getDay()) || (!req.daysOfWeek?.length && req.date === date.toISOString().split('T')[0])
-        );
+    const prevMonth = () => {
+        if (month === 0) { setYear(y => y - 1); setMonth(11); }
+        else setMonth(m => m - 1);
+    };
+    const nextMonth = () => {
+        if (month === 11) { setYear(y => y + 1); setMonth(0); }
+        else setMonth(m => m + 1);
     };
 
-    const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const days = useMemo(
+        () => Array.from({ length: daysInMonth }, (_, i) => new Date(year, month, i + 1)),
+        [year, month, daysInMonth],
+    );
+
+    const getDayItems = (date: Date) => {
+        const weekday = date.getDay();
+        const dateStr = fmtDateKey(date);
+        return routineItems
+            .filter(item => item.daysOfWeek?.includes(weekday) || item.date === dateStr)
+            .sort((a, b) => a.time.localeCompare(b.time));
+    };
 
     return (
-        <View style={styles.container}>
-            <View style={styles.headerRow}>
-                {weekDays.map(d => (
-                    <Text key={d} style={styles.weekdayText}>{d}</Text>
-                ))}
+        <View style={{ backgroundColor: theme.colors.background }}>
+
+            {/* ── Month navigation ── */}
+            <View style={styles.monthNav}>
+                <Pressable onPress={prevMonth} hitSlop={16}>
+                    <Text style={[styles.navSideLabel, { color: theme.colors.textSecondary }]}>
+                        {MONTH_NAMES[(month - 1 + 12) % 12]}
+                    </Text>
+                </Pressable>
+                <View style={styles.navCenter}>
+                    <Pressable onPress={prevMonth} hitSlop={16}>
+                        <Text style={[styles.navChevron, { color: theme.colors.textSecondary }]}>‹</Text>
+                    </Pressable>
+                    <Text style={[styles.navCurrentLabel, { color: theme.colors.text }]}>
+                        {MONTH_NAMES[month]}
+                    </Text>
+                    <Pressable onPress={nextMonth} hitSlop={16}>
+                        <Text style={[styles.navChevron, { color: theme.colors.textSecondary }]}>›</Text>
+                    </Pressable>
+                </View>
+                <Pressable onPress={nextMonth} hitSlop={16}>
+                    <Text style={[styles.navSideLabel, { color: theme.colors.textSecondary }]}>
+                        {MONTH_NAMES[(month + 1) % 12]}
+                    </Text>
+                </Pressable>
             </View>
-            <View style={styles.grid}>
+
+            {/* ── Day cards ── */}
+            <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.scrollContent}
+            >
                 {days.map((date, index) => {
-                    if (!date) {
-                        return <View key={`empty-${index}`} style={styles.cell} />;
+                    const dateStr = fmtDateKey(date);
+                    const isToday = dateStr === todayStr;
+                    const isSelected = dateStr === selectedStr;
+                    const items = getDayItems(date);
+
+                    // Card accent tint
+                    const dominantKey = items.find(it => it.imageKey && TASK_COLORS[it.imageKey])?.imageKey;
+                    const tint = dominantKey ? TASK_COLORS[dominantKey] : CARD_TINTS[index % CARD_TINTS.length];
+
+                    // Time window: 1hr before earliest to 1hr after latest
+                    let minH = 8, maxH = 11;
+                    if (items.length > 0) {
+                        const hours = items.map(it => Math.floor(timeToMinutes(it.time) / 60));
+                        minH = Math.max(0, Math.min(...hours) - 1);
+                        maxH = Math.min(23, Math.max(...hours) + 2);
                     }
-                    const dateStr = date.toISOString().split('T')[0];
-                    const isToday = dateStr === todayString;
-                    const hasItems = isDayActive(date);
+                    if (maxH - minH < 3) maxH = minH + 3;
+                    const hourSpan = maxH - minH;
+
+                    // Pill layout: horizontal by time offset, vertical stack for same-hour conflicts
+                    const hourStack: Record<number, number> = {};
+                    const pillLayout = items.map(item => {
+                        const totalMins = timeToMinutes(item.time);
+                        const h = Math.floor(totalMins / 60);
+                        const m = totalMins % 60;
+                        const leftPx = ((h - minH) + m / 60) * PX_PER_HOUR;
+                        const row = hourStack[h] ?? 0;
+                        hourStack[h] = row + 1;
+                        return { leftPx, row };
+                    });
+
+                    const maxStack = items.length > 0 ? Math.max(...Object.values(hourStack)) : 1;
+                    const pillsHeight = maxStack * (PILL_H + PILL_GAP) - PILL_GAP;
+                    const cardHeight = Math.max(100, 44 + 22 + 10 + pillsHeight + 20);
+
+                    // Content width = last pill's left edge + pill width + padding
+                    const lastLeft = pillLayout.length > 0
+                        ? Math.max(...pillLayout.map(p => p.leftPx))
+                        : hourSpan * PX_PER_HOUR;
+                    const timelineContentWidth = Math.max(
+                        hourSpan * PX_PER_HOUR,
+                        lastLeft + PILL_W + 24,
+                    );
+
+                    // Hour tick marks
+                    const hourMarkers = Array.from({ length: hourSpan + 1 }, (_, i) => minH + i);
 
                     return (
-                        <Pressable 
-                            key={dateStr} 
-                            style={[styles.cell, isToday && styles.todayCell]}
-                            onPress={() => onSelectDate(date)}
+                        // Card is a plain View — no Pressable — so horizontal scroll inside works freely
+                        <View
+                            key={dateStr}
+                            style={[
+                                styles.card,
+                                {
+                                    backgroundColor: `${tint}18`,
+                                    borderColor: isSelected
+                                        ? theme.colors.primary
+                                        : isToday
+                                            ? `${theme.colors.primary}55`
+                                            : `${tint}40`,
+                                    borderWidth: isSelected ? 2 : 1,
+                                    height: cardHeight,
+                                },
+                            ]}
                         >
-                            <Text style={[styles.dayText, isToday && styles.todayText]}>
-                                {date.getDate()}
-                            </Text>
-                            {hasItems && <View style={styles.dot} />}
-                        </Pressable>
+                            {/* ── Left date block — tap target ── */}
+                            <Pressable
+                                onPress={() => onSelectDate(date)}
+                                style={styles.cardLeft}
+                            >
+                                <Text style={[styles.cardWeekday, { color: tint }]}>
+                                    {DAY_NAMES[date.getDay()]}
+                                </Text>
+                                <Text style={[
+                                    styles.cardDateNum,
+                                    { color: isToday ? theme.colors.primary : theme.colors.text },
+                                ]}>
+                                    {date.getDate()}
+                                </Text>
+                                <Text style={[styles.cardMonthTag, { color: `${tint}99` }]}>
+                                    {MONTH_NAMES[month]}
+                                </Text>
+                            </Pressable>
+
+                            {/* Thin vertical divider */}
+                            <View style={[styles.rule, { backgroundColor: `${tint}40` }]} />
+
+                            {/* ── Horizontally scrollable timeline ── */}
+                            <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                style={styles.timelineScroll}
+                                contentContainerStyle={{ width: timelineContentWidth }}
+                                nestedScrollEnabled
+                            >
+                                <View style={{ width: timelineContentWidth, flex: 1 }}>
+
+                                    {/* Hour label row */}
+                                    <View style={[styles.hourRow, { width: timelineContentWidth }]}>
+                                        {hourMarkers.map((h) => {
+                                            const label = `${h % 12 || 12}${h < 12 ? 'am' : 'pm'}`;
+                                            return (
+                                                <View
+                                                    key={h}
+                                                    style={[styles.hourMarkerWrap, { left: (h - minH) * PX_PER_HOUR }]}
+                                                >
+                                                    <Text style={[styles.hourLabel, { color: theme.colors.textSecondary }]}>
+                                                        {label}
+                                                    </Text>
+                                                    <View style={[styles.hourTick, {
+                                                        backgroundColor: `${tint}28`,
+                                                        height: pillsHeight + 10,
+                                                    }]} />
+                                                </View>
+                                            );
+                                        })}
+                                    </View>
+
+                                    {/* Pills */}
+                                    <View style={[styles.pillsLayer, { height: pillsHeight, width: timelineContentWidth }]}>
+                                        {items.length === 0 ? (
+                                            <Text style={[styles.emptyHint, { color: theme.colors.textSecondary }]}>
+                                                No tasks
+                                            </Text>
+                                        ) : (
+                                            items.map((item, ti) => {
+                                                const { leftPx, row } = pillLayout[ti];
+                                                const pillColor = item.imageKey
+                                                    ? (TASK_COLORS[item.imageKey] ?? tint)
+                                                    : tint;
+                                                return (
+                                                    <View
+                                                        key={ti}
+                                                        style={[
+                                                            styles.pill,
+                                                            {
+                                                                backgroundColor: pillColor,
+                                                                left: leftPx,
+                                                                top: row * (PILL_H + PILL_GAP),
+                                                                width: PILL_W,
+                                                            },
+                                                        ]}
+                                                    >
+                                                        <Text style={styles.pillText} numberOfLines={1}>
+                                                            {item.task ?? item.imageKey?.replace(/_/g, ' ') ?? ''}
+                                                        </Text>
+                                                    </View>
+                                                );
+                                            })
+                                        )}
+                                    </View>
+
+                                </View>
+                            </ScrollView>
+                        </View>
                     );
                 })}
-            </View>
+            </ScrollView>
         </View>
     );
 }
 
-const getStyles = (theme: Theme) => StyleSheet.create({
-    container: {
-        flex: 1,
-        paddingHorizontal: 20,
-        paddingTop: 20,
-        backgroundColor: theme.colors.background,
-    },
-    headerRow: {
+const styles = StyleSheet.create({
+    monthNav: {
         flexDirection: 'row',
-        justifyContent: 'space-around',
-        marginBottom: 10,
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 24,
+        paddingTop: 8,
+        paddingBottom: 18,
     },
-    weekdayText: {
-        fontSize: 12,
-        fontFamily: theme.fonts.medium,
-        color: theme.colors.textSecondary,
-        width: 40,
+    navSideLabel: {
+        fontSize: 18,
+        fontWeight: '300',
+        letterSpacing: 2,
+        opacity: 0.45,
+        width: 44,
         textAlign: 'center',
     },
-    grid: {
+    navCenter: {
         flexDirection: 'row',
-        flexWrap: 'wrap',
-    },
-    cell: {
-        width: '14.28%', // 100/7
-        aspectRatio: 1,
-        justifyContent: 'center',
         alignItems: 'center',
+        gap: 14,
+    },
+    navChevron: {
+        fontSize: 28,
+        lineHeight: 32,
+        fontWeight: '300',
+        paddingHorizontal: 4,
+    },
+    navCurrentLabel: {
+        fontSize: 28,
+        fontWeight: '700',
+        letterSpacing: 2,
+        minWidth: 72,
+        textAlign: 'center',
+    },
+    scrollContent: {
+        paddingHorizontal: 16,
+        paddingBottom: 180,
+        gap: 12,
+    },
+    card: {
+        borderRadius: 22,
+        flexDirection: 'row',
+        paddingLeft: 16,
+        paddingVertical: 14,
+        overflow: 'hidden',
+    },
+    cardLeft: {
+        width: 72,
+        justifyContent: 'flex-start',
+    },
+    cardWeekday: {
+        fontSize: 11,
+        fontWeight: '600',
+        letterSpacing: 0.3,
+    },
+    cardDateNum: {
+        fontSize: 48,
+        fontWeight: '700',
+        lineHeight: 50,
+        letterSpacing: -2,
+        marginTop: 1,
+    },
+    cardMonthTag: {
+        fontSize: 13,
+        fontWeight: '700',
+        letterSpacing: 2,
+        marginTop: 2,
+    },
+    rule: {
+        width: 1,
+        marginHorizontal: 10,
+        alignSelf: 'stretch',
+        borderRadius: 1,
+    },
+    timelineScroll: {
+        flex: 1,
+    },
+    hourRow: {
+        height: 22,
+        position: 'relative',
         marginBottom: 8,
-        borderRadius: 20,
     },
-    todayCell: {
-        backgroundColor: `${theme.colors.primary}20`,
-    },
-    dayText: {
-        fontSize: 16,
-        fontFamily: theme.fonts.medium,
-        color: theme.colors.text,
-        marginBottom: 2,
-    },
-    todayText: {
-        color: theme.colors.primary,
-        fontFamily: theme.fonts.bold,
-    },
-    dot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-        backgroundColor: theme.colors.primary,
+    hourMarkerWrap: {
         position: 'absolute',
-        bottom: 6,
-    }
+        top: 0,
+        alignItems: 'flex-start',
+    },
+    hourLabel: {
+        fontSize: 9,
+        fontWeight: '600',
+        letterSpacing: 0.2,
+        marginBottom: 2,
+        opacity: 0.7,
+    },
+    hourTick: {
+        width: 1,
+    },
+    pillsLayer: {
+        position: 'relative',
+    },
+    pill: {
+        position: 'absolute',
+        height: PILL_H,
+        paddingHorizontal: 8,
+        borderRadius: 8,
+        justifyContent: 'center',
+    },
+    pillText: {
+        color: '#fff',
+        fontSize: 11,
+        fontWeight: '600',
+        letterSpacing: 0.1,
+    },
+    emptyHint: {
+        fontSize: 11,
+        opacity: 0.35,
+        marginTop: 4,
+    },
 });

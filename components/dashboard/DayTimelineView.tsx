@@ -678,12 +678,18 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
         return { pages: p, initialPageIndex: todayIdx };
     }, [today, is7Day]);
 
+    const initialTargetIndex = useMemo(() => {
+        const dateStr = formatDateKey(selectedDate);
+        const idx = pages.findIndex(page => page.some(d => formatDateKey(d) === dateStr));
+        return idx !== -1 ? idx : initialPageIndex;
+    }, [pages, selectedDate, initialPageIndex]);
+
     const flatListRef = useRef<FlatList>(null);
 
     // Sync scroll when viewMode changes
     React.useEffect(() => {
         if (viewMode === 'month') return;
-        
+
         const dateStr = formatDateKey(selectedDate);
         const targetIndex = pages.findIndex(page => page.some(d => formatDateKey(d) === dateStr));
         const indexToScroll = targetIndex !== -1 ? targetIndex : initialPageIndex;
@@ -691,7 +697,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
         setTimeout(() => {
             flatListRef.current?.scrollToIndex({ index: indexToScroll, animated: false });
         }, 50);
-    }, [viewMode, is7Day]);
+    }, [viewMode, is7Day, selectedDate]);
 
     const renderPage = useCallback(({ item: pageDates }: { item: Date[] }) => (
         <TimelinePage
@@ -769,7 +775,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                         testID="view-toggle-btn"
                     >
                         <Ionicons
-                            name={viewMode === '3-day' ? 'calendar-outline' : viewMode === '7-day' ? 'calendar' : 'grid'}
+                            name={viewMode === '3-day' ? 'calendar' : viewMode === '7-day' ? 'grid' : 'calendar-outline'}
                             size={22}
                             color={theme.colors.primary}
                         />
@@ -778,112 +784,112 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
             </Animated.View>
 
             {viewMode === 'month' ? (
-                <MonthCalendarView 
-                    currentDate={selectedDate || today} 
-                    routineItems={routineItems} 
+                <MonthCalendarView
+                    currentDate={selectedDate || today}
+                    routineItems={routineItems}
                     onSelectDate={(date) => {
                         handleSelectDate(date);
                         setViewMode('3-day');
-                    }} 
-                    theme={theme} 
+                    }}
+                    theme={theme}
                 />
             ) : (
                 <>
-                {/* ── Timeline (virtualized FlatList for multi-year calendar) ── */}
-            <Animated.View style={[styles.timelineWrapper, { opacity: collapseOpacity }]}>
-                <FlatList
-                    ref={flatListRef}
-                    data={pages}
-                    renderItem={renderPage}
-                    keyExtractor={(_, index) => `page-${index}`}
-                    horizontal
-                    pagingEnabled
-                    showsHorizontalScrollIndicator={false}
-                    initialScrollIndex={initialPageIndex}
-                    getItemLayout={(_, index) => ({
-                        length: SCREEN_WIDTH,
-                        offset: SCREEN_WIDTH * index,
-                        index,
-                    })}
-                    // Performance optimizations
-                    windowSize={3}
-                    maxToRenderPerBatch={2}
-                    updateCellsBatchingPeriod={50}
-                    removeClippedSubviews={Platform.OS === 'android'}
-                    onScrollToIndexFailed={info => {
-                        flatListRef.current?.scrollToOffset({
-                            offset: info.averageItemLength * info.index,
-                            animated: false,
-                        });
-                    }}
-                />
-            </Animated.View>
-
-            {/* ── Peek card ── */}
-            {firstItem && (
-                <Animated.View style={[styles.peekWrapper, { opacity: collapseOpacity }]}>
-                    <View style={styles.peekDivider} />
-                    <Pressable
-                        style={({ pressed }) => [
-                            styles.peekCard,
-                            pressed && { opacity: 0.88, transform: [{ scale: 0.975 }] },
-                        ]}
-                        onPress={onPressPeek}
-                        testID="peek-card"
-                    >
-                        <BlurView intensity={100} tint={isDarkMode ? 'systemThickMaterialDark' : 'systemThickMaterialLight'} style={StyleSheet.absoluteFill} pointerEvents="none" />
-                        <LinearGradient
-                            colors={[`${theme.colors.primary}18`, `${theme.colors.primary}04`]}
-                            style={StyleSheet.absoluteFill}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
+                    {/* ── Timeline (virtualized FlatList for multi-year calendar) ── */}
+                    <Animated.View style={[styles.timelineWrapper, { opacity: collapseOpacity }]}>
+                        <FlatList
+                            ref={flatListRef}
+                            data={pages}
+                            renderItem={renderPage}
+                            keyExtractor={(_, index) => `page-${index}`}
+                            horizontal
+                            pagingEnabled
+                            showsHorizontalScrollIndicator={false}
+                            initialScrollIndex={initialTargetIndex}
+                            getItemLayout={(_, index) => ({
+                                length: SCREEN_WIDTH,
+                                offset: SCREEN_WIDTH * index,
+                                index,
+                            })}
+                            // Performance optimizations
+                            windowSize={3}
+                            maxToRenderPerBatch={2}
+                            updateCellsBatchingPeriod={50}
+                            removeClippedSubviews={Platform.OS === 'android'}
+                            onScrollToIndexFailed={info => {
+                                flatListRef.current?.scrollToOffset({
+                                    offset: info.averageItemLength * info.index,
+                                    animated: false,
+                                });
+                            }}
                         />
-                        <View style={[styles.peekAccentBar, { backgroundColor: theme.colors.primary }]} />
+                    </Animated.View>
 
-                        <View style={styles.peekCircleWrapper}>
-                            <LinearGradient
-                                colors={[theme.colors.primary, `${theme.colors.primary}BB`]}
-                                style={styles.peekCircle}
-                                start={{ x: 0.1, y: 0 }}
-                                end={{ x: 0.9, y: 1 }}
+                    {/* ── Peek card ── */}
+                    {firstItem && (
+                        <Animated.View style={[styles.peekWrapper, { opacity: collapseOpacity }]}>
+                            <View style={styles.peekDivider} />
+                            <Pressable
+                                style={({ pressed }) => [
+                                    styles.peekCard,
+                                    pressed && { opacity: 0.88, transform: [{ scale: 0.975 }] },
+                                ]}
+                                onPress={onPressPeek}
+                                testID="peek-card"
                             >
-                                <Ionicons
-                                    name={ICON_MAP[firstItem.imageKey ?? ''] ?? 'ellipse-outline'}
-                                    size={22}
-                                    color={theme.colors.white}
+                                <BlurView intensity={100} tint={isDarkMode ? 'systemThickMaterialDark' : 'systemThickMaterialLight'} style={StyleSheet.absoluteFill} pointerEvents="none" />
+                                <LinearGradient
+                                    colors={[`${theme.colors.primary}18`, `${theme.colors.primary}04`]}
+                                    style={StyleSheet.absoluteFill}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 1 }}
                                 />
-                            </LinearGradient>
-                        </View>
+                                <View style={[styles.peekAccentBar, { backgroundColor: theme.colors.primary }]} />
 
-                        <View style={styles.peekText}>
-                            <View style={styles.peekTimeRow}>
-                                <Ionicons
-                                    name="time-outline"
-                                    size={11}
-                                    color={theme.colors.textSecondary}
-                                    style={{ marginRight: 4 }}
-                                />
-                                <Text style={styles.peekTime}>{firstItem.time}</Text>
-                                <View style={[styles.peekBadge, { backgroundColor: `${theme.colors.primary}14` }]}>
-                                    <Text style={[styles.peekBadgeText, { color: theme.colors.primary }]}>
-                                        {firstItem.daysOfWeek?.length ? "↺ Daily" : "Once"}
+                                <View style={styles.peekCircleWrapper}>
+                                    <LinearGradient
+                                        colors={[theme.colors.primary, `${theme.colors.primary}BB`]}
+                                        style={styles.peekCircle}
+                                        start={{ x: 0.1, y: 0 }}
+                                        end={{ x: 0.9, y: 1 }}
+                                    >
+                                        <Ionicons
+                                            name={ICON_MAP[firstItem.imageKey ?? ''] ?? 'ellipse-outline'}
+                                            size={22}
+                                            color={theme.colors.white}
+                                        />
+                                    </LinearGradient>
+                                </View>
+
+                                <View style={styles.peekText}>
+                                    <View style={styles.peekTimeRow}>
+                                        <Ionicons
+                                            name="time-outline"
+                                            size={11}
+                                            color={theme.colors.textSecondary}
+                                            style={{ marginRight: 4 }}
+                                        />
+                                        <Text style={styles.peekTime}>{firstItem.time}</Text>
+                                        <View style={[styles.peekBadge, { backgroundColor: `${theme.colors.primary}14` }]}>
+                                            <Text style={[styles.peekBadgeText, { color: theme.colors.primary }]}>
+                                                {firstItem.daysOfWeek?.length ? "↺ Daily" : "Once"}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                    <Text style={styles.peekTitle} numberOfLines={1} testID="peek-title">
+                                        {firstItem.task}
                                     </Text>
                                 </View>
-                            </View>
-                            <Text style={styles.peekTitle} numberOfLines={1} testID="peek-title">
-                                {firstItem.task}
-                            </Text>
-                        </View>
 
-                        <View style={[
-                            styles.peekChevron,
-                            { borderColor: `${theme.colors.primary}40`, backgroundColor: `${theme.colors.primary}10` },
-                        ]}>
-                            <Ionicons name="chevron-forward" size={14} color={theme.colors.primary} />
-                        </View>
-                    </Pressable>
-                </Animated.View>
-            )}
+                                <View style={[
+                                    styles.peekChevron,
+                                    { borderColor: `${theme.colors.primary}40`, backgroundColor: `${theme.colors.primary}10` },
+                                ]}>
+                                    <Ionicons name="chevron-forward" size={14} color={theme.colors.primary} />
+                                </View>
+                            </Pressable>
+                        </Animated.View>
+                    )}
                 </>
             )}
         </View>
