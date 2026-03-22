@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
     Dimensions,
+    Platform,
     Pressable,
     StyleSheet,
     Text,
@@ -15,6 +16,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Theme } from "../constants/shared";
 import { useTheme } from "../context/ThemeContext";
 import { useTimer } from "../context/TimerContext";
+
+// SwiftUI liquid glass (iOS dev build only)
+import { GlassEffectContainer, Host, Picker, VStack, Text as SwiftUIText } from '@expo/ui/swift-ui';
+import { glassEffect, frame } from '@expo/ui/swift-ui/modifiers';
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -106,7 +111,17 @@ export default function FocusScreen() {
 
                 <View style={styles.timerContainer}>
                     <View style={[styles.timerCircle, isActive && styles.timerCircleActive]}>
-                        <BlurView intensity={100} tint={isDarkMode ? 'systemThickMaterialDark' : 'systemThickMaterialLight'} style={StyleSheet.absoluteFill} pointerEvents="none" />
+                        {Platform.OS === 'ios' ? (
+                            <Host style={StyleSheet.absoluteFill} colorScheme={isDarkMode ? 'dark' : 'light'}>
+                                <GlassEffectContainer>
+                                    <VStack modifiers={[glassEffect(), frame({ maxWidth: 9999, maxHeight: 9999 })]}>
+                                        {null}
+                                    </VStack>
+                                </GlassEffectContainer>
+                            </Host>
+                        ) : (
+                            <BlurView intensity={100} tint={isDarkMode ? 'systemThickMaterialDark' : 'systemThickMaterialLight'} style={StyleSheet.absoluteFill} pointerEvents="none" />
+                        )}
                         <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.glass.cardBg }]} />
                         <Text style={styles.timerText}>{formatTime(displayTime)}</Text>
                     </View>
@@ -116,17 +131,31 @@ export default function FocusScreen() {
                     <View style={styles.pickerContainer}>
                         {/* Mode Selector */}
                         <View style={styles.nativeSegmentContainer}>
-                            <SegmentedControl
-                                values={['Free', 'Pomodoro']}
-                                selectedIndex={selectedMode === "Pomodoro" ? 1 : 0}
-                                onChange={(event) => {
-                                    Haptics.selectionAsync();
-                                    setSelectedMode(event.nativeEvent.selectedSegmentIndex === 0 ? "Free" : "Pomodoro");
-                                }}
-                                tintColor={theme.colors.primary}
-                                fontStyle={{ fontFamily: theme.fonts.bold, color: theme.colors.secondary }}
-                                activeFontStyle={{ fontFamily: theme.fonts.bold, color: theme.colors.white }}
-                            />
+                            {Platform.OS === 'ios' ? (
+                                <Host matchContents colorScheme={isDarkMode ? 'dark' : 'light'} style={{ width: '100%' }}>
+                                    <Picker
+                                        variant="segmented"
+                                        options={['Free', 'Pomodoro']}
+                                        selectedIndex={selectedMode === 'Pomodoro' ? 1 : 0}
+                                        onOptionSelected={(event) => {
+                                            Haptics.selectionAsync();
+                                            setSelectedMode(event.nativeEvent.index === 0 ? 'Free' : 'Pomodoro');
+                                        }}
+                                    />
+                                </Host>
+                            ) : (
+                                <SegmentedControl
+                                    values={['Free', 'Pomodoro']}
+                                    selectedIndex={selectedMode === "Pomodoro" ? 1 : 0}
+                                    onChange={(event) => {
+                                        Haptics.selectionAsync();
+                                        setSelectedMode(event.nativeEvent.selectedSegmentIndex === 0 ? "Free" : "Pomodoro");
+                                    }}
+                                    tintColor={theme.colors.primary}
+                                    fontStyle={{ fontFamily: theme.fonts.bold, color: theme.colors.secondary }}
+                                    activeFontStyle={{ fontFamily: theme.fonts.bold, color: theme.colors.white }}
+                                />
+                            )}
                         </View>
 
                         {selectedMode === "Free" ? (

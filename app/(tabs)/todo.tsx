@@ -32,6 +32,9 @@ import { getSharedStyles, Theme } from "../../constants/shared";
 import { useTheme } from "../../context/ThemeContext";
 import { useTimer } from "../../context/TimerContext";
 
+// SwiftUI liquid glass (iOS dev build only)
+import { ContextMenu, Button as SwiftUIButton, Text as SwiftUIText, Host } from '@expo/ui/swift-ui';
+
 const STORAGE_KEY = "@todo_tasks";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -81,12 +84,14 @@ const TaskItem = ({
   onToggle,
   onEdit,
   onDelete,
+  onDirectDelete,
   theme,
 }: {
   task: Task;
   onToggle: (id: string) => void;
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
+  onDirectDelete: (id: string) => void;
   theme: Theme;
 }) => {
   const router = useRouter();
@@ -158,36 +163,61 @@ const TaskItem = ({
     );
   };
 
+  const renderPressable = () => (
+    <Pressable
+      style={styles.taskItemContainer}
+      onPress={handleToggle}
+      android_ripple={{ color: "rgba(0,0,0,0.05)" }}
+    >
+      <View style={styles.checkboxWrapper}>
+        <View style={[styles.checkbox, task.completed && styles.checkboxDone]}>
+          {task.completed && (
+            <Ionicons name="checkmark" size={14} color={theme.colors.white} />
+          )}
+        </View>
+      </View>
+
+      <View style={styles.taskTextContainer}>
+        <View style={styles.strikeContainer}>
+          <Text
+            style={[
+              styles.taskItemText,
+              task.completed && styles.taskItemTextDone,
+            ]}
+            onLayout={(e) => { textWidth.value = e.nativeEvent.layout.width; }}
+          >
+            {task.text}
+          </Text>
+          <Animated.View style={[styles.strikeThrough, animatedStrikeStyle]} />
+        </View>
+      </View>
+    </Pressable>
+  );
+
   return (
     <View style={styles.taskItemWrapper}>
-      <Pressable
-        style={styles.taskItemContainer}
-        onPress={handleToggle}
-        android_ripple={{ color: "rgba(0,0,0,0.05)" }}
-      >
-        <View style={styles.checkboxWrapper}>
-          <View style={[styles.checkbox, task.completed && styles.checkboxDone]}>
-            {task.completed && (
-              <Ionicons name="checkmark" size={14} color={theme.colors.white} />
-            )}
-          </View>
-        </View>
-
-        <View style={styles.taskTextContainer}>
-          <View style={styles.strikeContainer}>
-            <Text
-              style={[
-                styles.taskItemText,
-                task.completed && styles.taskItemTextDone,
-              ]}
-              onLayout={(e) => { textWidth.value = e.nativeEvent.layout.width; }}
-            >
-              {task.text}
-            </Text>
-            <Animated.View style={[styles.strikeThrough, animatedStrikeStyle]} />
-          </View>
-        </View>
-      </Pressable>
+      {Platform.OS === 'ios' ? (
+        <Host style={{ flex: 1 }}>
+          <ContextMenu>
+            <ContextMenu.Trigger>
+              {renderPressable()}
+            </ContextMenu.Trigger>
+            <ContextMenu.Items>
+              <SwiftUIButton systemImage={isTimerActive ? "pause" : "play"} onPress={handleFocus}>
+                Focus
+              </SwiftUIButton>
+              <SwiftUIButton systemImage="pencil" onPress={handleEdit}>
+                Edit
+              </SwiftUIButton>
+              <SwiftUIButton systemImage="trash" role="destructive" onPress={() => onDirectDelete(task.id)}>
+                Delete
+              </SwiftUIButton>
+            </ContextMenu.Items>
+          </ContextMenu>
+        </Host>
+      ) : (
+        renderPressable()
+      )}
 
       <View style={styles.taskActions}>
         {isCurrentTimer && timer.timeLeft > 0 && (
@@ -442,6 +472,7 @@ const TaskSection = ({
   onToggle,
   onEdit,
   onDelete,
+  onDirectDelete,
   theme,
   icon,
   delayIndex = 0
@@ -451,6 +482,7 @@ const TaskSection = ({
   onToggle: (id: string) => void;
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
+  onDirectDelete: (id: string) => void;
   theme: Theme;
   icon: keyof typeof Ionicons.glyphMap;
   delayIndex?: number;
@@ -493,6 +525,7 @@ const TaskSection = ({
               onToggle={onToggle}
               onEdit={onEdit}
               onDelete={onDelete}
+              onDirectDelete={onDirectDelete}
               theme={theme}
             />
           </Animated.View>
@@ -614,7 +647,20 @@ export default function TodoScreen() {
       })
     );
 
-  const handleDeleteTask = (id: string) => {
+  const handleDeleteTask = (id: string, direct = false) => {
+    if (direct) {
+      setTasks((prev) => {
+        const taskToDelete = prev.find((t) => t.id === id);
+        if (taskToDelete?.completed) {
+          import("../../utils/stats").then(({ removeTaskCompleted }) =>
+            removeTaskCompleted(1)
+          );
+        }
+        return prev.filter((t) => t.id !== id);
+      });
+      return;
+    }
+
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         {
@@ -799,7 +845,8 @@ export default function TodoScreen() {
             setEditingTask(t);
             setModalVisible(true);
           }}
-          onDelete={handleDeleteTask}
+          onDelete={(id) => handleDeleteTask(id)}
+          onDirectDelete={(id) => handleDeleteTask(id, true)}
           theme={theme}
           icon="star"
           delayIndex={0}
@@ -813,10 +860,11 @@ export default function TodoScreen() {
             setEditingTask(t);
             setModalVisible(true);
           }}
-          onDelete={handleDeleteTask}
+          onDelete={(id) => handleDeleteTask(id)}
+          onDirectDelete={(id) => handleDeleteTask(id, true)}
           theme={theme}
           icon="time"
-          delayIndex={1}
+          delayIndex={todayTasks.length}
         />
 
         {tasks.length === 0 && <EmptyState styles={styles} theme={theme} />}

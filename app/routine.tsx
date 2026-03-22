@@ -24,6 +24,9 @@ import TaskForm from "../components/dashboard/TaskForm";
 import TaskModal from "../components/dashboard/TaskModal";
 import { TimelineEventCard } from "../components/dashboard/TimelineEventCard";
 import { Theme } from "../constants/shared";
+
+// SwiftUI liquid glass (iOS dev build only)
+import { ContextMenu, Button as SwiftUIButton, Text as SwiftUIText, Host } from '@expo/ui/swift-ui';
 import { useTheme } from "../context/ThemeContext";
 import { FormData, RoutineItem, getDateString, sortRoutineItems, timeToMinutes } from "../utils/utils";
 
@@ -586,6 +589,28 @@ export default function RoutineScreen() {
     // Automatically close modal after save if desired, but here we let the Modal decide.
   }, [allRoutines, saveRoutines]);
 
+  const handleDirectEdit = useCallback((task: RoutineItem) => {
+    openForm(task);
+  }, [openForm]);
+
+  const handleDirectDelete = useCallback((task: RoutineItem) => {
+    const taskNameLower = task.task?.toLowerCase().trim();
+    if (taskNameLower === "wake up" || taskNameLower === "sleep") return;
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Transfer ${task.task} away?`)) {
+        saveRoutines(allRoutines.filter(item => item.id !== task.id));
+      }
+    } else {
+      Alert.alert("Transfer", `Transfer ${task.task} away?`, [
+        { text: "Cancel", style: "cancel" },
+        { text: "Transfer", style: "destructive", onPress: () => {
+            saveRoutines(allRoutines.filter(item => item.id !== task.id));
+        } },
+      ]);
+    }
+  }, [allRoutines, saveRoutines]);
+
   const updateFormField = useCallback((field: keyof FormData, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   }, []);
@@ -672,17 +697,44 @@ export default function RoutineScreen() {
                       pageItems.map((entry, itemIdx) => {
                         const prevMins = itemIdx > 0 ? pageItems[itemIdx - 1].minutes : null;
                         const showBreakBefore = prevMins !== null && (entry.minutes - prevMins) > 45;
+                        const isProtected = entry.data.task?.toLowerCase().trim() === "wake up" || entry.data.task?.toLowerCase().trim() === "sleep";
                         return (
-                          <TimelineEventCard
-                            key={`${idx}-${(entry.data as any).id}`}
-                            item={entry.data}
-                            isFirst={itemIdx === 0}
-                            isLast={itemIdx === pageItems.length - 1}
-                            showBreakBefore={showBreakBefore}
-                            onPress={idx === 1
-                              ? () => openModal(entry.data as RoutineItem, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
-                              : undefined}
-                          />
+                          Platform.OS === 'ios' && idx === 1 ? (
+                            <Host key={`${idx}-${(entry.data as any).id}`}>
+                              <ContextMenu>
+                                <ContextMenu.Trigger>
+                                  <TimelineEventCard
+                                    item={entry.data}
+                                    isFirst={itemIdx === 0}
+                                    isLast={itemIdx === pageItems.length - 1}
+                                    showBreakBefore={showBreakBefore}
+                                    onPress={() => openModal(entry.data as RoutineItem, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)}
+                                  />
+                                </ContextMenu.Trigger>
+                                <ContextMenu.Items>
+                                  <SwiftUIButton systemImage="pencil" onPress={() => handleDirectEdit(entry.data as RoutineItem)}>
+                                    <SwiftUIText>Edit</SwiftUIText>
+                                  </SwiftUIButton>
+                                  {!isProtected && (
+                                    <SwiftUIButton systemImage="trash" role="destructive" onPress={() => handleDirectDelete(entry.data as RoutineItem)}>
+                                      <SwiftUIText>Transfer Out</SwiftUIText>
+                                    </SwiftUIButton>
+                                  )}
+                                </ContextMenu.Items>
+                              </ContextMenu>
+                            </Host>
+                          ) : (
+                            <TimelineEventCard
+                              key={`${idx}-${(entry.data as any).id}`}
+                              item={entry.data}
+                              isFirst={itemIdx === 0}
+                              isLast={itemIdx === pageItems.length - 1}
+                              showBreakBefore={showBreakBefore}
+                              onPress={idx === 1
+                                ? () => openModal(entry.data as RoutineItem, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
+                                : undefined}
+                            />
+                          )
                         );
                       })
                     )}

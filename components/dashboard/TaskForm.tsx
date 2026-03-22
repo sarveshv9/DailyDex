@@ -22,6 +22,10 @@ import { useTheme } from "../../context/ThemeContext";
 import { FormData, getRoutineIcon } from "../../utils/utils";
 import { TimePickerSheet } from "../common/TimePickerSheet";
 
+// SwiftUI liquid glass (iOS dev build only)
+import { GlassEffectContainer, Host, VStack } from '@expo/ui/swift-ui';
+import { glassEffect, frame } from '@expo/ui/swift-ui/modifiers';
+
 /* ─────────────────────────────── Types ──────────────────────────────── */
 
 interface TaskFormProps {
@@ -176,13 +180,27 @@ const TaskForm: React.FC<TaskFormProps> = ({
           }
         ]}
       >
-        <BlurView
-          style={StyleSheet.absoluteFill}
-          intensity={Platform.OS === 'ios' ? 20 : 40}
-          tint={isDark ? "dark" : "light"}
-          experimentalBlurMethod="dimezisBlurView"
-        />
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        {Platform.OS === 'ios' ? (
+          <Pressable style={StyleSheet.absoluteFill} onPress={onClose}>
+            <Host style={StyleSheet.absoluteFill} colorScheme={isDark ? 'dark' : 'light'}>
+              <GlassEffectContainer>
+                <VStack modifiers={[glassEffect(), frame({ maxWidth: 9999, maxHeight: 9999 })]}>
+                  {null}
+                </VStack>
+              </GlassEffectContainer>
+            </Host>
+          </Pressable>
+        ) : (
+          <>
+            <BlurView
+              style={StyleSheet.absoluteFill}
+              intensity={40}
+              tint={isDark ? "dark" : "light"}
+              experimentalBlurMethod="dimezisBlurView"
+            />
+            <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+          </>
+        )}
       </Animated.View>
 
       <View style={styles.overlay} pointerEvents="box-none">
@@ -190,12 +208,22 @@ const TaskForm: React.FC<TaskFormProps> = ({
           style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}
           testID="task-form-content"
         >
-          <BlurView
-            style={StyleSheet.absoluteFill}
-            intensity={Platform.OS === 'ios' ? 60 : 100}
-            tint={isDark ? "dark" : "light"}
-            experimentalBlurMethod="dimezisBlurView"
-          />
+          {Platform.OS === 'ios' ? (
+            <Host style={StyleSheet.absoluteFill} colorScheme={isDark ? 'dark' : 'light'}>
+              <GlassEffectContainer>
+                <VStack modifiers={[glassEffect(), frame({ maxWidth: 9999, maxHeight: 9999 })]}>
+                  {null}
+                </VStack>
+              </GlassEffectContainer>
+            </Host>
+          ) : (
+            <BlurView
+              style={StyleSheet.absoluteFill}
+              intensity={100}
+              tint={isDark ? "dark" : "light"}
+              experimentalBlurMethod="dimezisBlurView"
+            />
+          )}
           {/* ── Handle ── */}
           <View style={styles.handle} />
 

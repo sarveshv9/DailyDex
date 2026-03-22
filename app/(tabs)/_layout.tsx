@@ -15,6 +15,7 @@ import { BlurView } from 'expo-blur';
 import React, { useEffect, useRef } from 'react';
 import {
   Animated,
+  Platform,
   Pressable,
   StyleSheet,
   View,
@@ -26,6 +27,10 @@ import {
   PanGestureHandler
 } from 'react-native-gesture-handler';
 import { useTheme } from '../../context/ThemeContext';
+
+// SwiftUI liquid glass (iOS dev build only)
+import { GlassEffectContainer, Host, VStack } from '@expo/ui/swift-ui';
+import { glassEffect, frame } from '@expo/ui/swift-ui/modifiers';
 
 const { Navigator } = createMaterialTopTabNavigator();
 
@@ -116,12 +121,22 @@ function CustomTabBar({
           ]}
         >
           {/* Blur background */}
-          <BlurView
-            intensity={100}
-            tint={theme.colors.background === '#FFFFFF' || theme.colors.background.startsWith('#F') ? 'systemMaterialLight' : 'systemMaterialDark'}
-            style={StyleSheet.absoluteFill}
-            pointerEvents="none"
-          />
+          {Platform.OS === 'ios' ? (
+            <Host style={StyleSheet.absoluteFill} colorScheme={theme.colors.background === '#FFFFFF' || theme.colors.background.startsWith('#F') ? 'light' : 'dark'}>
+              <GlassEffectContainer>
+                <VStack modifiers={[glassEffect(), frame({ maxWidth: 9999, maxHeight: 9999 })]}>
+                  {null}
+                </VStack>
+              </GlassEffectContainer>
+            </Host>
+          ) : (
+            <BlurView
+              intensity={100}
+              tint={theme.colors.background === '#FFFFFF' || theme.colors.background.startsWith('#F') ? 'systemMaterialLight' : 'systemMaterialDark'}
+              style={StyleSheet.absoluteFill}
+              pointerEvents="none"
+            />
+          )}
           {/* Glass tint overlay */}
           <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.glass.cardBg }]} />
           {/* Background icons (outlined) - each in their own position */}

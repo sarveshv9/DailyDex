@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { memo, useCallback, useMemo, useRef } from 'react';
 import {
+    ActionSheetIOS,
     Animated,
     Dimensions,
     FlatList,
@@ -20,6 +21,9 @@ import { useTheme } from '../../context/ThemeContext';
 import { RoutineItem, timeToMinutes } from '../../utils/utils';
 import { MergedTaskChain } from './MergedTaskChain';
 import { MonthCalendarView } from './MonthCalendarView';
+
+// SwiftUI components (iOS only — wrapped in Platform.OS check at usage site)
+import { Host, ContextMenu, Button as SwiftUIButton, Text as SwiftUIText } from '@expo/ui/swift-ui';
 
 /* ─────────────────────────────── Config ─────────────────────────────── */
 
@@ -546,6 +550,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
     const styles = useMemo(() => getStyles(theme), [theme]);
 
     const [viewMode, setViewMode] = React.useState<'3-day' | '7-day' | 'month'>('3-day');
+    const [showDropdown, setShowDropdown] = React.useState(false);
     const is7Day = viewMode === '7-day';
     const COL_WIDTH = is7Day ? COL_WIDTH_7DAY : COL_WIDTH_3DAY;
 
@@ -760,26 +765,77 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                     </View>
                 </Pressable>
 
-                {/* ── View-mode toggle (calendar-outline = 3-day, calendar = 7-day, grid = month) ── */}
-                <Animated.View style={{ opacity: collapseOpacity }}>
-                    <Pressable
-                        onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                            setViewMode(prev => {
-                                if (prev === '3-day') return '7-day';
-                                if (prev === '7-day') return 'month';
-                                return '3-day';
-                            });
-                        }}
-                        style={styles.viewToggleBtn}
-                        testID="view-toggle-btn"
-                    >
-                        <Ionicons
-                            name={viewMode === '3-day' ? 'calendar' : viewMode === '7-day' ? 'grid' : 'calendar-outline'}
-                            size={22}
-                            color={theme.colors.primary}
-                        />
-                    </Pressable>
+                {/* ── View-mode toggle Dropdown ── */}
+                <Animated.View style={{ opacity: collapseOpacity, zIndex: 100 }}>
+                    {Platform.OS === 'ios' ? (
+                        /* Native SwiftUI ContextMenu on iOS — liquid glass effect */
+                        <Host matchContents colorScheme={isDarkMode ? 'dark' : 'light'} style={{ zIndex: 100 }}>
+                            <ContextMenu>
+                                <ContextMenu.Trigger>
+                                    <View style={[styles.viewToggleBtn, { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 24, backgroundColor: `${theme.colors.primary}15` }]}>
+                                        <Text style={{ color: theme.colors.primary, fontSize: 13, fontWeight: '700' }}>
+                                            {viewMode === '3-day' ? '3-Day' : viewMode === '7-day' ? 'Weekly' : 'Monthly'}
+                                        </Text>
+                                        <Ionicons name="chevron-down" size={16} color={theme.colors.primary} />
+                                    </View>
+                                </ContextMenu.Trigger>
+                                <ContextMenu.Items>
+                                    <SwiftUIButton systemImage="calendar" onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setViewMode('3-day'); }}>
+                                        <SwiftUIText>3-Day View</SwiftUIText>
+                                    </SwiftUIButton>
+                                    <SwiftUIButton systemImage="calendar.day.timeline.left" onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setViewMode('7-day'); }}>
+                                        <SwiftUIText>Weekly View</SwiftUIText>
+                                    </SwiftUIButton>
+                                    <SwiftUIButton systemImage="square.grid.2x2" onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setViewMode('month'); }}>
+                                        <SwiftUIText>Monthly View</SwiftUIText>
+                                    </SwiftUIButton>
+                                </ContextMenu.Items>
+                            </ContextMenu>
+                        </Host>
+                    ) : (
+                        /* Glass dropdown fallback for Android/Web */
+                        <>
+                            <Pressable
+                                onPress={() => {
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                    setShowDropdown(prev => !prev);
+                                }}
+                                style={[styles.viewToggleBtn, { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 24, backgroundColor: `${theme.colors.primary}15`, width: 'auto', height: 'auto' }]}
+                                testID="view-toggle-btn"
+                            >
+                                <Text style={{ color: theme.colors.primary, fontSize: 13, fontWeight: '700' }}>
+                                    {viewMode === '3-day' ? '3-Day' : viewMode === '7-day' ? 'Weekly' : 'Monthly'}
+                                </Text>
+                                <Ionicons name="chevron-down" size={16} color={theme.colors.primary} />
+                            </Pressable>
+                            {showDropdown && (
+                                <View style={{ position: 'absolute', top: 44, right: 0, width: 160, borderRadius: 16, overflow: 'hidden', backgroundColor: 'transparent', elevation: 8 }}>
+                                    <BlurView intensity={90} tint={isDarkMode ? 'dark' : 'light'} style={{ backgroundColor: isDarkMode ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.7)', borderWidth: 1, borderColor: `${theme.colors.text}10`, borderRadius: 16 }}>
+                                        {[{ mode: '3-day', label: '3-Day View' }, { mode: '7-day', label: 'Weekly View' }, { mode: 'month', label: 'Monthly View' }].map((opt, i) => (
+                                            <Pressable
+                                                key={opt.mode}
+                                                onPress={() => {
+                                                    setViewMode(opt.mode as any);
+                                                    setShowDropdown(false);
+                                                }}
+                                                style={({ pressed }) => [{
+                                                    paddingHorizontal: 16,
+                                                    paddingVertical: 14,
+                                                    borderBottomWidth: i === 2 ? 0 : StyleSheet.hairlineWidth,
+                                                    borderBottomColor: `${theme.colors.text}10`,
+                                                    backgroundColor: pressed ? `${theme.colors.primary}15` : 'transparent'
+                                                }]}
+                                            >
+                                                <Text style={{ color: viewMode === opt.mode ? theme.colors.primary : theme.colors.text, fontSize: 14, fontWeight: viewMode === opt.mode ? '600' : '400' }}>
+                                                    {opt.label}
+                                                </Text>
+                                            </Pressable>
+                                        ))}
+                                    </BlurView>
+                                </View>
+                            )}
+                        </>
+                    )}
                 </Animated.View>
             </Animated.View>
 

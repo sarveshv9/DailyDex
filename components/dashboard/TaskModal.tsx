@@ -20,6 +20,10 @@ import { useTheme } from "../../context/ThemeContext";
 import { RoutineItem, SubTask, parseTime, getRoutineIcon } from "../../utils/utils";
 import { TimePickerSheet } from "../common/TimePickerSheet";
 
+// SwiftUI liquid glass (iOS dev build only)
+import { GlassEffectContainer, Host, VStack } from '@expo/ui/swift-ui';
+import { glassEffect, frame, cornerRadius as swiftCornerRadius } from '@expo/ui/swift-ui/modifiers';
+
 interface TaskModalProps {
   visible: boolean;
   task: RoutineItem | null;
@@ -315,13 +319,27 @@ const TaskModal: React.FC<TaskModalProps> = ({
           }
         ]}
       >
-        <BlurView
-          style={StyleSheet.absoluteFill}
-          intensity={Platform.OS === 'ios' ? 20 : 40}
-          tint={isDark ? "dark" : "light"}
-          experimentalBlurMethod="dimezisBlurView"
-        />
-        <Pressable style={StyleSheet.absoluteFill} onPress={closeAndSave} />
+        {Platform.OS === 'ios' ? (
+          <Pressable style={StyleSheet.absoluteFill} onPress={closeAndSave}>
+            <Host style={StyleSheet.absoluteFill} colorScheme={isDark ? 'dark' : 'light'}>
+              <GlassEffectContainer>
+                <VStack modifiers={[glassEffect(), frame({ maxWidth: 9999, maxHeight: 9999 })]}>
+                  {null}
+                </VStack>
+              </GlassEffectContainer>
+            </Host>
+          </Pressable>
+        ) : (
+          <>
+            <BlurView
+              style={StyleSheet.absoluteFill}
+              intensity={40}
+              tint={isDark ? "dark" : "light"}
+              experimentalBlurMethod="dimezisBlurView"
+            />
+            <Pressable style={StyleSheet.absoluteFill} onPress={closeAndSave} />
+          </>
+        )}
       </Animated.View>
 
       <View style={styles.overlay} pointerEvents="box-none">

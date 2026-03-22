@@ -12,6 +12,10 @@ import {
 } from "react-native";
 import { Theme } from "../../constants/shared";
 
+// SwiftUI liquid glass (iOS dev build only)
+import { GlassEffectContainer, Host, VStack } from '@expo/ui/swift-ui';
+import { glassEffect, frame } from '@expo/ui/swift-ui/modifiers';
+
 type BottomSheetProps = {
   visible: boolean;
   onClose: () => void;
@@ -51,7 +55,19 @@ export function BottomSheet({
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.container}
       >
-        <Pressable style={styles.backdrop} onPress={onClose} />
+        {Platform.OS === 'ios' ? (
+          <Pressable style={styles.backdrop} onPress={onClose}>
+            <Host style={StyleSheet.absoluteFill} colorScheme={theme.colors.background.startsWith('#0') || theme.colors.background === '#000000' || theme.colors.background === '#1A1A1A' ? 'dark' : 'light'}>
+              <GlassEffectContainer>
+                <VStack modifiers={[glassEffect(), frame({ maxWidth: 9999, maxHeight: 9999 })]}>
+                  {null}
+                </VStack>
+              </GlassEffectContainer>
+            </Host>
+          </Pressable>
+        ) : (
+          <Pressable style={styles.backdrop} onPress={onClose} />
+        )}
         
         <View style={styles.sheetContent}>
           {/* Handle for visual affordance */}
