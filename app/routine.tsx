@@ -25,7 +25,7 @@ import TaskModal from "../components/dashboard/TaskModal";
 import { TimelineEventCard } from "../components/dashboard/TimelineEventCard";
 import { Theme } from "../constants/shared";
 import { useTheme } from "../context/ThemeContext";
-import { FormData, RoutineItem, getDateString, sortRoutineItems, timeToMinutes, getRoutineIcon } from "../utils/utils";
+import { FormData, RoutineItem, getDateString, sortRoutineItems, timeToMinutes } from "../utils/utils";
 
 /* -------------------- Assets & Constants -------------------- */
 
@@ -757,7 +757,7 @@ const getStyles = (theme: Theme) =>
     listOverlay: {
       ...StyleSheet.absoluteFillObject,
       top: 150, // Lowered for better accessibility and to reveal more timeline
-      backgroundColor: theme.colors.background,
+      backgroundColor: theme.colors.card,
       borderTopLeftRadius: 50,
       borderTopRightRadius: 50,
       shadowColor: "#000",
@@ -770,7 +770,7 @@ const getStyles = (theme: Theme) =>
     listHeader: {
       alignItems: "center",
       paddingVertical: 16,
-      backgroundColor: theme.colors.background,
+      backgroundColor: theme.colors.card,
       borderTopLeftRadius: 50,
       borderTopRightRadius: 50,
     },
@@ -788,7 +788,7 @@ const getStyles = (theme: Theme) =>
       width: 40,
       height: 5,
       borderRadius: 2.5,
-      backgroundColor: `${theme.colors.textSecondary}33`,
+      backgroundColor: `${theme.colors.secondary}33`,
       marginBottom: 8,
     },
     listTitle: {
