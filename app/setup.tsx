@@ -3,7 +3,6 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
     Dimensions,
-    Image,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -12,28 +11,29 @@ import {
     View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import { InlineTimePicker } from "../components/common/InlineTimePicker";
 import { Theme } from "../constants/shared";
 import { useTheme } from "../context/ThemeContext";
-import { getRoutineImage, RoutineItem } from "../utils/utils";
+import { getRoutineIcon, RoutineItem } from "../utils/utils";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const STORAGE_KEY = "@zen_routine";
 const SETUP_KEY = "@zen_setup_complete";
 
 const TEMPLATES = [
-    { task: "Wake Up", description: "A wild day appears! Start gently.", imageKey: "wakeup", emoji: "🌅", defaultTime: "07:00 AM" },
-    { task: "Hydrate", description: "It's super effective! Drink water.", imageKey: "water", emoji: "💧", defaultTime: "07:15 AM" },
-    { task: "Stretch", description: "Limber up to increase evasion.", imageKey: "yoga", emoji: "🧘", defaultTime: "07:30 AM" },
-    { task: "Tea", description: "Restore PP and focus your mind.", imageKey: "tea_journal", emoji: "🍵", defaultTime: "08:00 AM" },
-    { task: "Breakfast", description: "Boost Attack stat with nutrition.", imageKey: "breakfast", emoji: "🥣", defaultTime: "08:30 AM" },
-    { task: "Study", description: "Gain XP in a new skill.", imageKey: "study", emoji: "📚", defaultTime: "09:00 AM" },
-    { task: "Lunch", description: "Refuel HP for the afternoon.", imageKey: "lunch", emoji: "🍱", defaultTime: "01:00 PM" },
-    { task: "Walk", description: "Encounter nature in the tall grass.", imageKey: "walk", emoji: "🚶", defaultTime: "05:00 PM" },
-    { task: "Reflect", description: "Check your progress badge.", imageKey: "reflect", emoji: "📓", defaultTime: "06:00 PM" },
-    { task: "Dinner", description: "Share a meal with your party.", imageKey: "dinner", emoji: "🍽️", defaultTime: "07:00 PM" },
-    { task: "Wind Down", description: "Lower defense, prepare to rest.", imageKey: "prepare_sleep", emoji: "🌙", defaultTime: "09:00 PM" },
-    { task: "Sleep", description: "Save your game and recharge.", imageKey: "sleep", emoji: "😴", defaultTime: "10:00 PM" },
+  { task: "Wake Up", description: "Start your day with a clear mind.", imageKey: "wakeup", emoji: "🌅", defaultTime: "07:00 AM" },
+  { task: "Hydrate", description: "Refresh your body with water.", imageKey: "water", emoji: "💧", defaultTime: "07:15 AM" },
+  { task: "Stretch", description: "Gentle movement to wake up your muscles.", imageKey: "yoga", emoji: "🧘", defaultTime: "07:30 AM" },
+  { task: "Tea", description: "A moment of calm and reflection.", imageKey: "tea_journal", emoji: "🍵", defaultTime: "08:00 AM" },
+  { task: "Breakfast", description: "Nourish your body for the day ahead.", imageKey: "breakfast", emoji: "🥣", defaultTime: "08:30 AM" },
+  { task: "Study", description: "Focus on learning and growth.", imageKey: "study", emoji: "📚", defaultTime: "09:00 AM" },
+  { task: "Lunch", description: "Pause and refuel for the afternoon.", imageKey: "lunch", emoji: "🍱", defaultTime: "01:00 PM" },
+  { task: "Walk", description: "Step outside and connect with nature.", imageKey: "walk", emoji: "🚶", defaultTime: "05:00 PM" },
+  { task: "Reflect", description: "Acknowledge your progress and intentions.", imageKey: "reflect", emoji: "📓", defaultTime: "06:00 PM" },
+  { task: "Dinner", description: "Enjoy a mindful meal with loved ones.", imageKey: "dinner", emoji: "🍽️", defaultTime: "07:00 PM" },
+  { task: "Wind Down", description: "Slow down and prepare for rest.", imageKey: "prepare_sleep", emoji: "🌙", defaultTime: "09:00 PM" },
+  { task: "Sleep", description: "Rest deeply and recharge.", imageKey: "sleep", emoji: "😴", defaultTime: "10:00 PM" },
 ];
 
 type DraftItem = Omit<RoutineItem, "id" | "insertionOrder">;
@@ -78,10 +78,10 @@ function StepTime({
 
             <View style={styles.timePickerContainer}>
                 <View style={styles.largeIconWrap}>
-                    <Image
-                        source={getRoutineImage(imageKey)}
-                        style={styles.largeIcon}
-                        resizeMode="contain"
+                    <Ionicons
+                        name={getRoutineIcon(imageKey)}
+                        size={80}
+                        color={theme.colors.primary}
                     />
                 </View>
                 <View style={styles.mainTimePicker}>
@@ -155,10 +155,10 @@ function StepPick({
                             onPress={() => !isMandatory && onToggle(tmpl.task)}
                         >
                             <View style={[styles.gridIconWrap, isOn && styles.gridIconWrapOn]}>
-                                <Image
-                                    source={getRoutineImage(tmpl.imageKey)}
-                                    style={styles.gridIcon}
-                                    resizeMode="contain"
+                                <Ionicons
+                                    name={getRoutineIcon(tmpl.imageKey)}
+                                    size={34}
+                                    color={theme.colors.primary}
                                 />
                             </View>
                             <Text style={[styles.gridLabel, isOn && styles.gridLabelOn]}>
@@ -254,10 +254,10 @@ function StepTimes({
                                         onPress={() => setExpanded(isOpen ? null : index)}
                                     >
                                         <View style={styles.timelineCardLeft}>
-                                            <Image
-                                                source={getRoutineImage(item.imageKey)}
-                                                style={styles.timelineIcon}
-                                                resizeMode="contain"
+                                            <Ionicons
+                                                name={getRoutineIcon(item.imageKey)}
+                                                size={32}
+                                                color={theme.colors.primary}
                                             />
                                             <View>
                                                 <Text style={styles.timelineTask}>{item.task}</Text>
@@ -355,8 +355,8 @@ export default function SetupScreen() {
         setSaving(true);
         // Save minimal routine if skipped (just Wake Up and Sleep)
         const minimalItems: RoutineItem[] = [
-            { task: "Wake Up", description: "A wild day appears! Start gently.", imageKey: "wakeup", time: wakeTime, id: "skip-wakeup", insertionOrder: 1 },
-            { task: "Sleep", description: "Save your game and recharge.", imageKey: "sleep", time: sleepTime, id: "skip-sleep", insertionOrder: 2 },
+            { task: "Wake Up", description: "Start your day with a clear mind.", imageKey: "wakeup", time: wakeTime, id: "skip-wakeup", insertionOrder: 1 },
+            { task: "Sleep", description: "Rest deeply and recharge.", imageKey: "sleep", time: sleepTime, id: "skip-sleep", insertionOrder: 2 },
         ];
         try {
             await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(minimalItems));

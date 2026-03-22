@@ -17,7 +17,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../../context/ThemeContext";
-import { RoutineItem, SubTask, parseTime } from "../../utils/utils";
+import { RoutineItem, SubTask, parseTime, getRoutineIcon } from "../../utils/utils";
 import { TimePickerSheet } from "../common/TimePickerSheet";
 
 interface TaskModalProps {
@@ -353,7 +353,11 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 <View style={styles.dashedLine} />
               </View>
               <View style={styles.iconPill}>
-                <Ionicons name="moon" size={36} color="#4DA6FF" />
+                <Ionicons 
+                  name={getRoutineIcon(editedTask.imageKey)} 
+                  size={42} 
+                  color={theme.colors.primary} 
+                />
                 <View style={[styles.paletteBadge, { borderColor: theme.colors.primary }]}>
                   <Ionicons name="color-palette" size={16} color="#FFFFFF" />
                 </View>

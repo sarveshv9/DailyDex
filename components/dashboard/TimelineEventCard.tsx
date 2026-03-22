@@ -17,7 +17,7 @@ import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Theme } from '../../constants/shared';
 import { useTheme } from '../../context/ThemeContext';
-import { RoutineItem } from '../../utils/utils';
+import { RoutineItem, ICON_MAP } from '../../utils/utils';
 
 export interface TimelineEventCardProps {
     item: RoutineItem;
@@ -28,21 +28,6 @@ export interface TimelineEventCardProps {
     showBreakBefore?: boolean;
 }
 
-// Maps imageKey -> Ionicons icon name
-const ICON_MAP: Record<string, keyof typeof Ionicons.glyphMap> = {
-    wakeup: 'alarm-outline',
-    sleep: 'moon-outline',
-    water: 'water-outline',
-    tea_journal: 'cafe-outline',
-    breakfast: 'restaurant-outline',
-    lunch: 'restaurant-outline',
-    dinner: 'restaurant-outline',
-    study: 'book-outline',
-    walk: 'walk-outline',
-    yoga: 'fitness-outline',
-    reflect: 'journal-outline',
-    prepare_sleep: 'bed-outline',
-};
 
 const ICON_SIZE = 44; // diameter of the icon circle
 const TIME_COL_W = 52;

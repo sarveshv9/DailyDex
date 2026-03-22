@@ -18,27 +18,29 @@ export interface RoutineItem {
   subtasks?: SubTask[];
 }
 
-export const ROUTINE_IMAGES: Record<string, any> = {
-  wakeup: require("../assets/images/pixel/wakeup.png"),
-  water: require("../assets/images/pixel/water.png"),
-  yoga: require("../assets/images/pixel/yoga.png"),
-  tea_journal: require("../assets/images/pixel/tea_journal.png"),
-  breakfast: require("../assets/images/pixel/breakfast.png"),
-  study: require("../assets/images/pixel/study.png"),
-  lunch: require("../assets/images/pixel/lunch.png"),
-  walk: require("../assets/images/pixel/walk.png"),
-  reflect: require("../assets/images/pixel/reflect.png"),
-  dinner: require("../assets/images/pixel/dinner.png"),
-  prepare_sleep: require("../assets/images/pixel/prepare_sleep.png"),
-  sleep: require("../assets/images/pixel/sleep.png"),
-  breathe: require("../assets/images/pixel/breathe.png"),
+import { Ionicons } from "@expo/vector-icons";
+
+export const ICON_MAP: Record<string, keyof typeof Ionicons.glyphMap> = {
+  wakeup: "alarm-outline",
+  water: "water-outline",
+  yoga: "fitness-outline",
+  tea_journal: "cafe-outline",
+  breakfast: "restaurant-outline",
+  study: "book-outline",
+  lunch: "restaurant-outline",
+  walk: "walk-outline",
+  reflect: "journal-outline",
+  dinner: "restaurant-outline",
+  prepare_sleep: "bed-outline",
+  sleep: "moon-outline",
+  breathe: "leaf-outline",
 };
 
-export const getRoutineImage = (key?: string) => {
-  if (key && ROUTINE_IMAGES[key]) {
-    return ROUTINE_IMAGES[key];
+export const getRoutineIcon = (key?: string): keyof typeof Ionicons.glyphMap => {
+  if (key && ICON_MAP[key]) {
+    return ICON_MAP[key];
   }
-  return ROUTINE_IMAGES["breathe"];
+  return ICON_MAP["breathe"];
 };
 
 export interface FormData {

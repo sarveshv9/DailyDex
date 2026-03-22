@@ -19,7 +19,7 @@ import {
 import { BlurView } from "expo-blur";
 import { Theme } from "../../constants/shared";
 import { useTheme } from "../../context/ThemeContext";
-import { FormData, getRoutineImage } from "../../utils/utils";
+import { FormData, getRoutineIcon } from "../../utils/utils";
 import { TimePickerSheet } from "../common/TimePickerSheet";
 
 /* ─────────────────────────────── Types ──────────────────────────────── */
@@ -244,10 +244,11 @@ const TaskForm: React.FC<TaskFormProps> = ({
                       ]}
                       onPress={() => applyTemplate(tmpl)}
                     >
-                      <Image
-                        source={getRoutineImage(tmpl.imageKey)}
-                        style={styles.templateImg}
-                        resizeMode="contain"
+                      <Ionicons
+                        name={getRoutineIcon(tmpl.imageKey)}
+                        size={20}
+                        color={theme.colors.primary}
+                        style={{ marginRight: 8 }}
                       />
                       <Text style={styles.templateLabel}>{tmpl.task}</Text>
                     </Pressable>

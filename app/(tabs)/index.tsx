@@ -14,6 +14,7 @@ import {
   ActivityIndicator
 } from "react-native";
 import { BlurView } from 'expo-blur';
+import { Ionicons } from "@expo/vector-icons";
 import Animated, {
   Easing,
   FadeIn,
@@ -30,23 +31,23 @@ import {
   themes
 } from "../../constants/shared";
 import { useTheme } from "../../context/ThemeContext";
-import { getRoutineImage, RoutineItem, sortRoutineItems, timeToMinutes } from "../../utils/utils";
+import { getRoutineIcon, RoutineItem, sortRoutineItems, timeToMinutes } from "../../utils/utils";
 import { loadStats, UserStats } from "../../utils/stats";
 
 /* ---------- Constants & Assets ---------- */
 const TASK_THEME_MAP: Record<string, keyof typeof themes> = {
   "wakeup": "pikachu",
   "water": "squirtle",
-  "yoga": "dragonite",
-  "tea_journal": "mew",
-  "breakfast": "slowpoke",
-  "study": "psyduck",
-  "lunch": "charizard",
+  "yoga": "bulbasaur",
+  "tea_journal": "pikachu",
+  "breakfast": "pikachu",
+  "study": "pikachu",
+  "lunch": "squirtle",
   "walk": "bulbasaur",
-  "reflect": "meowth",
-  "dinner": "jigglypuff",
-  "prepare_sleep": "gengar",
-  "sleep": "snorlax",
+  "reflect": "bulbasaur",
+  "dinner": "squirtle",
+  "prepare_sleep": "bulbasaur",
+  "sleep": "squirtle",
 };
 
 /* ---------- Hooks & Helpers ---------- */
@@ -549,7 +550,7 @@ function HomeScreen() {
   const greetingEmoji = useMemo(() => getGreetingEmoji(currentTime.getHours()), [currentTime]);
   const currentTaskItem = useMemo(() => getCurrentTask(currentTime, routines), [currentTime, routines]);
   const currentTaskText = currentTaskItem?.task || "🌸 Just Breathe";
-  const taskImage = useMemo(() => getRoutineImage(currentTaskItem?.imageKey), [currentTaskItem]);
+  const taskIcon = useMemo(() => getRoutineIcon(currentTaskItem?.imageKey), [currentTaskItem]);
   const nextTasks = useMemo(() => getNextTasks(currentTime, routines, 3), [currentTime, routines]);
   const taskProgress = useMemo(
     () => getTaskProgress(currentTime, routines, currentTaskItem),
@@ -621,11 +622,11 @@ function HomeScreen() {
                 Design your daily routine and build mindful habits, one step at a time.
               </Text>
 
-              <Image
-                source={require("../../assets/images/pixel/study.png")}
-                style={styles.setupImage}
-                resizeMode="contain"
-                accessibilityIgnoresInvertColors
+              <Ionicons
+                name="book-outline"
+                size={80}
+                color={theme.colors.primary}
+                style={{ marginBottom: 20 }}
               />
 
               <Pressable
@@ -696,17 +697,11 @@ function HomeScreen() {
 
               <View style={styles.focusRow}>
                 <View style={styles.focusImageWrap}>
-                  {taskImage ? (
-                    /* Decorative breathing animation removed to reduce cognitive load */
-                    <Image
-                      source={taskImage}
-                      style={styles.focusImage}
-                      resizeMode="contain"
-                      accessibilityIgnoresInvertColors
-                    />
-                  ) : (
-                    <View style={styles.fallbackDot} />
-                  )}
+                  <Ionicons 
+                    name={taskIcon} 
+                    size={64} 
+                    color={theme.colors.primary} 
+                  />
                 </View>
 
                 <View style={styles.focusContent}>
