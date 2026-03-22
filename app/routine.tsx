@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { LinearGradient } from "expo-linear-gradient";
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   ActionSheetIOS,
@@ -113,7 +114,7 @@ export default function RoutineScreen() {
   const routineItems = useMemo(() => {
     const dayOfWeek = selectedDate.getDay();
     const dateStr = getDateString(selectedDate);
-    return allRoutines.filter(item => 
+    return allRoutines.filter(item =>
       item.daysOfWeek?.includes(dayOfWeek) || item.date === dateStr
     );
   }, [allRoutines, selectedDate]);
@@ -308,11 +309,23 @@ export default function RoutineScreen() {
     outputRange: [0, 1, 1],
   });
 
+  const fabScale = scrollY.interpolate({
+    inputRange: [0, 60],
+    outputRange: [1, 0],
+    extrapolate: "clamp",
+  });
+
+  const fabTranslate = scrollY.interpolate({
+    inputRange: [0, 60],
+    outputRange: [0, 40],
+    extrapolate: "clamp",
+  });
+
   /* -------------------- Per-day items helper -------------------- */
   const getItemsForDate = useCallback((date: Date) => {
     const dow = date.getDay();
     const dateStr = getDateString(date);
-    const items = allRoutines.filter(item => 
+    const items = allRoutines.filter(item =>
       item.daysOfWeek?.includes(dow) || item.date === dateStr
     );
     const sorted = sortRoutineItems(items);
@@ -435,13 +448,13 @@ export default function RoutineScreen() {
       });
     } else {
       setEditingId(null);
-      setFormData({ 
-        time: "", 
-        task: "", 
-        description: "", 
-        daysOfWeek: [], 
-        date: getDateString(selectedDate), 
-        duration: 30 
+      setFormData({
+        time: "",
+        task: "",
+        description: "",
+        daysOfWeek: [],
+        date: getDateString(selectedDate),
+        duration: 30
       });
     }
     setFormVisible(true);
@@ -462,7 +475,7 @@ export default function RoutineScreen() {
 
     const normalizedTask = task.trim().toLowerCase();
     const isSleepOrWake = normalizedTask === "sleep" || normalizedTask === "wake up";
-    
+
     // If it's a sleep/wake task, it repeating every day.
     // Otherwise, it's repeating if daysOfWeek is not empty, or one-off if it has a date.
     let finalDays = isSleepOrWake ? [0, 1, 2, 3, 4, 5, 6] : (daysOfWeek || []).sort();
@@ -605,6 +618,13 @@ export default function RoutineScreen() {
         ]}
         pointerEvents={listOpen ? "auto" : "none"}
       >
+        {/* Unified top gradient (corners and center) with a subtle glow */}
+        <LinearGradient
+          colors={[`${theme.colors.primary}3A`, `${theme.colors.primary}1A`, "transparent"]}
+          style={styles.gradientTop}
+          pointerEvents="none"
+        />
+
         <View style={styles.listHeader} {...listHeaderPanResponder.panHandlers}>
           <Pressable style={styles.closeBar} onPress={closeList} />
           <Text style={styles.listTitle}>Daily Routine</Text>
@@ -671,21 +691,31 @@ export default function RoutineScreen() {
           </Animated.View>
         </View>
 
+        {/* Floating Action Button (FAB) - Minimalist Pokéball Style (Moved inside to sync with animation) */}
+        {listOpen && (
+          <Animated.View
+            style={[
+              styles.fabContainer,
+              {
+                opacity: fabScale, // Use fabScale for both scale and opacity for a smooth "going" effect
+                transform: [{ scale: fabScale }, { translateY: fabTranslate }],
+              },
+            ]}
+          >
+            <Pressable
+              style={({ pressed }) => [
+                styles.fab,
+                pressed && styles.fabPressed,
+              ]}
+              onPress={() => openForm()}
+              testID="routine-fab"
+            >
+              <Ionicons name="add" size={32} color={theme.colors.white} />
+            </Pressable>
+          </Animated.View>
+        )}
       </Animated.View>
 
-      {/* Floating Action Button (FAB) - Minimalist Pokéball Style (Moved out of overlay) */}
-      {listOpen && (
-        <Pressable
-          style={({ pressed }) => [
-            styles.fab,
-            pressed && styles.fabPressed,
-          ]}
-          onPress={() => openForm()}
-          testID="routine-fab"
-        >
-          <Ionicons name="add" size={32} color={theme.colors.white} />
-        </Pressable>
-      )}
 
       <TaskModal
         visible={modalVisible}
@@ -726,10 +756,10 @@ const getStyles = (theme: Theme) =>
 
     listOverlay: {
       ...StyleSheet.absoluteFillObject,
-      top: 110, // Higher default state
+      top: 150, // Lowered for better accessibility and to reveal more timeline
       backgroundColor: theme.colors.background,
-      borderTopLeftRadius: 30,
-      borderTopRightRadius: 30,
+      borderTopLeftRadius: 50,
+      borderTopRightRadius: 50,
       shadowColor: "#000",
       shadowOffset: { width: 0, height: -4 },
       shadowOpacity: 0.1,
@@ -740,11 +770,19 @@ const getStyles = (theme: Theme) =>
     listHeader: {
       alignItems: "center",
       paddingVertical: 16,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: `${theme.colors.text}12`,
       backgroundColor: theme.colors.background,
-      borderTopLeftRadius: 30,
-      borderTopRightRadius: 30,
+      borderTopLeftRadius: 50,
+      borderTopRightRadius: 50,
+    },
+    gradientTop: {
+      position: "absolute",
+      top: 0, // Aligned with overlay top
+      left: 0,
+      right: 0,
+      height: 70, // Height to follow the 50px rounded corners
+      borderTopLeftRadius: 50,
+      borderTopRightRadius: 50,
+      zIndex: 20,
     },
     closeBar: {
       width: 40,
@@ -781,10 +819,13 @@ const getStyles = (theme: Theme) =>
     },
 
     /* Minimalist Pokéball FAB */
-    fab: {
+    fabContainer: {
       position: "absolute",
       bottom: 30,
       right: 24,
+      zIndex: 100,
+    },
+    fab: {
       width: 56,
       height: 56,
       borderRadius: 28,
