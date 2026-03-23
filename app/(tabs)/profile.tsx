@@ -27,6 +27,7 @@ import { StatsModal } from "../../components/profile/StatsModal";
 import { ThemeSelectionModal } from "../../components/profile/ThemeSelectionModal";
 import { BottomSheet } from "../../components/profile/BottomSheet";
 import { useAudio } from "../../context/AudioContext";
+import { useSettings } from "../../context/SettingsContext";
 import { useTheme } from "../../context/ThemeContext";
 import { cancelAllRoutineNotifications, scheduleRoutineNotifications } from "../../utils/notifications";
 import { loadStats, UserStats } from "../../utils/stats";
@@ -194,7 +195,6 @@ export default function ProfileScreen() {
 
   // Modal visibility
   const [editProfileModalOpen, setEditProfileModalOpen] = useState(false);
-  const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [showStatsModal, setShowStatsModal] = useState(false);
 
   // Profile setup state
@@ -214,11 +214,6 @@ export default function ProfileScreen() {
           const storedProfile = await AsyncStorage.getItem("@zen_user_profile");
           if (storedProfile) {
             setUser(JSON.parse(storedProfile));
-          }
-
-          const storedSettings = await AsyncStorage.getItem("@zen_user_settings");
-          if (storedSettings) {
-            setSettings(JSON.parse(storedSettings));
           }
 
           const statsData = await loadStats();
@@ -249,17 +244,7 @@ export default function ProfileScreen() {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   // App-level settings state
-  const [isAppearanceExpanded, setIsAppearanceExpanded] = useState(false);
-  const [settings, setSettings] = useState({
-    notifications: {
-      taskReminders: true,
-      dailySummary: true,
-      achievements: false,
-      news: false,
-    }
-  });
-
-  const [isMusicExpanded, setIsMusicExpanded] = useState(false);
+  const { settings, toggleNotification } = useSettings();
 
   /* -------------------- Handlers -------------------- */
   const selectThemeMode = (isDark: boolean) => {
@@ -268,7 +253,7 @@ export default function ProfileScreen() {
   };
 
   const handleBackup = async () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    if (settings.hapticsEnabled) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     try {
       const keys = await AsyncStorage.getAllKeys();
       const items = await AsyncStorage.multiGet(keys);
@@ -285,44 +270,48 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleSelectSong = (index: number) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSelectedSong(index);
-    console.log("Selected Song:", index);
-  };
-
-  const toggleNotification = (key: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSettings((prev) => {
-      const newValue = !((prev.notifications as any)[key]);
-      const newSettings = {
-        ...prev,
-        notifications: {
-          ...prev.notifications,
-          [key]: newValue,
-        },
-      };
-
-      // Save to async storage
-      AsyncStorage.setItem("@zen_user_settings", JSON.stringify(newSettings))
-        .catch(e => console.error("Failed to save settings", e));
-
-      // If toggling taskReminders, schedule or cancel routine notifications
-      if (key === "taskReminders") {
-        if (newValue) {
-          AsyncStorage.getItem("@zen_routine").then((data) => {
-            if (data) {
-              const routines: RoutineItem[] = JSON.parse(data);
-              scheduleRoutineNotifications(routines);
-            }
-          }).catch(e => console.error("Failed to load routine for notifications", e));
-        } else {
-          cancelAllRoutineNotifications();
-        }
-      }
-
-      return newSettings;
-    });
+  const handleResetTasks = () => {
+    if (settings.hapticsEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    Alert.alert("Reset All Tasks", "Are you sure you want to reset all tasks? This action cannot be undone.", [
+      { text: "Cancel", style: "cancel" },
+      { 
+        text: "Yes, Reset", 
+        style: "destructive", 
+        onPress: () => {
+          setTimeout(() => {
+            Alert.alert(
+              "Final Confirmation", 
+              "This is your last chance. Do you really want to permanently delete all your tasks?", 
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Reset Everything",
+                  style: "destructive",
+                  onPress: async () => {
+                    try {
+                      const data = await AsyncStorage.getItem("@zen_routine");
+                      if (data) {
+                        const routines: RoutineItem[] = JSON.parse(data);
+                        const preserved = routines.filter(r => {
+                          const taskLo = r.task?.toLowerCase().trim();
+                          return taskLo === "wake up" || taskLo === "sleep";
+                        });
+                        await AsyncStorage.setItem("@zen_routine", JSON.stringify(preserved));
+                        if (settings.hapticsEnabled) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        Alert.alert("Success", "All tasks have been reset except Wake Up and Sleep.");
+                      }
+                    } catch (e) {
+                      console.error("Failed to reset tasks", e);
+                      Alert.alert("Error", "Could not reset tasks.");
+                    }
+                  }
+                }
+              ]
+            );
+          }, 500);
+        } 
+      },
+    ]);
   };
 
   const handleLogout = () => {
@@ -365,52 +354,6 @@ export default function ProfileScreen() {
       console.error("Failed to save profile flag", e);
     }
     console.log("Profile Saved:", user);
-  };
-
-  const handleResetTasks = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    Alert.alert("Reset All Tasks", "Are you sure you want to reset all tasks? This action cannot be undone.", [
-      { text: "Cancel", style: "cancel" },
-      { 
-        text: "Yes, Reset", 
-        style: "destructive", 
-        onPress: () => {
-          // Second step confirmation
-          setTimeout(() => {
-            Alert.alert(
-              "Final Confirmation", 
-              "This is your last chance. Do you really want to permanently delete all your tasks?", 
-              [
-                { text: "Cancel", style: "cancel" },
-                {
-                  text: "Reset Everything",
-                  style: "destructive",
-                  onPress: async () => {
-                    try {
-                      const data = await AsyncStorage.getItem("@zen_routine");
-                      if (data) {
-                        const routines: RoutineItem[] = JSON.parse(data);
-                        // Preserve Wake Up and Sleep tasks
-                        const preserved = routines.filter(r => {
-                          const taskLo = r.task?.toLowerCase().trim();
-                          return taskLo === "wake up" || taskLo === "sleep";
-                        });
-                        await AsyncStorage.setItem("@zen_routine", JSON.stringify(preserved));
-                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                        Alert.alert("Success", "All tasks have been reset except Wake Up and Sleep.");
-                      }
-                    } catch (e) {
-                      console.error("Failed to reset tasks", e);
-                      Alert.alert("Error", "Could not reset tasks.");
-                    }
-                  }
-                }
-              ]
-            );
-          }, 500);
-        } 
-      },
-    ]);
   };
 
   /* -------------------- Render -------------------- */
@@ -515,18 +458,7 @@ export default function ProfileScreen() {
         <View style={styles.sectionsContainer}>
           <SettingsSection
             theme={theme}
-            isDarkMode={isDarkMode}
-            isAppearanceExpanded={isAppearanceExpanded}
-            setIsAppearanceExpanded={setIsAppearanceExpanded}
-            selectThemeMode={selectThemeMode}
-            settings={settings}
-            setShowNotificationSettings={setShowNotificationSettings}
             handleBackup={handleBackup}
-            selectedSong={selectedSong}
-            setSelectedSong={handleSelectSong}
-            isMusicExpanded={isMusicExpanded}
-            setIsMusicExpanded={setIsMusicExpanded}
-
             handleResetTasks={handleResetTasks}
           />
         </View>
@@ -555,21 +487,6 @@ export default function ProfileScreen() {
         stats={userStats}
       />
 
-      {/* -------------------- Theme Selection Modal -------------------- */}
-      <ThemeSelectionModal
-        visible={isAppearanceExpanded}
-        onClose={() => setIsAppearanceExpanded(false)}
-        currentTheme={theme}
-        activeThemeName={themeName}
-        isDarkMode={isDarkMode}
-        onToggleDarkMode={selectThemeMode}
-        isAutoTheme={isAutoTheme}
-        onToggleAutoTheme={setIsAutoTheme}
-        onSelectTheme={(tName) => {
-          setThemeName(tName);
-        }}
-      />
-
       {/* -------------------- Edit Profile Modal -------------------- */}
       <SettingModal
         visible={editProfileModalOpen}
@@ -579,40 +496,6 @@ export default function ProfileScreen() {
         setUser={setUser}
       />
 
-      {/* -------------------- Notification Modal -------------------- */}
-      {/* Previously an inline centered modal. Changed to BottomSheet for UX consistency. */}
-      <BottomSheet
-        visible={showNotificationSettings}
-        onClose={() => setShowNotificationSettings(false)}
-        theme={theme}
-        title="Notifications"
-      >
-        <ScrollView showsVerticalScrollIndicator={false}>
-          {[
-            { key: "taskReminders", label: "Task Reminders" },
-            { key: "dailySummary", label: "Daily Summary" },
-            { key: "achievements", label: "Achievements" },
-            { key: "news", label: "News & Updates" },
-          ].map((opt, idx, arr) => (
-            <View
-              key={opt.key}
-              style={[
-                styles.row,
-                idx === arr.length - 1 && { borderBottomWidth: 0, paddingBottom: 0 },
-              ]}
-            >
-              <Text style={styles.rowLabel}>{opt.label}</Text>
-              <Switch
-                value={(settings.notifications as any)[opt.key]}
-                onValueChange={() => toggleNotification(opt.key)}
-                trackColor={{ false: theme.colors.secondary, true: theme.colors.primary }}
-                thumbColor={theme.colors.white}
-                accessibilityLabel={`Toggle ${opt.label}`}
-              />
-            </View>
-          ))}
-        </ScrollView>
-      </BottomSheet>
     </SafeAreaView>
   );
 }

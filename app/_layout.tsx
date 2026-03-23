@@ -9,6 +9,7 @@ import { ThemeProvider } from "../context/ThemeContext";
 // 1. ADD THIS IMPORT
 import { useEffect } from "react";
 import { AudioProvider } from "../context/AudioContext";
+import { SettingsProvider } from "../context/SettingsContext";
 import { TimerProvider } from "../context/TimerContext";
 import { requestNotificationPermissions } from "../utils/notifications";
 
@@ -36,17 +37,20 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       {/* 2. WRAP YOUR STACK WITH AUDIOPROVIDER */}
-      <AudioProvider>
-        <TimerProvider>
-          <StatusBar style="dark" />
-          <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="routine" options={{ headerShown: false }} />
-            <Stack.Screen name="setup" options={{ headerShown: false }} />
-            <Stack.Screen name="focus" options={{ headerShown: false, presentation: "modal" }} />
-          </Stack>
-        </TimerProvider>
-      </AudioProvider>
+      <SettingsProvider>
+        <AudioProvider>
+          <TimerProvider>
+            <StatusBar style="dark" />
+            <Stack>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="routine" options={{ headerShown: false }} />
+              <Stack.Screen name="setup" options={{ headerShown: false }} />
+              <Stack.Screen name="focus" options={{ headerShown: false, presentation: "modal" }} />
+              <Stack.Screen name="settings" options={{ presentation: "modal", headerShown: false }} />
+            </Stack>
+          </TimerProvider>
+        </AudioProvider>
+      </SettingsProvider>
     </ThemeProvider>
   );
 }

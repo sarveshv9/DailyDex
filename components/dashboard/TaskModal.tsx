@@ -18,7 +18,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../../context/ThemeContext";
 import { RoutineItem, SubTask, parseTime, getRoutineIcon } from "../../utils/utils";
-import { TimePickerSheet } from "../common/TimePickerSheet";
+import { InlineTimePicker } from "../common/InlineTimePicker";
 
 interface TaskModalProps {
   visible: boolean;
@@ -54,7 +54,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
 
   const [editedTask, setEditedTask] = useState<RoutineItem | null>(null);
-  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showInlineTimePicker, setShowInlineTimePicker] = useState(false);
   const [showDays, setShowDays] = useState(false);
   const [newSubtaskText, setNewSubtaskText] = useState("");
 
@@ -142,7 +142,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
     if (visible && task) {
       setEditedTask(JSON.parse(JSON.stringify(task)));
       setShowDays(false);
-      setShowTimePicker(false);
+      setShowInlineTimePicker(false);
     }
   }, [visible, task]);
 
@@ -398,8 +398,38 @@ const TaskModal: React.FC<TaskModalProps> = ({
                   iconColor={theme.colors.primary}
                   title={getDisplayTime()}
                   titleColor={theme.colors.text}
-                  onPress={() => setShowTimePicker(true)}
+                  onPress={() => setShowInlineTimePicker(!showInlineTimePicker)}
                 />
+                 {showInlineTimePicker && (
+                   <View style={{ paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(150,150,150,0.1)' }}>
+                     <InlineTimePicker
+                       value={editedTask.time || "1:00 AM"}
+                       onChange={(time) => setEditedTask(prev => prev ? { ...prev, time } : null)}
+                     />
+                     
+                     <View style={[styles.divider, { marginLeft: 16, marginVertical: 10 }]} />
+                     
+                     <View style={{ paddingHorizontal: 16 }}>
+                       <Text style={{ color: theme.colors.textSecondary, fontSize: 14, marginBottom: 12 }}>Duration</Text>
+                       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                         {[15, 30, 45, 60, 90, 120].map((dur) => (
+                           <TouchableOpacity
+                             key={dur}
+                             style={[
+                               styles.durPill,
+                               editedTask.duration === dur && { backgroundColor: theme.colors.primary }
+                             ]}
+                             onPress={() => setEditedTask(prev => prev ? { ...prev, duration: dur } : null)}
+                           >
+                             <Text style={[styles.durPillText, editedTask.duration === dur && { color: '#FFF' }]}>
+                               {dur < 60 ? `${dur}m` : `${dur/60}h${dur%60 === 0 ? '' : ' ' + (dur%60)+'m'}`}
+                             </Text>
+                           </TouchableOpacity>
+                         ))}
+                       </View>
+                     </View>
+                   </View>
+                 )}
                 <CardRow
                   icon="sync"
                   iconColor={theme.colors.primary}
@@ -496,18 +526,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
             })()}
           </View>
 
-          {/* Time Picker Overlay */}
-          {showTimePicker && (
-            <View style={styles.pickerOverlay}>
-              <TimePickerSheet
-                initialTime={editedTask.time || "1:00 AM"}
-                initialDuration={editedTask.duration}
-                onTimeChange={(time) => setEditedTask(prev => prev ? { ...prev, time } : null)}
-                onDurationChange={(duration) => setEditedTask(prev => prev ? { ...prev, duration } : null)}
-                onClose={() => setShowTimePicker(false)}
-              />
-            </View>
-          )}
 
         </Animated.View>
       </View>
@@ -576,6 +594,19 @@ const styles = StyleSheet.create({
   bottomBar: { alignItems: 'center', paddingTop: 16 },
   deletePillBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, paddingHorizontal: 24, backgroundColor: 'rgba(255, 69, 58, 0.15)', borderRadius: 24 },
   deleteText: { color: '#FF453A', fontSize: 16, fontWeight: '600' },
+  durPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: 'rgba(150,150,150,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(150,150,150,0.1)',
+  },
+  durPillText: {
+    fontSize: 13,
+    color: '#8E8E93',
+    fontWeight: '500',
+  },
   pickerOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end", alignItems: "center", zIndex: 100 },
   pickerCard: { borderRadius: 28, paddingVertical: 24, paddingHorizontal: 20, width: "90%", maxWidth: 320 },
 });

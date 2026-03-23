@@ -20,7 +20,7 @@ import { BlurView } from "expo-blur";
 import { Theme } from "../../constants/shared";
 import { useTheme } from "../../context/ThemeContext";
 import { FormData, getRoutineIcon } from "../../utils/utils";
-import { TimePickerSheet } from "../common/TimePickerSheet";
+import { InlineTimePicker } from "../common/InlineTimePicker";
 
 /* ─────────────────────────────── Types ──────────────────────────────── */
 
@@ -262,7 +262,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
               <Text style={styles.sectionLabel}>Start Time</Text>
               <Pressable
                 style={styles.fieldCard}
-                onPress={() => setShowTimePicker(true)}
+                onPress={() => setShowTimePicker(!showTimePicker)}
               >
                 <View style={styles.fieldIconWrap}>
                   <Ionicons name="time-outline" size={18} color={theme.colors.primary} />
@@ -276,11 +276,20 @@ const TaskForm: React.FC<TaskFormProps> = ({
                   {formData.time || "Set time"}
                 </Text>
                 <Ionicons
-                  name="chevron-forward"
+                  name={showTimePicker ? "chevron-up" : "chevron-forward"}
                   size={16}
                   color={`${theme.colors.textSecondary}60`}
                 />
               </Pressable>
+              
+              {showTimePicker && (
+                <View style={[styles.fieldCard, { marginTop: 8, paddingVertical: 10 }]}>
+                  <InlineTimePicker
+                    value={formData.time || "1:00 AM"}
+                    onChange={(time) => onUpdateField("time", time)}
+                  />
+                </View>
+              )}
             </View>
 
             {/* ── Task name ── */}
@@ -470,18 +479,6 @@ const TaskForm: React.FC<TaskFormProps> = ({
           </ScrollView>
         </Animated.View>
 
-        {/* ── Time picker overlay ── */}
-        {showTimePicker && (
-          <View style={styles.pickerOverlay}>
-            <TimePickerSheet
-              initialTime={formData.time || "1:00 AM"}
-              initialDuration={formData.duration}
-              onTimeChange={(time: string) => onUpdateField("time", time)}
-              onDurationChange={(duration: number) => onUpdateField("duration", duration)}
-              onClose={() => setShowTimePicker(false)}
-            />
-          </View>
-        )}
       </View>
     </Modal>
   );
