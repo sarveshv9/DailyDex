@@ -11,7 +11,7 @@ export default function Root({ children }: PropsWithChildren) {
             <head>
                 <meta charSet="utf-8" />
                 <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
-                <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+                <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
 
                 {/*
                   Disable body scrolling on web. This makes ScrollView components work closer to how they do on native.
@@ -19,7 +19,15 @@ export default function Root({ children }: PropsWithChildren) {
                 */}
                 <ScrollViewStyleReset />
 
-                {/* Add any additional <head> elements that you want globally available on web... */}
+                {/* Force 100dvh on mobile browsers to prevent Safari/Chrome URL bar layout shifts */}
+                <style dangerouslySetInnerHTML={{ __html: `
+                  @supports (height: 100dvh) {
+                    html, body, #root {
+                      height: 100dvh !important;
+                      min-height: 100dvh !important;
+                    }
+                  }
+                `}} />
             </head>
             <body>{children}</body>
         </html>

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Theme } from '../../constants/shared';
 import { RoutineItem, timeToMinutes } from '../../utils/utils';
 
@@ -10,8 +10,6 @@ interface Props {
     theme: Theme;
 }
 
-const PX_PER_HOUR = 110;
-const PILL_W = 90;   // fixed pill width so content width is predictable
 const PILL_H = 27;
 const PILL_GAP = 5;
 
@@ -122,14 +120,40 @@ export function MonthCalendarView({ currentDate, routineItems, onSelectDate, the
                     }
                     if (maxH - minH < 3) maxH = minH + 3;
                     const hourSpan = maxH - minH;
+                    const totalMins = hourSpan * 60;
+
+                    const isOccupied = new Array(totalMins).fill(false);
+                    items.forEach(item => {
+                        const mStart = timeToMinutes(item.time) - (minH * 60);
+                        const dur = item.duration ?? 60;
+                        for (let m = mStart; m < mStart + dur; m++) {
+                            if (m >= 0 && m < totalMins) isOccupied[m] = true;
+                        }
+                    });
+
+                    const cX = new Array(totalMins + 1).fill(0);
+                    let currentX = 0;
+                    for (let i = 0; i < totalMins; i++) {
+                        cX[i] = currentX;
+                        currentX += isOccupied[i] ? 1.5 : 0.35;
+                    }
+                    cX[totalMins] = currentX;
+
+                    // Dynamic spacing to fit content automatically
+                    const { width: SCREEN_WIDTH } = Dimensions.get('window');
+                    const availableWidth = SCREEN_WIDTH - 125; // Account for left block and padding
+                    const rawTimelineWidth = cX[totalMins];
+                    const scaleFactor = Math.max(1, availableWidth / Math.max(1, rawTimelineWidth));
+                    
+                    const dynamicPillW = Math.max(50, Math.min(90, 60 * 1.5 * scaleFactor - 8));
 
                     // Pill layout: horizontal by time offset, vertical stack for same-hour conflicts
                     const hourStack: Record<number, number> = {};
                     const pillLayout = items.map(item => {
-                        const totalMins = timeToMinutes(item.time);
-                        const h = Math.floor(totalMins / 60);
-                        const m = totalMins % 60;
-                        const leftPx = ((h - minH) + m / 60) * PX_PER_HOUR;
+                        const mStart = timeToMinutes(item.time) - (minH * 60);
+                        const h = Math.floor(mStart / 60);
+                        const safeStart = Math.max(0, Math.min(totalMins, mStart));
+                        const leftPx = cX[safeStart] * scaleFactor;
                         const row = hourStack[h] ?? 0;
                         hourStack[h] = row + 1;
                         return { leftPx, row };
@@ -142,10 +166,10 @@ export function MonthCalendarView({ currentDate, routineItems, onSelectDate, the
                     // Content width = last pill's left edge + pill width + padding
                     const lastLeft = pillLayout.length > 0
                         ? Math.max(...pillLayout.map(p => p.leftPx))
-                        : hourSpan * PX_PER_HOUR;
+                        : rawTimelineWidth * scaleFactor;
                     const timelineContentWidth = Math.max(
-                        hourSpan * PX_PER_HOUR,
-                        lastLeft + PILL_W + 24,
+                        rawTimelineWidth * scaleFactor,
+                        lastLeft + dynamicPillW + 24,
                     );
 
                     // Hour tick marks
@@ -207,7 +231,7 @@ export function MonthCalendarView({ currentDate, routineItems, onSelectDate, the
                                             return (
                                                 <View
                                                     key={h}
-                                                    style={[styles.hourMarkerWrap, { left: (h - minH) * PX_PER_HOUR }]}
+                                                    style={[styles.hourMarkerWrap, { left: cX[(h - minH) * 60] * scaleFactor }]}
                                                 >
                                                     <Text style={[styles.hourLabel, { color: theme.colors.textSecondary }]}>
                                                         {label}
@@ -242,7 +266,7 @@ export function MonthCalendarView({ currentDate, routineItems, onSelectDate, the
                                                                 backgroundColor: pillColor,
                                                                 left: leftPx,
                                                                 top: row * (PILL_H + PILL_GAP),
-                                                                width: PILL_W,
+                                                                width: dynamicPillW,
                                                             },
                                                         ]}
                                                     >
