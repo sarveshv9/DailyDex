@@ -9,7 +9,7 @@ import {
   ParamListBase,
   TabNavigationState,
 } from '@react-navigation/native';
-import * as Haptics from 'expo-haptics';
+import * as Haptics from '../../utils/haptics';
 import { withLayoutContext } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import React, { useEffect, useRef } from 'react';

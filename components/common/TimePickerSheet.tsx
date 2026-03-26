@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
-import DateTimePicker from '@react-native-community/datetimepicker';
 
 interface TimePickerSheetProps {
   initialTime: string;
@@ -11,8 +10,6 @@ interface TimePickerSheetProps {
   onDurationChange?: (duration: number) => void;
   onClose: () => void;
 }
-
-
 
 export const TimePickerSheet: React.FC<TimePickerSheetProps> = ({
   initialTime,
@@ -89,6 +86,73 @@ export const TimePickerSheet: React.FC<TimePickerSheetProps> = ({
     }
   };
 
+  const isWeb = Platform.OS === 'web';
+
+  const renderTimePicker = () => {
+    if (isWeb) {
+      const { WebTimePicker } = require('./WebTimePicker');
+      return (
+        <View style={styles.pickerContainer}>
+          <WebTimePicker
+            value={initialTime || "1:00 AM"}
+            onChange={(time: string) => onTimeChange(time)}
+            textColor="#FFFFFF"
+          />
+        </View>
+      );
+    }
+
+    const DateTimePicker = require('@react-native-community/datetimepicker').default;
+    return (
+      <View style={styles.pickerContainer}>
+        <DateTimePicker
+          value={currentDate}
+          mode="time"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={handleChange}
+          textColor="#FFFFFF"
+          themeVariant="dark"
+          style={{ height: 210, width: '100%' }}
+        />
+      </View>
+    );
+  };
+
+  const renderCustomDuration = () => {
+    if (isWeb) {
+      const { WebDurationPicker } = require('./WebTimePicker');
+      return (
+        <View style={styles.pickerContainer}>
+          <WebDurationPicker
+            value={activeDuration}
+            onChange={(mins: number) => selectDuration(mins)}
+          />
+        </View>
+      );
+    }
+
+    const DateTimePicker = require('@react-native-community/datetimepicker').default;
+    return (
+      <View style={styles.pickerContainer}>
+        <DateTimePicker
+          value={durationDate}
+          mode="countdown"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={(event: any, selectedDate?: Date) => {
+            if (selectedDate) {
+              setDurationDate(selectedDate);
+              const mins = selectedDate.getHours() * 60 + selectedDate.getMinutes();
+              selectDuration(mins);
+            }
+          }}
+          textColor="#FFFFFF"
+          themeVariant="dark"
+          style={{ height: 160, width: '100%' }}
+        />
+      </View>
+    );
+  };
+
   return (
     <View style={styles.card}>
       {/* Header */}
@@ -102,17 +166,7 @@ export const TimePickerSheet: React.FC<TimePickerSheetProps> = ({
       </View>
 
       {/* Time Wheel Container */}
-      <View style={styles.pickerContainer}>
-        <DateTimePicker
-          value={currentDate}
-          mode="time"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={handleChange}
-          textColor="#FFFFFF"
-          themeVariant="dark"
-          style={{ height: 210, width: '100%' }}
-        />
-      </View>
+      {renderTimePicker()}
 
       {/* Midnight tag */}
       <View style={styles.midnightRow}>
@@ -131,23 +185,7 @@ export const TimePickerSheet: React.FC<TimePickerSheetProps> = ({
       </View>
       
       {showCustomDuration ? (
-         <View style={styles.pickerContainer}>
-            <DateTimePicker
-               value={durationDate}
-               mode="countdown"
-               display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-               onChange={(event, selectedDate) => {
-                   if (selectedDate) {
-                       setDurationDate(selectedDate);
-                       const mins = selectedDate.getHours() * 60 + selectedDate.getMinutes();
-                       selectDuration(mins);
-                   }
-               }}
-               textColor="#FFFFFF"
-               themeVariant="dark"
-               style={{ height: 160, width: '100%' }}
-            />
-         </View>
+         renderCustomDuration()
       ) : (
          <View style={styles.durationPillsContainer}>
             {dynamicDurations.map(dur => {
@@ -176,12 +214,12 @@ export const TimePickerSheet: React.FC<TimePickerSheetProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#1E1E20', // Very dark grey, matching the image
+    backgroundColor: '#1E1E20',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     paddingTop: 24,
     paddingHorizontal: 24,
-    paddingBottom: 40, // Bottom safe area padding
+    paddingBottom: 40,
     width: '100%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },

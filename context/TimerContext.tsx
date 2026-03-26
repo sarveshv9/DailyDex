@@ -1,4 +1,4 @@
-import * as Haptics from "expo-haptics";
+import * as Haptics from "../utils/haptics";
 import * as Notifications from "expo-notifications";
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 

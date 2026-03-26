@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
+import * as Haptics from "../utils/haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
@@ -10,7 +10,7 @@ import {
     View,
 } from "react-native";
 import { BlurView } from 'expo-blur';
-import SegmentedControl from '@react-native-segmented-control/segmented-control';
+import CrossPlatformSegmentedControl from '../components/common/CrossPlatformSegmentedControl';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Theme } from "../constants/shared";
 import { useTheme } from "../context/ThemeContext";
@@ -116,7 +116,7 @@ export default function FocusScreen() {
                     <View style={styles.pickerContainer}>
                         {/* Mode Selector */}
                         <View style={styles.nativeSegmentContainer}>
-                            <SegmentedControl
+                            <CrossPlatformSegmentedControl
                                 values={['Free', 'Pomodoro']}
                                 selectedIndex={selectedMode === "Pomodoro" ? 1 : 0}
                                 onChange={(event) => {

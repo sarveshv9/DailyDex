@@ -1,6 +1,5 @@
 import React, { useMemo } from "react";
 import { StyleSheet, View, Platform } from "react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import { Theme } from "../../constants/shared";
 import { useTheme } from "../../context/ThemeContext";
 
@@ -12,6 +11,17 @@ interface InlineTimePickerProps {
 export const InlineTimePicker: React.FC<InlineTimePickerProps> = ({ value, onChange }) => {
     const { theme } = useTheme();
     const styles = useMemo(() => getStyles(theme), [theme]);
+
+    if (Platform.OS === 'web') {
+        const { WebTimePicker } = require('./WebTimePicker');
+        return (
+            <View style={styles.container}>
+                <WebTimePicker value={value || "1:00 AM"} onChange={onChange} />
+            </View>
+        );
+    }
+
+    const DateTimePicker = require("@react-native-community/datetimepicker").default;
 
     const getDateFromString = (timeStr: string) => {
       const now = new Date();

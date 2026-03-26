@@ -1,4 +1,3 @@
-import DateTimePicker from "@react-native-community/datetimepicker";
 import React, { useMemo } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { Theme } from "../../constants/shared";
@@ -17,6 +16,20 @@ export const SimpleTimePicker: React.FC<SimpleTimePickerProps> = ({
 }) => {
   const { theme } = useTheme();
   const styles = useMemo(() => getStyles(theme), [theme]);
+
+  if (Platform.OS === 'web') {
+    const { WebTimePicker } = require('./WebTimePicker');
+    return (
+      <View style={styles.container}>
+        <WebTimePicker value={selectedTime || "1:00 AM"} onChange={onTimeChange} />
+        <Pressable style={styles.timeConfirmButton} onPress={onConfirm}>
+          <Text style={styles.timeConfirmText}>Done</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  const DateTimePicker = require("@react-native-community/datetimepicker").default;
 
   const getDateFromString = (timeStr: string) => {
     const now = new Date();

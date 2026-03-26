@@ -3,15 +3,18 @@ import { Platform } from "react-native";
 import { RoutineItem, timeToMinutes } from "./utils";
 
 // Configure how notifications appear while app is in the foreground
-Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: false,
-        shouldShowBanner: true,
-        shouldShowList: true,
-    }),
-});
+// Skip on web - expo-notifications doesn't work on web
+if (Platform.OS !== 'web') {
+  Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+          shouldShowAlert: true,
+          shouldPlaySound: true,
+          shouldSetBadge: false,
+          shouldShowBanner: true,
+          shouldShowList: true,
+      }),
+  });
+}
 
 const CHANNEL_ID = "zen-routine";
 const NOTIFICATION_ID_PREFIX = "zen-routine-";
@@ -21,6 +24,7 @@ const NOTIFICATION_ID_PREFIX = "zen-routine-";
  * Should be called on app startup.
  */
 export const requestNotificationPermissions = async (): Promise<boolean> => {
+    if (Platform.OS === 'web') return false;
     if (Platform.OS === "android") {
         await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
             name: "Zen Routine Reminders",
@@ -44,6 +48,7 @@ export const requestNotificationPermissions = async (): Promise<boolean> => {
 export const scheduleRoutineNotifications = async (
     routines: RoutineItem[]
 ): Promise<void> => {
+    if (Platform.OS === 'web') return;
     // Cancel all existing routine notifications
     await cancelAllRoutineNotifications();
 
@@ -91,6 +96,7 @@ export const scheduleRoutineNotifications = async (
  * Cancel all previously scheduled routine notifications.
  */
 export const cancelAllRoutineNotifications = async (): Promise<void> => {
+    if (Platform.OS === 'web') return;
     const scheduled = await Notifications.getAllScheduledNotificationsAsync();
     for (const notif of scheduled) {
         if (notif.identifier.startsWith(NOTIFICATION_ID_PREFIX)) {
