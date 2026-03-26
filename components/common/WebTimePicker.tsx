@@ -61,19 +61,23 @@ export const WebTimePicker: React.FC<WebTimePickerProps> = ({
         onChange={handleChange}
         style={{
           fontSize: 32,
-          fontWeight: "600",
+          fontFamily: theme.fonts.bold,
           padding: 16,
           borderRadius: 16,
-          border: "1px solid rgba(255,255,255,0.15)",
-          backgroundColor: "rgba(255,255,255,0.06)",
+          borderWidth: 1,
+          borderStyle: "solid",
+          borderColor: theme.glass.borderColor,
+          backgroundColor: theme.glass.cardBg,
           color: textColor || theme.colors.text,
           outline: "none",
           width: "100%",
           textAlign: "center" as const,
-          fontFamily: "inherit",
           WebkitAppearance: "none" as any,
           MozAppearance: "none" as any,
           colorScheme: "dark",
+          boxShadow: `0 4px 12px rgba(0,0,0,${theme.glass.shadowOpacity})`,
+          backdropFilter: "blur(10px)",
+          WebkitBackdropFilter: "blur(10px)",
         }}
       />
     </View>
@@ -81,7 +85,7 @@ export const WebTimePicker: React.FC<WebTimePickerProps> = ({
 };
 
 interface WebDurationPickerProps {
-  value: number;           // minutes
+  value: number; // minutes
   onChange: (minutes: number) => void;
 }
 
@@ -106,21 +110,28 @@ export const WebDurationPicker: React.FC<WebDurationPickerProps> = ({
             max="23"
             value={hours}
             onChange={(e) => {
-              const h = Math.max(0, Math.min(23, parseInt(e.target.value) || 0));
+              const h = Math.max(
+                0,
+                Math.min(23, parseInt(e.target.value) || 0),
+              );
               onChange(h * 60 + mins);
             }}
             style={{
               fontSize: 28,
-              fontWeight: "600",
+              fontFamily: theme.fonts.bold,
               padding: 12,
               borderRadius: 12,
-              border: "1px solid rgba(255,255,255,0.15)",
-              backgroundColor: "rgba(255,255,255,0.06)",
+              borderWidth: 1,
+              borderStyle: "solid",
+              borderColor: theme.glass.borderColor,
+              backgroundColor: theme.glass.cardBg,
               color: theme.colors.text,
               outline: "none",
               width: 70,
               textAlign: "center" as const,
-              fontFamily: "inherit",
+              boxShadow: `0 4px 12px rgba(0,0,0,${theme.glass.shadowOpacity})`,
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
             }}
           />
           <Text style={styles.unitLabel}>hr</Text>
@@ -135,21 +146,28 @@ export const WebDurationPicker: React.FC<WebDurationPickerProps> = ({
             max="59"
             value={mins}
             onChange={(e) => {
-              const m = Math.max(0, Math.min(59, parseInt(e.target.value) || 0));
+              const m = Math.max(
+                0,
+                Math.min(59, parseInt(e.target.value) || 0),
+              );
               onChange(hours * 60 + m);
             }}
             style={{
               fontSize: 28,
-              fontWeight: "600",
+              fontFamily: theme.fonts.bold,
               padding: 12,
               borderRadius: 12,
-              border: "1px solid rgba(255,255,255,0.15)",
-              backgroundColor: "rgba(255,255,255,0.06)",
+              borderWidth: 1,
+              borderStyle: "solid",
+              borderColor: theme.glass.borderColor,
+              backgroundColor: theme.glass.cardBg,
               color: theme.colors.text,
               outline: "none",
               width: 70,
               textAlign: "center" as const,
-              fontFamily: "inherit",
+              boxShadow: `0 4px 12px rgba(0,0,0,${theme.glass.shadowOpacity})`,
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
             }}
           />
           <Text style={styles.unitLabel}>min</Text>

@@ -43,10 +43,22 @@ export default function RootLayout() {
     if (!fontsLoaded || isSetupComplete === null) return;
     
     // Check if user is in tabs but hasn't completed setup
-    const inTabsGroup = segments[0] === "(tabs)";
-    if (inTabsGroup && !isSetupComplete) {
-      router.replace("/setup");
-    }
+    const verifySetup = async () => {
+      const inTabsGroup = segments[0] === "(tabs)";
+      if (inTabsGroup) {
+        try {
+          const setup = await AsyncStorage.getItem("@zen_setup_complete");
+          if (setup !== "true") {
+            router.replace("/setup");
+          } else if (isSetupComplete === false) {
+            setIsSetupComplete(true);
+          }
+        } catch (e) {
+          router.replace("/setup");
+        }
+      }
+    };
+    verifySetup();
   }, [fontsLoaded, isSetupComplete, segments]);
 
   if (!fontsLoaded || isSetupComplete === null) {
