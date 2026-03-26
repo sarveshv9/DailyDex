@@ -1,22 +1,18 @@
 // In app/_layout.tsx
 
 import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
+import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { View } from "react-native";
 import { ThemeProvider } from "../context/ThemeContext";
 
-// 1. ADD THIS IMPORT
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { AudioProvider } from "../context/AudioContext";
 import { SettingsProvider } from "../context/SettingsContext";
 import { TimerProvider } from "../context/TimerContext";
 import { requestNotificationPermissions } from "../utils/notifications";
-
-// import AsyncStorage from '@react-native-async-storage/async-storage';
-
-// // Temporary code to clear all data
-// AsyncStorage.clear().then(() => console.log('App Data Cleared!'));
+import { ErrorBoundary } from "../components/common/ErrorBoundary";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -26,31 +22,58 @@ export default function RootLayout() {
     UbuntuMedium: require("../assets/fonts/Ubuntu-Medium.ttf"),
   });
 
+  const [isSetupComplete, setIsSetupComplete] = useState<boolean | null>(null);
+  const router = useRouter();
+  const segments = useSegments();
+
   useEffect(() => {
     requestNotificationPermissions();
+    const checkSetup = async () => {
+      try {
+        const setup = await AsyncStorage.getItem("@zen_setup_complete");
+        setIsSetupComplete(setup === "true");
+      } catch (e) {
+        setIsSetupComplete(false);
+      }
+    };
+    checkSetup();
   }, []);
 
-  if (!fontsLoaded) {
+  useEffect(() => {
+    if (!fontsLoaded || isSetupComplete === null) return;
+    
+    // Check if user is in tabs but hasn't completed setup
+    const inTabsGroup = segments[0] === "(tabs)";
+    if (inTabsGroup && !isSetupComplete) {
+      router.replace("/setup");
+    }
+  }, [fontsLoaded, isSetupComplete, segments]);
+
+  if (!fontsLoaded || isSetupComplete === null) {
     return <View style={{ flex: 1, backgroundColor: "#F5F5F7" }} />;
   }
 
   return (
-    <ThemeProvider>
-      {/* 2. WRAP YOUR STACK WITH AUDIOPROVIDER */}
-      <SettingsProvider>
-        <AudioProvider>
-          <TimerProvider>
-            <StatusBar style="dark" />
-            <Stack>
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="routine" options={{ headerShown: false }} />
-              <Stack.Screen name="setup" options={{ headerShown: false }} />
-              <Stack.Screen name="focus" options={{ headerShown: false, presentation: "modal" }} />
-              <Stack.Screen name="settings" options={{ presentation: "modal", headerShown: false }} />
-            </Stack>
-          </TimerProvider>
-        </AudioProvider>
-      </SettingsProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <SettingsProvider>
+          <AudioProvider>
+            <TimerProvider>
+              <StatusBar style="dark" />
+              <Stack>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="routine" options={{ headerShown: false }} />
+                <Stack.Screen name="setup" options={{ headerShown: false }} />
+                <Stack.Screen name="privacy" options={{ headerShown: false, presentation: "card" }} />
+                <Stack.Screen name="terms" options={{ headerShown: false, presentation: "card" }} />
+                <Stack.Screen name="focus" options={{ headerShown: false, presentation: "modal" }} />
+                <Stack.Screen name="settings" options={{ presentation: "modal", headerShown: false }} />
+                <Stack.Screen name="+not-found" options={{ title: "Oops!" }} />
+              </Stack>
+            </TimerProvider>
+          </AudioProvider>
+        </SettingsProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
