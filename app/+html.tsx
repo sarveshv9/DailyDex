@@ -12,6 +12,8 @@ export default function Root({ children }: PropsWithChildren) {
                 <meta charSet="utf-8" />
                 <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
                 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+                <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+                <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
 
                 {/*
                   Disable body scrolling on web. This makes ScrollView components work closer to how they do on native.
@@ -21,6 +23,14 @@ export default function Root({ children }: PropsWithChildren) {
 
                 {/* Force 100dvh on mobile browsers to prevent Safari/Chrome URL bar layout shifts */}
                 <style dangerouslySetInnerHTML={{ __html: `
+                  html, body {
+                    background-color: #000000;
+                  }
+                  @media (prefers-color-scheme: light) {
+                    html, body {
+                      background-color: #ffffff;
+                    }
+                  }
                   @supports (height: 100dvh) {
                     html, body, #root {
                       height: 100dvh !important;
