@@ -116,6 +116,26 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ theme, handleB
           isDestructive
         />
       </View>
+
+      <Text style={[styles.sectionTitle, { color: theme.colors.text, marginTop: theme.spacing.lg }]}>
+        Legal
+      </Text>
+
+      <View style={[styles.settingsCard, { backgroundColor: theme.colors.card }]}>
+        <SettingItem
+            theme={theme}
+            iconName="document-text-outline"
+            text="Privacy Policy"
+            onPress={() => router.push('/privacy')}
+        />
+        <SettingItem
+            theme={theme}
+            iconName="shield-checkmark-outline"
+            text="Terms of Service"
+            onPress={() => router.push('/terms')}
+            isLast
+        />
+      </View>
     </View>
   );
 };

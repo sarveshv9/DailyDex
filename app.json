@@ -4,18 +4,29 @@
     "slug": "Zen-app",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
     "scheme": "zenapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.Zen-app"
+      "bundleIdentifier": "com.anonymous.Zen-app",
+      "infoPlist": {
+        "NSCalendarsUsageDescription": "Allow Zen to seamlessly integrate routines with your calendar.",
+        "NSUserNotificationsUsageDescription": "Zen uses notifications to gently remind you of your daily routines."
+      }
     },
     "android": {
       "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.anonymous.Zenapp",
+      "permissions": [
+        "SCHEDULE_EXACT_ALARM",
+        "RECEIVE_BOOT_COMPLETED"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -27,6 +38,7 @@
       [
         "expo-splash-screen",
         {
+          "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
