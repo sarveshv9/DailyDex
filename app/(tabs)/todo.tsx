@@ -223,6 +223,7 @@ const ConfirmModal = ({
   visible,
   title,
   message,
+  confirmText = "Confirm",
   onCancel,
   onConfirm,
   theme,
@@ -230,6 +231,7 @@ const ConfirmModal = ({
   visible: boolean;
   title: string;
   message: string;
+  confirmText?: string;
   onCancel: () => void;
   onConfirm: () => void;
   theme: Theme;
@@ -272,7 +274,7 @@ const ConfirmModal = ({
                 onPressOut={() => { confirmScale.value = withSpring(1, { damping: 12 }); }}
                 onPress={onConfirm}
               >
-                <Text style={styles.saveButtonText}>Clear</Text>
+                <Text style={styles.saveButtonText}>{confirmText}</Text>
               </AnimatedPressable>
             </View>
           </Pressable>
@@ -557,8 +559,40 @@ export default function TodoScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
-  // Confirm modal for clearing
-  const [confirmVisible, setConfirmVisible] = useState(false);
+  // Confirm modal state
+  const [confirmState, setConfirmState] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    confirmText: string;
+    action: () => void;
+  }>({
+    visible: false,
+    title: "",
+    message: "",
+    confirmText: "Confirm",
+    action: () => {},
+  });
+
+  const requestConfirm = (title: string, message: string, confirmText: string, action: () => void) => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Cancel', confirmText],
+          destructiveButtonIndex: 1,
+          cancelButtonIndex: 0,
+          title,
+          message,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) action();
+        }
+      );
+    } else {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      setConfirmState({ visible: true, title, message, confirmText, action });
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -615,47 +649,17 @@ export default function TodoScreen() {
     );
 
   const handleDeleteTask = (id: string) => {
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: ['Cancel', 'Delete Task'],
-          destructiveButtonIndex: 1,
-          cancelButtonIndex: 0,
-          title: 'Delete Task?',
-          message: 'Are you sure you want to delete this task?',
-        },
-        (buttonIndex) => {
-          if (buttonIndex === 1) {
-            setTasks((prev) => {
-              const taskToDelete = prev.find((t) => t.id === id);
-              if (taskToDelete?.completed) {
-                import("../../utils/stats").then(({ removeTaskCompleted }) =>
-                  removeTaskCompleted(1)
-                );
-              }
-              return prev.filter((t) => t.id !== id);
-            });
-          }
+    requestConfirm('Delete Task?', 'Are you sure you want to delete this task?', 'Delete', () => {
+      setTasks((prev) => {
+        const taskToDelete = prev.find((t) => t.id === id);
+        if (taskToDelete?.completed) {
+          import("../../utils/stats").then(({ removeTaskCompleted }) =>
+            removeTaskCompleted(1)
+          );
         }
-      );
-    } else {
-      Alert.alert('Delete Task?', 'Are you sure you want to delete this task?', [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
-          style: 'destructive', 
-          onPress: () => setTasks((prev) => {
-            const taskToDelete = prev.find((t) => t.id === id);
-            if (taskToDelete?.completed) {
-              import("../../utils/stats").then(({ removeTaskCompleted }) =>
-                removeTaskCompleted(1)
-              );
-            }
-            return prev.filter((t) => t.id !== id);
-          }) 
-        }
-      ]);
-    }
+        return prev.filter((t) => t.id !== id);
+      });
+    });
   };
 
   const buttonScale = useSharedValue(1);
@@ -666,17 +670,17 @@ export default function TodoScreen() {
   /* show in-app confirm modal */
   const handleClearCompleted = () => {
     if (completedCount === 0) {
-      const msg = "There are no completed tasks to clear.";
       if (Platform.OS === 'web') {
-        window.alert(msg);
+        window.alert("There are no completed tasks to clear.");
       } else {
-        Alert.alert("No completed tasks", msg);
+        Alert.alert("No completed tasks", "There are no completed tasks to clear.");
       }
       return;
     }
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setConfirmVisible(true);
+    requestConfirm('Clear Completed?', 'Are you sure you want to clear all completed tasks?', 'Clear', () => {
+      performClearCompleted();
+    });
   };
 
   const performClearCompleted = () => {
@@ -694,7 +698,7 @@ export default function TodoScreen() {
       console.log(`[TodoScreen] cleared ${prev.length - next.length} completed tasks`);
       return next;
     });
-    setConfirmVisible(false);
+    setConfirmState(prev => ({ ...prev, visible: false }));
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
@@ -834,11 +838,12 @@ export default function TodoScreen() {
       />
 
       <ConfirmModal
-        visible={confirmVisible}
-        title="Clear Completed"
-        message={`Remove ${completedCount} completed task${completedCount === 1 ? "" : "s"}?`}
-        onCancel={() => setConfirmVisible(false)}
-        onConfirm={performClearCompleted}
+        visible={confirmState.visible}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmText={confirmState.confirmText}
+        onCancel={() => setConfirmState(prev => ({ ...prev, visible: false }))}
+        onConfirm={() => confirmState.action()}
         theme={theme}
       />
     </SafeAreaView>

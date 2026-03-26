@@ -16,6 +16,7 @@ import { InlineTimePicker } from "../components/common/InlineTimePicker";
 import { Theme } from "../constants/shared";
 import { useTheme } from "../context/ThemeContext";
 import { getRoutineIcon, RoutineItem } from "../utils/utils";
+import { scheduleRoutineNotifications } from "../utils/notifications";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const STORAGE_KEY = "@zen_routine";
@@ -355,12 +356,13 @@ export default function SetupScreen() {
         setSaving(true);
         // Save minimal routine if skipped (just Wake Up and Sleep)
         const minimalItems: RoutineItem[] = [
-            { task: "Wake Up", description: "Start your day with a clear mind.", imageKey: "wakeup", time: wakeTime, id: "skip-wakeup", insertionOrder: 1 },
-            { task: "Sleep", description: "Rest deeply and recharge.", imageKey: "sleep", time: sleepTime, id: "skip-sleep", insertionOrder: 2 },
+            { task: "Wake Up", description: "Start your day with a clear mind.", imageKey: "wakeup", time: wakeTime, id: "skip-wakeup", insertionOrder: 1, daysOfWeek: [0, 1, 2, 3, 4, 5, 6] },
+            { task: "Sleep", description: "Rest deeply and recharge.", imageKey: "sleep", time: sleepTime, id: "skip-sleep", insertionOrder: 2, daysOfWeek: [0, 1, 2, 3, 4, 5, 6] },
         ];
         try {
             await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(minimalItems));
             await AsyncStorage.setItem(SETUP_KEY, "true");
+            await scheduleRoutineNotifications(minimalItems);
             router.replace("/(tabs)");
         } catch (e) {
             console.error("Failed to skip setup", e);
@@ -418,10 +420,12 @@ export default function SetupScreen() {
             ...r,
             id: Date.now().toString() + idx,
             insertionOrder: idx + 1,
+            daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
         }));
         try {
             await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(items));
             await AsyncStorage.setItem(SETUP_KEY, "true");
+            await scheduleRoutineNotifications(items);
             router.replace("/(tabs)");
         } catch (e) {
             console.error("Failed to save setup data", e);

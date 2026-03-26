@@ -37,10 +37,12 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({
     setupAudio();
   }, []);
 
-  // Unload sound on component unmount
+  // Unload sound safely on component unmount
   useEffect(() => {
     return () => {
-      soundRef.current?.unloadAsync();
+      if (soundRef.current) {
+        soundRef.current.unloadAsync().catch(() => {});
+      }
     };
   }, []);
 

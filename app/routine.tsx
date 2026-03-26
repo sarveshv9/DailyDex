@@ -7,6 +7,7 @@ import {
   Alert,
   Animated,
   Dimensions,
+  Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
   PanResponder,
@@ -26,6 +27,7 @@ import { TimelineEventCard } from "../components/dashboard/TimelineEventCard";
 import { Theme } from "../constants/shared";
 import { useTheme } from "../context/ThemeContext";
 import { FormData, RoutineItem, getDateString, sortRoutineItems, timeToMinutes } from "../utils/utils";
+import { scheduleRoutineNotifications } from "../utils/notifications";
 
 /* -------------------- Assets & Constants -------------------- */
 
@@ -89,6 +91,29 @@ const useModalAnimation = () => {
   return { animatedStyle, openAnimation, closeAnimation };
 };
 
+/* -------------------- CONFIRM MODAL (IN-APP) -------------------- */
+const ConfirmModal = ({ visible, title, message, confirmText, onCancel, onConfirm, theme }: any) => {
+  if (!visible) return null;
+  return (
+    <Modal visible={visible} transparent animationType="fade">
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
+        <View style={{ backgroundColor: theme.colors.card, width: '80%', borderRadius: 24, padding: 24, alignItems: 'center' }}>
+          <Text style={{ fontSize: 20, fontFamily: theme.fonts.bold, color: theme.colors.text, marginBottom: 8, textAlign: 'center' }}>{title}</Text>
+          <Text style={{ fontSize: 16, color: theme.colors.textSecondary, textAlign: 'center', marginBottom: 24, lineHeight: 22 }}>{message}</Text>
+          <View style={{ flexDirection: 'row', gap: 12, width: '100%' }}>
+            <Pressable style={{ flex: 1, paddingVertical: 14, backgroundColor: theme.colors.background, borderRadius: 14, alignItems: 'center' }} onPress={onCancel}>
+              <Text style={{ fontSize: 16, fontFamily: theme.fonts.bold, color: theme.colors.text }}>Cancel</Text>
+            </Pressable>
+            <Pressable style={{ flex: 1, paddingVertical: 14, backgroundColor: theme.colors.primary, borderRadius: 14, alignItems: 'center' }} onPress={onConfirm}>
+              <Text style={{ fontSize: 16, fontFamily: theme.fonts.bold, color: theme.colors.white }}>{confirmText}</Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
 /* -------------------- Screen Component -------------------- */
 export default function RoutineScreen() {
   const { theme } = useTheme();
@@ -102,6 +127,33 @@ export default function RoutineScreen() {
   const [formData, setFormData] = useState<FormData>({ time: "", task: "", description: "", daysOfWeek: [] });
   const [nextInsertionOrder, setNextInsertionOrder] = useState(13);
   const [selectedDate, setSelectedDate] = useState(new Date());
+
+  const [confirmState, setConfirmState] = useState({
+    visible: false,
+    title: "",
+    message: "",
+    confirmText: "Transfer",
+    action: () => {},
+  });
+
+  const requestConfirm = useCallback((title: string, message: string, confirmText: string, action: () => void) => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Cancel', confirmText],
+          destructiveButtonIndex: 1,
+          cancelButtonIndex: 0,
+          title,
+          message,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) action();
+        }
+      );
+    } else {
+      setConfirmState({ visible: true, title, message, confirmText, action });
+    }
+  }, []);
 
   // Stable 3-slot page array: [prev, center, next]
   const [pageDates, setPageDates] = useState<[Date, Date, Date]>(() => {
@@ -415,6 +467,7 @@ export default function RoutineScreen() {
     try {
       setAllRoutines(newItems);
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newItems));
+      await scheduleRoutineNotifications(newItems);
     } catch (e) {
       console.error("Failed to save routines.", e);
     }
@@ -534,44 +587,13 @@ export default function RoutineScreen() {
     const taskNameLower = taskToDelete.task?.toLowerCase().trim();
     if (taskNameLower === "wake up" || taskNameLower === "sleep") return;
 
-    if (Platform.OS === 'web') {
-      if (window.confirm(`Transfer ${taskToDelete.task} away?`)) {
-        const remaining = allRoutines.filter((item) => item.id !== taskToDelete.id);
-        saveRoutines(remaining);
-        setTimeout(() => closeModal(), 50);
-      }
-    } else if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: ['Cancel', 'Transfer Out'],
-          destructiveButtonIndex: 1,
-          cancelButtonIndex: 0,
-          title: 'Transfer Routine',
-          message: `Transfer ${taskToDelete.task} away?`,
-        },
-        (buttonIndex) => {
-          if (buttonIndex === 1) {
-            const remaining = allRoutines.filter((item) => item.id !== taskToDelete.id);
-            saveRoutines(remaining);
-            setTimeout(() => closeModal(), 50);
-          }
-        }
-      );
-    } else {
-      Alert.alert("Transfer", `Transfer ${taskToDelete.task} away?`, [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Transfer",
-          style: "destructive",
-          onPress: () => {
-            const remaining = allRoutines.filter((item) => item.id !== taskToDelete.id);
-            saveRoutines(remaining);
-            setTimeout(() => closeModal(), 50);
-          },
-        },
-      ]);
-    }
-  }, [selectedTask, closeModal, allRoutines, saveRoutines]);
+    requestConfirm('Transfer Routine', `Transfer ${taskToDelete.task} away?`, 'Transfer Out', () => {
+      const remaining = allRoutines.filter((item) => item.id !== taskToDelete.id);
+      saveRoutines(remaining);
+      setTimeout(() => closeModal(), 50);
+      setConfirmState(prev => ({ ...prev, visible: false }));
+    });
+  }, [selectedTask, closeModal, allRoutines, saveRoutines, requestConfirm]);
 
   const handleEditFromModal = useCallback(() => {
     if (selectedTask) {
@@ -737,6 +759,16 @@ export default function RoutineScreen() {
         onUpdateField={updateFormField}
         onSave={handleSave}
         onClose={closeForm}
+      />
+
+      <ConfirmModal
+        visible={confirmState.visible}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmText={confirmState.confirmText}
+        onCancel={() => setConfirmState(prev => ({ ...prev, visible: false }))}
+        onConfirm={() => confirmState.action()}
+        theme={theme}
       />
     </SafeAreaView >
   );
