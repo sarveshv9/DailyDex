@@ -21,20 +21,41 @@ export default function Root({ children }: PropsWithChildren) {
                 */}
                 <ScrollViewStyleReset />
 
-                {/* Force 100dvh on mobile browsers to prevent Safari/Chrome URL bar layout shifts */}
+                {/* Force full-screen coverage on mobile browsers including safe areas */}
                 <style dangerouslySetInnerHTML={{ __html: `
                   html, body {
                     background-color: #000000;
+                    margin: 0;
+                    padding: 0;
+                    overflow: hidden;
+                    width: 100%;
+                    height: 100%;
                   }
                   @media (prefers-color-scheme: light) {
                     html, body {
                       background-color: #ffffff;
                     }
                   }
+                  #root {
+                    display: flex;
+                    flex-direction: column;
+                    width: 100%;
+                    height: 100%;
+                    overflow: hidden;
+                  }
                   @supports (height: 100dvh) {
                     html, body, #root {
                       height: 100dvh !important;
                       min-height: 100dvh !important;
+                    }
+                  }
+                  @supports (padding-bottom: env(safe-area-inset-bottom)) {
+                    body {
+                      padding-bottom: 0 !important;
+                    }
+                    #root {
+                      padding-bottom: env(safe-area-inset-bottom);
+                      box-sizing: border-box;
                     }
                   }
                 `}} />

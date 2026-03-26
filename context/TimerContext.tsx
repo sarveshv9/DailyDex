@@ -1,6 +1,6 @@
 import * as Haptics from "../utils/haptics";
 import * as Notifications from "expo-notifications";
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState, useMemo } from "react";
 
 export type PomodoroPhase = "work" | "shortBreak" | "longBreak";
 
@@ -119,7 +119,7 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
         };
     }, [isActive, timeLeft, isCompleted]);
 
-    const startTimer = (id: string, name: string, seconds: number) => {
+    const startTimer = useCallback((id: string, name: string, seconds: number) => {
         setPomodoroMode(false);
         setTaskId(id);
         setTaskName(name);
@@ -127,7 +127,7 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
         setTimeLeft(seconds);
         setIsActive(true);
         setIsCompleted(false);
-    };
+    }, []);
 
     const startPomodoro = useCallback((id: string, name: string) => {
         const dur = POMODORO_DURATIONS.work;
@@ -163,10 +163,10 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }, []);
 
-    const pauseTimer = () => setIsActive(false);
-    const resumeTimer = () => { if (timeLeft > 0) setIsActive(true); };
+    const pauseTimer = useCallback(() => setIsActive(false), []);
+    const resumeTimer = useCallback(() => { if (timeLeft > 0) setIsActive(true); }, [timeLeft]);
 
-    const stopTimer = () => {
+    const stopTimer = useCallback(() => {
         setIsActive(false);
         setPomodoroMode(false);
         setPomodoroPhase("work");
@@ -176,24 +176,28 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
         setTimeLeft(0);
         setDuration(0);
         setIsCompleted(false);
-    };
+    }, []);
 
-    const resetTimer = () => {
+    const resetTimer = useCallback(() => {
         setIsActive(false);
         setTimeLeft(duration);
         setIsCompleted(false);
-    };
+    }, [duration]);
+
+    const value = useMemo(() => ({
+        taskId, taskName, timeLeft, duration,
+        isActive, isCompleted,
+        startTimer, pauseTimer, resumeTimer, stopTimer, resetTimer,
+        pomodoroMode, pomodoroPhase, pomodoroSession,
+        startPomodoro, advancePomodoroPhase,
+    }), [
+        taskId, taskName, timeLeft, duration, isActive, isCompleted,
+        startTimer, pauseTimer, resumeTimer, stopTimer, resetTimer,
+        pomodoroMode, pomodoroPhase, pomodoroSession, startPomodoro, advancePomodoroPhase
+    ]);
 
     return (
-        <TimerContext.Provider
-            value={{
-                taskId, taskName, timeLeft, duration,
-                isActive, isCompleted,
-                startTimer, pauseTimer, resumeTimer, stopTimer, resetTimer,
-                pomodoroMode, pomodoroPhase, pomodoroSession,
-                startPomodoro, advancePomodoroPhase,
-            }}
-        >
+        <TimerContext.Provider value={value}>
             {children}
         </TimerContext.Provider>
     );

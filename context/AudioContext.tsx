@@ -1,6 +1,6 @@
 // context/AudioContext.tsx
 import { Audio } from 'expo-av';
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { SONG_LIST } from '../constants/songs';
 
 interface AudioContextType {
@@ -29,9 +29,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({
           staysActiveInBackground: false,
           shouldDuckAndroid: true,
         });
-        console.log('✅ Audio mode configured');
       } catch (error) {
-        console.error('❌ Error setting audio mode:', error);
+        // Error handling
       }
     };
     setupAudio();
@@ -46,75 +45,53 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, []);
 
-  const playSound = async (id: number) => {
-    const song = SONG_LIST.find((s) => s.id === id);
-    if (!song) {
-      console.error('❌ Song not found:', id);
-      return;
-    }
-
-    console.log('🎵 Attempting to load song:', song.title);
-    console.log('📂 File source:', JSON.stringify(song.file, null, 2));
-
-    // Always unload previous sound when loading a new one
+  const stopSound = useCallback(async () => {
     if (soundRef.current) {
-      console.log('🔄 Unloading previous sound');
-      try {
-        await soundRef.current.stopAsync();
-        await soundRef.current.unloadAsync();
-      } catch (error) {
-        console.log('Note: Error unloading previous sound (this is okay)', error);
-      }
-      soundRef.current = null;
-    }
-
-    try {
-      // More lenient audio loading options
-      const { sound } = await Audio.Sound.createAsync(
-        song.file,
-        { 
-          shouldPlay: true, 
-          isLooping: true,
-          // Add these options for better compatibility
-          progressUpdateIntervalMillis: 500,
-          positionMillis: 0,
-        },
-        // Status update callback
-        (status) => {
-          if (!status.isLoaded && 'error' in status) {
-            console.error('❌ Playback error:', status.error);
-          }
-        }
-      );
-      soundRef.current = sound;
-      setIsPlaying(true);
-      console.log('✅ Successfully loaded and playing:', song.title);
-    } catch (error) {
-      console.error('❌ Error loading audio for song:', song.title);
-      console.error('❌ Error details:', error);
-      console.error('❌ File that failed:', JSON.stringify(song.file, null, 2));
-      setIsPlaying(false);
-      
-      // More helpful error message
-      console.error('💡 Suggestions:');
-      console.error('   1. Check if the MP3 file is corrupted');
-      console.error('   2. Try re-encoding the file with: ffmpeg -i input.mp3 -acodec libmp3lame -ar 44100 -ab 192k output.mp3');
-      console.error('   3. Verify the file exists at the correct path');
-    }
-  };
-
-  const stopSound = async () => {
-    if (soundRef.current) {
-      console.log('⏹️ Stopping sound');
       await soundRef.current.stopAsync();
       await soundRef.current.unloadAsync();
       soundRef.current = null;
     }
     setIsPlaying(false);
-  };
+  }, []);
 
-  const setSelectedSong = (id: number) => {
-    console.log('🎵 setSelectedSong called with id:', id);
+  const playSound = useCallback(async (id: number) => {
+    const song = SONG_LIST.find((s) => s.id === id);
+    if (!song) return;
+
+    // Always unload previous sound when loading a new one
+    if (soundRef.current) {
+      try {
+        await soundRef.current.stopAsync();
+        await soundRef.current.unloadAsync();
+      } catch (error) {
+        // Ignore unload error
+      }
+      soundRef.current = null;
+    }
+
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        song.file,
+        { 
+          shouldPlay: true, 
+          isLooping: true,
+          progressUpdateIntervalMillis: 500,
+          positionMillis: 0,
+        },
+        (status) => {
+          if (!status.isLoaded && 'error' in status) {
+            // Silently handle error
+          }
+        }
+      );
+      soundRef.current = sound;
+      setIsPlaying(true);
+    } catch (error) {
+      setIsPlaying(false);
+    }
+  }, []);
+
+  const setSelectedSong = useCallback((id: number) => {
     _setSelectedSong(id);
     selectedSongRef.current = id;
 
@@ -123,10 +100,16 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({
     } else {
       playSound(id);
     }
-  };
+  }, [playSound, stopSound]);
+
+  const value = useMemo(() => ({
+    selectedSong,
+    setSelectedSong,
+    isPlaying
+  }), [selectedSong, setSelectedSong, isPlaying]);
 
   return (
-    <AudioContext.Provider value={{ selectedSong, setSelectedSong, isPlaying }}>
+    <AudioContext.Provider value={value}>
       {children}
     </AudioContext.Provider>
   );

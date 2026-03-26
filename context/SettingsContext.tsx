@@ -1,6 +1,6 @@
 // context/SettingsContext.tsx
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 
 interface Settings {
   notifications: {
@@ -63,7 +63,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [settings, isLoading]);
 
-  const toggleNotification = (key: keyof Settings['notifications']) => {
+  const toggleNotification = useCallback((key: keyof Settings['notifications']) => {
     setSettings(prev => ({
       ...prev,
       notifications: {
@@ -71,26 +71,26 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         [key]: !prev.notifications[key],
       },
     }));
-  };
+  }, []);
 
-  const setHapticsEnabled = (enabled: boolean) => {
+  const setHapticsEnabled = useCallback((enabled: boolean) => {
     setSettings(prev => ({ ...prev, hapticsEnabled: enabled }));
-  };
+  }, []);
 
-  const setMusicPreference = (id: number) => {
+  const setMusicPreference = useCallback((id: number) => {
     setSettings(prev => ({ ...prev, musicPreference: id }));
-  };
+  }, []);
+
+  const value = useMemo(() => ({
+    settings,
+    toggleNotification,
+    setHapticsEnabled,
+    setMusicPreference,
+    isLoading,
+  }), [settings, isLoading, toggleNotification, setHapticsEnabled, setMusicPreference]);
 
   return (
-    <SettingsContext.Provider
-      value={{
-        settings,
-        toggleNotification,
-        setHapticsEnabled,
-        setMusicPreference,
-        isLoading,
-      }}
-    >
+    <SettingsContext.Provider value={value}>
       {children}
     </SettingsContext.Provider>
   );
