@@ -803,7 +803,10 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                             renderItem={renderPage}
                             keyExtractor={(_, index) => `page-${index}`}
                             horizontal
-                            pagingEnabled
+                            pagingEnabled={Platform.OS !== 'web'}
+                            snapToInterval={Platform.OS === 'web' ? SCREEN_WIDTH : undefined}
+                            snapToAlignment="start"
+                            decelerationRate={Platform.OS === 'web' ? "fast" : "normal"}
                             showsHorizontalScrollIndicator={false}
                             initialScrollIndex={initialTargetIndex}
                             getItemLayout={(_, index) => ({

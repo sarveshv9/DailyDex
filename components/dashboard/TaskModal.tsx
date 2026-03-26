@@ -49,7 +49,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
   onSaveTask,
   onDelete,
 }) => {
-  const { theme } = useTheme();
+  const { theme, isDarkMode } = useTheme();
   const insets = useSafeAreaInsets();
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
 
@@ -57,8 +57,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
   const [showInlineTimePicker, setShowInlineTimePicker] = useState(false);
   const [showDays, setShowDays] = useState(false);
   const [newSubtaskText, setNewSubtaskText] = useState("");
-
-  const isDark = theme.colors.background === "#000000" || theme.colors.background === "#1A1A1A" || theme.colors.background.startsWith('#0');
 
   const scrollOffset = useRef(0);
   const handleSaveRef = useRef<(() => void) | null>(null);
@@ -104,8 +102,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
 
   const headerPanResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dy) > 10,
+      onStartShouldSetPanResponder: () => Platform.OS !== 'web',
+      onMoveShouldSetPanResponder: (_, gestureState) => Platform.OS !== 'web' && Math.abs(gestureState.dy) > 10,
       onPanResponderMove: handlePanResponderMove,
       onPanResponderRelease: handlePanResponderRelease,
     })
@@ -115,9 +113,11 @@ const TaskModal: React.FC<TaskModalProps> = ({
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponderCapture: (_, gestureState) => {
+        if (Platform.OS === 'web') return false;
         return gestureState.dy > 15 && scrollOffset.current <= 1;
       },
       onMoveShouldSetPanResponder: (_, gestureState) => {
+        if (Platform.OS === 'web') return false;
         return gestureState.dy > 15 && scrollOffset.current <= 1;
       },
       onPanResponderMove: handlePanResponderMove,
@@ -317,8 +317,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
       >
         <BlurView
           style={StyleSheet.absoluteFill}
-          intensity={Platform.OS === 'ios' ? 20 : 40}
-          tint={isDark ? "dark" : "light"}
+          intensity={Platform.OS === 'ios' ? 20 : (Platform.OS === 'web' ? 10 : 40)}
+          tint={isDarkMode ? "dark" : "light"}
           experimentalBlurMethod="dimezisBlurView"
         />
         <Pressable style={StyleSheet.absoluteFill} onPress={closeAndSave} />

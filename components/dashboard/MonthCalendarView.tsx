@@ -32,8 +32,8 @@ const TASK_COLORS: Record<string, string> = {
 };
 
 const CARD_TINTS = [
-    '#7B8CDE', '#C084FC', '#E8975E',
-    '#4DA8DA', '#6BCB77', '#B89B72', '#5A5A7A',
+    '#7B8CDE', '#C084FC',
+    '#4DA8DA', '#6BCB77', '#5A5A7A',
 ];
 
 const MONTH_NAMES = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
@@ -73,7 +73,7 @@ export function MonthCalendarView({ currentDate, routineItems, onSelectDate, the
     };
 
     return (
-        <View style={{ backgroundColor: theme.colors.background }}>
+        <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
 
             {/* ── Month navigation ── */}
             <View style={styles.monthNav}>
@@ -111,15 +111,13 @@ export function MonthCalendarView({ currentDate, routineItems, onSelectDate, the
                     const isSelected = dateStr === selectedStr;
                     const items = getDayItems(date);
 
-                    // Card accent tint
-                    const dominantKey = items.find(it => it.imageKey && TASK_COLORS[it.imageKey])?.imageKey;
-                    const tint = dominantKey ? TASK_COLORS[dominantKey] : CARD_TINTS[index % CARD_TINTS.length];
+                    const fallbackPillColor = CARD_TINTS[index % CARD_TINTS.length];
 
-                    // Time window: 1hr before earliest to 1hr after latest
+                    // Time window: Start exactly at earliest task, pad 1hr after latest
                     let minH = 8, maxH = 11;
                     if (items.length > 0) {
                         const hours = items.map(it => Math.floor(timeToMinutes(it.time) / 60));
-                        minH = Math.max(0, Math.min(...hours) - 1);
+                        minH = Math.min(...hours);
                         maxH = Math.min(23, Math.max(...hours) + 2);
                     }
                     if (maxH - minH < 3) maxH = minH + 3;
@@ -154,19 +152,18 @@ export function MonthCalendarView({ currentDate, routineItems, onSelectDate, the
                     const hourMarkers = Array.from({ length: hourSpan + 1 }, (_, i) => minH + i);
 
                     return (
-                        // Card is a plain View — no Pressable — so horizontal scroll inside works freely
                         <View
                             key={dateStr}
                             style={[
                                 styles.card,
                                 {
-                                    backgroundColor: `${tint}18`,
+                                    backgroundColor: theme.colors.card,
                                     borderColor: isSelected
                                         ? theme.colors.primary
                                         : isToday
-                                            ? `${theme.colors.primary}55`
-                                            : `${tint}40`,
-                                    borderWidth: isSelected ? 2 : 1,
+                                            ? '#FF453A'
+                                            : 'rgba(150,150,150,0.15)',
+                                    borderWidth: isSelected || isToday ? 2 : 1,
                                     height: cardHeight,
                                 },
                             ]}
@@ -176,22 +173,22 @@ export function MonthCalendarView({ currentDate, routineItems, onSelectDate, the
                                 onPress={() => onSelectDate(date)}
                                 style={styles.cardLeft}
                             >
-                                <Text style={[styles.cardWeekday, { color: tint }]}>
+                                <Text style={[styles.cardWeekday, { color: isToday ? '#FF453A' : theme.colors.textSecondary }]}>
                                     {DAY_NAMES[date.getDay()]}
                                 </Text>
                                 <Text style={[
                                     styles.cardDateNum,
-                                    { color: isToday ? theme.colors.primary : theme.colors.text },
+                                    { color: isToday ? '#FF453A' : theme.colors.text },
                                 ]}>
                                     {date.getDate()}
                                 </Text>
-                                <Text style={[styles.cardMonthTag, { color: `${tint}99` }]}>
+                                <Text style={[styles.cardMonthTag, { color: isToday ? 'rgba(255, 69, 58, 0.8)' : theme.colors.textSecondary }]}>
                                     {MONTH_NAMES[month]}
                                 </Text>
                             </Pressable>
 
                             {/* Thin vertical divider */}
-                            <View style={[styles.rule, { backgroundColor: `${tint}40` }]} />
+                            <View style={[styles.rule, { backgroundColor: 'rgba(150,150,150,0.2)' }]} />
 
                             {/* ── Horizontally scrollable timeline ── */}
                             <ScrollView
@@ -216,7 +213,7 @@ export function MonthCalendarView({ currentDate, routineItems, onSelectDate, the
                                                         {label}
                                                     </Text>
                                                     <View style={[styles.hourTick, {
-                                                        backgroundColor: `${tint}28`,
+                                                        backgroundColor: 'rgba(150,150,150,0.15)',
                                                         height: pillsHeight + 10,
                                                     }]} />
                                                 </View>
@@ -234,8 +231,8 @@ export function MonthCalendarView({ currentDate, routineItems, onSelectDate, the
                                             items.map((item, ti) => {
                                                 const { leftPx, row } = pillLayout[ti];
                                                 const pillColor = item.imageKey
-                                                    ? (TASK_COLORS[item.imageKey] ?? tint)
-                                                    : tint;
+                                                    ? (TASK_COLORS[item.imageKey] ?? fallbackPillColor)
+                                                    : fallbackPillColor;
                                                 return (
                                                     <View
                                                         key={ti}
