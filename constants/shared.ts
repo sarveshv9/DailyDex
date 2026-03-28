@@ -58,25 +58,26 @@ const darkGlass = {
 };
 
 // --- LIGHT VARIATIONS ---
-// Light versions have tinted bright backgrounds, vibrant pokemon brand colors,
-// and dark text for contrast.
+// Light versions use pure white backgrounds, subtle tinted cards, and strict Pokemon brand accent colors.
 export const lightThemes: Record<string, Theme> = {
-  default: { ...baseTheme, glass: lightGlass, colors: { primary: "#FF4D4D", secondary: "#2D2D2D", background: "#FFFFFF", card: "#F8F8F8", text: "#1A1A1A", textSecondary: "#666666", white: "#FFFFFF" } },
-  dark: { ...baseTheme, glass: lightGlass, colors: { primary: "#E5E7EB", secondary: "#9CA3AF", background: "#0F172A", card: "#1E293B", text: "#F9FAFB", textSecondary: "#D1D5DB", white: "#FFFFFF" } },
-  pikachu: { ...baseTheme, glass: lightGlass, colors: { primary: "#D97706", secondary: "#B45309", background: "#FEF9C3", card: "#FFFFFF", text: "#451A03", textSecondary: "#78350F", white: "#FFFFFF" } },
-  squirtle: { ...baseTheme, glass: lightGlass, colors: { primary: "#0284C7", secondary: "#0369A1", background: "#E0F2FE", card: "#FFFFFF", text: "#0C4A6E", textSecondary: "#075985", white: "#FFFFFF" } },
-  bulbasaur: { ...baseTheme, glass: lightGlass, colors: { primary: "#059669", secondary: "#047857", background: "#D1FAE5", card: "#FFFFFF", text: "#022C22", textSecondary: "#064E3B", white: "#FFFFFF" } },
+  pokeball: { ...baseTheme, glass: lightGlass, colors: { primary: "#FF4D4D", secondary: "#2D2D2D", background: "#FFFFFF", card: "#F8F8F8", text: "#1A1A1A", textSecondary: "#666666", white: "#FFFFFF" } },
+  pikachu: { ...baseTheme, glass: lightGlass, colors: { primary: "#D97706", secondary: "#B45309", background: "#FFFFFF", card: "#F8F8F8", text: "#1A1A1A", textSecondary: "#666666", white: "#FFFFFF" } },
+  squirtle: { ...baseTheme, glass: lightGlass, colors: { primary: "#0284C7", secondary: "#0369A1", background: "#FFFFFF", card: "#F8F8F8", text: "#1A1A1A", textSecondary: "#666666", white: "#FFFFFF" } },
+  bulbasaur: { ...baseTheme, glass: lightGlass, colors: { primary: "#059669", secondary: "#047857", background: "#FFFFFF", card: "#F8F8F8", text: "#1A1A1A", textSecondary: "#666666", white: "#FFFFFF" } },
+  gengar: { ...baseTheme, glass: lightGlass, colors: { primary: "#9333EA", secondary: "#7E22CE", background: "#FFFFFF", card: "#F8F8F8", text: "#1A1A1A", textSecondary: "#666666", white: "#FFFFFF" } },
+  charizard: { ...baseTheme, glass: lightGlass, colors: { primary: "#EA580C", secondary: "#C2410C", background: "#FFFFFF", card: "#F8F8F8", text: "#1A1A1A", textSecondary: "#666666", white: "#FFFFFF" } },
 };
 
 // --- DARK VARIATIONS ---
-// Dark versions have deep dark backgrounds, subtle card overlays, bright popped primary accents,
+// Dark versions use deep black backgrounds, subtle dark card overlays, bright popped primary accents,
 // and off-white text.
 export const darkThemes: Record<string, Theme> = {
-  default: { ...baseTheme, glass: darkGlass, colors: { primary: "#FF4D4D", secondary: "#F2F2F2", background: "#0A0A0A", card: "#161616", text: "#F2F2F2", textSecondary: "#A0A0A0", white: "#FFFFFF" } },
-  dark: { ...baseTheme, glass: darkGlass, colors: { primary: "#6B7280", secondary: "#4B5563", background: "#030712", card: "#111827", text: "#E5E7EB", textSecondary: "#9CA3AF", white: "#FFFFFF" } },
-  pikachu: { ...baseTheme, glass: darkGlass, colors: { primary: "#FBBF24", secondary: "#F59E0B", background: "#1C1917", card: "#292524", text: "#FEF3C7", textSecondary: "#FDE68A", white: "#000000" } },
-  squirtle: { ...baseTheme, glass: darkGlass, colors: { primary: "#38BDF8", secondary: "#0EA5E9", background: "#082F49", card: "#0C4A6E", text: "#E0F2FE", textSecondary: "#BAE6FD", white: "#FFFFFF" } },
-  bulbasaur: { ...baseTheme, glass: darkGlass, colors: { primary: "#34D399", secondary: "#10B981", background: "#022C22", card: "#064E3B", text: "#D1FAE5", textSecondary: "#A7F3D0", white: "#064E3B" } },
+  pokeball: { ...baseTheme, glass: darkGlass, colors: { primary: "#FF4D4D", secondary: "#F2F2F2", background: "#000000", card: "#161616", text: "#F2F2F2", textSecondary: "#A0A0A0", white: "#FFFFFF" } },
+  pikachu: { ...baseTheme, glass: darkGlass, colors: { primary: "#FBBF24", secondary: "#F59E0B", background: "#000000", card: "#161616", text: "#F2F2F2", textSecondary: "#A0A0A0", white: "#000000" } },
+  squirtle: { ...baseTheme, glass: darkGlass, colors: { primary: "#38BDF8", secondary: "#0EA5E9", background: "#000000", card: "#161616", text: "#F2F2F2", textSecondary: "#A0A0A0", white: "#FFFFFF" } },
+  bulbasaur: { ...baseTheme, glass: darkGlass, colors: { primary: "#34D399", secondary: "#10B981", background: "#000000", card: "#161616", text: "#F2F2F2", textSecondary: "#A0A0A0", white: "#064E3B" } },
+  gengar: { ...baseTheme, glass: darkGlass, colors: { primary: "#C084FC", secondary: "#A855F7", background: "#000000", card: "#161616", text: "#F2F2F2", textSecondary: "#A0A0A0", white: "#FFFFFF" } },
+  charizard: { ...baseTheme, glass: darkGlass, colors: { primary: "#FB923C", secondary: "#F97316", background: "#000000", card: "#161616", text: "#F2F2F2", textSecondary: "#A0A0A0", white: "#FFFFFF" } },
 };
 
 // Aliasing themes for backward compatibility, although they should be avoided going forward.
