@@ -1014,7 +1014,7 @@ const getStyles = (theme: Theme) =>
             minWidth: 105,
             maxWidth: 160,
             aspectRatio: 0.82,
-            backgroundColor: theme.colors.white,
+            backgroundColor: "#121212ff",
             borderRadius: 18,
             alignItems: "center",
             justifyContent: "center",
@@ -1459,7 +1459,7 @@ const getStyles = (theme: Theme) =>
         },
         timelineCard: {
             flex: 1,
-            backgroundColor: theme.colors.white,
+            backgroundColor: "#121212ff",
             borderRadius: 16,
             marginBottom: 10,
             borderWidth: 1.5,

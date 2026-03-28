@@ -1,6 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import { LayoutAnimation, Platform, UIManager } from 'react-native';
 import { darkThemes, lightThemes, Theme, ThemeName } from '../constants/shared';
+
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 export interface CustomThemeConfig {
   pokemonId: string;
@@ -42,6 +48,19 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
 
   useEffect(() => {
+    // Inject gentle color transition for Web platform globally
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      const style = document.createElement('style');
+      style.innerHTML = `
+        div, span {
+          transition-property: background-color, border-color, color;
+          transition-duration: 0.3s;
+          transition-timing-function: ease-in-out;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
     const loadTheme = async () => {
       try {
         const savedTheme = await AsyncStorage.getItem('@zen_theme');
@@ -97,6 +116,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const setThemeName = async (name: string) => {
+    if (Platform.OS !== 'web') LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setThemeNameState(name);
     try {
       await AsyncStorage.setItem('@zen_theme', name);
@@ -115,6 +135,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const setIsDarkMode = async (val: boolean) => {
+    if (Platform.OS !== 'web') LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setIsDarkModeState(val);
     try {
       await AsyncStorage.setItem('@zen_dark_mode', String(val));
@@ -126,7 +147,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const addCustomTheme = async (id: string, config: CustomThemeConfig) => {
     const updated = { ...customThemes, [id]: config };
     setCustomThemesState(updated);
-    // Explicitly set the new themeName before await
+    if (Platform.OS !== 'web') LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setThemeNameState(`custom_${id}`);
     try {
       await AsyncStorage.setItem('@zen_custom_themes', JSON.stringify(updated));

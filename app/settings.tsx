@@ -60,8 +60,9 @@ export default function SettingsScreen() {
           if (settings.hapticsEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           onValueChange(v);
         }}
-        trackColor={{ false: theme.colors.secondary + "40", true: theme.colors.primary }}
-        thumbColor="#FFF"
+        trackColor={{ false: `${theme.colors.secondary}40`, true: theme.colors.primary }}
+        thumbColor="#FFFFFF"
+        {...({ activeThumbColor: "#FFFFFF" } as any)}
       />
     </View>
   );

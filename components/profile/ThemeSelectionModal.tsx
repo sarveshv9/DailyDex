@@ -189,8 +189,9 @@ export function ThemeSelectionModal({
                                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                 onToggleDarkMode(v);
                             }}
-                            trackColor={{ false: currentTheme.colors.secondary, true: currentTheme.colors.primary }}
-                            thumbColor={currentTheme.colors.white}
+                            trackColor={{ false: `${currentTheme.colors.secondary}40`, true: currentTheme.colors.primary }}
+                            thumbColor="#FFFFFF"
+                            {...({ activeThumbColor: "#FFFFFF" } as any)}
                         />
                     </View>
 
@@ -207,8 +208,9 @@ export function ThemeSelectionModal({
                                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                 onToggleAutoTheme(v);
                             }}
-                            trackColor={{ false: currentTheme.colors.secondary, true: currentTheme.colors.primary }}
-                            thumbColor={currentTheme.colors.white}
+                            trackColor={{ false: `${currentTheme.colors.secondary}40`, true: currentTheme.colors.primary }}
+                            thumbColor="#FFFFFF"
+                            {...({ activeThumbColor: "#FFFFFF" } as any)}
                         />
                     </View>
                 </View>

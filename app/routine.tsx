@@ -26,8 +26,8 @@ import TaskModal from "../components/dashboard/TaskModal";
 import { TimelineEventCard } from "../components/dashboard/TimelineEventCard";
 import { Theme } from "../constants/shared";
 import { useTheme } from "../context/ThemeContext";
-import { FormData, RoutineItem, getDateString, sortRoutineItems, timeToMinutes } from "../utils/utils";
 import { scheduleRoutineNotifications } from "../utils/notifications";
+import { FormData, RoutineItem, getDateString, sortRoutineItems, timeToMinutes } from "../utils/utils";
 
 /* -------------------- Assets & Constants -------------------- */
 
@@ -133,7 +133,7 @@ export default function RoutineScreen() {
     title: "",
     message: "",
     confirmText: "Transfer",
-    action: () => {},
+    action: () => { },
   });
 
   const requestConfirm = useCallback((title: string, message: string, confirmText: string, action: () => void) => {
@@ -823,7 +823,7 @@ const getStyles = (theme: Theme) =>
       width: 40,
       height: 5,
       borderRadius: 2.5,
-      backgroundColor: `${theme.colors.secondary}33`,
+      backgroundColor: `${theme.colors.text}`,
       marginBottom: 8,
     },
     listTitle: {
