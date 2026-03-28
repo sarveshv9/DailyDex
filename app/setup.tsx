@@ -1,4 +1,6 @@
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -8,107 +10,104 @@ import {
     StyleSheet,
     Text,
     TextInput,
-    View,
-    Modal
+    View
 } from "react-native";
-import { BlurView } from "expo-blur";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
 import { InlineTimePicker } from "../components/common/InlineTimePicker";
 import { Theme } from "../constants/shared";
 import { useTheme } from "../context/ThemeContext";
-import { getRoutineIcon, RoutineItem, timeToMinutes } from "../utils/utils";
 import { scheduleRoutineNotifications } from "../utils/notifications";
+import { getRoutineIcon, RoutineItem, timeToMinutes } from "../utils/utils";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const STORAGE_KEY = "@zen_routine";
 const SETUP_KEY = "@zen_setup_complete";
 
 const CATEGORIES = [
-  { key: "all", label: "All", emoji: "✨" },
-  { key: "morning", label: "Morning", emoji: "🌅" },
-  { key: "meals", label: "Meals", emoji: "🍽️" },
-  { key: "fitness", label: "Fitness", emoji: "💪" },
-  { key: "productivity", label: "Productivity", emoji: "📚" },
-  { key: "mindfulness", label: "Mindfulness", emoji: "🧘" },
-  { key: "creative", label: "Creative", emoji: "🎨" },
-  { key: "social", label: "Social", emoji: "👥" },
-  { key: "evening", label: "Evening", emoji: "🌙" },
+    { key: "all", label: "All", emoji: "✨" },
+    { key: "morning", label: "Morning", emoji: "🌅" },
+    { key: "meals", label: "Meals", emoji: "🍽️" },
+    { key: "fitness", label: "Fitness", emoji: "💪" },
+    { key: "productivity", label: "Productivity", emoji: "📚" },
+    { key: "mindfulness", label: "Mindfulness", emoji: "🧘" },
+    { key: "creative", label: "Creative", emoji: "🎨" },
+    { key: "social", label: "Social", emoji: "👥" },
+    { key: "evening", label: "Evening", emoji: "🌙" },
 ] as const;
 
 type CategoryKey = (typeof CATEGORIES)[number]["key"];
 
 interface ActivityTemplate {
-  task: string;
-  description: string;
-  imageKey: string;
-  emoji: string;
-  defaultTime: string;
-  category: CategoryKey;
+    task: string;
+    description: string;
+    imageKey: string;
+    emoji: string;
+    defaultTime: string;
+    category: CategoryKey;
 }
 
 const TEMPLATES: ActivityTemplate[] = [
-  // Morning
-  { task: "Wake Up", description: "Start your day with a clear mind.", imageKey: "wakeup", emoji: "🌅", defaultTime: "07:00 AM", category: "morning" },
-  { task: "Hydrate", description: "Refresh your body with water.", imageKey: "water", emoji: "💧", defaultTime: "07:15 AM", category: "morning" },
-  { task: "Stretch", description: "Gentle movement to wake up your muscles.", imageKey: "yoga", emoji: "🧘", defaultTime: "07:30 AM", category: "morning" },
-  { task: "Cold Shower", description: "Invigorate your senses and boost circulation.", imageKey: "cold_shower", emoji: "🚿", defaultTime: "07:20 AM", category: "morning" },
-  { task: "Skincare", description: "Take care of your skin, take care of yourself.", imageKey: "skincare", emoji: "✨", defaultTime: "07:25 AM", category: "morning" },
-  { task: "Affirmations", description: "Set powerful intentions for the day.", imageKey: "affirmations", emoji: "💬", defaultTime: "07:10 AM", category: "morning" },
+    // Morning
+    { task: "Wake Up", description: "Start your day with a clear mind.", imageKey: "wakeup", emoji: "🌅", defaultTime: "07:00 AM", category: "morning" },
+    { task: "Hydrate", description: "Refresh your body with water.", imageKey: "water", emoji: "💧", defaultTime: "07:15 AM", category: "morning" },
+    { task: "Stretch", description: "Gentle movement to wake up your muscles.", imageKey: "yoga", emoji: "🧘", defaultTime: "07:30 AM", category: "morning" },
+    { task: "Cold Shower", description: "Invigorate your senses and boost circulation.", imageKey: "cold_shower", emoji: "🚿", defaultTime: "07:20 AM", category: "morning" },
+    { task: "Skincare", description: "Take care of your skin, take care of yourself.", imageKey: "skincare", emoji: "✨", defaultTime: "07:25 AM", category: "morning" },
+    { task: "Affirmations", description: "Set powerful intentions for the day.", imageKey: "affirmations", emoji: "💬", defaultTime: "07:10 AM", category: "morning" },
 
-  // Meals
-  { task: "Breakfast", description: "Nourish your body for the day ahead.", imageKey: "breakfast", emoji: "🥣", defaultTime: "08:30 AM", category: "meals" },
-  { task: "Lunch", description: "Pause and refuel for the afternoon.", imageKey: "lunch", emoji: "🍱", defaultTime: "01:00 PM", category: "meals" },
-  { task: "Dinner", description: "Enjoy a mindful meal with loved ones.", imageKey: "dinner", emoji: "🍽️", defaultTime: "07:00 PM", category: "meals" },
-  { task: "Snack", description: "A healthy bite to keep your energy up.", imageKey: "snack", emoji: "🍎", defaultTime: "04:00 PM", category: "meals" },
-  { task: "Meal Prep", description: "Prepare tomorrow's fuel today.", imageKey: "meal_prep", emoji: "🔪", defaultTime: "06:00 PM", category: "meals" },
-  { task: "Tea", description: "A moment of calm and reflection.", imageKey: "tea_journal", emoji: "🍵", defaultTime: "08:00 AM", category: "meals" },
-  { task: "Coffee", description: "Your daily dose of clarity.", imageKey: "coffee", emoji: "☕", defaultTime: "08:15 AM", category: "meals" },
+    // Meals
+    { task: "Breakfast", description: "Nourish your body for the day ahead.", imageKey: "breakfast", emoji: "🥣", defaultTime: "08:30 AM", category: "meals" },
+    { task: "Lunch", description: "Pause and refuel for the afternoon.", imageKey: "lunch", emoji: "🍱", defaultTime: "01:00 PM", category: "meals" },
+    { task: "Dinner", description: "Enjoy a mindful meal with loved ones.", imageKey: "dinner", emoji: "🍽️", defaultTime: "07:00 PM", category: "meals" },
+    { task: "Snack", description: "A healthy bite to keep your energy up.", imageKey: "snack", emoji: "🍎", defaultTime: "04:00 PM", category: "meals" },
+    { task: "Meal Prep", description: "Prepare tomorrow's fuel today.", imageKey: "meal_prep", emoji: "🔪", defaultTime: "06:00 PM", category: "meals" },
+    { task: "Tea", description: "A moment of calm and reflection.", imageKey: "tea_journal", emoji: "🍵", defaultTime: "08:00 AM", category: "meals" },
+    { task: "Coffee", description: "Your daily dose of clarity.", imageKey: "coffee", emoji: "☕", defaultTime: "08:15 AM", category: "meals" },
 
-  // Fitness
-  { task: "Gym", description: "Build strength and discipline.", imageKey: "gym", emoji: "🏋️", defaultTime: "06:30 AM", category: "fitness" },
-  { task: "Yoga", description: "Flow through mind-body harmony.", imageKey: "yoga", emoji: "🧘", defaultTime: "07:00 AM", category: "fitness" },
-  { task: "Run", description: "Clear your head with every stride.", imageKey: "run", emoji: "🏃", defaultTime: "06:00 AM", category: "fitness" },
-  { task: "Walk", description: "Step outside and connect with nature.", imageKey: "walk", emoji: "🚶", defaultTime: "05:00 PM", category: "fitness" },
-  { task: "Swim", description: "Dive in and wash away stress.", imageKey: "swim", emoji: "🏊", defaultTime: "07:00 AM", category: "fitness" },
-  { task: "Sports", description: "Play hard, reset harder.", imageKey: "sports", emoji: "⚽", defaultTime: "05:30 PM", category: "fitness" },
-  { task: "Home Workout", description: "No gym needed — just you and your will.", imageKey: "home_workout", emoji: "💪", defaultTime: "06:30 AM", category: "fitness" },
-  { task: "Cycling", description: "Pedal your way to peace.", imageKey: "cycling", emoji: "🚴", defaultTime: "06:00 AM", category: "fitness" },
+    // Fitness
+    { task: "Gym", description: "Build strength and discipline.", imageKey: "gym", emoji: "🏋️", defaultTime: "06:30 AM", category: "fitness" },
+    { task: "Yoga", description: "Flow through mind-body harmony.", imageKey: "yoga", emoji: "🧘", defaultTime: "07:00 AM", category: "fitness" },
+    { task: "Run", description: "Clear your head with every stride.", imageKey: "run", emoji: "🏃", defaultTime: "06:00 AM", category: "fitness" },
+    { task: "Walk", description: "Step outside and connect with nature.", imageKey: "walk", emoji: "🚶", defaultTime: "05:00 PM", category: "fitness" },
+    { task: "Swim", description: "Dive in and wash away stress.", imageKey: "swim", emoji: "🏊", defaultTime: "07:00 AM", category: "fitness" },
+    { task: "Sports", description: "Play hard, reset harder.", imageKey: "sports", emoji: "⚽", defaultTime: "05:30 PM", category: "fitness" },
+    { task: "Home Workout", description: "No gym needed — just you and your will.", imageKey: "home_workout", emoji: "💪", defaultTime: "06:30 AM", category: "fitness" },
+    { task: "Cycling", description: "Pedal your way to peace.", imageKey: "cycling", emoji: "🚴", defaultTime: "06:00 AM", category: "fitness" },
 
-  // Productivity
-  { task: "Study", description: "Focus on learning and growth.", imageKey: "study", emoji: "📚", defaultTime: "09:00 AM", category: "productivity" },
-  { task: "Deep Work", description: "Dive deep into focused creation.", imageKey: "deep_work", emoji: "🖥️", defaultTime: "10:00 AM", category: "productivity" },
-  { task: "Read", description: "Expand your mind one page at a time.", imageKey: "read", emoji: "📖", defaultTime: "08:00 PM", category: "productivity" },
-  { task: "Side Project", description: "Build something you believe in.", imageKey: "side_project", emoji: "🚀", defaultTime: "07:00 PM", category: "productivity" },
-  { task: "Emails", description: "Clear your inbox, clear your mind.", imageKey: "emails", emoji: "📧", defaultTime: "09:30 AM", category: "productivity" },
-  { task: "Planning", description: "Map out your path forward.", imageKey: "planning", emoji: "📋", defaultTime: "08:00 AM", category: "productivity" },
+    // Productivity
+    { task: "Study", description: "Focus on learning and growth.", imageKey: "study", emoji: "📚", defaultTime: "09:00 AM", category: "productivity" },
+    { task: "Deep Work", description: "Dive deep into focused creation.", imageKey: "deep_work", emoji: "🖥️", defaultTime: "10:00 AM", category: "productivity" },
+    { task: "Read", description: "Expand your mind one page at a time.", imageKey: "read", emoji: "📖", defaultTime: "08:00 PM", category: "productivity" },
+    { task: "Side Project", description: "Build something you believe in.", imageKey: "side_project", emoji: "🚀", defaultTime: "07:00 PM", category: "productivity" },
+    { task: "Emails", description: "Clear your inbox, clear your mind.", imageKey: "emails", emoji: "📧", defaultTime: "09:30 AM", category: "productivity" },
+    { task: "Planning", description: "Map out your path forward.", imageKey: "planning", emoji: "📋", defaultTime: "08:00 AM", category: "productivity" },
 
-  // Mindfulness
-  { task: "Meditate", description: "Still your mind, find your center.", imageKey: "meditate", emoji: "🪷", defaultTime: "07:00 AM", category: "mindfulness" },
-  { task: "Breathe", description: "Conscious breathing for inner calm.", imageKey: "breathe", emoji: "🌿", defaultTime: "12:00 PM", category: "mindfulness" },
-  { task: "Journal", description: "Pour your thoughts onto the page.", imageKey: "journal", emoji: "📝", defaultTime: "09:00 PM", category: "mindfulness" },
-  { task: "Reflect", description: "Acknowledge your progress and intentions.", imageKey: "reflect", emoji: "📓", defaultTime: "06:00 PM", category: "mindfulness" },
-  { task: "Gratitude", description: "Count your blessings, big and small.", imageKey: "gratitude", emoji: "🙏", defaultTime: "09:30 PM", category: "mindfulness" },
-  { task: "Prayer", description: "Connect with something greater.", imageKey: "prayer", emoji: "🕊️", defaultTime: "06:00 AM", category: "mindfulness" },
+    // Mindfulness
+    { task: "Meditate", description: "Still your mind, find your center.", imageKey: "meditate", emoji: "🪷", defaultTime: "07:00 AM", category: "mindfulness" },
+    { task: "Breathe", description: "Conscious breathing for inner calm.", imageKey: "breathe", emoji: "🌿", defaultTime: "12:00 PM", category: "mindfulness" },
+    { task: "Journal", description: "Pour your thoughts onto the page.", imageKey: "journal", emoji: "📝", defaultTime: "09:00 PM", category: "mindfulness" },
+    { task: "Reflect", description: "Acknowledge your progress and intentions.", imageKey: "reflect", emoji: "📓", defaultTime: "06:00 PM", category: "mindfulness" },
+    { task: "Gratitude", description: "Count your blessings, big and small.", imageKey: "gratitude", emoji: "🙏", defaultTime: "09:30 PM", category: "mindfulness" },
+    { task: "Prayer", description: "Connect with something greater.", imageKey: "prayer", emoji: "🕊️", defaultTime: "06:00 AM", category: "mindfulness" },
 
-  // Creative
-  { task: "Draw", description: "Express yourself through lines and color.", imageKey: "draw", emoji: "🎨", defaultTime: "04:00 PM", category: "creative" },
-  { task: "Music Practice", description: "Let rhythm move through you.", imageKey: "music_practice", emoji: "🎵", defaultTime: "05:00 PM", category: "creative" },
-  { task: "Write", description: "Give your ideas a voice.", imageKey: "write", emoji: "✍️", defaultTime: "08:00 PM", category: "creative" },
-  { task: "Photography", description: "Capture moments worth remembering.", imageKey: "photography", emoji: "📸", defaultTime: "05:00 PM", category: "creative" },
-  { task: "Craft", description: "Create something with your hands.", imageKey: "craft", emoji: "🧶", defaultTime: "03:00 PM", category: "creative" },
+    // Creative
+    { task: "Draw", description: "Express yourself through lines and color.", imageKey: "draw", emoji: "🎨", defaultTime: "04:00 PM", category: "creative" },
+    { task: "Music Practice", description: "Let rhythm move through you.", imageKey: "music_practice", emoji: "🎵", defaultTime: "05:00 PM", category: "creative" },
+    { task: "Write", description: "Give your ideas a voice.", imageKey: "write", emoji: "✍️", defaultTime: "08:00 PM", category: "creative" },
+    { task: "Photography", description: "Capture moments worth remembering.", imageKey: "photography", emoji: "📸", defaultTime: "05:00 PM", category: "creative" },
+    { task: "Craft", description: "Create something with your hands.", imageKey: "craft", emoji: "🧶", defaultTime: "03:00 PM", category: "creative" },
 
-  // Social
-  { task: "Family Time", description: "Be present with those who matter most.", imageKey: "family_time", emoji: "👨‍👩‍👧", defaultTime: "06:30 PM", category: "social" },
-  { task: "Call a Friend", description: "Stay connected to the people you love.", imageKey: "call_friend", emoji: "📞", defaultTime: "07:00 PM", category: "social" },
-  { task: "Date Night", description: "Nurture your relationship.", imageKey: "date_night", emoji: "❤️", defaultTime: "07:30 PM", category: "social" },
-  { task: "Volunteer", description: "Give back and grow through service.", imageKey: "volunteer", emoji: "🤝", defaultTime: "10:00 AM", category: "social" },
+    // Social
+    { task: "Family Time", description: "Be present with those who matter most.", imageKey: "family_time", emoji: "👨‍👩‍👧", defaultTime: "06:30 PM", category: "social" },
+    { task: "Call a Friend", description: "Stay connected to the people you love.", imageKey: "call_friend", emoji: "📞", defaultTime: "07:00 PM", category: "social" },
+    { task: "Date Night", description: "Nurture your relationship.", imageKey: "date_night", emoji: "❤️", defaultTime: "07:30 PM", category: "social" },
+    { task: "Volunteer", description: "Give back and grow through service.", imageKey: "volunteer", emoji: "🤝", defaultTime: "10:00 AM", category: "social" },
 
-  // Evening
-  { task: "Wind Down", description: "Slow down and prepare for rest.", imageKey: "prepare_sleep", emoji: "🌙", defaultTime: "09:00 PM", category: "evening" },
-  { task: "Screen Off", description: "Disconnect to recharge.", imageKey: "screen_off", emoji: "📵", defaultTime: "09:30 PM", category: "evening" },
-  { task: "Night Walk", description: "A peaceful stroll under the stars.", imageKey: "night_walk", emoji: "🌃", defaultTime: "09:00 PM", category: "evening" },
-  { task: "Sleep", description: "Rest deeply and recharge.", imageKey: "sleep", emoji: "😴", defaultTime: "10:00 PM", category: "evening" },
+    // Evening
+    { task: "Wind Down", description: "Slow down and prepare for rest.", imageKey: "prepare_sleep", emoji: "🌙", defaultTime: "09:00 PM", category: "evening" },
+    { task: "Screen Off", description: "Disconnect to recharge.", imageKey: "screen_off", emoji: "📵", defaultTime: "09:30 PM", category: "evening" },
+    { task: "Night Walk", description: "A peaceful stroll under the stars.", imageKey: "night_walk", emoji: "🌃", defaultTime: "09:00 PM", category: "evening" },
+    { task: "Sleep", description: "Rest deeply and recharge.", imageKey: "sleep", emoji: "😴", defaultTime: "10:00 PM", category: "evening" },
 ];
 
 type DraftItem = Omit<RoutineItem, "id" | "insertionOrder">;
@@ -236,7 +235,7 @@ function StepPick({
             if (b.task === "Wake Up") return 1;
             if (a.task === "Sleep") return 1;
             if (b.task === "Sleep") return -1;
-            
+
             return timeToMinutes(a.defaultTime) - timeToMinutes(b.defaultTime);
         });
     }
@@ -321,8 +320,8 @@ function StepPick({
                         cat.key === "all"
                             ? selected.length
                             : allTemplates.filter(
-                                  (t) => t.category === cat.key && selected.includes(t.task)
-                              ).length;
+                                (t) => t.category === cat.key && selected.includes(t.task)
+                            ).length;
                     return (
                         <Pressable
                             key={cat.key}
@@ -618,7 +617,7 @@ function StepTimes({
                                                     onChange={(v) => onUpdateTime(index, v)}
                                                 />
                                             </View>
-                                            <Text style={[styles.expandedLabel, { marginTop: 12 }]}>
+                                            <Text style={[styles.expandedLabel, { marginTop: 30 }]}>
                                                 Notes (optional)
                                             </Text>
                                             <TextInput
@@ -669,7 +668,7 @@ function StepTimes({
                             <Text style={styles.previewDescription}>
                                 Automatically schedule this activity repeatedly until you sleep.
                             </Text>
-                            
+
                             <View style={{ width: '100%', gap: 12 }}>
                                 {[1, 2, 3, 4].map((hours) => (
                                     <Pressable
@@ -996,7 +995,7 @@ const getStyles = (theme: Theme) =>
         mainTimePicker: {
             width: "80%",
             height: 180,
-            backgroundColor: `${theme.colors.primary}05`,
+            backgroundColor: `${theme.colors.background}`,
             borderRadius: 20,
             borderWidth: 2,
             borderColor: `${theme.colors.primary}10`,

@@ -112,7 +112,7 @@ export const TimePickerSheet: React.FC<TimePickerSheetProps> = ({
           onChange={handleChange}
           textColor="#FFFFFF"
           themeVariant="dark"
-          style={{ height: 210, width: '100%' }}
+          style={{ height: 210, alignSelf: 'center', width: Platform.OS === 'ios' ? 320 : '100%' }}
         />
       </View>
     );
@@ -147,7 +147,7 @@ export const TimePickerSheet: React.FC<TimePickerSheetProps> = ({
           }}
           textColor="#FFFFFF"
           themeVariant="dark"
-          style={{ height: 160, width: '100%' }}
+          style={{ height: 160, alignSelf: 'center', width: Platform.OS === 'ios' ? 320 : '100%' }}
         />
       </View>
     );

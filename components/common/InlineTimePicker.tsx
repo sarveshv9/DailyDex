@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { StyleSheet, View, Platform } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import { Theme } from "../../constants/shared";
 import { useTheme } from "../../context/ThemeContext";
 
@@ -24,18 +24,18 @@ export const InlineTimePicker: React.FC<InlineTimePickerProps> = ({ value, onCha
     const DateTimePicker = require("@react-native-community/datetimepicker").default;
 
     const getDateFromString = (timeStr: string) => {
-      const now = new Date();
-      if (!timeStr) return now;
-      const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-      if (match) {
-        let h = parseInt(match[1], 10);
-        const m = parseInt(match[2], 10);
-        const ampm = match[3].toUpperCase();
-        if (ampm === "PM" && h < 12) h += 12;
-        if (ampm === "AM" && h === 12) h = 0;
-        now.setHours(h, m, 0, 0);
-      }
-      return now;
+        const now = new Date();
+        if (!timeStr) return now;
+        const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+        if (match) {
+            let h = parseInt(match[1], 10);
+            const m = parseInt(match[2], 10);
+            const ampm = match[3].toUpperCase();
+            if (ampm === "PM" && h < 12) h += 12;
+            if (ampm === "AM" && h === 12) h = 0;
+            now.setHours(h, m, 0, 0);
+        }
+        return now;
     };
 
     const currentDate = getDateFromString(value);
@@ -58,7 +58,8 @@ export const InlineTimePicker: React.FC<InlineTimePickerProps> = ({ value, onCha
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                 onChange={handleChange}
                 textColor={theme.colors.text}
-                style={{ height: 160, width: "100%" }}
+                style={{ height: 160, alignSelf: "center", width: Platform.OS === 'ios' ? 320 : "100%" }}
+                borderColor={theme.colors.text}
             />
         </View>
     );
