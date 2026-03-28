@@ -21,19 +21,69 @@ export interface RoutineItem {
 import { Ionicons } from "@expo/vector-icons";
 
 export const ICON_MAP: Record<string, keyof typeof Ionicons.glyphMap> = {
+  // Morning
   wakeup: "alarm-outline",
   water: "water-outline",
-  yoga: "fitness-outline",
-  tea_journal: "cafe-outline",
+  cold_shower: "snow-outline",
+  skincare: "sparkles-outline",
+  affirmations: "heart-outline",
+
+  // Meals
   breakfast: "restaurant-outline",
-  study: "book-outline",
   lunch: "restaurant-outline",
-  walk: "walk-outline",
-  reflect: "journal-outline",
   dinner: "restaurant-outline",
-  prepare_sleep: "bed-outline",
-  sleep: "moon-outline",
+  snack: "nutrition-outline",
+  meal_prep: "cut-outline",
+  tea_journal: "cafe-outline",
+  coffee: "cafe-outline",
+
+  // Fitness
+  gym: "barbell-outline",
+  yoga: "fitness-outline",
+  run: "footsteps-outline",
+  walk: "walk-outline",
+  swim: "water-outline",
+  sports: "football-outline",
+  home_workout: "body-outline",
+  cycling: "bicycle-outline",
+
+  // Productivity
+  study: "book-outline",
+  deep_work: "desktop-outline",
+  read: "reader-outline",
+  side_project: "rocket-outline",
+  emails: "mail-outline",
+  planning: "calendar-outline",
+
+  // Mindfulness
+  meditate: "flower-outline",
   breathe: "leaf-outline",
+  journal: "journal-outline",
+  reflect: "journal-outline",
+  gratitude: "happy-outline",
+  prayer: "hand-left-outline",
+
+  // Creative
+  draw: "brush-outline",
+  music_practice: "musical-notes-outline",
+  write: "pencil-outline",
+  photography: "camera-outline",
+  craft: "color-palette-outline",
+
+  // Social
+  family_time: "people-outline",
+  call_friend: "call-outline",
+  date_night: "heart-circle-outline",
+  volunteer: "hand-right-outline",
+
+  // Evening
+  prepare_sleep: "bed-outline",
+  screen_off: "phone-landscape-outline",
+  night_walk: "cloudy-night-outline",
+  sleep: "moon-outline",
+
+  // Fallback
+  custom: "add-circle-outline",
 };
 
 export const getRoutineIcon = (key?: string): keyof typeof Ionicons.glyphMap => {
