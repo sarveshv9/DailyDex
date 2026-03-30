@@ -37,19 +37,19 @@ const CIRCLE_SEL = 80;
 const CIRCLE_OTHER = 30;
 /** Warm color palette for task types (sleep = dark, alarm = amber, etc.) */
 const TASK_COLORS: Record<string, string> = {
-    wakeup: '#E8975E',
-    sleep: '#5A5A7A',
-    water: '#4DA8DA',
-    tea_journal: '#B89B72',
-    breakfast: '#E8975E',
-    lunch: '#E8975E',
-    dinner: '#E8975E',
-    study: '#7B8CDE',
-    walk: '#6BCB77',
-    yoga: '#C084FC',
-    reflect: '#7B8CDE',
-    prepare_sleep: '#5A5A7A',
-    breathe: '#6BCB77',
+    wakeup: '#FFB347',
+    sleep: '#9CBBE3',
+    water: '#77CCEE',
+    tea_journal: '#E6D5B8',
+    breakfast: '#FFD1BA',
+    lunch: '#FFD1BA',
+    dinner: '#FFD1BA',
+    study: '#A0C4FF',
+    walk: '#B9FBC0',
+    yoga: '#CFBAF0',
+    reflect: '#A0C4FF',
+    prepare_sleep: '#BDB2FF',
+    breathe: '#B9FBC0',
 };
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];

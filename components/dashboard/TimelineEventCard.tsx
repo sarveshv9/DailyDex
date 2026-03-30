@@ -19,6 +19,22 @@ import { Theme } from '../../constants/shared';
 import { useTheme } from '../../context/ThemeContext';
 import { RoutineItem, ICON_MAP } from '../../utils/utils';
 
+const TASK_COLORS: Record<string, string> = {
+    wakeup: '#FFB347',
+    sleep: '#9CBBE3',
+    water: '#77CCEE',
+    tea_journal: '#E6D5B8',
+    breakfast: '#FFD1BA',
+    lunch: '#FFD1BA',
+    dinner: '#FFD1BA',
+    study: '#A0C4FF',
+    walk: '#B9FBC0',
+    yoga: '#CFBAF0',
+    reflect: '#A0C4FF',
+    prepare_sleep: '#BDB2FF',
+    breathe: '#B9FBC0',
+};
+
 export interface TimelineEventCardProps {
     item: RoutineItem;
     onPress?: () => void;
@@ -53,8 +69,9 @@ export const TimelineEventCard: React.FC<TimelineEventCardProps> = ({
 
     const icon: keyof typeof Ionicons.glyphMap = ICON_MAP[routineData.imageKey ?? ''] ?? 'checkmark-circle-outline';
 
-    const nodeColor = theme.colors.primary;
-    const lineColor = `${theme.colors.primary}35`;
+    const taskColor = TASK_COLORS[routineData.imageKey ?? ''] ?? theme.colors.primary;
+    const nodeColor = taskColor;
+    const lineColor = `${taskColor}45`; // Increased opacity for better visibility on white background
 
     return (
         <View>

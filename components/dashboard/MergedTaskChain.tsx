@@ -15,19 +15,19 @@ export const getTimelineMinute = (timeStr: string, startHour: number) => {
 const DURATION_DEFAULT = 30;
 
 const TASK_COLORS: Record<string, string> = {
-    wakeup: '#E8975E',
-    sleep: '#5A5A7A',
-    water: '#4DA8DA',
-    tea_journal: '#B89B72',
-    breakfast: '#E8975E',
-    lunch: '#E8975E',
-    dinner: '#E8975E',
-    study: '#7B8CDE',
-    walk: '#6BCB77',
-    yoga: '#C084FC',
-    reflect: '#7B8CDE',
-    prepare_sleep: '#5A5A7A',
-    breathe: '#6BCB77',
+    wakeup: '#FFB347',
+    sleep: '#9CBBE3',
+    water: '#77CCEE',
+    tea_journal: '#E6D5B8',
+    breakfast: '#FFD1BA',
+    lunch: '#FFD1BA',
+    dinner: '#FFD1BA',
+    study: '#A0C4FF',
+    walk: '#B9FBC0',
+    yoga: '#CFBAF0',
+    reflect: '#A0C4FF',
+    prepare_sleep: '#BDB2FF',
+    breathe: '#B9FBC0',
 };
 
 const ICON_MAP: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -71,7 +71,7 @@ export const TaskPill = memo<{
                     borderRadius,
                     overflow: 'hidden',
                     borderWidth: isSelected ? 1.5 : 1,
-                    borderColor: isSelected ? `${taskColor}90` : `${theme.colors.text}22`,
+                    borderColor: isSelected ? `${taskColor}CC` : `${theme.colors.text}22`,
                 },
                 isSelected
                     ? Platform.select({
@@ -84,22 +84,33 @@ export const TaskPill = memo<{
                     }),
             ]}
         >
-            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: theme.colors.background }} />
-            <LinearGradient
-                colors={isSelected ? [`${taskColor}55`, `${taskColor}28`, `${taskColor}10`] : [`${theme.colors.text}18`, `${theme.colors.text}08`]}
-                start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
-                style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-            />
-            <LinearGradient
-                colors={isSelected ? [taskColor, `${taskColor}00`] : [`${theme.colors.text}28`, `${theme.colors.text}00`]}
-                start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
-                style={{ position: 'absolute', top: 0, left: 0, right: 0, height: accentBarHeight, opacity: isSelected ? 0.55 : 0.4 }}
-            />
+            <View style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: isSelected ? taskColor : theme.colors.background
+            }} />
+            {!isSelected && (
+                <LinearGradient
+                    colors={[`${theme.colors.text}18`, `${theme.colors.text}08`]}
+                    start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
+                    style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+                />
+            )}
+            {isSelected && (
+              <LinearGradient
+                  colors={['rgba(255,255,255,0.4)', 'rgba(255,255,255,0)']}
+                  start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
+                  style={{ position: 'absolute', top: 0, left: 0, right: 0, height: accentBarHeight }}
+              />
+            )}
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
                 <Ionicons
                     name={ICON_MAP[item.imageKey ?? ''] ?? 'ellipse-outline'}
                     size={iconSize}
-                    color={isSelected ? taskColor : `${theme.colors.textSecondary}88`}
+                    color={isSelected ? theme.colors.white : `${theme.colors.textSecondary}88`}
                 />
             </View>
         </Pressable>

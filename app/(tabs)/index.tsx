@@ -1,8 +1,11 @@
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { BlurView } from "expo-blur";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AccessibilityRole,
+  ActivityIndicator,
   Dimensions,
   Platform,
   Pressable,
@@ -10,10 +13,7 @@ import {
   StyleSheet,
   Text,
   View,
-  ActivityIndicator,
 } from "react-native";
-import { BlurView } from "expo-blur";
-import { Ionicons } from "@expo/vector-icons";
 import Animated, {
   FadeIn,
   FadeInDown,
@@ -22,13 +22,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle } from "react-native-svg";
 import { Theme, themes } from "../../constants/shared";
 import { useTheme } from "../../context/ThemeContext";
+import { loadStats, UserStats } from "../../utils/stats";
 import {
   getRoutineIcon,
   RoutineItem,
   sortRoutineItems,
   timeToMinutes,
 } from "../../utils/utils";
-import { loadStats, UserStats } from "../../utils/stats";
 
 /* ---------- Constants ---------- */
 const TASK_THEME_MAP: Record<string, keyof typeof themes> = {

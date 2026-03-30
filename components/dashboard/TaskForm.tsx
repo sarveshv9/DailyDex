@@ -1,10 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "../../utils/haptics";
+import { BlurView } from "expo-blur";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
-  Image,
   Modal,
   Platform,
   Pressable,
@@ -14,11 +13,11 @@ import {
   TextInput,
   TouchableOpacity,
   useColorScheme,
-  View,
+  View
 } from "react-native";
-import { BlurView } from "expo-blur";
 import { Theme } from "../../constants/shared";
 import { useTheme } from "../../context/ThemeContext";
+import * as Haptics from "../../utils/haptics";
 import { FormData, getRoutineIcon } from "../../utils/utils";
 import { InlineTimePicker } from "../common/InlineTimePicker";
 
@@ -81,10 +80,9 @@ const TaskForm: React.FC<TaskFormProps> = ({
   onSave,
   onClose,
 }) => {
-  const { theme } = useTheme();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const styles = useMemo(() => getStyles(theme, isDark), [theme, isDark]);
+  const { theme, isDarkMode } = useTheme();
+  const isDark = isDarkMode;
+  const styles = useMemo(() => getStyles(theme), [theme]);
 
   const [showTimePicker, setShowTimePicker] = useState(false);
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
@@ -164,15 +162,15 @@ const TaskForm: React.FC<TaskFormProps> = ({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <Animated.View 
+      <Animated.View
         style={[
-          StyleSheet.absoluteFill, 
-          { 
+          StyleSheet.absoluteFill,
+          {
             opacity: slideAnim.interpolate({
               inputRange: [0, SCREEN_HEIGHT],
               outputRange: [1, 0],
               extrapolate: 'clamp'
-            }) 
+            })
           }
         ]}
       >
@@ -281,7 +279,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                   color={`${theme.colors.textSecondary}60`}
                 />
               </Pressable>
-              
+
               {showTimePicker && (
                 <View style={[styles.fieldCard, { marginTop: 8, paddingVertical: 10 }]}>
                   <InlineTimePicker
@@ -486,7 +484,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
 
 /* ─────────────────────────────── Styles ─────────────────────────────── */
 
-const getStyles = (theme: Theme, isDark: boolean) =>
+const getStyles = (theme: Theme) =>
   StyleSheet.create({
 
     /* ── Modal shell ── */
@@ -495,7 +493,7 @@ const getStyles = (theme: Theme, isDark: boolean) =>
       justifyContent: "flex-end",
     },
     sheet: {
-      backgroundColor: isDark ? "rgba(30, 30, 30, 0.75)" : "rgba(255, 255, 255, 0.75)",
+      backgroundColor: theme.glass.cardBg,
       borderTopLeftRadius: 36,
       borderTopRightRadius: 36,
       paddingTop: 10,
@@ -504,7 +502,7 @@ const getStyles = (theme: Theme, isDark: boolean) =>
       maxHeight: SCREEN_HEIGHT * 0.92,
       overflow: 'hidden',
       borderWidth: 1,
-      borderColor: isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(255, 255, 255, 0.5)",
+      borderColor: theme.glass.borderColor,
       ...Platform.select({
         ios: {
           shadowColor: "#000",
@@ -610,12 +608,12 @@ const getStyles = (theme: Theme, isDark: boolean) =>
     fieldCard: {
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.03)",
+      backgroundColor: `${theme.colors.text}0A`,
       borderRadius: 18,
       paddingVertical: 14,
       paddingHorizontal: 16,
       borderWidth: 1,
-      borderColor: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.04)",
+      borderColor: `${theme.colors.text}0F`,
       minHeight: 56,
     },
     fieldCardPadded: {
@@ -670,7 +668,7 @@ const getStyles = (theme: Theme, isDark: boolean) =>
       width: 40,
       height: 40,
       borderRadius: 20,
-      backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)",
+      backgroundColor: `${theme.colors.text}0D`,
       alignItems: "center",
       justifyContent: "center",
       flexShrink: 0,
@@ -713,8 +711,8 @@ const getStyles = (theme: Theme, isDark: boolean) =>
       paddingHorizontal: 16,
       borderRadius: 20,
       borderWidth: 1,
-      borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)",
-      backgroundColor: isDark ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.5)",
+      borderColor: `${theme.colors.text}1A`,
+      backgroundColor: `${theme.colors.text}08`,
     },
     presetChipText: {
       fontSize: 13,
@@ -732,10 +730,10 @@ const getStyles = (theme: Theme, isDark: boolean) =>
       height: 40,
       borderRadius: 20,
       borderWidth: 1,
-      borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)",
+      borderColor: `${theme.colors.text}1A`,
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.5)",
+      backgroundColor: `${theme.colors.text}0A`,
     },
     dayBtnText: {
       fontSize: 14,
@@ -808,19 +806,19 @@ const getStyles = (theme: Theme, isDark: boolean) =>
     pickerOverlay: {
       position: "absolute",
       top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: "rgba(0,0,0,0.45)",
+      backgroundColor: theme.colors.background,
       justifyContent: "flex-end",
       alignItems: "center",
     },
     pickerCard: {
-      backgroundColor: isDark ? "rgba(30,30,30,0.9)" : "rgba(255,255,255,0.95)",
+      backgroundColor: theme.colors.card,
       borderRadius: 28,
       paddingVertical: 24,
       paddingHorizontal: 20,
       width: "90%",
       maxWidth: 320,
       borderWidth: 1,
-      borderColor: isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.05)",
+      borderColor: `${theme.colors.text}26`,
       ...Platform.select({
         ios: {
           shadowColor: "#000",

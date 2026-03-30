@@ -46,7 +46,7 @@ const baseTheme = {
 };
 
 const lightGlass = {
-  cardBg: "rgba(255, 255, 255, 0.62)",
+  cardBg: "rgba(239, 239, 239, 0.76)",
   borderColor: "rgba(255, 255, 255, 0.45)",
   shadowOpacity: 0.06,
 };

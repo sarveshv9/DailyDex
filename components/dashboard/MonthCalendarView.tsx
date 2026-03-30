@@ -1,7 +1,13 @@
 import React, { useMemo, useState } from 'react';
-import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View
+} from 'react-native';
 import { Theme } from '../../constants/shared';
-import { RoutineItem, timeToMinutes } from '../../utils/utils';
+import { RoutineItem } from '../../utils/utils';
 
 interface Props {
     currentDate: Date;
@@ -10,43 +16,138 @@ interface Props {
     theme: Theme;
 }
 
-const PILL_H = 27;
-const PILL_GAP = 5;
-
 const TASK_COLORS: Record<string, string> = {
-    wakeup: '#E8975E',
-    sleep: '#5A5A7A',
-    water: '#4DA8DA',
-    tea_journal: '#B89B72',
-    breakfast: '#E8975E',
-    lunch: '#E8975E',
-    dinner: '#E8975E',
-    study: '#7B8CDE',
-    walk: '#6BCB77',
-    yoga: '#C084FC',
-    reflect: '#7B8CDE',
-    prepare_sleep: '#5A5A7A',
-    breathe: '#6BCB77',
+    wakeup: '#FFB347',
+    sleep: '#9CBBE3',
+    water: '#77CCEE',
+    tea_journal: '#E6D5B8',
+    breakfast: '#FFD1BA',
+    lunch: '#FFD1BA',
+    dinner: '#FFD1BA',
+    study: '#A0C4FF',
+    walk: '#B9FBC0',
+    yoga: '#CFBAF0',
+    reflect: '#A0C4FF',
+    prepare_sleep: '#BDB2FF',
+    breathe: '#B9FBC0',
 };
 
-const CARD_TINTS = [
-    '#7B8CDE', '#C084FC',
-    '#4DA8DA', '#6BCB77', '#5A5A7A',
-];
+const FALLBACK_COLORS = ['#7B8CDE', '#C084FC', '#4DA8DA', '#6BCB77', '#E8975E', '#B89B72'];
 
-const MONTH_NAMES = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const MONTH_NAMES = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+];
+const MONTH_SHORT = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+const DAY_HEADERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const DAY_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 const fmtDateKey = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
+const fmtTime = (time?: string): string => {
+    if (!time) return '';
+    const parts = time.split(':');
+    const h = parseInt(parts[0], 10);
+    const m = parseInt(parts[1] ?? '0', 10);
+    if (isNaN(h)) return time; // return raw if unparseable
+    const suffix = h < 12 ? 'am' : 'pm';
+    const hour = h % 12 || 12;
+    const mins = isNaN(m) ? '00' : String(m).padStart(2, '0');
+    return `${hour}:${mins}${suffix}`;
+};
+
+function getTaskColor(item: RoutineItem, idx: number): string {
+    if (item.imageKey && TASK_COLORS[item.imageKey]) return TASK_COLORS[item.imageKey];
+    return FALLBACK_COLORS[idx % FALLBACK_COLORS.length];
+}
+
+// ─── Day Detail Panel ────────────────────────────────────────────────────────
+
+interface DayDetailProps {
+    date: Date;
+    items: RoutineItem[];
+    theme: Theme;
+}
+
+function DayDetail({ date, items, theme }: DayDetailProps) {
+    const isToday = fmtDateKey(date) === fmtDateKey(new Date());
+
+    return (
+        <View style={[detail.container, { backgroundColor: theme.colors.card }]}>
+            {/* Header */}
+            <View style={detail.header}>
+                <View>
+                    <Text style={[detail.dayName, { color: theme.colors.textSecondary }]}>
+                        {DAY_FULL[date.getDay()].toUpperCase()}
+                    </Text>
+                    <View style={detail.dateLine}>
+                        <Text style={[detail.dateNum, { color: isToday ? '#FF453A' : theme.colors.text }]}>
+                            {date.getDate()}
+                        </Text>
+                        <Text style={[detail.monthYear, { color: theme.colors.textSecondary }]}>
+                            {MONTH_SHORT[date.getMonth()]} {date.getFullYear()}
+                        </Text>
+                    </View>
+                </View>
+                <View style={[detail.badge, { backgroundColor: isToday ? 'rgba(255,69,58,0.12)' : 'rgba(150,150,150,0.1)' }]}>
+                    <Text style={[detail.badgeText, { color: isToday ? '#FF453A' : theme.colors.textSecondary }]}>
+                        {items.length} {items.length === 1 ? 'task' : 'tasks'}
+                    </Text>
+                </View>
+            </View>
+
+            {/* Divider */}
+            <View style={[detail.divider, { backgroundColor: 'rgba(150,150,150,0.15)' }]} />
+
+            {/* Task list */}
+            {items.length === 0 ? (
+                <View style={detail.emptyState}>
+                    <Text style={[detail.emptyIcon]}>○</Text>
+                    <Text style={[detail.emptyText, { color: theme.colors.textSecondary }]}>
+                        No tasks scheduled
+                    </Text>
+                </View>
+            ) : (
+                <View style={detail.taskList}>
+                    {items.map((item, i) => {
+                        const color = getTaskColor(item, i);
+                        const label = item.task ?? item.imageKey?.replace(/_/g, ' ') ?? '';
+                        return (
+                            <View key={i} style={detail.taskRow}>
+                                <View style={[detail.taskDot, { backgroundColor: color }]} />
+                                <View style={detail.taskInfo}>
+                                    <Text style={[detail.taskName, { color: theme.colors.text }]}>
+                                        {label}
+                                    </Text>
+                                    <Text style={[detail.taskMeta, { color: theme.colors.textSecondary }]}>
+                                        {fmtTime(item.time)}
+                                        {item.duration ? ` · ${item.duration}min` : ''}
+                                    </Text>
+                                </View>
+                                <View style={[detail.taskPill, { backgroundColor: color + '22' }]}>
+                                    <Text style={[detail.taskPillText, { color }]}>
+                                        {fmtTime(item.time)}
+                                    </Text>
+                                </View>
+                            </View>
+                        );
+                    })}
+                </View>
+            )}
+        </View>
+    );
+}
+
+// ─── Main Component ──────────────────────────────────────────────────────────
+
 export function MonthCalendarView({ currentDate, routineItems, onSelectDate, theme }: Props) {
     const [year, setYear] = useState(currentDate.getFullYear());
     const [month, setMonth] = useState(currentDate.getMonth());
+    const [selectedDate, setSelectedDate] = useState<Date>(currentDate);
 
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
     const todayStr = fmtDateKey(new Date());
-    const selectedStr = fmtDateKey(currentDate);
+    const selectedStr = fmtDateKey(selectedDate);
 
     const prevMonth = () => {
         if (month === 0) { setYear(y => y - 1); setMonth(11); }
@@ -57,10 +158,17 @@ export function MonthCalendarView({ currentDate, routineItems, onSelectDate, the
         else setMonth(m => m + 1);
     };
 
-    const days = useMemo(
-        () => Array.from({ length: daysInMonth }, (_, i) => new Date(year, month, i + 1)),
-        [year, month, daysInMonth],
-    );
+    // Build the 6-row grid (42 cells), padded with nulls for leading/trailing days
+    const gridCells = useMemo(() => {
+        const firstDow = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const cells: (Date | null)[] = [];
+        for (let i = 0; i < firstDow; i++) cells.push(null);
+        for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d));
+        // Pad to complete the last row
+        while (cells.length % 7 !== 0) cells.push(null);
+        return cells;
+    }, [year, month]);
 
     const getDayItems = (date: Date) => {
         const weekday = date.getDay();
@@ -70,342 +178,403 @@ export function MonthCalendarView({ currentDate, routineItems, onSelectDate, the
             .sort((a, b) => a.time.localeCompare(b.time));
     };
 
-    return (
-        <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+    const selectedItems = useMemo(() => getDayItems(selectedDate), [selectedDate, routineItems]);
 
-            {/* ── Month navigation ── */}
-            <View style={styles.monthNav}>
-                <Pressable onPress={prevMonth} hitSlop={16}>
-                    <Text style={[styles.navSideLabel, { color: theme.colors.textSecondary }]}>
-                        {MONTH_NAMES[(month - 1 + 12) % 12]}
-                    </Text>
+    // Tapping a grid cell only highlights it; tapping the detail card fires onSelectDate
+    const handleCellPress = (date: Date) => {
+        setSelectedDate(date);
+    };
+
+    const handleDetailCardPress = () => {
+        onSelectDate(selectedDate);
+    };
+
+    // Dot colors for a cell (up to 3 unique colors)
+    const getCellDots = (date: Date) => {
+        const items = getDayItems(date);
+        const colors = items.slice(0, 3).map((item, i) => getTaskColor(item, i));
+        return { colors, total: items.length };
+    };
+
+    return (
+        <ScrollView
+            style={{ flex: 1, backgroundColor: theme.colors.background }}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 120 }}
+        >
+            {/* ── Month Navigation ── */}
+            <View style={[nav.container]}>
+                <Pressable onPress={prevMonth} hitSlop={16} style={nav.chevronBtn}>
+                    <Text style={[nav.chevron, { color: theme.colors.textSecondary }]}>‹</Text>
                 </Pressable>
-                <View style={styles.navCenter}>
-                    <Pressable onPress={prevMonth} hitSlop={16}>
-                        <Text style={[styles.navChevron, { color: theme.colors.textSecondary }]}>‹</Text>
-                    </Pressable>
-                    <Text style={[styles.navCurrentLabel, { color: theme.colors.text }]}>
+
+                <View style={nav.center}>
+                    <Text style={[nav.monthName, { color: theme.colors.text }]}>
                         {MONTH_NAMES[month]}
                     </Text>
-                    <Pressable onPress={nextMonth} hitSlop={16}>
-                        <Text style={[styles.navChevron, { color: theme.colors.textSecondary }]}>›</Text>
-                    </Pressable>
-                </View>
-                <Pressable onPress={nextMonth} hitSlop={16}>
-                    <Text style={[styles.navSideLabel, { color: theme.colors.textSecondary }]}>
-                        {MONTH_NAMES[(month + 1) % 12]}
+                    <Text style={[nav.yearLabel, { color: theme.colors.textSecondary }]}>
+                        {year}
                     </Text>
+                </View>
+
+                <Pressable onPress={nextMonth} hitSlop={16} style={nav.chevronBtn}>
+                    <Text style={[nav.chevron, { color: theme.colors.textSecondary }]}>›</Text>
                 </Pressable>
             </View>
 
-            {/* ── Day cards ── */}
-            <ScrollView
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.scrollContent}
-            >
-                {days.map((date, index) => {
-                    const dateStr = fmtDateKey(date);
-                    const isToday = dateStr === todayStr;
-                    const isSelected = dateStr === selectedStr;
-                    const items = getDayItems(date);
+            {/* ── Day of Week Headers ── */}
+            <View style={[grid.headerRow, { paddingHorizontal: 16, marginBottom: 6 }]}>
+                {DAY_HEADERS.map((d, i) => (
+                    <View key={i} style={grid.headerCell}>
+                        <Text style={[
+                            grid.headerText,
+                            { color: (i === 0 || i === 6) ? '#FF453A' : theme.colors.textSecondary },
+                        ]}>
+                            {d}
+                        </Text>
+                    </View>
+                ))}
+            </View>
 
-                    const fallbackPillColor = CARD_TINTS[index % CARD_TINTS.length];
+            {/* ── Calendar Grid ── */}
+            <View style={[grid.gridContainer, { paddingHorizontal: 16 }]}>
+                {Array.from({ length: gridCells.length / 7 }, (_, weekIdx) => (
+                    <View key={weekIdx} style={grid.weekRow}>
+                        {gridCells.slice(weekIdx * 7, weekIdx * 7 + 7).map((date, cellIdx) => {
+                            if (!date) {
+                                return <View key={cellIdx} style={grid.cell} />;
+                            }
 
-                    // Time window: Start exactly at earliest task, pad 1hr after latest
-                    let minH = 8, maxH = 11;
-                    if (items.length > 0) {
-                        const hours = items.map(it => Math.floor(timeToMinutes(it.time) / 60));
-                        minH = Math.min(...hours);
-                        maxH = Math.min(23, Math.max(...hours) + 2);
-                    }
-                    if (maxH - minH < 3) maxH = minH + 3;
-                    const hourSpan = maxH - minH;
-                    const totalMins = hourSpan * 60;
+                            const dateStr = fmtDateKey(date);
+                            const isToday = dateStr === todayStr;
+                            const isSelected = dateStr === selectedStr;
+                            const isWeekend = cellIdx === 0 || cellIdx === 6;
+                            const { colors: dotColors, total: taskCount } = getCellDots(date);
 
-                    const isOccupied = new Array(totalMins).fill(false);
-                    items.forEach(item => {
-                        const mStart = timeToMinutes(item.time) - (minH * 60);
-                        const dur = item.duration ?? 60;
-                        for (let m = mStart; m < mStart + dur; m++) {
-                            if (m >= 0 && m < totalMins) isOccupied[m] = true;
-                        }
-                    });
+                            return (
+                                <Pressable
+                                    key={dateStr}
+                                    onPress={() => handleCellPress(date)}
+                                    style={({ pressed }) => [
+                                        grid.cell,
+                                        isSelected && [grid.cellSelected, { backgroundColor: theme.colors.primary }],
+                                        isToday && !isSelected && grid.cellToday,
+                                        pressed && !isSelected && { opacity: 0.6 },
+                                    ]}
+                                >
+                                    {/* Date Number */}
+                                    <Text style={[
+                                        grid.cellNum,
+                                        isSelected
+                                            ? grid.cellNumSelected
+                                            : isToday
+                                                ? [grid.cellNumToday, { color: '#FF453A' }]
+                                                : { color: isWeekend ? theme.colors.textSecondary : theme.colors.text },
+                                    ]}>
+                                        {date.getDate()}
+                                    </Text>
 
-                    const cX = new Array(totalMins + 1).fill(0);
-                    let currentX = 0;
-                    for (let i = 0; i < totalMins; i++) {
-                        cX[i] = currentX;
-                        currentX += isOccupied[i] ? 1.5 : 0.35;
-                    }
-                    cX[totalMins] = currentX;
-
-                    // Dynamic spacing to fit content automatically
-                    const { width: SCREEN_WIDTH } = Dimensions.get('window');
-                    const availableWidth = SCREEN_WIDTH - 125; // Account for left block and padding
-                    const rawTimelineWidth = cX[totalMins];
-                    const scaleFactor = Math.max(1, availableWidth / Math.max(1, rawTimelineWidth));
-                    
-                    const dynamicPillW = Math.max(50, Math.min(90, 60 * 1.5 * scaleFactor - 8));
-
-                    // Pill layout: horizontal by time offset, vertical stack for same-hour conflicts
-                    const hourStack: Record<number, number> = {};
-                    const pillLayout = items.map(item => {
-                        const mStart = timeToMinutes(item.time) - (minH * 60);
-                        const h = Math.floor(mStart / 60);
-                        const safeStart = Math.max(0, Math.min(totalMins, mStart));
-                        const leftPx = cX[safeStart] * scaleFactor;
-                        const row = hourStack[h] ?? 0;
-                        hourStack[h] = row + 1;
-                        return { leftPx, row };
-                    });
-
-                    const maxStack = items.length > 0 ? Math.max(...Object.values(hourStack)) : 1;
-                    const pillsHeight = maxStack * (PILL_H + PILL_GAP) - PILL_GAP;
-                    const cardHeight = Math.max(100, 44 + 22 + 10 + pillsHeight + 20);
-
-                    // Content width = last pill's left edge + pill width + padding
-                    const lastLeft = pillLayout.length > 0
-                        ? Math.max(...pillLayout.map(p => p.leftPx))
-                        : rawTimelineWidth * scaleFactor;
-                    const timelineContentWidth = Math.max(
-                        rawTimelineWidth * scaleFactor,
-                        lastLeft + dynamicPillW + 24,
-                    );
-
-                    // Hour tick marks
-                    const hourMarkers = Array.from({ length: hourSpan + 1 }, (_, i) => minH + i);
-
-                    return (
-                        <View
-                            key={dateStr}
-                            style={[
-                                styles.card,
-                                {
-                                    backgroundColor: theme.colors.card,
-                                    borderColor: isSelected
-                                        ? theme.colors.primary
-                                        : isToday
-                                            ? '#FF453A'
-                                            : 'rgba(150,150,150,0.15)',
-                                    borderWidth: isSelected || isToday ? 2 : 1,
-                                    height: cardHeight,
-                                },
-                            ]}
-                        >
-                            {/* ── Left date block — tap target ── */}
-                            <Pressable
-                                onPress={() => onSelectDate(date)}
-                                style={styles.cardLeft}
-                            >
-                                <Text style={[styles.cardWeekday, { color: isToday ? '#FF453A' : theme.colors.textSecondary }]}>
-                                    {DAY_NAMES[date.getDay()]}
-                                </Text>
-                                <Text style={[
-                                    styles.cardDateNum,
-                                    { color: isToday ? '#FF453A' : theme.colors.text },
-                                ]}>
-                                    {date.getDate()}
-                                </Text>
-                                <Text style={[styles.cardMonthTag, { color: isToday ? 'rgba(255, 69, 58, 0.8)' : theme.colors.textSecondary }]}>
-                                    {MONTH_NAMES[month]}
-                                </Text>
-                            </Pressable>
-
-                            {/* Thin vertical divider */}
-                            <View style={[styles.rule, { backgroundColor: 'rgba(150,150,150,0.2)' }]} />
-
-                            {/* ── Horizontally scrollable timeline ── */}
-                            <ScrollView
-                                horizontal
-                                showsHorizontalScrollIndicator={false}
-                                style={styles.timelineScroll}
-                                contentContainerStyle={{ width: timelineContentWidth }}
-                                nestedScrollEnabled
-                            >
-                                <View style={{ width: timelineContentWidth, flex: 1 }}>
-
-                                    {/* Hour label row */}
-                                    <View style={[styles.hourRow, { width: timelineContentWidth }]}>
-                                        {hourMarkers.map((h) => {
-                                            const label = `${h % 12 || 12}${h < 12 ? 'am' : 'pm'}`;
-                                            return (
+                                    {/* Task dots */}
+                                    {taskCount > 0 && (
+                                        <View style={grid.dotsRow}>
+                                            {dotColors.map((color, di) => (
                                                 <View
-                                                    key={h}
-                                                    style={[styles.hourMarkerWrap, { left: cX[(h - minH) * 60] * scaleFactor }]}
-                                                >
-                                                    <Text style={[styles.hourLabel, { color: theme.colors.textSecondary }]}>
-                                                        {label}
-                                                    </Text>
-                                                    <View style={[styles.hourTick, {
-                                                        backgroundColor: 'rgba(150,150,150,0.15)',
-                                                        height: pillsHeight + 10,
-                                                    }]} />
-                                                </View>
-                                            );
-                                        })}
-                                    </View>
+                                                    key={di}
+                                                    style={[
+                                                        grid.dot,
+                                                        { backgroundColor: isSelected ? 'rgba(255,255,255,0.8)' : color },
+                                                    ]}
+                                                />
+                                            ))}
+                                            {taskCount > 3 && (
+                                                <Text style={[grid.dotMore, { color: isSelected ? 'rgba(255,255,255,0.7)' : theme.colors.textSecondary }]}>
+                                                    +{taskCount - 3}
+                                                </Text>
+                                            )}
+                                        </View>
+                                    )}
+                                </Pressable>
+                            );
+                        })}
+                    </View>
+                ))}
+            </View>
 
-                                    {/* Pills */}
-                                    <View style={[styles.pillsLayer, { height: pillsHeight, width: timelineContentWidth }]}>
-                                        {items.length === 0 ? (
-                                            <Text style={[styles.emptyHint, { color: theme.colors.textSecondary }]}>
-                                                No tasks
-                                            </Text>
-                                        ) : (
-                                            items.map((item, ti) => {
-                                                const { leftPx, row } = pillLayout[ti];
-                                                const pillColor = item.imageKey
-                                                    ? (TASK_COLORS[item.imageKey] ?? fallbackPillColor)
-                                                    : fallbackPillColor;
-                                                return (
-                                                    <View
-                                                        key={ti}
-                                                        style={[
-                                                            styles.pill,
-                                                            {
-                                                                backgroundColor: pillColor,
-                                                                left: leftPx,
-                                                                top: row * (PILL_H + PILL_GAP),
-                                                                width: dynamicPillW,
-                                                            },
-                                                        ]}
-                                                    >
-                                                        <Text style={styles.pillText} numberOfLines={1}>
-                                                            {item.task ?? item.imageKey?.replace(/_/g, ' ') ?? ''}
-                                                        </Text>
-                                                    </View>
-                                                );
-                                            })
-                                        )}
-                                    </View>
+            {/* ── Thin separator ── */}
+            <View style={[sep.line, { backgroundColor: 'rgba(150,150,150,0.15)', marginHorizontal: 16, marginTop: 16 }]} />
 
-                                </View>
-                            </ScrollView>
-                        </View>
-                    );
-                })}
-            </ScrollView>
-        </View>
+            {/* ── Selected Day Detail ── tap the card to confirm selection ── */}
+            <Pressable
+                onPress={handleDetailCardPress}
+                style={({ pressed }) => ({ paddingHorizontal: 16, marginTop: 16, opacity: pressed ? 0.85 : 1 })}
+            >
+                <DayDetail
+                    date={selectedDate}
+                    items={selectedItems}
+                    theme={theme}
+                />
+            </Pressable>
+        </ScrollView>
     );
 }
 
-const styles = StyleSheet.create({
-    monthNav: {
+// ─── Styles ──────────────────────────────────────────────────────────────────
+
+const nav = StyleSheet.create({
+    container: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 24,
-        paddingTop: 8,
-        paddingBottom: 18,
+        paddingHorizontal: 20,
+        paddingTop: 12,
+        paddingBottom: 20,
     },
-    navSideLabel: {
-        fontSize: 18,
+    chevronBtn: {
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    chevron: {
+        fontSize: 32,
         fontWeight: '300',
-        letterSpacing: 2,
-        opacity: 0.45,
-        width: 44,
-        textAlign: 'center',
+        lineHeight: 36,
     },
-    navCenter: {
+    center: {
+        alignItems: 'center',
+    },
+    monthName: {
+        fontSize: 24,
+        fontWeight: '700',
+        letterSpacing: -0.5,
+    },
+    yearLabel: {
+        fontSize: 13,
+        fontWeight: '500',
+        letterSpacing: 1,
+        marginTop: 1,
+        opacity: 0.6,
+    },
+});
+
+const grid = StyleSheet.create({
+    headerRow: {
+        flexDirection: 'row',
+    },
+    headerCell: {
+        flex: 1,
+        alignItems: 'center',
+        paddingVertical: 4,
+    },
+    headerText: {
+        fontSize: 12,
+        fontWeight: '600',
+        letterSpacing: 0.5,
+    },
+    gridContainer: {
+        gap: 4,
+    },
+    weekRow: {
+        flexDirection: 'row',
+        gap: 4,
+    },
+    cell: {
+        flex: 1,
+        aspectRatio: 0.85,
+        borderRadius: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 6,
+        gap: 3,
+    },
+    cellSelected: {
+        borderRadius: 10,
+    },
+    cellToday: {
+        borderWidth: 1.5,
+        borderColor: '#FF453A',
+        borderRadius: 10,
+    },
+    cellNum: {
+        fontSize: 15,
+        fontWeight: '500',
+        letterSpacing: -0.3,
+    },
+    cellNumSelected: {
+        color: '#fff',
+        fontWeight: '700',
+    },
+    cellNumToday: {
+        fontWeight: '700',
+    },
+    dotsRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 14,
+        gap: 2,
     },
-    navChevron: {
-        fontSize: 28,
-        lineHeight: 32,
-        fontWeight: '300',
-        paddingHorizontal: 4,
+    dot: {
+        width: 5,
+        height: 5,
+        borderRadius: 3,
     },
-    navCurrentLabel: {
-        fontSize: 28,
-        fontWeight: '700',
-        letterSpacing: 2,
-        minWidth: 72,
-        textAlign: 'center',
+    dotMore: {
+        fontSize: 8,
+        fontWeight: '600',
+        marginLeft: 1,
     },
-    scrollContent: {
-        paddingHorizontal: 16,
-        paddingBottom: 180,
-        gap: 12,
+});
+
+const sep = StyleSheet.create({
+    line: {
+        height: 1,
     },
-    card: {
-        borderRadius: 22,
-        flexDirection: 'row',
-        paddingLeft: 16,
-        paddingVertical: 14,
+});
+
+const detail = StyleSheet.create({
+    container: {
+        borderRadius: 20,
+        padding: 20,
         overflow: 'hidden',
     },
-    cardLeft: {
-        width: 72,
-        justifyContent: 'flex-start',
+    header: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        marginBottom: 16,
     },
-    cardWeekday: {
+    dayName: {
         fontSize: 11,
+        fontWeight: '600',
+        letterSpacing: 1.5,
+        marginBottom: 2,
+    },
+    dateLine: {
+        flexDirection: 'row',
+        alignItems: 'baseline',
+        gap: 6,
+    },
+    dateNum: {
+        fontSize: 36,
+        fontWeight: '700',
+        letterSpacing: -1,
+        lineHeight: 40,
+    },
+    monthYear: {
+        fontSize: 14,
+        fontWeight: '600',
+        letterSpacing: 1,
+    },
+    badge: {
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 20,
+        marginTop: 4,
+    },
+    badgeText: {
+        fontSize: 12,
         fontWeight: '600',
         letterSpacing: 0.3,
     },
-    cardDateNum: {
-        fontSize: 48,
-        fontWeight: '700',
-        lineHeight: 50,
-        letterSpacing: -2,
-        marginTop: 1,
+    divider: {
+        height: 1,
+        marginBottom: 16,
     },
-    cardMonthTag: {
-        fontSize: 13,
-        fontWeight: '700',
-        letterSpacing: 2,
-        marginTop: 2,
+    emptyState: {
+        alignItems: 'center',
+        paddingVertical: 20,
+        gap: 8,
     },
-    rule: {
-        width: 1,
-        marginHorizontal: 10,
-        alignSelf: 'stretch',
-        borderRadius: 1,
+    emptyIcon: {
+        fontSize: 22,
+        opacity: 0.25,
     },
-    timelineScroll: {
-        flex: 1,
-    },
-    hourRow: {
-        height: 22,
-        position: 'relative',
-        marginBottom: 8,
-    },
-    hourMarkerWrap: {
-        position: 'absolute',
-        top: 0,
-        alignItems: 'flex-start',
-    },
-    hourLabel: {
-        fontSize: 9,
-        fontWeight: '600',
+    emptyText: {
+        fontSize: 14,
+        opacity: 0.5,
         letterSpacing: 0.2,
-        marginBottom: 2,
-        opacity: 0.7,
     },
-    hourTick: {
-        width: 1,
+    taskList: {
+        gap: 12,
     },
-    pillsLayer: {
-        position: 'relative',
+    taskRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
     },
-    pill: {
-        position: 'absolute',
-        height: PILL_H,
-        paddingHorizontal: 8,
-        borderRadius: 8,
-        justifyContent: 'center',
+    taskDot: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        flexShrink: 0,
     },
-    pillText: {
-        color: '#fff',
-        fontSize: 11,
+    taskInfo: {
+        flex: 1,
+        gap: 1,
+    },
+    taskName: {
+        fontSize: 14,
         fontWeight: '600',
+        textTransform: 'capitalize',
         letterSpacing: 0.1,
     },
-    emptyHint: {
+    taskMeta: {
+        fontSize: 12,
+        opacity: 0.6,
+    },
+    taskPill: {
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 8,
+    },
+    taskPillText: {
         fontSize: 11,
-        opacity: 0.35,
-        marginTop: 4,
+        fontWeight: '600',
+        letterSpacing: 0.2,
+    },
+});
+
+const detailCard = StyleSheet.create({
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 18,
+        paddingVertical: 14,
+        borderRadius: 18,
+    },
+    headerOpen: {
+        borderBottomLeftRadius: 0,
+        borderBottomRightRadius: 0,
+    },
+    headerLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    colorBar: {
+        width: 3,
+        height: 36,
+        borderRadius: 2,
+    },
+    headerDay: {
+        fontSize: 10,
+        fontWeight: '600',
+        letterSpacing: 1.5,
+        marginBottom: 2,
+    },
+    headerDate: {
+        fontSize: 16,
+        fontWeight: '700',
+        letterSpacing: -0.3,
+    },
+    chevron: {
+        fontSize: 16,
+        opacity: 0.5,
+    },
+    body: {
+        paddingHorizontal: 18,
+        paddingBottom: 18,
+        borderBottomLeftRadius: 18,
+        borderBottomRightRadius: 18,
     },
 });
