@@ -60,10 +60,9 @@ export const SettingModal = ({ visible, onClose, theme, user, setUser, handleSav
               placeholder="Name"
               placeholderTextColor={theme.colors.textSecondary}
               style={{
-                borderWidth: 1,
-                borderColor: theme.colors.background,
+                backgroundColor: `${theme.colors.secondary}10`,
                 padding: theme.spacing.md,
-                borderRadius: theme.borderRadius.sm,
+                borderRadius: 16,
                 marginBottom: theme.spacing.md,
                 color: theme.colors.text,
                 fontFamily: theme.fonts.regular
@@ -77,10 +76,9 @@ export const SettingModal = ({ visible, onClose, theme, user, setUser, handleSav
               placeholder="Role"
               placeholderTextColor={theme.colors.textSecondary}
               style={{
-                borderWidth: 1,
-                borderColor: theme.colors.background,
+                backgroundColor: `${theme.colors.secondary}10`,
                 padding: theme.spacing.md,
-                borderRadius: theme.borderRadius.sm,
+                borderRadius: 16,
                 marginBottom: theme.spacing.md,
                 color: theme.colors.text,
                 fontFamily: theme.fonts.regular
@@ -94,10 +92,9 @@ export const SettingModal = ({ visible, onClose, theme, user, setUser, handleSav
               placeholder="Email"
               placeholderTextColor={theme.colors.textSecondary}
               style={{
-                borderWidth: 1,
-                borderColor: theme.colors.background,
+                backgroundColor: `${theme.colors.secondary}10`,
                 padding: theme.spacing.md,
-                borderRadius: theme.borderRadius.sm,
+                borderRadius: 16,
                 marginBottom: theme.spacing.md,
                 color: theme.colors.text,
                 fontFamily: theme.fonts.regular
@@ -112,10 +109,9 @@ export const SettingModal = ({ visible, onClose, theme, user, setUser, handleSav
               placeholderTextColor={theme.colors.textSecondary}
               multiline
               style={{
-                borderWidth: 1,
-                borderColor: theme.colors.background,
+                backgroundColor: `${theme.colors.secondary}10`,
                 padding: theme.spacing.md,
-                borderRadius: theme.borderRadius.sm,
+                borderRadius: 16,
                 marginBottom: theme.spacing.md,
                 color: theme.colors.text,
                 fontFamily: theme.fonts.regular,
@@ -128,8 +124,8 @@ export const SettingModal = ({ visible, onClose, theme, user, setUser, handleSav
               onPress={save}
               style={({ pressed }) => ({
                 backgroundColor: theme.colors.primary,
-                padding: theme.spacing.md,
-                borderRadius: theme.borderRadius.md,
+                padding: 16,
+                borderRadius: 24,
                 marginTop: theme.spacing.md,
                 opacity: pressed ? 0.85 : 1,
                 transform: [{ scale: pressed ? 0.97 : 1 }],

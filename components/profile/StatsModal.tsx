@@ -221,7 +221,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     banner: {
         backgroundColor: `${theme.colors.primary}10`,
         padding: theme.spacing.md,
-        borderRadius: theme.borderRadius.md,
+        borderRadius: 20,
         alignItems: 'center',
         marginBottom: theme.spacing.sm,
     },
@@ -244,12 +244,10 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     },
     statBox: {
         flex: 1,
-        backgroundColor: theme.colors.card,
-        borderRadius: theme.borderRadius.lg,
+        backgroundColor: `${theme.colors.secondary}0A`,
+        borderRadius: 24,
         padding: theme.spacing.md,
         alignItems: "center",
-        borderWidth: 1,
-        borderColor: `${theme.colors.textSecondary}20`,
         shadowColor: "#000",
         shadowOffset: { width: 2, height: 2 },
         shadowOpacity: 0.1,
@@ -277,8 +275,8 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     },
     milestoneBox: {
         flex: 1,
-        backgroundColor: `${theme.colors.primary}08`, // Very light primary
-        borderRadius: theme.borderRadius.md,
+        backgroundColor: `${theme.colors.primary}0A`, 
+        borderRadius: 20,
         padding: theme.spacing.md,
         alignItems: "center",
     },

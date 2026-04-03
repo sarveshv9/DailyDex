@@ -1,7 +1,7 @@
 // components/profile/SettingsSection.tsx
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 
 interface Theme {
@@ -31,6 +31,7 @@ interface Theme {
     medium: string;
     bold: string;
   };
+  glows?: any;
 }
 
 interface SettingsSectionProps {
@@ -154,11 +155,16 @@ const makeStyles = (theme: Theme) => StyleSheet.create({
     opacity: 0.6,
   },
   settingsCard: {
-    borderRadius: 20,
+    borderRadius: 28,
     overflow: 'hidden',
     backgroundColor: theme.colors.card,
-    borderWidth: 1,
-    borderColor: `${theme.colors.secondary}15`,
+    ...Platform.select({
+      ios: {
+        shadowColor: "rgba(0, 0, 0, 0.08)", // Fallback if theme.glows is unavaible for SettingsSection Type yet
+        ...theme.glows?.card, 
+      },
+      android: { elevation: theme.glows?.card?.elevation || 2 },
+    }),
   },
   settingItem: {
     flexDirection: 'row',

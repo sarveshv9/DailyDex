@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { Theme } from "../../constants/shared";
 import { useTheme } from "../../context/ThemeContext";
 import { RoutineItem } from "../../utils/utils";
@@ -70,16 +70,20 @@ const RoutineCard: React.FC<RoutineCardProps> = ({ item, onPress }) => {
 const getStyles = (theme: Theme) => StyleSheet.create({
   cardContainer: {
     backgroundColor: theme.colors.card,
-    borderRadius: theme.borderRadius.md,
-    marginVertical: 4,
-    padding: 12, // Slightly increased padding since image is gone to let text breathe
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: `${theme.colors.primary}15`,
+    borderRadius: 24,
+    marginVertical: 6,
+    padding: 18, 
+    ...Platform.select({
+      ios: {
+        shadowColor: theme.glows.card.shadowColor,
+        shadowOffset: theme.glows.card.shadowOffset,
+        shadowOpacity: theme.glows.card.shadowOpacity,
+        shadowRadius: theme.glows.card.shadowRadius,
+      },
+      android: {
+        elevation: theme.glows.card.elevation,
+      },
+    }),
   },
   /* Header Styles */
   cardHeader: {
@@ -87,9 +91,6 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 8,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: `${theme.colors.primary}08`, // Divider line similar to Trainer cards
   },
   headerLeft: {
     flexDirection: 'row',

@@ -42,6 +42,24 @@ const DAYS_OF_WEEK = [
   { label: "S", full: "Sat", value: 6 },
 ];
 
+const TASK_COLORS: Record<string, string> = {
+    wakeup: '#FFB347',
+    sleep: '#9CBBE3',
+    water: '#77CCEE',
+    tea_journal: '#E6D5B8',
+    breakfast: '#FFD1BA',
+    lunch: '#FFD1BA',
+    dinner: '#FFD1BA',
+    study: '#A0C4FF',
+    walk: '#B9FBC0',
+    yoga: '#CFBAF0',
+    reflect: '#A0C4FF',
+    prepare_sleep: '#BDB2FF',
+    breathe: '#B9FBC0',
+};
+
+const FALLBACK_COLORS = ['#7B8CDE', '#C084FC', '#4DA8DA', '#6BCB77', '#E8975E', '#B89B72'];
+
 const TaskModal: React.FC<TaskModalProps> = ({
   visible,
   task,
@@ -60,6 +78,19 @@ const TaskModal: React.FC<TaskModalProps> = ({
 
   const scrollOffset = useRef(0);
   const handleSaveRef = useRef<(() => void) | null>(null);
+
+  const taskColor = React.useMemo(() => {
+    if (!editedTask) return theme.colors.primary;
+    if (editedTask.imageKey && TASK_COLORS[editedTask.imageKey]) return TASK_COLORS[editedTask.imageKey];
+    
+    let hash = 0;
+    const str = editedTask.task || "";
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const idx = Math.abs(hash) % FALLBACK_COLORS.length;
+    return FALLBACK_COLORS[idx];
+  }, [editedTask?.imageKey, editedTask?.task, theme.colors.primary]);
 
   const closeAndSave = () => {
     Animated.timing(slideAnim, {
@@ -332,7 +363,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
           ]}
         >
           {/* --- Draggable Header area --- */}
-          <View {...headerPanResponder.panHandlers} style={[styles.headerSection, { backgroundColor: theme.colors.primary }]}>
+          <View {...headerPanResponder.panHandlers} style={[styles.headerSection, { backgroundColor: taskColor }]}>
             <View style={styles.handle} />
 
             <View style={styles.topActions}>
@@ -356,9 +387,9 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 <Ionicons 
                   name={getRoutineIcon(editedTask.imageKey)} 
                   size={42} 
-                  color={theme.colors.primary} 
+                  color={taskColor} 
                 />
-                <View style={[styles.paletteBadge, { borderColor: theme.colors.primary }]}>
+                <View style={[styles.paletteBadge, { borderColor: taskColor }]}>
                   <Ionicons name="color-palette" size={16} color="#FFFFFF" />
                 </View>
               </View>
@@ -395,7 +426,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
               <View style={[styles.card, { backgroundColor: theme.colors.card }]}>
                 <CardRow
                   icon="time-outline"
-                  iconColor={theme.colors.primary}
+                  iconColor={taskColor}
                   title={getDisplayTime()}
                   titleColor={theme.colors.text}
                   onPress={() => setShowInlineTimePicker(!showInlineTimePicker)}
@@ -417,7 +448,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                              key={dur}
                              style={[
                                styles.durPill,
-                               editedTask.duration === dur && { backgroundColor: theme.colors.primary }
+                               editedTask.duration === dur && { backgroundColor: taskColor }
                              ]}
                              onPress={() => setEditedTask(prev => prev ? { ...prev, duration: dur } : null)}
                            >
@@ -432,7 +463,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                  )}
                 <CardRow
                   icon="sync"
-                  iconColor={theme.colors.primary}
+                  iconColor={taskColor}
                   title={getRepeatText()}
                   titleColor={theme.colors.text}
                   isLast={!showDays}
@@ -447,7 +478,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                           key={day.value}
                           style={[
                             styles.dayBtn,
-                            active && { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
+                            active && { backgroundColor: taskColor, borderColor: taskColor },
                           ]}
                           onPress={() => toggleDay(day.value)}
                         >
@@ -465,7 +496,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 {editedTask.subtasks?.map((st) => (
                   <View key={st.id} style={styles.subtaskRow}>
                     <TouchableOpacity onPress={() => toggleSubtask(st.id)} style={styles.subtaskCheck}>
-                      <Ionicons name={st.completed ? "checkmark-circle" : "square-outline"} size={22} color={st.completed ? theme.colors.primary : theme.colors.textSecondary} />
+                      <Ionicons name={st.completed ? "checkmark-circle" : "square-outline"} size={22} color={st.completed ? taskColor : theme.colors.textSecondary} />
                     </TouchableOpacity>
                     <TextInput
                       style={[styles.subtaskInput, { color: theme.colors.text }, st.completed && { textDecorationLine: 'line-through', opacity: 0.5 }]}
@@ -491,7 +522,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                   />
                   {newSubtaskText.length > 0 && (
                     <TouchableOpacity onPress={addSubtask} style={styles.subtaskAddBtn}>
-                      <Ionicons name="arrow-up-circle" size={26} color={theme.colors.primary} />
+                      <Ionicons name="arrow-up-circle" size={26} color={taskColor} />
                     </TouchableOpacity>
                   )}
                 </View>

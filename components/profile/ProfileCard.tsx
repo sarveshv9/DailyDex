@@ -7,7 +7,8 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  View
+  View,
+  Platform
 } from "react-native";
 import { Theme } from "../../constants/shared";
 import { useTheme } from "../../context/ThemeContext";
@@ -121,17 +122,21 @@ const getStyles = (theme: Theme) =>
     card: {
       backgroundColor: theme.colors.card,
       marginHorizontal: theme.spacing.lg,
-      marginTop: theme.spacing.xl,
-      paddingVertical: theme.spacing.xl,
+      marginTop: theme.spacing.xl + 60,
+      paddingBottom: theme.spacing.xl,
       paddingHorizontal: theme.spacing.lg,
-      borderRadius: 20,
-      elevation: 6,
-      shadowColor: "#000",
-      shadowOpacity: 0.08,
-      shadowRadius: 16,
-      shadowOffset: { width: 0, height: 6 },
+      borderRadius: 32,
       position: "relative",
       alignItems: "center",
+      ...Platform.select({
+        ios: {
+          shadowColor: theme.glows.card.shadowColor,
+          shadowOffset: theme.glows.card.shadowOffset,
+          shadowOpacity: theme.glows.card.shadowOpacity,
+          shadowRadius: theme.glows.card.shadowRadius,
+        },
+        android: { elevation: theme.glows.card.elevation },
+      }),
     },
 
     // Edit Icon
@@ -148,21 +153,30 @@ const getStyles = (theme: Theme) =>
       elevation: 4,
     },
 
-    // Avatar
     avatarContainer: {
       alignItems: "center",
+      marginTop: -70,
       marginBottom: theme.spacing.lg,
+      zIndex: 100,
     },
     avatar: {
       width: 110,
       height: 110,
-      borderRadius: 55,
+      borderRadius: 44,
       backgroundColor: theme.colors.primary,
       justifyContent: "center",
       alignItems: "center",
       borderColor: theme.colors.card,
-      borderWidth: 4,
-      elevation: 2,
+      borderWidth: 6,
+      ...Platform.select({
+        ios: {
+          shadowColor: theme.glows.primary.shadowColor,
+          shadowOffset: theme.glows.primary.shadowOffset,
+          shadowOpacity: theme.glows.primary.shadowOpacity,
+          shadowRadius: theme.glows.primary.shadowRadius,
+        },
+        android: { elevation: theme.glows.primary.elevation },
+      }),
     },
     avatarText: {
       fontSize: 50,
@@ -203,13 +217,11 @@ const getStyles = (theme: Theme) =>
     },
     input: {
       backgroundColor: theme.colors.background,
-      borderRadius: theme.borderRadius.md,
+      borderRadius: 16,
       padding: theme.spacing.md,
       fontSize: 16,
       color: theme.colors.text,
       fontFamily: theme.fonts.regular,
-      borderWidth: 1,
-      borderColor: theme.colors.textSecondary + "55",
       marginBottom: theme.spacing.md,
     },
     bioInput: {

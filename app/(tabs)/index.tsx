@@ -339,19 +339,17 @@ const getStyles = (theme: Theme) =>
 
     /* Current Focus Card */
     focusCard: {
-      borderRadius: 20,
+      borderRadius: 32,
       backgroundColor: theme.glass.cardBg,
-      borderWidth: 1,
-      borderColor: theme.glass.borderColor,
       overflow: "hidden",
       ...Platform.select({
         ios: {
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: theme.glass.shadowOpacity * 1.2,
-          shadowRadius: 16,
+          shadowColor: theme.glows.card.shadowColor,
+          shadowOffset: theme.glows.card.shadowOffset,
+          shadowOpacity: theme.glows.card.shadowOpacity,
+          shadowRadius: theme.glows.card.shadowRadius,
         },
-        android: { elevation: 6 },
+        android: { elevation: theme.glows.card.elevation },
       }),
     },
     cardBlur: {
@@ -444,19 +442,19 @@ const getStyles = (theme: Theme) =>
     primaryButton: {
       width: "100%",
       borderRadius: 50,
-      paddingVertical: 16,
+      paddingVertical: 18,
       alignItems: "center",
       justifyContent: "center",
       flexDirection: "row",
       gap: 10,
       ...Platform.select({
         ios: {
-          shadowColor: theme.colors.primary,
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: 0.35,
-          shadowRadius: 12,
+          shadowColor: theme.glows.primary.shadowColor,
+          shadowOffset: theme.glows.primary.shadowOffset,
+          shadowOpacity: theme.glows.primary.shadowOpacity,
+          shadowRadius: theme.glows.primary.shadowRadius,
         },
-        android: { elevation: 6 },
+        android: { elevation: theme.glows.primary.elevation },
       }),
     },
     primaryButtonText: {
@@ -475,20 +473,18 @@ const getStyles = (theme: Theme) =>
       flexDirection: "row",
       alignItems: "center",
       backgroundColor: theme.glass.cardBg,
-      borderWidth: 1,
-      borderColor: theme.glass.borderColor,
-      borderRadius: 18,
-      paddingVertical: 16,
+      borderRadius: 24,
+      paddingVertical: 18,
       paddingHorizontal: 16,
       gap: 14,
       ...Platform.select({
         ios: {
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 3 },
-          shadowOpacity: theme.glass.shadowOpacity * 0.6,
-          shadowRadius: 8,
+          shadowColor: theme.glows.card.shadowColor,
+          shadowOffset: theme.glows.card.shadowOffset,
+          shadowOpacity: theme.glows.card.shadowOpacity,
+          shadowRadius: theme.glows.card.shadowRadius,
         },
-        android: { elevation: 3 },
+        android: { elevation: theme.glows.card.elevation },
       }),
     },
     upNextIconCircle: {
@@ -534,18 +530,16 @@ const getStyles = (theme: Theme) =>
     /* Setup card */
     setupCard: {
       width: "100%",
-      borderRadius: 24,
-      borderWidth: 1,
-      borderColor: theme.glass.borderColor,
+      borderRadius: 32,
       overflow: "hidden",
       ...Platform.select({
         ios: {
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: theme.glass.shadowOpacity,
-          shadowRadius: 16,
+          shadowColor: theme.glows.card.shadowColor,
+          shadowOffset: theme.glows.card.shadowOffset,
+          shadowOpacity: theme.glows.card.shadowOpacity,
+          shadowRadius: theme.glows.card.shadowRadius,
         },
-        android: { elevation: 6 },
+        android: { elevation: theme.glows.card.elevation },
       }),
     },
     setupCardInner: {
@@ -654,9 +648,14 @@ function HomeScreen() {
     () => getGreetingEmoji(currentTime.getHours()),
     [currentTime]
   );
+  // Filter today's routines for the day of week
+  const todayRoutines = useMemo(() => {
+    return getRoutineItemsForDate(routines, currentTime);
+  }, [routines, currentTime]);
+
   const currentTaskItem = useMemo(
-    () => getCurrentTask(currentTime, routines),
-    [currentTime, routines]
+    () => getCurrentTask(currentTime, todayRoutines),
+    [currentTime, todayRoutines]
   );
   const currentTaskText = currentTaskItem?.task || "🌸 Just Breathe";
   const taskIcon = useMemo(
@@ -664,19 +663,13 @@ function HomeScreen() {
     [currentTaskItem]
   );
   const nextTasks = useMemo(
-    () => getNextTasks(currentTime, routines, 5),
-    [currentTime, routines]
+    () => getNextTasks(currentTime, todayRoutines, 5),
+    [currentTime, todayRoutines]
   );
   const taskProgress = useMemo(
-    () => getTaskProgress(currentTime, routines, currentTaskItem),
-    [currentTime, routines, currentTaskItem]
+    () => getTaskProgress(currentTime, todayRoutines, currentTaskItem),
+    [currentTime, todayRoutines, currentTaskItem]
   );
-
-
-  // Filter today's routines for the day of week
-  const todayRoutines = useMemo(() => {
-    return getRoutineItemsForDate(routines, currentTime);
-  }, [routines, currentTime]);
 
   // Daily progress
   const todayStr = currentTime.toISOString().split("T")[0];

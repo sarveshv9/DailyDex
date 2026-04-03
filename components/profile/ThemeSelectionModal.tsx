@@ -500,10 +500,8 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     customForm: {
         marginTop: theme.spacing.sm,
         padding: theme.spacing.lg,
-        backgroundColor: `${theme.colors.secondary}10`,
-        borderRadius: theme.borderRadius.lg,
-        borderWidth: 1,
-        borderColor: `${theme.colors.secondary}20`,
+        backgroundColor: `${theme.colors.secondary}0A`,
+        borderRadius: 24,
     },
     customFormHeader: {
         flexDirection: "row",
@@ -516,13 +514,11 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         fontFamily: theme.fonts.bold,
         color: theme.colors.text,
     },
-    /* Live preview */
     previewCard: {
         flexDirection: "row",
         alignItems: "center",
         gap: theme.spacing.md,
-        borderWidth: 1,
-        borderRadius: theme.borderRadius.lg,
+        borderRadius: 20,
         padding: theme.spacing.md,
         marginBottom: theme.spacing.lg,
         backgroundColor: theme.colors.card,
@@ -554,10 +550,8 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     searchRow: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: theme.colors.background,
-        borderWidth: 1,
-        borderColor: `${theme.colors.secondary}30`,
-        borderRadius: theme.borderRadius.md,
+        backgroundColor: `${theme.colors.secondary}0A`,
+        borderRadius: 16,
         paddingHorizontal: theme.spacing.md,
         gap: theme.spacing.sm,
     },
@@ -567,12 +561,9 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         color: theme.colors.text,
         fontFamily: theme.fonts.medium,
     },
-    /* Custom hex */
     input: {
-        backgroundColor: theme.colors.background,
-        borderWidth: 1,
-        borderColor: `${theme.colors.secondary}30`,
-        borderRadius: theme.borderRadius.md,
+        backgroundColor: `${theme.colors.secondary}0A`,
+        borderRadius: 16,
         paddingHorizontal: theme.spacing.md,
         paddingVertical: theme.spacing.sm,
         color: theme.colors.text,

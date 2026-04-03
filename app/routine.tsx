@@ -566,7 +566,8 @@ export default function RoutineScreen() {
         daysOfWeek: item.daysOfWeek || [],
         date: item.date,
         duration: item.duration || 30,
-        imageKey: item.imageKey
+        imageKey: item.imageKey,
+        subtasks: item.subtasks || []
       });
     } else {
       setEditingId(null);
@@ -576,7 +577,8 @@ export default function RoutineScreen() {
         description: "",
         daysOfWeek: [],
         date: getDateString(selectedDate),
-        duration: 30
+        duration: 30,
+        subtasks: []
       });
     }
     setFormVisible(true);
@@ -585,7 +587,7 @@ export default function RoutineScreen() {
   const closeForm = useCallback(() => {
     setFormVisible(false);
     setEditingId(null);
-    setFormData({ time: "", task: "", description: "", daysOfWeek: [], date: "" });
+    setFormData({ time: "", task: "", description: "", daysOfWeek: [], date: "", subtasks: [] });
   }, []);
 
   const handleSaveInstance = useCallback(() => {
@@ -611,6 +613,7 @@ export default function RoutineScreen() {
       daysOfWeek: [], // Single exact date
       date: dateStr,
       duration: duration || originalTask.duration || 30,
+      subtasks: formData.subtasks || [],
     };
     
     const updatedRoutines = [...allRoutines, newItem];
@@ -620,7 +623,7 @@ export default function RoutineScreen() {
   }, [formData, editingId, nextInsertionOrder, closeForm, allRoutines, saveRoutines, selectedDate]);
 
   const handleSave = useCallback(() => {
-    const { time, task, description, daysOfWeek, duration, date } = formData;
+    const { time, task, description, daysOfWeek, duration, date, subtasks } = formData;
     if (!time.trim() || !task.trim()) {
       Alert.alert("Missing Information", "Please enter a task name and time.");
       return;
@@ -657,7 +660,8 @@ export default function RoutineScreen() {
             imageKey: formData.imageKey || item.imageKey || "breathe",
             daysOfWeek: finalDays,
             date: finalDate,
-            duration: duration || item.duration || 30
+            duration: duration || item.duration || 30,
+            subtasks: subtasks || [],
           }
           : item
       );
@@ -673,6 +677,7 @@ export default function RoutineScreen() {
         daysOfWeek: finalDays,
         date: finalDate,
         duration: duration || 30,
+        subtasks: subtasks || [],
       };
       saveRoutines([...allRoutines, newItem]);
       setNextInsertionOrder((prev) => prev + 1);
@@ -923,8 +928,8 @@ export default function RoutineScreen() {
             style={[
               styles.fabContainer,
               {
-                opacity: fabScale, // Use fabScale for both scale and opacity for a smooth "going" effect
-                transform: [{ scale: fabScale }, { translateY: fabTranslate }],
+                opacity: 1,
+                transform: [],
               },
             ]}
           >

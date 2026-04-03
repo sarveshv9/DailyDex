@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { Theme } from '../../constants/shared';
 import { useTheme } from '../../context/ThemeContext';
-import { RoutineItem, timeToMinutes, getRoutineItemsForDate } from '../../utils/utils';
+import { RoutineItem, timeToMinutes, getRoutineItemsForDate, ICON_MAP } from '../../utils/utils';
 import { MergedTaskChain } from './MergedTaskChain';
 import { MonthCalendarView } from './MonthCalendarView';
 
@@ -93,21 +93,7 @@ export const getTimelineMinute = (timeStr: string, startHour: number) => {
 
 /* ─────────────────────────────── Icon map ───────────────────────────── */
 
-const ICON_MAP: Record<string, keyof typeof Ionicons.glyphMap> = {
-    wakeup: 'alarm-outline',
-    sleep: 'moon-outline',
-    water: 'water-outline',
-    tea_journal: 'cafe-outline',
-    breakfast: 'restaurant-outline',
-    lunch: 'restaurant-outline',
-    dinner: 'restaurant-outline',
-    study: 'book-outline',
-    walk: 'walk-outline',
-    yoga: 'fitness-outline',
-    reflect: 'journal-outline',
-    prepare_sleep: 'bed-outline',
-    breathe: 'leaf-outline',
-};
+
 
 /* ─────────────────────────────── Props ──────────────────────────────── */
 
@@ -1008,12 +994,12 @@ const getStyles = (theme: Theme) =>
             borderRadius: 26,
             ...Platform.select({
                 ios: {
-                    shadowColor: theme.colors.primary,
-                    shadowOffset: { width: 0, height: 0 },
-                    shadowOpacity: 0.55,
-                    shadowRadius: 16,
+                    shadowColor: theme.glows.primary.shadowColor,
+                    shadowOffset: theme.glows.primary.shadowOffset,
+                    shadowOpacity: theme.glows.primary.shadowOpacity,
+                    shadowRadius: theme.glows.primary.shadowRadius,
                 },
-                android: { elevation: 10 },
+                android: { elevation: theme.glows.primary.elevation },
             }),
         },
         dateBadgeGradient: {
@@ -1076,18 +1062,16 @@ const getStyles = (theme: Theme) =>
             paddingVertical: 14,
             backgroundColor: theme.colors.card,
             marginHorizontal: 16,
-            borderRadius: 20,
+            borderRadius: 28,
             overflow: 'hidden',
-            borderWidth: 1,
-            borderColor: `${theme.colors.primary}18`,
             ...Platform.select({
                 ios: {
-                    shadowColor: theme.colors.primary,
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.12,
-                    shadowRadius: 14,
+                    shadowColor: theme.glows.card.shadowColor,
+                    shadowOffset: theme.glows.card.shadowOffset,
+                    shadowOpacity: theme.glows.card.shadowOpacity,
+                    shadowRadius: theme.glows.card.shadowRadius,
                 },
-                android: { elevation: 5 },
+                android: { elevation: theme.glows.card.elevation },
             }),
         },
         peekAccentBar: {
@@ -1103,12 +1087,12 @@ const getStyles = (theme: Theme) =>
             marginRight: 14,
             ...Platform.select({
                 ios: {
-                    shadowColor: theme.colors.primary,
-                    shadowOffset: { width: 0, height: 3 },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 8,
+                    shadowColor: theme.glows.primary.shadowColor,
+                    shadowOffset: theme.glows.primary.shadowOffset,
+                    shadowOpacity: theme.glows.primary.shadowOpacity,
+                    shadowRadius: theme.glows.primary.shadowRadius,
                 },
-                android: { elevation: 4 },
+                android: { elevation: theme.glows.primary.elevation },
             }),
         },
         peekCircle: {
@@ -1153,7 +1137,6 @@ const getStyles = (theme: Theme) =>
             borderRadius: 14,
             alignItems: 'center',
             justifyContent: 'center',
-            borderWidth: 1,
             marginLeft: 8,
         },
     });

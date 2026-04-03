@@ -432,8 +432,8 @@ const sep = StyleSheet.create({
 
 const detail = StyleSheet.create({
     container: {
-        borderRadius: 20,
-        padding: 20,
+        borderRadius: 28,
+        padding: 24,
         overflow: 'hidden',
     },
     header: {
@@ -467,7 +467,7 @@ const detail = StyleSheet.create({
     badge: {
         paddingHorizontal: 10,
         paddingVertical: 5,
-        borderRadius: 20,
+        borderRadius: 16,
         marginTop: 4,
     },
     badgeText: {

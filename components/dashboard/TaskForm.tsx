@@ -18,7 +18,7 @@ import {
 import { Theme } from "../../constants/shared";
 import { useTheme } from "../../context/ThemeContext";
 import * as Haptics from "../../utils/haptics";
-import { FormData, getRoutineIcon } from "../../utils/utils";
+import { FormData, getRoutineIcon, SubTask } from "../../utils/utils";
 import { InlineTimePicker } from "../common/InlineTimePicker";
 
 /* ─────────────────────────────── Types ──────────────────────────────── */
@@ -50,17 +50,88 @@ const DAYS_OF_WEEK = [
 /** Duration presets in minutes */
 const DURATION_PRESETS = [15, 30, 45, 60, 90, 120];
 
-const TEMPLATES = [
-  { task: "Hydrate", description: "Drink a full glass of water.", imageKey: "water" },
-  { task: "Stretch", description: "Loosen up and improve flexibility.", imageKey: "yoga" },
-  { task: "Tea Time", description: "Slow down and restore focus.", imageKey: "tea_journal" },
-  { task: "Breakfast", description: "Fuel up for the morning ahead.", imageKey: "breakfast" },
-  { task: "Study", description: "Deep work on a skill or subject.", imageKey: "study" },
-  { task: "Lunch", description: "Refuel and take a proper break.", imageKey: "lunch" },
-  { task: "Walk", description: "Clear your head outdoors.", imageKey: "walk" },
-  { task: "Reflect", description: "Review the day and set intentions.", imageKey: "reflect" },
-  { task: "Dinner", description: "Share a mindful evening meal.", imageKey: "dinner" },
-  { task: "Wind Down", description: "Transition your body toward rest.", imageKey: "prepare_sleep" },
+const CATEGORIES = [
+  {
+    name: "Morning",
+    items: [
+       { task: "Wake Up", description: "Start your day with a clear mind.", imageKey: "wakeup" },
+       { task: "Hydrate", description: "Drink a full glass of water.", imageKey: "water" },
+       { task: "Cold Shower", description: "Invigorate your body.", imageKey: "cold_shower" },
+       { task: "Skincare", description: "Take care of your skin.", imageKey: "skincare" },
+       { task: "Affirmations", description: "Set positive intentions.", imageKey: "affirmations" },
+    ]
+  },
+  {
+    name: "Meals",
+    items: [
+       { task: "Breakfast", description: "Fuel up for the morning ahead.", imageKey: "breakfast" },
+       { task: "Coffee", description: "Enjoy a fresh cup of coffee.", imageKey: "coffee" },
+       { task: "Lunch", description: "Refuel and take a proper break.", imageKey: "lunch" },
+       { task: "Snack", description: "A quick bite for energy.", imageKey: "snack" },
+       { task: "Meal Prep", description: "Prepare food for the week.", imageKey: "meal_prep" },
+       { task: "Dinner", description: "Share a mindful evening meal.", imageKey: "dinner" },
+    ]
+  },
+  {
+    name: "Fitness",
+    items: [
+       { task: "Gym", description: "Strength training or cardio.", imageKey: "gym" },
+       { task: "Yoga", description: "Loosen up and improve flexibility.", imageKey: "yoga" },
+       { task: "Run", description: "Go for a jog or run.", imageKey: "run" },
+       { task: "Walk", description: "Clear your head outdoors.", imageKey: "walk" },
+       { task: "Home Workout", description: "Exercise from home.", imageKey: "home_workout" },
+       { task: "Cycling", description: "Go for a bike ride.", imageKey: "cycling" },
+    ]
+  },
+  {
+    name: "Productivity",
+    items: [
+       { task: "Study", description: "Deep work on a skill or subject.", imageKey: "study" },
+       { task: "Deep Work", description: "Focused distraction-free work.", imageKey: "deep_work" },
+       { task: "Read", description: "Read a book or articles.", imageKey: "read" },
+       { task: "Side Project", description: "Work on personal projects.", imageKey: "side_project" },
+       { task: "Emails", description: "Clear out your inbox.", imageKey: "emails" },
+       { task: "Planning", description: "Plan your day or week.", imageKey: "planning" },
+    ]
+  },
+  {
+    name: "Mindfulness",
+    items: [
+       { task: "Meditate", description: "Sit in silence and observe.", imageKey: "meditate" },
+       { task: "Breathe", description: "Focus on your breath.", imageKey: "breathe" },
+       { task: "Journal", description: "Write down your thoughts.", imageKey: "journal" },
+       { task: "Reflect", description: "Review the day and set intentions.", imageKey: "reflect" },
+       { task: "Gratitude", description: "List things you are grateful for.", imageKey: "gratitude" },
+    ]
+  },
+  {
+    name: "Creative",
+    items: [
+       { task: "Draw", description: "Sketch or paint something.", imageKey: "draw" },
+       { task: "Music Practice", description: "Practice an instrument.", imageKey: "music_practice" },
+       { task: "Write", description: "Creative writing or blogging.", imageKey: "write" },
+       { task: "Photography", description: "Take some photos.", imageKey: "photography" },
+       { task: "Craft", description: "Work on a DIY craft.", imageKey: "craft" },
+    ]
+  },
+  {
+    name: "Social",
+    items: [
+       { task: "Family Time", description: "Spend quality time with family.", imageKey: "family_time" },
+       { task: "Call Friend", description: "Catch up with someone.", imageKey: "call_friend" },
+       { task: "Date Night", description: "Spend time with a loved one.", imageKey: "date_night" },
+       { task: "Volunteer", description: "Give back to the community.", imageKey: "volunteer" },
+    ]
+  },
+  {
+    name: "Evening",
+    items: [
+       { task: "Wind Down", description: "Transition your body toward rest.", imageKey: "prepare_sleep" },
+       { task: "Screen Off", description: "Turn off digital devices.", imageKey: "screen_off" },
+       { task: "Night Walk", description: "A peaceful walk before bed.", imageKey: "night_walk" },
+       { task: "Sleep", description: "Rest deeply and recharge.", imageKey: "sleep" },
+    ]
+  }
 ];
 
 /** Format minutes → human-readable string (e.g. "1 hr 30 min") */
@@ -87,6 +158,8 @@ const TaskForm: React.FC<TaskFormProps> = ({
   const styles = useMemo(() => getStyles(theme), [theme]);
 
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(0);
+  const [newSubtaskText, setNewSubtaskText] = useState("");
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
 
   /* ── Sheet open/close animation ── */
@@ -145,9 +218,31 @@ const TaskForm: React.FC<TaskFormProps> = ({
     [currentDuration, onUpdateField]
   );
 
+  const toggleSubtask = (id: string) => {
+    const st = formData.subtasks || [];
+    onUpdateField("subtasks", st.map(s => s.id === id ? { ...s, completed: !s.completed } : s));
+  };
+
+  const addSubtask = () => {
+    if (!newSubtaskText.trim()) return;
+    const st = formData.subtasks || [];
+    onUpdateField("subtasks", [...st, { id: Date.now().toString(), title: newSubtaskText.trim(), completed: false }]);
+    setNewSubtaskText("");
+  };
+
+  const editSubtask = (id: string, text: string) => {
+    const st = formData.subtasks || [];
+    onUpdateField("subtasks", st.map(s => s.id === id ? { ...s, title: text } : s));
+  };
+
+  const deleteSubtask = (id: string) => {
+    const st = formData.subtasks || [];
+    onUpdateField("subtasks", st.filter(s => s.id !== id));
+  };
+
   /* ── Template fill ── */
   const applyTemplate = useCallback(
-    (tmpl: typeof TEMPLATES[number]) => {
+    (tmpl: typeof CATEGORIES[number]["items"][number]) => {
       Haptics.selectionAsync();
       onUpdateField("task", tmpl.task);
       onUpdateField("description", tmpl.description);
@@ -230,12 +325,31 @@ const TaskForm: React.FC<TaskFormProps> = ({
             {!isEditing && (
               <View style={styles.section}>
                 <Text style={styles.sectionLabel}>Quick Start</Text>
+                
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 12 }}>
+                  {CATEGORIES.map((cat, idx) => (
+                    <Pressable
+                      key={idx}
+                      onPress={() => setSelectedCategory(idx)}
+                      style={[
+                        styles.categoryChip,
+                        selectedCategory === idx && { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }
+                      ]}
+                    >
+                      <Text style={[
+                        styles.categoryChipText,
+                        selectedCategory === idx ? { color: theme.colors.white } : { color: theme.colors.textSecondary }
+                      ]}>{cat.name}</Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.templateRow}
                 >
-                  {TEMPLATES.map((tmpl, idx) => (
+                  {CATEGORIES[selectedCategory].items.map((tmpl, idx) => (
                     <Pressable
                       key={idx}
                       style={({ pressed }) => [
@@ -457,6 +571,46 @@ const TaskForm: React.FC<TaskFormProps> = ({
               </View>
             </View>
 
+            {/* ── Subtasks ── */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Subtasks</Text>
+              <View style={[styles.fieldCard, styles.fieldCardPadded, { minHeight: 0 }]}>
+                {formData.subtasks?.map((st) => (
+                  <View key={st.id} style={styles.subtaskRow}>
+                    <TouchableOpacity onPress={() => toggleSubtask(st.id)} style={styles.subtaskCheck}>
+                      <Ionicons name={st.completed ? "checkmark-circle" : "ellipse-outline"} size={22} color={st.completed ? theme.colors.primary : theme.colors.textSecondary} />
+                    </TouchableOpacity>
+                    <TextInput
+                      style={[styles.subtaskInput, { color: theme.colors.text }, st.completed && { textDecorationLine: 'line-through', opacity: 0.5 }]}
+                      value={st.title}
+                      onChangeText={(t) => editSubtask(st.id, t)}
+                    />
+                    <TouchableOpacity onPress={() => deleteSubtask(st.id)} style={styles.subtaskDelete}>
+                      <Ionicons name="close" size={20} color={theme.colors.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+
+                <View style={styles.addSubtaskRow}>
+                  <Ionicons name="add" size={22} color={theme.colors.textSecondary} style={{ marginRight: 10 }} />
+                  <TextInput
+                    style={[styles.subtaskInput, { color: theme.colors.text }]}
+                    placeholder="Add Subtask"
+                    placeholderTextColor={`${theme.colors.textSecondary}60`}
+                    value={newSubtaskText}
+                    onChangeText={setNewSubtaskText}
+                    onSubmitEditing={addSubtask}
+                    returnKeyType="done"
+                  />
+                  {newSubtaskText.length > 0 && (
+                    <TouchableOpacity onPress={addSubtask} style={styles.subtaskAddBtn}>
+                      <Ionicons name="arrow-up-circle" size={26} color={theme.colors.primary} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            </View>
+
             {/* ── Description ── */}
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>Notes</Text>
@@ -523,8 +677,6 @@ const getStyles = (theme: Theme) =>
       height: SCREEN_HEIGHT * 0.85,
       maxHeight: SCREEN_HEIGHT * 0.92,
       overflow: 'hidden',
-      borderWidth: 1,
-      borderColor: theme.glass.borderColor,
       ...Platform.select({
         ios: {
           shadowColor: "#000",
@@ -626,16 +778,13 @@ const getStyles = (theme: Theme) =>
       marginBottom: 10,
     },
 
-    /* ── Field card (grouped input background) ── */
     fieldCard: {
       flexDirection: "row",
       alignItems: "center",
       backgroundColor: `${theme.colors.text}0A`,
-      borderRadius: 18,
+      borderRadius: 24,
       paddingVertical: 14,
       paddingHorizontal: 16,
-      borderWidth: 1,
-      borderColor: `${theme.colors.text}0F`,
       minHeight: 56,
     },
     fieldCardPadded: {
@@ -731,9 +880,7 @@ const getStyles = (theme: Theme) =>
     presetChip: {
       paddingVertical: 8,
       paddingHorizontal: 16,
-      borderRadius: 20,
-      borderWidth: 1,
-      borderColor: `${theme.colors.text}1A`,
+      borderRadius: 24,
       backgroundColor: `${theme.colors.text}08`,
     },
     presetChipText: {
@@ -751,8 +898,6 @@ const getStyles = (theme: Theme) =>
       width: 40,
       height: 40,
       borderRadius: 20,
-      borderWidth: 1,
-      borderColor: `${theme.colors.text}1A`,
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: `${theme.colors.text}0A`,
@@ -770,9 +915,7 @@ const getStyles = (theme: Theme) =>
     quickChip: {
       paddingVertical: 6,
       paddingHorizontal: 13,
-      borderRadius: 14,
-      borderWidth: 1,
-      borderColor: `${theme.colors.text}10`,
+      borderRadius: 16,
       backgroundColor: `${theme.colors.text}06`,
     },
     quickChipText: {
@@ -806,8 +949,6 @@ const getStyles = (theme: Theme) =>
       paddingVertical: 9,
       paddingHorizontal: 14,
       borderRadius: 22,
-      borderWidth: 1,
-      borderColor: `${theme.colors.primary}1A`,
     },
     templateChipPressed: {
       opacity: 0.7,
@@ -824,6 +965,22 @@ const getStyles = (theme: Theme) =>
       color: theme.colors.text,
     },
 
+    categoryChip: {
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+      borderRadius: 20,
+      backgroundColor: `${theme.colors.text}0A`,
+    },
+    categoryChipText: {
+      fontSize: 13,
+      fontFamily: theme.fonts.bold,
+    },
+    subtaskRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 16 },
+    addSubtaskRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 16 },
+    subtaskCheck: { marginRight: 10 },
+    subtaskInput: { flex: 1, fontSize: 16, fontFamily: theme.fonts.medium, padding: 0 },
+    subtaskDelete: { padding: 4 },
+    subtaskAddBtn: { padding: 2 },
     /* ── Single Instance Button ── */
     primaryButton: {
       flexDirection: 'row',
@@ -855,8 +1012,6 @@ const getStyles = (theme: Theme) =>
       paddingHorizontal: 20,
       width: "90%",
       maxWidth: 320,
-      borderWidth: 1,
-      borderColor: `${theme.colors.text}26`,
       ...Platform.select({
         ios: {
           shadowColor: "#000",

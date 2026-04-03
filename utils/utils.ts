@@ -102,6 +102,7 @@ export interface FormData {
   daysOfWeek: number[];
   date?: string;
   duration?: number;
+  subtasks?: SubTask[];
 }
 
 export const parseTime = (

@@ -4,7 +4,7 @@ import React, { memo } from 'react';
 import { Platform, View, Pressable } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { Theme } from '../../constants/shared';
-import { RoutineItem, timeToMinutes } from '../../utils/utils';
+import { RoutineItem, timeToMinutes, ICON_MAP } from '../../utils/utils';
 
 export const getTimelineMinute = (timeStr: string, startHour: number) => {
     let m = timeToMinutes(timeStr);
@@ -30,21 +30,7 @@ const TASK_COLORS: Record<string, string> = {
     breathe: '#B9FBC0',
 };
 
-const ICON_MAP: Record<string, keyof typeof Ionicons.glyphMap> = {
-    wakeup: 'alarm-outline',
-    sleep: 'moon-outline',
-    water: 'water-outline',
-    tea_journal: 'cafe-outline',
-    breakfast: 'restaurant-outline',
-    lunch: 'restaurant-outline',
-    dinner: 'restaurant-outline',
-    study: 'book-outline',
-    walk: 'walk-outline',
-    yoga: 'fitness-outline',
-    reflect: 'journal-outline',
-    prepare_sleep: 'bed-outline',
-    breathe: 'leaf-outline',
-};
+
 
 /* ─────────────────────────── Single Pill ─────────────────────────── */
 
@@ -75,12 +61,17 @@ export const TaskPill = memo<{
                 },
                 isSelected
                     ? Platform.select({
-                        ios: { shadowColor: taskColor, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.45, shadowRadius: 10 },
+                        ios: { shadowColor: taskColor, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.6, shadowRadius: 10 },
                         android: { elevation: 8 },
                     })
                     : Platform.select({
-                        ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4 },
-                        android: { elevation: 2 },
+                        ios: {
+                            shadowColor: theme.glows.card.shadowColor,
+                            shadowOffset: theme.glows.card.shadowOffset,
+                            shadowOpacity: theme.glows.card.shadowOpacity,
+                            shadowRadius: theme.glows.card.shadowRadius,
+                        },
+                        android: { elevation: theme.glows.card.elevation },
                     }),
             ]}
         >
@@ -208,12 +199,17 @@ export const MergedTaskChain = memo<{
                 },
                 isSelected
                     ? Platform.select({
-                        ios: { shadowColor: chainColor, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 12 },
+                        ios: { shadowColor: chainColor, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.6, shadowRadius: 12 },
                         android: { elevation: 10 },
                     })
                     : Platform.select({
-                        ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 6 },
-                        android: { elevation: 3 },
+                        ios: {
+                            shadowColor: theme.glows.card.shadowColor,
+                            shadowOffset: theme.glows.card.shadowOffset,
+                            shadowOpacity: theme.glows.card.shadowOpacity,
+                            shadowRadius: theme.glows.card.shadowRadius,
+                        },
+                        android: { elevation: theme.glows.card.elevation },
                     }),
             ]}
         >
