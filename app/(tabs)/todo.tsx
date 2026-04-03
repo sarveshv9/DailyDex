@@ -55,21 +55,61 @@ const createNewTask = (text: string, category: TaskCategory): Task => ({
   category,
 });
 
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const STORAGE_KEY = "@zen_tasks";
+
 const loadTasks = async (): Promise<Task[]> => {
   try {
-    const { data: user } = await supabase.auth.getUser();
-    if (!user?.user) return [];
+    let finalTasks: Task[] | null = null;
+    let localTasks: Task[] | null = null;
     
-    const { data, error } = await supabase.from('tasks').select('*').order('created_at', { ascending: true });
-    if (error) throw error;
+    // 1. Load from local storage
+    const localData = await AsyncStorage.getItem(STORAGE_KEY);
+    if (localData) {
+      try {
+        localTasks = JSON.parse(localData);
+      } catch (e) {}
+    }
+
+    // 2. Fetch from Supabase if authenticated
+    const { data: userAuth } = await supabase.auth.getUser();
     
-    return data.map(d => ({
-      id: d.id,
-      text: d.text,
-      completed: d.completed,
-      category: d.category,
-      createdAt: d.created_at
-    }));
+    if (userAuth?.user) {
+      const { data: stored, error } = await supabase.from('tasks').select('*').order('created_at', { ascending: true });
+      
+      if (!error && stored && stored.length > 0) {
+        // Remote data exists, use it and update local
+        finalTasks = stored.map(d => ({
+          id: d.id,
+          text: d.text,
+          completed: d.completed,
+          category: d.category,
+          createdAt: d.created_at
+        }));
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(finalTasks));
+        
+      } else if (localTasks && localTasks.length > 0) {
+        // No remote data but local data exists, sync local to remote
+        finalTasks = localTasks;
+        const dbTasks = localTasks.map((t) => ({
+          id: t.id,
+          user_id: userAuth.user.id,
+          text: t.text,
+          completed: t.completed,
+          category: t.category,
+          created_at: t.createdAt
+        }));
+        await supabase.from('tasks').insert(dbTasks);
+      }
+    }
+
+    // 3. Fallback to local if unauthenticated or Supabase failed
+    if (!finalTasks && localTasks) {
+      finalTasks = localTasks;
+    }
+
+    return finalTasks || [];
   } catch (error) {
     console.error("Error loading tasks:", error);
     return [];
@@ -78,10 +118,14 @@ const loadTasks = async (): Promise<Task[]> => {
 
 const saveTasks = async (tasks: Task[]) => {
   try {
+    // Immediately save locally
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    
+    // Sync to Supabase if authenticated
     const { data: user } = await supabase.auth.getUser();
     if (!user?.user) return;
     
-    // Handle deletes for things removed from array
+    // Handle remote deletes
     const { data: remoteData } = await supabase.from('tasks').select('id');
     const remoteRecordIds = remoteData ? remoteData.map((t: any) => t.id) : [];
     
@@ -92,6 +136,7 @@ const saveTasks = async (tasks: Task[]) => {
       await supabase.from('tasks').delete().in('id', toDeleteIds);
     }
     
+    // Handle remote inserts/updates
     const dbTasks = tasks.map((t) => ({
       id: t.id,
       user_id: user.user.id,

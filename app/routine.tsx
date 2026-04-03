@@ -416,48 +416,93 @@ export default function RoutineScreen() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const { data: userAuth } = await supabase.auth.getUser();
-        if (!userAuth?.user) return;
+        let finalRoutines: RoutineItem[] | null = null;
+        let localRoutines: RoutineItem[] | null = null;
         
-        const { data: stored, error } = await supabase.from('routines').select('*').order('insertion_order', { ascending: true });
-        if (error) throw error;
-        
-        if (stored && stored.length > 0) {
-          let parsed: RoutineItem[] = stored.map((d: any) => ({
-            id: d.id,
-            time: d.time,
-            task: d.task,
-            description: d.description,
-            imageKey: d.image_key,
-            insertionOrder: d.insertion_order,
-            duration: d.duration,
-            daysOfWeek: d.days_of_week,
-            date: d.date
-          }));
+        // 1. Try to load local data (saved from setup or previous sessions)
+        const localDataStr = await AsyncStorage.getItem(STORAGE_KEY);
+        if (localDataStr) {
+          try {
+            localRoutines = JSON.parse(localDataStr);
+          } catch (e) {}
+        }
 
-          setAllRoutines(parsed);
-          setNextInsertionOrder(parsed.length > 0 ? Math.max(...parsed.map((i: RoutineItem) => i.insertionOrder || 0)) + 1 : 1);
-        } else {
-          const initialWithDays = INITIAL_ROUTINE.map(item => {
+        // 2. Fetch from Supabase (if authenticated)
+        const { data: userAuth } = await supabase.auth.getUser();
+        
+        if (userAuth?.user) {
+          const { data: stored, error } = await supabase.from('routines').select('*').order('insertion_order', { ascending: true });
+          
+          if (!error && stored && stored.length > 0) {
+            // Remote data exists, use it as source of truth and sync down to local
+            finalRoutines = stored.map((d: any) => ({
+              id: d.id,
+              time: d.time,
+              task: d.task,
+              description: d.description,
+              imageKey: d.image_key,
+              insertionOrder: d.insertion_order,
+              duration: d.duration,
+              daysOfWeek: d.days_of_week,
+              date: d.date
+            }));
+            await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(finalRoutines));
+
+          } else if (localRoutines && localRoutines.length > 0) {
+            // No remote data, but we have local data. Push our local data up to Supabase.
+            finalRoutines = localRoutines;
+            const dbRoutines = localRoutines.map(item => ({
+              id: item.id,
+              user_id: userAuth.user.id,
+              time: item.time,
+              task: item.task,
+              description: item.description,
+              image_key: item.imageKey,
+              insertion_order: item.insertionOrder,
+              duration: item.duration,
+              days_of_week: item.daysOfWeek,
+              date: item.date
+            }));
+            await supabase.from('routines').insert(dbRoutines);
+          }
+        }
+
+        // 3. Unauthenticated local usage OR no data found anywhere
+        if (!finalRoutines && localRoutines && localRoutines.length > 0) {
+          // If we weren't logged in, or Supabase fetch failed but we have local, use local
+          finalRoutines = localRoutines;
+        }
+
+        // 4. Fallback to ultimate defaults if completely empty
+        if (!finalRoutines || finalRoutines.length === 0) {
+          finalRoutines = INITIAL_ROUTINE.map(item => {
             const isDaily = item.task.toLowerCase() === "sleep" || item.task.toLowerCase() === "wake up";
             return { ...item, daysOfWeek: isDaily ? [0, 1, 2, 3, 4, 5, 6] : [new Date().getDay()] };
           });
-          setAllRoutines(initialWithDays);
           
-          const dbRoutines = initialWithDays.map(item => ({
-            id: item.id,
-            user_id: userAuth.user.id,
-            time: item.time,
-            task: item.task,
-            description: item.description,
-            image_key: item.imageKey,
-            insertion_order: item.insertionOrder,
-            duration: item.duration,
-            days_of_week: item.daysOfWeek,
-            date: item.date
-          }));
-          await supabase.from('routines').insert(dbRoutines);
+          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(finalRoutines));
+          
+          // And back it up to cloud if currently signed in
+          if (userAuth?.user) {
+             const dbRoutines = finalRoutines.map(item => ({
+              id: item.id,
+              user_id: userAuth.user.id,
+              time: item.time,
+              task: item.task,
+              description: item.description,
+              image_key: item.imageKey,
+              insertion_order: item.insertionOrder,
+              duration: item.duration,
+              days_of_week: item.daysOfWeek,
+              date: item.date
+            }));
+            await supabase.from('routines').insert(dbRoutines);
+          }
         }
+
+        setAllRoutines(finalRoutines);
+        setNextInsertionOrder(finalRoutines.length > 0 ? Math.max(...finalRoutines.map((i: RoutineItem) => i.insertionOrder || 0)) + 1 : 1);
+
       } catch (e) {
         console.error("Failed to load routines.", e);
       }
@@ -468,10 +513,12 @@ export default function RoutineScreen() {
   const saveRoutines = useCallback(async (newItems: RoutineItem[]) => {
     try {
       setAllRoutines(newItems);
+      // Immediately save to local storage for offline preservation
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newItems));
       await scheduleRoutineNotifications(newItems);
       
       const { data: userAuth } = await supabase.auth.getUser();
-      if (!userAuth?.user) return;
+      if (!userAuth?.user) return; // Exit cloud sync silently if unauthenticated
       
       const { data: remoteData } = await supabase.from('routines').select('id');
       const remoteRecordIds = remoteData ? remoteData.map((t: any) => t.id) : [];
