@@ -922,7 +922,10 @@ export default function TodoScreen() {
         message={confirmState.message}
         confirmText={confirmState.confirmText}
         onCancel={() => setConfirmState(prev => ({ ...prev, visible: false }))}
-        onConfirm={() => confirmState.action()}
+        onConfirm={() => {
+          confirmState.action();
+          setConfirmState(prev => ({ ...prev, visible: false }));
+        }}
         theme={theme}
       />
     </SafeAreaView>
