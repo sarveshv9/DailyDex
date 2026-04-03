@@ -28,7 +28,7 @@ import { TimelineEventCard } from "../components/dashboard/TimelineEventCard";
 import { Theme } from "../constants/shared";
 import { useTheme } from "../context/ThemeContext";
 import { scheduleRoutineNotifications } from "../utils/notifications";
-import { FormData, RoutineItem, getDateString, sortRoutineItems, timeToMinutes } from "../utils/utils";
+import { FormData, RoutineItem, getDateString, sortRoutineItems, timeToMinutes, getRoutineItemsForDate } from "../utils/utils";
 
 /* -------------------- Assets & Constants -------------------- */
 
@@ -165,11 +165,7 @@ export default function RoutineScreen() {
   });
 
   const routineItems = useMemo(() => {
-    const dayOfWeek = selectedDate.getDay();
-    const dateStr = getDateString(selectedDate);
-    return allRoutines.filter(item =>
-      item.daysOfWeek?.includes(dayOfWeek) || item.date === dateStr
-    );
+    return getRoutineItemsForDate(allRoutines, selectedDate);
   }, [allRoutines, selectedDate]);
 
   /* -------------------- Timeline panel state -------------------- */
@@ -376,11 +372,7 @@ export default function RoutineScreen() {
 
   /* -------------------- Per-day items helper -------------------- */
   const getItemsForDate = useCallback((date: Date) => {
-    const dow = date.getDay();
-    const dateStr = getDateString(date);
-    const items = allRoutines.filter(item =>
-      item.daysOfWeek?.includes(dow) || item.date === dateStr
-    );
+    const items = getRoutineItemsForDate(allRoutines, date);
     const sorted = sortRoutineItems(items);
 
     const all: Array<{ minutes: number; type: 'routine'; data: RoutineItem }> = [
@@ -596,6 +588,37 @@ export default function RoutineScreen() {
     setFormData({ time: "", task: "", description: "", daysOfWeek: [], date: "" });
   }, []);
 
+  const handleSaveInstance = useCallback(() => {
+    const { time, task, description, duration } = formData;
+    if (!time.trim() || !task.trim()) {
+      Alert.alert("Missing Information", "Please enter a task name and time.");
+      return;
+    }
+
+    const originalTask = allRoutines.find((item) => item.id === editingId);
+    if (!originalTask) return;
+
+    const dateStr = getDateString(selectedDate);
+    
+    // Create new task mapped specifically to this date, without modifying the repeating original
+    const newItem: RoutineItem = {
+      id: Date.now().toString(),
+      time: time.trim(),
+      task: task.trim(),
+      description: description.trim(),
+      imageKey: formData.imageKey || originalTask.imageKey || "breathe",
+      insertionOrder: nextInsertionOrder,
+      daysOfWeek: [], // Single exact date
+      date: dateStr,
+      duration: duration || originalTask.duration || 30,
+    };
+    
+    const updatedRoutines = [...allRoutines, newItem];
+    saveRoutines(updatedRoutines);
+    setNextInsertionOrder(prev => prev + 1);
+    closeForm();
+  }, [formData, editingId, nextInsertionOrder, closeForm, allRoutines, saveRoutines, selectedDate]);
+
   const handleSave = useCallback(() => {
     const { time, task, description, daysOfWeek, duration, date } = formData;
     if (!time.trim() || !task.trim()) {
@@ -606,9 +629,8 @@ export default function RoutineScreen() {
     const normalizedTask = task.trim().toLowerCase();
     const isSleepOrWake = normalizedTask === "sleep" || normalizedTask === "wake up";
 
-    // If it's a sleep/wake task, it repeating every day.
-    // Otherwise, it's repeating if daysOfWeek is not empty, or one-off if it has a date.
-    let finalDays = isSleepOrWake ? [0, 1, 2, 3, 4, 5, 6] : (daysOfWeek || []).sort();
+    // Allow sleep/wake tasks to have varying days of week, just like other tasks.
+    let finalDays = (daysOfWeek || []).sort();
     let finalDate = (finalDays.length > 0) ? undefined : date;
 
     if (isSleepOrWake) {
@@ -664,13 +686,65 @@ export default function RoutineScreen() {
     const taskNameLower = taskToDelete.task?.toLowerCase().trim();
     if (taskNameLower === "wake up" || taskNameLower === "sleep") return;
 
-    requestConfirm('Transfer Routine', `Transfer ${taskToDelete.task} away?`, 'Transfer Out', () => {
-      const remaining = allRoutines.filter((item) => item.id !== taskToDelete.id);
-      saveRoutines(remaining);
+    const isRepeating = taskToDelete.daysOfWeek && taskToDelete.daysOfWeek.length > 0;
+
+    if (isRepeating) {
+      if (Platform.OS === 'web') {
+        const wantsSkip = window.confirm("Do you want to SKIP this task for THIS DATE ONLY? (Cancel to delete for ALL days)");
+        if (wantsSkip) {
+          const dateStr = getDateString(selectedDate);
+          const newItem: RoutineItem = {
+             ...taskToDelete,
+             id: Date.now().toString(),
+             isSkipped: true,
+             daysOfWeek: [],
+             date: dateStr,
+          };
+          saveRoutines([...allRoutines, newItem]);
+          closeModal();
+          return;
+        }
+      } else {
+        Alert.alert(
+          "Delete Repeating Task",
+          "Do you want to delete this task for all repeating days, or just skip it on this date?",
+          [
+            { text: "Cancel", style: "cancel" },
+            { 
+              text: "Skip this date", 
+              onPress: () => {
+                const dateStr = getDateString(selectedDate);
+                const newItem: RoutineItem = {
+                    ...taskToDelete,
+                    id: Date.now().toString(),
+                    isSkipped: true,
+                    daysOfWeek: [],
+                    date: dateStr,
+                };
+                saveRoutines([...allRoutines, newItem]);
+                closeModal();
+              } 
+            },
+            { 
+              text: "Delete all days", 
+              style: "destructive", 
+              onPress: () => {
+                 saveRoutines(allRoutines.filter((item) => item.id !== taskToDelete.id));
+                 setTimeout(() => closeModal(), 50);
+              }
+            }
+          ]
+        );
+        return;
+      }
+    }
+
+    requestConfirm('Delete Routine', `Are you sure you want to delete ${taskToDelete.task}?`, 'Delete', () => {
+      saveRoutines(allRoutines.filter((item) => item.id !== taskToDelete.id));
       setTimeout(() => closeModal(), 50);
       setConfirmState(prev => ({ ...prev, visible: false }));
     });
-  }, [selectedTask, closeModal, allRoutines, saveRoutines, requestConfirm]);
+  }, [selectedTask, closeModal, allRoutines, saveRoutines, requestConfirm, selectedDate]);
 
   const handleEditFromModal = useCallback(() => {
     if (selectedTask) {
@@ -680,10 +754,60 @@ export default function RoutineScreen() {
   }, [selectedTask, closeModal, openForm]);
 
   const handleSaveFromModal = useCallback((updatedTask: RoutineItem) => {
-    const updated = allRoutines.map(item => item.id === updatedTask.id ? updatedTask : item);
-    saveRoutines(updated);
-    // Automatically close modal after save if desired, but here we let the Modal decide.
-  }, [allRoutines, saveRoutines]);
+    const originalTask = allRoutines.find(i => i.id === updatedTask.id);
+    if (!originalTask) return;
+
+    const isDifferent = originalTask.time !== updatedTask.time || originalTask.task !== updatedTask.task || originalTask.duration !== updatedTask.duration;
+    const isRepeating = originalTask.daysOfWeek && originalTask.daysOfWeek.length > 0;
+
+    const doFinalSave = () => {
+      const updated = allRoutines.map(item => item.id === updatedTask.id ? updatedTask : item);
+      saveRoutines(updated);
+    };
+
+    if (isRepeating && isDifferent) {
+      if (Platform.OS === 'web') {
+        const wantsInstance = window.confirm("Do you want to save this change for THIS DATE ONLY? (Cancel saves for ALL days)");
+        if (wantsInstance) {
+          const dateStr = getDateString(selectedDate);
+          const newItem: RoutineItem = {
+            ...updatedTask,
+            id: Date.now().toString(),
+            daysOfWeek: [],
+            date: dateStr,
+          };
+          saveRoutines([...allRoutines, newItem]);
+          setNextInsertionOrder(prev => prev + 1);
+          return;
+        }
+      } else {
+        Alert.alert(
+          "Edit Repeating Task",
+          "Do you want to save this change for this specific date only, or update the task for all days?",
+          [
+            { text: "Cancel", style: "cancel" },
+            { 
+              text: "This date only", 
+              onPress: () => {
+                const dateStr = getDateString(selectedDate);
+                const newItem: RoutineItem = {
+                  ...updatedTask,
+                  id: Date.now().toString(),
+                  daysOfWeek: [],
+                  date: dateStr,
+                };
+                saveRoutines([...allRoutines, newItem]);
+                setNextInsertionOrder(prev => prev + 1);
+              }
+            },
+            { text: "All days", style: "destructive", onPress: doFinalSave }
+          ]
+        );
+        return;
+      }
+    }
+    doFinalSave();
+  }, [allRoutines, saveRoutines, selectedDate]);
 
   const updateFormField = useCallback((field: keyof FormData, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -835,6 +959,7 @@ export default function RoutineScreen() {
         formData={formData}
         onUpdateField={updateFormField}
         onSave={handleSave}
+        onSaveInstance={handleSaveInstance}
         onClose={closeForm}
       />
 

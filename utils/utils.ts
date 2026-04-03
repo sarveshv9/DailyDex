@@ -16,6 +16,7 @@ export interface RoutineItem {
   date?: string; // "YYYY-MM-DD"
   duration?: number;
   subtasks?: SubTask[];
+  isSkipped?: boolean; // Flag to indicate a deleted one-off occurrence of a recurring task
 }
 
 import { Ionicons } from "@expo/vector-icons";
@@ -146,7 +147,9 @@ export const timeToMinutes = (timeStr: string): number => {
   if (!isValid) {
     return Number.MAX_SAFE_INTEGER;
   }
-  return hours * 60 + minutes;
+  // Shift late-night times (before 4 AM) so they logically appear at the end of the day
+  const adjustedHours = hours < 4 ? hours + 24 : hours;
+  return adjustedHours * 60 + minutes;
 };
 
 export const sortRoutineItems = (items: RoutineItem[]): RoutineItem[] => {
@@ -169,4 +172,34 @@ export const getDateString = (date: Date): string => {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+};
+
+export const getRoutineItemsForDate = (items: RoutineItem[], date: Date): RoutineItem[] => {
+  const dow = date.getDay();
+  const dateStr = getDateString(date);
+
+  const filtered = items.filter(item =>
+    item.daysOfWeek?.includes(dow) || item.date === dateStr
+  );
+
+  const map = new Map<string, RoutineItem[]>();
+  filtered.forEach(i => {
+    const key = i.task.toLowerCase().trim();
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(i);
+  });
+
+  const result: RoutineItem[] = [];
+  map.forEach(group => {
+    const oneOff = group.find(i => i.date === dateStr);
+    if (oneOff) {
+      if (!oneOff.isSkipped) {
+        result.push(oneOff);
+      }
+    } else {
+      result.push(...group);
+    }
+  });
+
+  return result;
 };

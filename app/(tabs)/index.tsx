@@ -28,6 +28,7 @@ import {
   RoutineItem,
   sortRoutineItems,
   timeToMinutes,
+  getRoutineItemsForDate
 } from "../../utils/utils";
 
 /* ---------- Constants ---------- */
@@ -93,7 +94,7 @@ const getCurrentTask = (
   routines: RoutineItem[]
 ): RoutineItem | null => {
   if (routines.length === 0) return null;
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const currentMinutes = (now.getHours() < 4 ? now.getHours() + 24 : now.getHours()) * 60 + now.getMinutes();
 
   let current = routines[0];
   for (let i = 0; i < routines.length; i++) {
@@ -117,7 +118,7 @@ const getNextTasks = (
   count: number = 5
 ): RoutineItem[] => {
   if (routines.length === 0) return [];
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const currentMinutes = (now.getHours() < 4 ? now.getHours() + 24 : now.getHours()) * 60 + now.getMinutes();
 
   const upcoming = routines.filter(
     (r) => timeToMinutes(r.time) > currentMinutes
@@ -131,7 +132,7 @@ const getTaskProgress = (
   current: RoutineItem | null
 ): number => {
   if (!current || routines.length === 0) return 0;
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const currentMinutes = (now.getHours() < 4 ? now.getHours() + 24 : now.getHours()) * 60 + now.getMinutes();
   const currentStart = timeToMinutes(current.time);
 
   const currentIdx = routines.findIndex((r) => r.id === current.id);
@@ -674,11 +675,7 @@ function HomeScreen() {
 
   // Filter today's routines for the day of week
   const todayRoutines = useMemo(() => {
-    const today = currentTime.getDay();
-    return routines.filter((r) => {
-      if (!r.daysOfWeek || r.daysOfWeek.length === 0) return true;
-      return r.daysOfWeek.includes(today);
-    });
+    return getRoutineItemsForDate(routines, currentTime);
   }, [routines, currentTime]);
 
   // Daily progress

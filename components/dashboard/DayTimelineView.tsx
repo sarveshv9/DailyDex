@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { Theme } from '../../constants/shared';
 import { useTheme } from '../../context/ThemeContext';
-import { RoutineItem, timeToMinutes } from '../../utils/utils';
+import { RoutineItem, timeToMinutes, getRoutineItemsForDate } from '../../utils/utils';
 import { MergedTaskChain } from './MergedTaskChain';
 import { MonthCalendarView } from './MonthCalendarView';
 
@@ -186,9 +186,7 @@ const TimelinePage = memo<{
         pageDates.forEach(date => {
             const di = date.getDay();
             const dateStr = formatDateKey(date);
-            const items = allRoutines.filter(item =>
-                item.daysOfWeek?.includes(di) || item.date === dateStr
-            );
+            const items = getRoutineItemsForDate(allRoutines, date);
 
             // Per-column hour counter (reset for every column)
             const colTasksPerHour = new Array(TOTAL_HOURS).fill(0);
@@ -269,8 +267,7 @@ const TimelinePage = memo<{
         pageDates.forEach(date => {
             const di = date.getDay();
             const dateStr = formatDateKey(date);
-            allRoutines
-                .filter(item => item.daysOfWeek?.includes(di) || item.date === dateStr)
+            getRoutineItemsForDate(allRoutines, date)
                 .forEach(item => {
                     const start = getTimelineMinute(item.time, startHour);
                     const dur = item.duration ?? DEFAULT_DURATION;
@@ -295,10 +292,7 @@ const TimelinePage = memo<{
         // Layer 2: Cluster-level — ensure overlapping tasks that merge
         // into a single chain have enough room for N stacked pills.
         pageDates.forEach(date => {
-            const di = date.getDay();
-            const dateStr = formatDateKey(date);
-            const items = allRoutines
-                .filter(item => item.daysOfWeek?.includes(di) || item.date === dateStr)
+            const items = getRoutineItemsForDate(allRoutines, date)
                 .sort((a, b) => getTimelineMinute(a.time, startHour) - getTimelineMinute(b.time, startHour));
 
             type Cluster = { count: number; startMin: number; endMin: number };
@@ -432,12 +426,9 @@ const TimelinePage = memo<{
                 {/* ── 3 day columns ── */}
                 {pageDates.map(date => {
                     const key = formatDateKey(date);
-                    const dayIndex = date.getDay();
-                    const dateStr = formatDateKey(date);
                     const isSelected = key === selectedKey;
-                    const dayItems = allRoutines.filter(item =>
-                        item.daysOfWeek?.includes(dayIndex) || item.date === dateStr
-                    ).sort((a, b) => getTimelineMinute(a.time, startHour) - getTimelineMinute(b.time, startHour));
+                    const colItems = getRoutineItemsForDate(allRoutines, date)
+                        .sort((a, b) => getTimelineMinute(a.time, startHour) - getTimelineMinute(b.time, startHour));
                     const circleSize = isSelected ? circleSel : circleOther;
                     const lineColor = isSelected
                         ? `${theme.colors.primary}35`
@@ -469,7 +460,7 @@ const TimelinePage = memo<{
                             {/* Clustering overlapping items to visually merge them into chained capsules */}
                             {(() => {
                                 const clusters: { items: RoutineItem[]; startMins: number; endMins: number }[] = [];
-                                dayItems.forEach(item => {
+                                colItems.forEach(item => {
                                     const start = getTimelineMinute(item.time, startHour);
                                     const dur = item.duration ?? DEFAULT_DURATION;
                                     const end = start + dur;
@@ -638,11 +629,8 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
 
 
     const currentDayItems = useMemo(() => {
-        const dow = selectedDate.getDay();
-        const dateStr = formatDateKey(selectedDate);
-        return routineItems.filter(item =>
-            item.daysOfWeek?.includes(dow) || item.date === dateStr
-        ).sort((a, b) => getTimelineMinute(a.time, startHour) - getTimelineMinute(b.time, startHour));
+        return getRoutineItemsForDate(routineItems, selectedDate)
+            .sort((a, b) => getTimelineMinute(a.time, startHour) - getTimelineMinute(b.time, startHour));
     }, [routineItems, selectedDate, startHour]);
     const firstItem = currentDayItems[0] ?? null;
 

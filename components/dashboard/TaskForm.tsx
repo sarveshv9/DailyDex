@@ -29,6 +29,7 @@ interface TaskFormProps {
   formData: FormData;
   onUpdateField: (field: keyof FormData, value: any) => void;
   onSave: () => void;
+  onSaveInstance?: () => void;
   onClose: () => void;
 }
 
@@ -78,6 +79,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
   formData,
   onUpdateField,
   onSave,
+  onSaveInstance,
   onClose,
 }) => {
   const { theme, isDarkMode } = useTheme();
@@ -472,6 +474,26 @@ const TaskForm: React.FC<TaskFormProps> = ({
               </View>
             </View>
 
+            {/* ── Single Instance Exception Button ── */}
+            {isEditing && (formData.daysOfWeek?.length ?? 0) > 0 && onSaveInstance && (
+              <View style={{ marginBottom: 24 }}>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.primaryButton,
+                    { backgroundColor: theme.colors.textSecondary },
+                    pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }
+                  ]}
+                  onPress={onSaveInstance}
+                >
+                  <Ionicons name="calendar-outline" size={18} color={theme.colors.white} />
+                  <Text style={styles.primaryButtonText}>Save for this date only</Text>
+                </Pressable>
+                <Text style={{ textAlign: 'center', marginTop: 8, fontSize: 12, color: theme.colors.textSecondary }}>
+                  Creates a one-time override without changing other days.
+                </Text>
+              </View>
+            )}
+
             {/* Bottom safe-area breathing room */}
             <View style={{ height: 16 }} />
           </ScrollView>
@@ -800,6 +822,22 @@ const getStyles = (theme: Theme) =>
       fontSize: 14,
       fontFamily: theme.fonts.bold,
       color: theme.colors.text,
+    },
+
+    /* ── Single Instance Button ── */
+    primaryButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 14,
+      borderRadius: 18,
+      marginHorizontal: 10,
+    },
+    primaryButtonText: {
+      marginLeft: 8,
+      fontSize: 15,
+      fontFamily: theme.fonts.bold,
+      color: theme.colors.white,
     },
 
     /* ── Time picker ── */
