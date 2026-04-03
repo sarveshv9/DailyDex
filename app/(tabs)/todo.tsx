@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { supabase } from "../../lib/supabase";
 import * as Haptics from "../../utils/haptics";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
@@ -32,8 +32,6 @@ import { getSharedStyles, Theme } from "../../constants/shared";
 import { useTheme } from "../../context/ThemeContext";
 import { useTimer } from "../../context/TimerContext";
 
-const STORAGE_KEY = "@todo_tasks";
-
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 interface Task {
@@ -59,8 +57,19 @@ const createNewTask = (text: string, category: TaskCategory): Task => ({
 
 const loadTasks = async (): Promise<Task[]> => {
   try {
-    const tasksJson = await AsyncStorage.getItem(STORAGE_KEY);
-    return tasksJson ? JSON.parse(tasksJson) : [];
+    const { data: user } = await supabase.auth.getUser();
+    if (!user?.user) return [];
+    
+    const { data, error } = await supabase.from('tasks').select('*').order('created_at', { ascending: true });
+    if (error) throw error;
+    
+    return data.map(d => ({
+      id: d.id,
+      text: d.text,
+      completed: d.completed,
+      category: d.category,
+      createdAt: d.created_at
+    }));
   } catch (error) {
     console.error("Error loading tasks:", error);
     return [];
@@ -69,7 +78,32 @@ const loadTasks = async (): Promise<Task[]> => {
 
 const saveTasks = async (tasks: Task[]) => {
   try {
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    const { data: user } = await supabase.auth.getUser();
+    if (!user?.user) return;
+    
+    // Handle deletes for things removed from array
+    const { data: remoteData } = await supabase.from('tasks').select('id');
+    const remoteRecordIds = remoteData ? remoteData.map((t: any) => t.id) : [];
+    
+    const incomingIds = tasks.map(t => t.id);
+    const toDeleteIds = remoteRecordIds.filter(id => !incomingIds.includes(id));
+    
+    if (toDeleteIds.length > 0) {
+      await supabase.from('tasks').delete().in('id', toDeleteIds);
+    }
+    
+    const dbTasks = tasks.map((t) => ({
+      id: t.id,
+      user_id: user.user.id,
+      text: t.text,
+      completed: t.completed,
+      category: t.category,
+      created_at: t.createdAt
+    }));
+    
+    if (dbTasks.length > 0) {
+      await supabase.from('tasks').upsert(dbTasks);
+    }
   } catch (error) {
     console.error("Error saving tasks:", error);
   }

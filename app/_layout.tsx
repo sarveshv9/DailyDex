@@ -1,5 +1,3 @@
-// In app/_layout.tsx
-
 import { useFonts } from "expo-font";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -10,11 +8,12 @@ import { useEffect, useState } from "react";
 import { AudioProvider } from "../context/AudioContext";
 import { SettingsProvider } from "../context/SettingsContext";
 import { TimerProvider } from "../context/TimerContext";
+import { AuthProvider, useAuth } from "../context/AuthContext";
 import { requestNotificationPermissions } from "../utils/notifications";
 import { ErrorBoundary } from "../components/common/ErrorBoundary";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function RootLayout() {
+function RootLayoutNav() {
   const [fontsLoaded] = useFonts({
     UbuntuLightI: require("../assets/fonts/Ubuntu-LightItalic.ttf"),
     UbuntuBold: require("../assets/fonts/Ubuntu-Bold.ttf"),
@@ -25,6 +24,7 @@ export default function RootLayout() {
   const [isSetupComplete, setIsSetupComplete] = useState<boolean | null>(null);
   const router = useRouter();
   const segments = useSegments();
+  const { session, initialized } = useAuth();
 
   useEffect(() => {
     requestNotificationPermissions();
@@ -40,28 +40,49 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (!fontsLoaded || isSetupComplete === null) return;
+    if (!fontsLoaded || isSetupComplete === null || !initialized) return;
     
-    // Check if user is in tabs but hasn't completed setup
-    const verifySetup = async () => {
+    // Setup routing check — auth is optional, no sign-in gate
+    const verifyRouting = async () => {
+      const inAuthGroup = segments[0] === ("(auth)" as any);
       const inTabsGroup = segments[0] === "(tabs)";
-      if (inTabsGroup) {
+
+      // If user is on auth page but already signed in, redirect out
+      if (session && inAuthGroup) {
         try {
           const setup = await AsyncStorage.getItem("@zen_setup_complete");
           if (setup !== "true") {
-            router.replace("/setup");
-          } else if (isSetupComplete === false) {
+            router.replace("/setup" as any);
+          } else {
+            router.replace("/(tabs)" as any);
+          }
+        } catch (e) {
+          router.replace("/setup" as any);
+        }
+        return;
+      }
+
+      // For first-time users, check if setup is complete
+      if (!inAuthGroup) {
+        try {
+          const setup = await AsyncStorage.getItem("@zen_setup_complete");
+          if (setup !== "true" && inTabsGroup) {
+            router.replace("/setup" as any);
+          } else if (setup === "true" && isSetupComplete === false) {
             setIsSetupComplete(true);
           }
         } catch (e) {
-          router.replace("/setup");
+          if (inTabsGroup) {
+            router.replace("/setup" as any);
+          }
         }
       }
     };
-    verifySetup();
-  }, [fontsLoaded, isSetupComplete, segments]);
+    
+    verifyRouting();
+  }, [fontsLoaded, isSetupComplete, segments, session, initialized]);
 
-  if (!fontsLoaded || isSetupComplete === null) {
+  if (!fontsLoaded || isSetupComplete === null || !initialized) {
     return <View style={{ flex: 1, backgroundColor: "#F5F5F7" }} />;
   }
 
@@ -74,6 +95,7 @@ export default function RootLayout() {
               <StatusBar style="dark" />
               <Stack>
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="(auth)" options={{ headerShown: false }} />
                 <Stack.Screen name="routine" options={{ headerShown: false }} />
                 <Stack.Screen name="setup" options={{ headerShown: false }} />
                 <Stack.Screen name="privacy" options={{ headerShown: false, presentation: "card" }} />
@@ -87,5 +109,13 @@ export default function RootLayout() {
         </SettingsProvider>
       </ThemeProvider>
     </ErrorBoundary>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <RootLayoutNav />
+    </AuthProvider>
   );
 }

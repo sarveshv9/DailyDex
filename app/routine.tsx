@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { supabase } from "../lib/supabase";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
@@ -415,36 +416,24 @@ export default function RoutineScreen() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const stored = await AsyncStorage.getItem(STORAGE_KEY);
-        if (stored !== null) {
-          let parsed: RoutineItem[] = JSON.parse(stored);
-
-          // Migration: if items use `date` or have no `daysOfWeek`, convert them.
-          let needsMigration = false;
-          parsed = parsed.map(item => {
-            if (!item.daysOfWeek) {
-              needsMigration = true;
-              // If it's a sleep/wakeup task, apply to all days
-              const taskLo = item.task?.toLowerCase().trim();
-              if (taskLo === "sleep" || taskLo === "wake up") {
-                return { ...item, daysOfWeek: [0, 1, 2, 3, 4, 5, 6] };
-              }
-              // Otherwise, if it has a specific date, map to that day of the week, else today
-              if ((item as any).date) {
-                const parts = (item as any).date.split('-');
-                if (parts.length === 3) {
-                  const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-                  return { ...item, daysOfWeek: [d.getDay()] };
-                }
-              }
-              return { ...item, daysOfWeek: [new Date().getDay()] };
-            }
-            return item;
-          });
-
-          if (needsMigration) {
-            await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
-          }
+        const { data: userAuth } = await supabase.auth.getUser();
+        if (!userAuth?.user) return;
+        
+        const { data: stored, error } = await supabase.from('routines').select('*').order('insertion_order', { ascending: true });
+        if (error) throw error;
+        
+        if (stored && stored.length > 0) {
+          let parsed: RoutineItem[] = stored.map((d: any) => ({
+            id: d.id,
+            time: d.time,
+            task: d.task,
+            description: d.description,
+            imageKey: d.image_key,
+            insertionOrder: d.insertion_order,
+            duration: d.duration,
+            daysOfWeek: d.days_of_week,
+            date: d.date
+          }));
 
           setAllRoutines(parsed);
           setNextInsertionOrder(parsed.length > 0 ? Math.max(...parsed.map((i: RoutineItem) => i.insertionOrder || 0)) + 1 : 1);
@@ -454,7 +443,20 @@ export default function RoutineScreen() {
             return { ...item, daysOfWeek: isDaily ? [0, 1, 2, 3, 4, 5, 6] : [new Date().getDay()] };
           });
           setAllRoutines(initialWithDays);
-          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(initialWithDays));
+          
+          const dbRoutines = initialWithDays.map(item => ({
+            id: item.id,
+            user_id: userAuth.user.id,
+            time: item.time,
+            task: item.task,
+            description: item.description,
+            image_key: item.imageKey,
+            insertion_order: item.insertionOrder,
+            duration: item.duration,
+            days_of_week: item.daysOfWeek,
+            date: item.date
+          }));
+          await supabase.from('routines').insert(dbRoutines);
         }
       } catch (e) {
         console.error("Failed to load routines.", e);
@@ -466,8 +468,36 @@ export default function RoutineScreen() {
   const saveRoutines = useCallback(async (newItems: RoutineItem[]) => {
     try {
       setAllRoutines(newItems);
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newItems));
       await scheduleRoutineNotifications(newItems);
+      
+      const { data: userAuth } = await supabase.auth.getUser();
+      if (!userAuth?.user) return;
+      
+      const { data: remoteData } = await supabase.from('routines').select('id');
+      const remoteRecordIds = remoteData ? remoteData.map((t: any) => t.id) : [];
+      
+      const incomingIds = newItems.map(t => t.id);
+      const toDeleteIds = remoteRecordIds.filter(id => !incomingIds.includes(id));
+      
+      if (toDeleteIds.length > 0) {
+        await supabase.from('routines').delete().in('id', toDeleteIds);
+      }
+      
+      const dbRoutines = newItems.map(item => ({
+        id: item.id,
+        user_id: userAuth.user.id,
+        time: item.time,
+        task: item.task,
+        description: item.description,
+        image_key: item.imageKey,
+        insertion_order: item.insertionOrder,
+        duration: item.duration,
+        days_of_week: item.daysOfWeek,
+        date: item.date
+      }));
+      if (dbRoutines.length > 0) {
+        await supabase.from('routines').upsert(dbRoutines);
+      }
     } catch (e) {
       console.error("Failed to save routines.", e);
     }
