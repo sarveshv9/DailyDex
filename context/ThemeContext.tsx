@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 import { LayoutAnimation, Platform, UIManager } from 'react-native';
 import { darkThemes, lightThemes, Theme, ThemeName } from '../constants/shared';
+import { supabase } from '../lib/supabase';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -63,49 +64,83 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
 
     const loadTheme = async () => {
       try {
+        let localThemeName = 'pokeball';
+        let localIsDarkMode = false;
+        let localIsAutoTheme = false;
+        let localCustomThemes: Record<string, CustomThemeConfig> = {};
+
+        // 1. Load Local State
         const savedTheme = await AsyncStorage.getItem('@zen_theme');
         if (savedTheme) {
-          // Backward compatibility: If it starts with light-, strip it and turn off dark mode
           if (savedTheme.startsWith('light-')) {
             const stripped = savedTheme.replace('light-', '');
-            setThemeNameState((stripped === 'default' ? 'pokeball' : stripped));
-            setIsDarkModeState(false);
+            localThemeName = (stripped === 'default' ? 'pokeball' : stripped);
+            localIsDarkMode = false;
           } else {
-            setThemeNameState(savedTheme === 'default' ? 'pokeball' : savedTheme);
-            // By default backwards compat, non-light- strings were 'heavy' mode, 
-            // but now we need an explicit dark mode.
+            localThemeName = savedTheme === 'default' ? 'pokeball' : savedTheme;
           }
         }
 
         const autoTheme = await AsyncStorage.getItem('@zen_auto_theme');
         if (autoTheme !== null) {
-          setIsAutoThemeState(autoTheme === 'true');
+          localIsAutoTheme = autoTheme === 'true';
         }
 
         const darkMode = await AsyncStorage.getItem('@zen_dark_mode');
         if (darkMode !== null) {
-          setIsDarkModeState(darkMode === 'true');
+          localIsDarkMode = darkMode === 'true';
         }
 
         const customCfg = await AsyncStorage.getItem('@zen_custom_themes');
         if (customCfg) {
           try {
-            setCustomThemesState(JSON.parse(customCfg));
-          } catch (e) {
-            console.error('Failed to parse custom themes dict', e);
-          }
+            localCustomThemes = JSON.parse(customCfg);
+          } catch (e) {}
         } else {
-             // Backward compatibility migration for users with single old key
              const oldCustomCfg = await AsyncStorage.getItem('@zen_custom_theme');
              if (oldCustomCfg) {
                  try {
                      const parsed = JSON.parse(oldCustomCfg);
                      if (parsed && parsed.pokemonId) {
-                         setCustomThemesState({ [parsed.pokemonId]: parsed });
+                         localCustomThemes = { [parsed.pokemonId]: parsed };
                      }
                  } catch(e) {}
              }
         }
+
+        // 2. Fetch Remote State
+        const { data: userAuth } = await supabase.auth.getUser();
+        if (userAuth?.user) {
+           const { data: remote, error } = await supabase.from('user_themes').select('*').eq('id', userAuth.user.id).single();
+           if (!error && remote) {
+               // Use remote state as truth
+               localThemeName = remote.active_theme;
+               localIsDarkMode = remote.is_dark_mode;
+               localIsAutoTheme = remote.auto_theme;
+               localCustomThemes = remote.custom_themes || {};
+
+               // Sync down to local storage
+               await AsyncStorage.setItem('@zen_theme', localThemeName);
+               await AsyncStorage.setItem('@zen_auto_theme', String(localIsAutoTheme));
+               await AsyncStorage.setItem('@zen_dark_mode', String(localIsDarkMode));
+               await AsyncStorage.setItem('@zen_custom_themes', JSON.stringify(localCustomThemes));
+           } else {
+               // Push local state up to Supabase to initialize
+               await supabase.from('user_themes').upsert({
+                    id: userAuth.user.id,
+                    active_theme: localThemeName,
+                    is_dark_mode: localIsDarkMode,
+                    auto_theme: localIsAutoTheme,
+                    custom_themes: localCustomThemes
+                });
+           }
+        }
+
+        setThemeNameState(localThemeName);
+        setIsAutoThemeState(localIsAutoTheme);
+        setIsDarkModeState(localIsDarkMode);
+        setCustomThemesState(localCustomThemes);
+
       } catch (e) {
         console.error('Failed to load theme', e);
       } finally {
@@ -114,6 +149,24 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     };
     loadTheme();
   }, []);
+
+  // 3. Sync to cloud on local changes
+  useEffect(() => {
+    if (!isLoaded) return;
+    const syncToCloud = async () => {
+      const { data: userAuth } = await supabase.auth.getUser();
+      if (userAuth?.user) {
+        await supabase.from('user_themes').upsert({
+          id: userAuth.user.id,
+          active_theme: themeName,
+          is_dark_mode: isDarkMode,
+          auto_theme: isAutoTheme,
+          custom_themes: customThemes
+        });
+      }
+    };
+    syncToCloud();
+  }, [themeName, isAutoTheme, isDarkMode, customThemes, isLoaded]);
 
   const setThemeName = async (name: string) => {
     if (Platform.OS !== 'web') LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);

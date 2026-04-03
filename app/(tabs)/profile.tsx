@@ -232,9 +232,29 @@ export default function ProfileScreen() {
           const profileSetup = await AsyncStorage.getItem("@zen_profile_setup_complete");
           setProfileCreated(!!profileSetup);
 
+          let localProfile = null;
           const storedProfile = await AsyncStorage.getItem("@zen_user_profile");
           if (storedProfile) {
-            setUser(JSON.parse(storedProfile));
+            localProfile = JSON.parse(storedProfile);
+            setUser(localProfile);
+          }
+
+          // Fetch from Supabase
+          if (session?.user) {
+              const { data: remoteProfile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+              if (remoteProfile) {
+                  const updatedProfile = {
+                      ...localProfile, // keep defaults like mock stats
+                      name: remoteProfile.full_name || localProfile?.name || 'User',
+                      avatar: remoteProfile.avatar_url || localProfile?.avatar || 'U',
+                      role: remoteProfile.role || localProfile?.role || 'Zen Practitioner',
+                      bio: remoteProfile.bio || localProfile?.bio || '',
+                      email: session.user.email || localProfile?.email || '',
+                      stats: localProfile?.stats || { followers: 0, following: 0, projects: 0 }
+                  };
+                  setUser(updatedProfile);
+                  await AsyncStorage.setItem("@zen_user_profile", JSON.stringify(updatedProfile));
+              }
           }
 
           const statsData = await loadStats();
@@ -415,6 +435,18 @@ export default function ProfileScreen() {
       await AsyncStorage.setItem("@zen_profile_setup_complete", "true");
       await AsyncStorage.setItem("@zen_user_profile", JSON.stringify(user));
       setProfileCreated(true);
+      
+      // Sync to cloud
+      if (session?.user) {
+        await supabase.from('profiles').upsert({
+           id: session.user.id,
+           full_name: user.name,
+           avatar_url: user.avatar,
+           role: user.role,
+           bio: user.bio,
+           updated_at: new Date().toISOString()
+        });
+      }
     } catch (e) {
       console.error("Failed to save profile flag", e);
     }

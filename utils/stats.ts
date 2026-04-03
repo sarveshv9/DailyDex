@@ -102,23 +102,56 @@ export const getYearlyData = (stats: UserStats) => {
     return data;
 };
 
+import { supabase } from '../lib/supabase';
+
 export const loadStats = async (): Promise<UserStats> => {
     try {
-        const data = await AsyncStorage.getItem(STATS_STORAGE_KEY);
-        if (!data) return DEFAULT_STATS;
+        let finalStats: UserStats | null = null;
+        let localStats: UserStats | null = null;
 
-        const stats: UserStats = JSON.parse(data);
+        const data = await AsyncStorage.getItem(STATS_STORAGE_KEY);
+        if (data) {
+            try { localStats = JSON.parse(data); } catch(e){}
+        }
+
+        const { data: userAuth } = await supabase.auth.getUser();
+        if (userAuth?.user) {
+            const { data: remote, error } = await supabase.from('user_stats').select('*').eq('id', userAuth.user.id).single();
+            if (!error && remote) {
+                finalStats = {
+                    totalFocusMinutes: remote.total_focus_minutes || 0,
+                    tasksCompleted: remote.tasks_completed || 0,
+                    sessionsCompleted: remote.sessions_completed || 0,
+                    currentStreak: remote.current_streak || 0,
+                    bestStreak: remote.best_streak || 0,
+                    history: remote.history || {}
+                };
+                await AsyncStorage.setItem(STATS_STORAGE_KEY, JSON.stringify(finalStats));
+            } else if (localStats) {
+                finalStats = localStats;
+                await supabase.from('user_stats').upsert({
+                    id: userAuth.user.id,
+                    total_focus_minutes: localStats.totalFocusMinutes,
+                    tasks_completed: localStats.tasksCompleted,
+                    sessions_completed: localStats.sessionsCompleted,
+                    current_streak: localStats.currentStreak,
+                    best_streak: localStats.bestStreak,
+                    history: localStats.history
+                });
+            }
+        }
+
+        if (!finalStats && localStats) finalStats = localStats;
+        if (!finalStats) finalStats = DEFAULT_STATS;
 
         // Streak logic check
         const today = getTodayString();
         const yesterday = getYesterdayString();
-
-        // If they didn't do anything today AND didn't do anything yesterday, streak is broken
-        if (!stats.history[today] && !stats.history[yesterday]) {
-            stats.currentStreak = 0;
+        if (!finalStats.history[today] && !finalStats.history[yesterday]) {
+            finalStats.currentStreak = 0;
         }
 
-        return stats;
+        return finalStats;
     } catch (e) {
         console.error("Failed to load stats", e);
         return DEFAULT_STATS;
@@ -127,7 +160,24 @@ export const loadStats = async (): Promise<UserStats> => {
 
 export const saveStats = async (stats: UserStats): Promise<void> => {
     try {
+        // Immediate local save
         await AsyncStorage.setItem(STATS_STORAGE_KEY, JSON.stringify(stats));
+        
+        // Background sync to cloud
+        supabase.auth.getUser().then(async ({ data: userAuth }) => {
+            if (userAuth?.user) {
+                const { error } = await supabase.from('user_stats').upsert({
+                    id: userAuth.user.id,
+                    total_focus_minutes: stats.totalFocusMinutes,
+                    tasks_completed: stats.tasksCompleted,
+                    sessions_completed: stats.sessionsCompleted,
+                    current_streak: stats.currentStreak,
+                    best_streak: stats.bestStreak,
+                    history: stats.history
+                });
+                if (error) console.error("Failed to sync user stats", error);
+            }
+        });
     } catch (e) {
         console.error("Failed to save stats", e);
     }

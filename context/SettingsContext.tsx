@@ -1,6 +1,7 @@
 // context/SettingsContext.tsx
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
+import { supabase } from '../lib/supabase';
 
 interface Settings {
   notifications: {
@@ -42,10 +43,44 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   useEffect(() => {
     const loadSettings = async () => {
       try {
+        let finalSettings: Settings | null = null;
+        let localSettings: Settings | null = null;
+
+        // 1. Load local
         const stored = await AsyncStorage.getItem('@zen_user_settings_v2');
         if (stored) {
-          setSettings(JSON.parse(stored));
+          try { localSettings = JSON.parse(stored); } catch(e){}
         }
+
+        // 2. Fetch remote if auth
+        const { data: userAuth } = await supabase.auth.getUser();
+        if (userAuth?.user) {
+          const { data: remote, error } = await supabase.from('user_settings').select('preferences').eq('id', userAuth.user.id).single();
+          if (!error && remote?.preferences) {
+            finalSettings = { ...DEFAULT_SETTINGS, ...remote.preferences };
+            await AsyncStorage.setItem('@zen_user_settings_v2', JSON.stringify(finalSettings));
+          } else if (localSettings) {
+            // Push local to remote
+            finalSettings = localSettings;
+            await supabase.from('user_settings').upsert({ id: userAuth.user.id, preferences: localSettings });
+          }
+        }
+
+        // 3. Fallback
+        if (!finalSettings && localSettings) {
+          finalSettings = localSettings;
+        }
+
+        if (finalSettings) {
+           setSettings(finalSettings);
+        } else {
+           // Provide ultimate default to remote if available
+           setSettings(DEFAULT_SETTINGS);
+           if (userAuth?.user) {
+              await supabase.from('user_settings').upsert({ id: userAuth.user.id, preferences: DEFAULT_SETTINGS });
+           }
+        }
+
       } catch (e) {
         console.error('Failed to load settings', e);
       } finally {
@@ -59,7 +94,15 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   useEffect(() => {
     if (!isLoading) {
       AsyncStorage.setItem('@zen_user_settings_v2', JSON.stringify(settings))
-        .catch(e => console.error('Failed to save settings', e));
+        .catch(e => console.error('Failed to save settings local', e));
+      
+      // Sync to cloud
+      supabase.auth.getUser().then(async ({ data: userAuth }: { data: any }) => {
+         if (userAuth?.user) {
+            const { error } = await supabase.from('user_settings').upsert({ id: userAuth.user.id, preferences: settings });
+            if (error) console.error('Failed to sync settings', error);
+         }
+      });
     }
   }, [settings, isLoading]);
 
