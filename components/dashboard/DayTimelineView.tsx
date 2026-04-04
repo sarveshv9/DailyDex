@@ -6,13 +6,13 @@ import { useRouter } from 'expo-router';
 import React, { memo, useCallback, useMemo, useRef } from 'react';
 import {
     Animated,
-    Dimensions,
     FlatList,
     Platform,
     Pressable,
     ScrollView,
     StyleSheet,
     Text,
+    useWindowDimensions,
     View,
 } from 'react-native';
 import { Theme } from '../../constants/shared';
@@ -23,14 +23,12 @@ import { MonthCalendarView } from './MonthCalendarView';
 
 /* ─────────────────────────────── Config ─────────────────────────────── */
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
 /** Width reserved for the time-label column on the left */
 const TIME_AXIS_WIDTH = 44;
 
-/** Column count and width are computed dynamically inside the component based on viewMode */
-const COL_WIDTH_3DAY = (SCREEN_WIDTH - TIME_AXIS_WIDTH - 16) / 3;
-const COL_WIDTH_7DAY = (SCREEN_WIDTH - TIME_AXIS_WIDTH - 16) / 7;
+/** Helper to compute column width dynamically based on screen width and view mode */
+const getColWidth = (screenWidth: number, columns: 3 | 7) => 
+    (screenWidth - TIME_AXIS_WIDTH - 16) / columns;
 
 /** Circle sizes — selected day is larger */
 const CIRCLE_SEL = 80;
@@ -148,6 +146,7 @@ const TimelinePage = memo<{
     circleOther: number;
     is7Day: boolean;
     COL_WIDTH: number;
+    screenWidth: number;
     theme: Theme;
     styles: any;
     handleSelectDate: (date: Date) => void;
@@ -157,7 +156,7 @@ const TimelinePage = memo<{
     onPressTask?: (item: RoutineItem) => void;
 }>(({
     pageDates, allRoutines, selectedKey, todayKey,
-    circleSel, circleOther, is7Day, COL_WIDTH, theme, styles, handleSelectDate,
+    circleSel, circleOther, is7Day, COL_WIDTH, screenWidth, theme, styles, handleSelectDate,
     startHour, totalMinutes, timeLabels, onPressTask
 }) => {
     const { cumY, dynamicBodyHeight, timeAxisPositions } = useMemo(() => {
@@ -317,7 +316,7 @@ const TimelinePage = memo<{
 
     return (
         <ScrollView
-            style={{ width: SCREEN_WIDTH }}
+            style={{ width: screenWidth }}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 24 }}
         >
@@ -520,11 +519,12 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
     onPressTask,
 }) => {
     const { theme, isDarkMode } = useTheme();
+    const { width: SCREEN_WIDTH } = useWindowDimensions();
     const styles = useMemo(() => getStyles(theme), [theme]);
 
     const [viewMode, setViewMode] = React.useState<'3-day' | '7-day' | 'month'>('3-day');
     const is7Day = viewMode === '7-day';
-    const COL_WIDTH = is7Day ? COL_WIDTH_7DAY : COL_WIDTH_3DAY;
+    const COL_WIDTH = getColWidth(SCREEN_WIDTH, is7Day ? 7 : 3);
 
     // Circle sizes — in 7-day view everything is smaller to fit
     const circleSel = is7Day ? 28 : CIRCLE_SEL;
@@ -683,6 +683,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
             circleOther={circleOther}
             is7Day={is7Day}
             COL_WIDTH={COL_WIDTH}
+            screenWidth={SCREEN_WIDTH}
             theme={theme}
             styles={styles}
             handleSelectDate={handleSelectDate}
@@ -691,7 +692,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
             timeLabels={timeLabels}
             onPressTask={onPressTask}
         />
-    ), [routineItems, selectedKey, todayKey, circleSel, circleOther, is7Day, COL_WIDTH, theme, styles, handleSelectDate, startHour, totalMinutes, timeLabels, onPressTask]);
+    ), [routineItems, selectedKey, todayKey, circleSel, circleOther, is7Day, COL_WIDTH, SCREEN_WIDTH, theme, styles, handleSelectDate, startHour, totalMinutes, timeLabels, onPressTask]);
 
     // Split header date into weekday + rest
     const dateHeader = selectedDate.toLocaleDateString('en-US', {
@@ -783,10 +784,10 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                             decelerationRate={Platform.OS === 'web' ? "fast" : "normal"}
                             showsHorizontalScrollIndicator={false}
                             initialScrollIndex={initialTargetIndex}
-                            getItemLayout={(_, index) => ({
+                            getItemLayout={(_, idx) => ({
                                 length: SCREEN_WIDTH,
-                                offset: SCREEN_WIDTH * index,
-                                index,
+                                offset: SCREEN_WIDTH * idx,
+                                index: idx,
                             })}
                             // Performance optimizations
                             windowSize={3}
