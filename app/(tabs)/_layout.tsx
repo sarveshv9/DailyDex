@@ -15,6 +15,7 @@ import { BlurView } from 'expo-blur';
 import React, { useEffect, useRef } from 'react';
 import {
   Animated,
+  Platform,
   Pressable,
   StyleSheet,
   View,
@@ -115,13 +116,23 @@ function CustomTabBar({
             },
           ]}
         >
-          {/* Blur background */}
-          <BlurView
-            intensity={100}
-            tint={theme.colors.background === '#FFFFFF' || theme.colors.background.startsWith('#F') ? 'systemMaterialLight' : 'systemMaterialDark'}
-            style={StyleSheet.absoluteFill}
-            pointerEvents="none"
-          />
+          {/* Blur background - fallback to solid bg on web */}
+          {Platform.OS === 'web' ? (
+            <View 
+              style={[
+                StyleSheet.absoluteFill, 
+                { backgroundColor: theme.colors.background, opacity: 0.92 }
+              ]} 
+              pointerEvents="none"
+            />
+          ) : (
+            <BlurView
+              intensity={100}
+              tint={theme.colors.background === '#FFFFFF' || theme.colors.background.startsWith('#F') ? 'systemMaterialLight' : 'systemMaterialDark'}
+              style={StyleSheet.absoluteFill}
+              pointerEvents="none"
+            />
+          )}
           {/* Glass tint overlay */}
           <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.glass.cardBg }]} />
           {/* Background icons (outlined) - each in their own position */}

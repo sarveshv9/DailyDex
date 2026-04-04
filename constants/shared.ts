@@ -154,6 +154,9 @@ export const getSharedStyles = (theme: Theme) => {
         android: {
           elevation: theme.glows.card.elevation,
         },
+        web: {
+          boxShadow: `0px ${theme.glows.card.shadowOffset.height}px ${theme.glows.card.shadowRadius}px rgba(0, 0, 0, ${theme.glows.card.shadowOpacity})`,
+        },
       }),
     },
   });

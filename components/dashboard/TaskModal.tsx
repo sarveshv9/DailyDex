@@ -346,12 +346,21 @@ const TaskModal: React.FC<TaskModalProps> = ({
           }
         ]}
       >
-        <BlurView
-          style={StyleSheet.absoluteFill}
-          intensity={Platform.OS === 'ios' ? 20 : (Platform.OS === 'web' ? 10 : 40)}
-          tint={isDarkMode ? "dark" : "light"}
-          experimentalBlurMethod="dimezisBlurView"
-        />
+        {Platform.OS === 'web' ? (
+          <View 
+            style={[
+              StyleSheet.absoluteFill, 
+              { backgroundColor: isDarkMode ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.6)' }
+            ]} 
+          />
+        ) : (
+          <BlurView
+            style={StyleSheet.absoluteFill}
+            intensity={Platform.OS === 'ios' ? 20 : 40}
+            tint={isDarkMode ? "dark" : "light"}
+            experimentalBlurMethod="dimezisBlurView"
+          />
+        )}
         <Pressable style={StyleSheet.absoluteFill} onPress={closeAndSave} />
       </Animated.View>
 

@@ -17,6 +17,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -32,7 +33,9 @@ import { FormData, RoutineItem, getDateString, sortRoutineItems, timeToMinutes, 
 
 /* -------------------- Assets & Constants -------------------- */
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+// Use useWindowDimensions() inside components for dynamic values on web
+// These fallbacks are only used for initial/modal animations outside the component
+const { width: INITIAL_SCREEN_WIDTH, height: INITIAL_SCREEN_HEIGHT } = Dimensions.get("window");
 
 /** Height of the timeline panel when fully expanded.
  *  BODY_HEIGHT(320) + day header(~55) + peek card(~90) + padding(~30) */
@@ -57,7 +60,7 @@ const INITIAL_ROUTINE: RoutineItem[] = [
 const STORAGE_KEY = "@zen_routine";
 
 /* -------------------- Modal Hook -------------------- */
-const useModalAnimation = () => {
+const useModalAnimation = (screenWidth: number, screenHeight: number) => {
   const scaleAnim = React.useRef(new Animated.Value(0)).current;
   const translateX = React.useRef(new Animated.Value(0)).current;
   const translateY = React.useRef(new Animated.Value(0)).current;
@@ -69,8 +72,8 @@ const useModalAnimation = () => {
 
   const openAnimation = useCallback(
     (x: number, y: number) => {
-      translateX.setValue(x - SCREEN_WIDTH / 2);
-      translateY.setValue(y - SCREEN_HEIGHT / 2);
+      translateX.setValue(x - screenWidth / 2);
+      translateY.setValue(y - screenHeight / 2);
       scaleAnim.setValue(0);
 
       Animated.parallel([
@@ -79,7 +82,7 @@ const useModalAnimation = () => {
         Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, tension: 100, friction: 9 }),
       ]).start();
     },
-    [translateX, translateY, scaleAnim]
+    [translateX, translateY, scaleAnim, screenWidth, screenHeight]
   );
 
   const closeAnimation = useCallback(
@@ -118,6 +121,7 @@ const ConfirmModal = ({ visible, title, message, confirmText, onCancel, onConfir
 /* -------------------- Screen Component -------------------- */
 export default function RoutineScreen() {
   const { theme } = useTheme();
+  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = useWindowDimensions();
   const styles = useMemo(() => getStyles(theme), [theme]);
 
   const [allRoutines, setAllRoutines] = useState<RoutineItem[]>([]);
@@ -241,7 +245,8 @@ export default function RoutineScreen() {
   // Horizontal pager offset — starts at 0 (center panel)
   const pagerX = useRef(new Animated.Value(0)).current;
   // Stable Animated.add node — never recreated on re-render
-  const pagerTranslateX = useRef(Animated.add(pagerX, new Animated.Value(-SCREEN_WIDTH))).current;
+  // Uses initial screen width since this is only created once and mobile web won't resize
+  const pagerTranslateX = useRef(Animated.add(pagerX, new Animated.Value(-INITIAL_SCREEN_WIDTH))).current;
   const isDraggingHorizontal = useRef(false);
   // Flag set when a swipe completes — tells useLayoutEffect to reset pagerX
   // after the new pageDates have been committed, preventing the flicker.
@@ -280,66 +285,71 @@ export default function RoutineScreen() {
     }
   }, [pageDates, pagerX]);
 
+  // PanResponder for native gesture handling - disabled on web where it doesn't work well
   const pagerPanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponderCapture: (_, g) => {
-        const isHoriz = Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5;
-        const isDown = g.dy > 15 && scrollOffsetRef.current <= 1 && Math.abs(g.dy) > Math.abs(g.dx);
-        return isHoriz || isDown;
-      },
-      onMoveShouldSetPanResponder: (_, g) => {
-        const isHoriz = Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5;
-        const isDown = g.dy > 15 && scrollOffsetRef.current <= 1 && Math.abs(g.dy) > Math.abs(g.dx);
-        return isHoriz || isDown;
-      },
-      onPanResponderGrant: () => {
-        isDraggingHorizontal.current = false;
-      },
-      onPanResponderMove: (_, g) => {
-        if (Math.abs(g.dx) > Math.abs(g.dy) && Math.abs(g.dx) > 8) {
-          isDraggingHorizontal.current = true;
-          pagerX.setValue(g.dx);
-        }
-      },
-      onPanResponderRelease: (_, g) => {
-        if (isDraggingHorizontal.current) {
-          const LEFT = g.dx < -60 || g.vx < -0.8;
-          const RIGHT = g.dx > 60 || g.vx > 0.8;
-          if (LEFT || RIGHT) {
-            const target = LEFT ? -SCREEN_WIDTH : SCREEN_WIDTH;
-            Animated.timing(pagerX, {
-              toValue: target,
-              duration: 220,
-              useNativeDriver: false,
-            }).start(() => {
-              shiftDate(LEFT ? 1 : -1);
-              // pagerX already reset inside shiftDate
-            });
-          } else {
-            Animated.spring(pagerX, {
-              toValue: 0,
-              useNativeDriver: false,
-              tension: 80,
-              friction: 12,
-            }).start();
-          }
-        } else if (g.dy > 50 || g.vy > 1) {
-          closeList();
-        }
-        isDraggingHorizontal.current = false;
-      },
-    })
+    Platform.OS === 'web' 
+      ? { panHandlers: {} }
+      : PanResponder.create({
+          onStartShouldSetPanResponder: () => false,
+          onMoveShouldSetPanResponderCapture: (_, g) => {
+            const isHoriz = Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5;
+            const isDown = g.dy > 15 && scrollOffsetRef.current <= 1 && Math.abs(g.dy) > Math.abs(g.dx);
+            return isHoriz || isDown;
+          },
+          onMoveShouldSetPanResponder: (_, g) => {
+            const isHoriz = Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5;
+            const isDown = g.dy > 15 && scrollOffsetRef.current <= 1 && Math.abs(g.dy) > Math.abs(g.dx);
+            return isHoriz || isDown;
+          },
+          onPanResponderGrant: () => {
+            isDraggingHorizontal.current = false;
+          },
+          onPanResponderMove: (_, g) => {
+            if (Math.abs(g.dx) > Math.abs(g.dy) && Math.abs(g.dx) > 8) {
+              isDraggingHorizontal.current = true;
+              pagerX.setValue(g.dx);
+            }
+          },
+          onPanResponderRelease: (_, g) => {
+            if (isDraggingHorizontal.current) {
+              const LEFT = g.dx < -60 || g.vx < -0.8;
+              const RIGHT = g.dx > 60 || g.vx > 0.8;
+              if (LEFT || RIGHT) {
+                const target = LEFT ? -SCREEN_WIDTH : SCREEN_WIDTH;
+                Animated.timing(pagerX, {
+                  toValue: target,
+                  duration: 220,
+                  useNativeDriver: false,
+                }).start(() => {
+                  shiftDate(LEFT ? 1 : -1);
+                  // pagerX already reset inside shiftDate
+                });
+              } else {
+                Animated.spring(pagerX, {
+                  toValue: 0,
+                  useNativeDriver: false,
+                  tension: 80,
+                  friction: 12,
+                }).start();
+              }
+            } else if (g.dy > 50 || g.vy > 1) {
+              closeList();
+            }
+            isDraggingHorizontal.current = false;
+          },
+        })
   ).current;
 
   const listHeaderPanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dy) > 10,
-      onPanResponderRelease: (_, g) => {
-        if (g.dy > 50 || g.vy > 1) closeList();
-      },
-    })
+    Platform.OS === 'web'
+      ? { panHandlers: {} }
+      : PanResponder.create({
+          onStartShouldSetPanResponder: () => true,
+          onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dy) > 10,
+          onPanResponderRelease: (_, g) => {
+            if (g.dy > 50 || g.vy > 1) closeList();
+          },
+        })
   ).current;
 
   const listTranslateY = listAnim.interpolate({
@@ -400,7 +410,7 @@ export default function RoutineScreen() {
     }
   );
 
-  const { animatedStyle, openAnimation, closeAnimation } = useModalAnimation();
+  const { animatedStyle, openAnimation, closeAnimation } = useModalAnimation(SCREEN_WIDTH, SCREEN_HEIGHT);
   const sortedRoutineItems = useMemo(() => sortRoutineItems(routineItems), [routineItems]);
 
 
@@ -1039,15 +1049,15 @@ const getStyles = (theme: Theme) =>
       color: theme.colors.text,
     },
 
-    /* Pager */
+    /* Pager - these styles use initial dimensions but are overridden by inline styles in render */
     pagerStrip: {
       flexDirection: 'row',
-      width: SCREEN_WIDTH * 3,
+      width: INITIAL_SCREEN_WIDTH * 3,
       flex: 1,
       overflow: 'hidden',
     },
     pagerPage: {
-      width: SCREEN_WIDTH,
+      width: INITIAL_SCREEN_WIDTH,
       flex: 1,
     },
     scrollContainer: {

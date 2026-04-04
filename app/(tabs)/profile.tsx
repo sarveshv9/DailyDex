@@ -333,58 +333,98 @@ export default function ProfileScreen() {
       const backupData = Object.fromEntries(items);
       const dataString = JSON.stringify(backupData, null, 2);
 
-      await Share.share({
-        message: dataString,
-        title: 'Zen App Backup'
-      });
+      if (Platform.OS === 'web') {
+        // Web: trigger a file download
+        const blob = new Blob([dataString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `zen-backup-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } else {
+        await Share.share({
+          message: dataString,
+          title: 'Zen App Backup'
+        });
+      }
     } catch (e) {
-      Alert.alert("Error", "Failed to create backup.");
+      if (Platform.OS === 'web') {
+        window.alert("Failed to create backup.");
+      } else {
+        Alert.alert("Error", "Failed to create backup.");
+      }
       console.error(e);
     }
   };
 
-  const handleResetTasks = () => {
+  const handleResetTasks = async () => {
     if (settings.hapticsEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    Alert.alert("Reset All Tasks", "Are you sure you want to reset all tasks? This action cannot be undone.", [
-      { text: "Cancel", style: "cancel" },
-      { 
-        text: "Yes, Reset", 
-        style: "destructive", 
-        onPress: () => {
-          setTimeout(() => {
-            Alert.alert(
-              "Final Confirmation", 
-              "This is your last chance. Do you really want to permanently delete all your tasks?", 
-              [
-                { text: "Cancel", style: "cancel" },
-                {
-                  text: "Reset Everything",
-                  style: "destructive",
-                  onPress: async () => {
-                    try {
-                      const data = await AsyncStorage.getItem("@zen_routine");
-                      if (data) {
-                        const routines: RoutineItem[] = JSON.parse(data);
-                        const preserved = routines.filter(r => {
-                          const taskLo = r.task?.toLowerCase().trim();
-                          return taskLo === "wake up" || taskLo === "sleep";
-                        });
-                        await AsyncStorage.setItem("@zen_routine", JSON.stringify(preserved));
-                        if (settings.hapticsEnabled) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                        Alert.alert("Success", "All tasks have been reset except Wake Up and Sleep.");
-                      }
-                    } catch (e) {
-                      console.error("Failed to reset tasks", e);
-                      Alert.alert("Error", "Could not reset tasks.");
-                    }
+    
+    const performReset = async () => {
+      try {
+        const data = await AsyncStorage.getItem("@zen_routine");
+        if (data) {
+          const routines: RoutineItem[] = JSON.parse(data);
+          const preserved = routines.filter(r => {
+            const taskLo = r.task?.toLowerCase().trim();
+            return taskLo === "wake up" || taskLo === "sleep";
+          });
+          await AsyncStorage.setItem("@zen_routine", JSON.stringify(preserved));
+          if (settings.hapticsEnabled) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          if (Platform.OS === 'web') {
+            window.alert("All tasks have been reset except Wake Up and Sleep.");
+          } else {
+            Alert.alert("Success", "All tasks have been reset except Wake Up and Sleep.");
+          }
+        }
+      } catch (e) {
+        console.error("Failed to reset tasks", e);
+        if (Platform.OS === 'web') {
+          window.alert("Could not reset tasks.");
+        } else {
+          Alert.alert("Error", "Could not reset tasks.");
+        }
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      // Web: use window.confirm for dialogs
+      const firstConfirm = window.confirm("Reset All Tasks\n\nAre you sure you want to reset all tasks? This action cannot be undone.");
+      if (firstConfirm) {
+        const secondConfirm = window.confirm("Final Confirmation\n\nThis is your last chance. Do you really want to permanently delete all your tasks?");
+        if (secondConfirm) {
+          await performReset();
+        }
+      }
+    } else {
+      // Native: use Alert.alert with nested callbacks
+      Alert.alert("Reset All Tasks", "Are you sure you want to reset all tasks? This action cannot be undone.", [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Yes, Reset", 
+          style: "destructive", 
+          onPress: () => {
+            setTimeout(() => {
+              Alert.alert(
+                "Final Confirmation", 
+                "This is your last chance. Do you really want to permanently delete all your tasks?", 
+                [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Reset Everything",
+                    style: "destructive",
+                    onPress: performReset
                   }
-                }
-              ]
-            );
-          }, 500);
-        } 
-      },
-    ]);
+                ]
+              );
+            }, 500);
+          } 
+        },
+      ]);
+    }
   };
 
   const handleLogout = () => {

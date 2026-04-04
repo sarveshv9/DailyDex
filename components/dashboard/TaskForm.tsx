@@ -271,12 +271,21 @@ const TaskForm: React.FC<TaskFormProps> = ({
           }
         ]}
       >
-        <BlurView
-          style={StyleSheet.absoluteFill}
-          intensity={Platform.OS === 'ios' ? 20 : 40}
-          tint={isDark ? "dark" : "light"}
-          experimentalBlurMethod="dimezisBlurView"
-        />
+        {Platform.OS === 'web' ? (
+          <View 
+            style={[
+              StyleSheet.absoluteFill, 
+              { backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.6)' }
+            ]} 
+          />
+        ) : (
+          <BlurView
+            style={StyleSheet.absoluteFill}
+            intensity={Platform.OS === 'ios' ? 20 : 40}
+            tint={isDark ? "dark" : "light"}
+            experimentalBlurMethod="dimezisBlurView"
+          />
+        )}
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       </Animated.View>
 
@@ -285,12 +294,21 @@ const TaskForm: React.FC<TaskFormProps> = ({
           style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}
           testID="task-form-content"
         >
-          <BlurView
-            style={StyleSheet.absoluteFill}
-            intensity={Platform.OS === 'ios' ? 60 : 100}
-            tint={isDark ? "dark" : "light"}
-            experimentalBlurMethod="dimezisBlurView"
-          />
+          {Platform.OS === 'web' ? (
+            <View 
+              style={[
+                StyleSheet.absoluteFill, 
+                { backgroundColor: isDark ? theme.colors.card : theme.colors.background }
+              ]} 
+            />
+          ) : (
+            <BlurView
+              style={StyleSheet.absoluteFill}
+              intensity={Platform.OS === 'ios' ? 60 : 100}
+              tint={isDark ? "dark" : "light"}
+              experimentalBlurMethod="dimezisBlurView"
+            />
+          )}
           {/* ── Handle ── */}
           <View style={styles.handle} />
 
