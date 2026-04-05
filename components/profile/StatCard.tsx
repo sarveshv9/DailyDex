@@ -21,8 +21,6 @@ export const StatCard: React.FC<StatCardProps> = ({ label, value, theme }) => {
         borderRadius: theme.borderRadius.md,
         borderWidth: 1,
         borderColor: theme.glass.borderColor,
-        alignItems: "center",
-        overflow: "hidden",
         elevation: 3,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 3 },
@@ -33,36 +31,37 @@ export const StatCard: React.FC<StatCardProps> = ({ label, value, theme }) => {
       <BlurView
         intensity={50}
         tint={isDarkMode ? "dark" : "light"}
-        style={StyleSheet.absoluteFill}
-      />
-      <View
-        style={[
-          StyleSheet.absoluteFill,
-          { backgroundColor: theme.glass.cardBg },
-        ]}
-      />
-      <View style={{ padding: theme.spacing.md, alignItems: "center" }}>
-        <Text
-          style={{
-            fontSize: 20,
-            fontFamily: theme.fonts.bold,
-            color: theme.colors.text,
-          }}
-        >
-          {String(value)}
-        </Text>
+        style={{ borderRadius: theme.borderRadius.md, overflow: "hidden", alignItems: "center" }}
+      >
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: theme.glass.cardBg },
+          ]}
+        />
+        <View style={{ padding: theme.spacing.md, alignItems: "center", zIndex: 1 }}>
+          <Text
+            style={{
+              fontSize: 20,
+              fontFamily: theme.fonts.bold,
+              color: theme.colors.text,
+            }}
+          >
+            {String(value)}
+          </Text>
 
-        <Text
-          style={{
-            fontSize: 12,
-            fontFamily: theme.fonts.regular,
-            color: theme.colors.textSecondary,
-            marginTop: theme.spacing.sm,
-          }}
-        >
-          {label}
-        </Text>
-      </View>
+          <Text
+            style={{
+              fontSize: 12,
+              fontFamily: theme.fonts.regular,
+              color: theme.colors.textSecondary,
+              marginTop: theme.spacing.sm,
+            }}
+          >
+            {label}
+          </Text>
+        </View>
+      </BlurView>
     </View>
   );
 };

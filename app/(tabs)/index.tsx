@@ -341,7 +341,6 @@ const getStyles = (theme: Theme) =>
     focusCard: {
       borderRadius: 32,
       backgroundColor: theme.glass.cardBg,
-      overflow: "hidden",
       ...Platform.select({
         ios: {
           shadowColor: theme.glows.card.shadowColor,
@@ -361,6 +360,7 @@ const getStyles = (theme: Theme) =>
     },
     focusCardInner: {
       padding: 20,
+      zIndex: 1,
     },
     /* Top row: icon + text + duration badge */
     focusTopRow: {
@@ -531,7 +531,6 @@ const getStyles = (theme: Theme) =>
     setupCard: {
       width: "100%",
       borderRadius: 32,
-      overflow: "hidden",
       ...Platform.select({
         ios: {
           shadowColor: theme.glows.card.shadowColor,
@@ -546,6 +545,7 @@ const getStyles = (theme: Theme) =>
       paddingVertical: 32,
       paddingHorizontal: 24,
       alignItems: "center",
+      zIndex: 1,
     },
     setupIconCircle: {
       width: 100,
@@ -742,11 +742,10 @@ function HomeScreen() {
                   ? "systemThickMaterialDark"
                   : "systemThickMaterialLight"
               }
-              style={styles.cardBlur}
-              pointerEvents="none"
-            />
-            <View style={styles.cardTint} />
-            <View style={styles.setupCardInner}>
+              style={{ borderRadius: 32, overflow: "hidden", width: "100%" }}
+            >
+              <View style={styles.cardTint} />
+              <View style={styles.setupCardInner}>
               <View style={styles.setupIconCircle}>
                 <Ionicons
                   name="leaf-outline"
@@ -785,7 +784,8 @@ function HomeScreen() {
                 <Text style={styles.primaryButtonText}>Create Routine</Text>
               </Pressable>
             </View>
-          </Animated.View>
+          </BlurView>
+        </Animated.View>
         </View>
       </SafeAreaView>
     );
@@ -858,11 +858,10 @@ function HomeScreen() {
                   ? "systemThickMaterialDark"
                   : "systemThickMaterialLight"
               }
-              style={styles.cardBlur}
-              pointerEvents="none"
-            />
-            <View style={styles.cardTint} />
-            <View style={styles.focusCardInner}>
+              style={{ borderRadius: 32, overflow: "hidden" }}
+            >
+              <View style={styles.cardTint} />
+              <View style={styles.focusCardInner}>
               {/* Top: Icon + Name + Description + Duration */}
               <View style={styles.focusTopRow}>
                 <View style={styles.focusIconCircle}>
@@ -933,7 +932,8 @@ function HomeScreen() {
                 />
               </Pressable>
             </View>
-          </View>
+          </BlurView>
+        </View>
         </Animated.View>
 
         {/* ======= UP NEXT ======= */}

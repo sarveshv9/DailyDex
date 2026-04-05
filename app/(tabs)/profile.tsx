@@ -301,18 +301,18 @@ export default function ProfileScreen() {
     autoCreateProfile();
   }, [session, profileCreated, isLoading]);
 
-  // Profile state (keeps your existing defaults)
+  // Profile state (defaults for new offline users)
   const [user, setUser] = useState({
-    name: "Ash Ketchum",
-    avatar: "A",
-    role: "Pokémon Trainer",
+    name: "",
+    avatar: "",
+    role: "",
     stats: {
-      followers: 25,
-      following: 3,
-      projects: 12,
+      followers: 0,
+      following: 0,
+      projects: 0,
     },
-    email: "ash@palette.town",
-    bio: "Pokémon Trainer from Palette Town.",
+    email: "",
+    bio: "",
   });
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
