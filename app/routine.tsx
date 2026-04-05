@@ -25,7 +25,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { DayTimelineView } from "../components/dashboard/DayTimelineView";
 import TaskForm from "../components/dashboard/TaskForm";
 import TaskModal from "../components/dashboard/TaskModal";
-import { TimelineEventCard } from "../components/dashboard/TimelineEventCard";
+import { TimelineEventCard, SkeletonTimelineEventCard } from "../components/dashboard/TimelineEventCard";
 import { Theme } from "../constants/shared";
 import { useTheme } from "../context/ThemeContext";
 import { scheduleRoutineNotifications } from "../utils/notifications";
@@ -125,6 +125,7 @@ export default function RoutineScreen() {
   const styles = useMemo(() => getStyles(theme), [theme]);
 
   const [allRoutines, setAllRoutines] = useState<RoutineItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<RoutineItem | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [formVisible, setFormVisible] = useState(false);
@@ -507,6 +508,8 @@ export default function RoutineScreen() {
 
       } catch (e) {
         console.error("Failed to load routines.", e);
+      } finally {
+        setIsLoading(false);
       }
     };
     loadData();
@@ -901,7 +904,15 @@ export default function RoutineScreen() {
                   bounces={false}
                 >
                   <View style={styles.cardList}>
-                    {pageItems.length === 0 ? (
+                    {isLoading ? (
+                      Array.from({ length: 5 }).map((_, itemIdx) => (
+                        <SkeletonTimelineEventCard
+                          key={`skeleton-${itemIdx}`}
+                          isFirst={itemIdx === 0}
+                          isLast={itemIdx === 4}
+                        />
+                      ))
+                    ) : pageItems.length === 0 ? (
                       <View style={styles.emptyStateContainer}>
                         <Text style={styles.emptyStateTitle}>Your deck is empty!</Text>
                         <Text style={styles.emptyStateSub}>Tap the + below to start building your routine.</Text>

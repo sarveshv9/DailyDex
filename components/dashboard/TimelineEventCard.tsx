@@ -14,7 +14,7 @@
 
 import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, Animated } from 'react-native';
 import { Theme } from '../../constants/shared';
 import { useTheme } from '../../context/ThemeContext';
 import { RoutineItem, ICON_MAP } from '../../utils/utils';
@@ -250,4 +250,78 @@ const getStyles = (theme: Theme) =>
             borderWidth: 2,
             backgroundColor: 'transparent',
         },
+        /* Skeleton specific styles */
+        skeletonBox: {
+            backgroundColor: theme.colors.card === '#ffffff' ? '#E5E5E5' : '#333333',
+            borderRadius: 4,
+        },
+        skeletonCircle: {
+            width: ICON_SIZE,
+            height: ICON_SIZE,
+            borderRadius: ICON_SIZE / 2,
+            backgroundColor: theme.colors.card === '#ffffff' ? '#E5E5E5' : '#333333',
+        },
+        skeletonRing: {
+            width: 26,
+            height: 26,
+            borderRadius: 13,
+            borderWidth: 2,
+            borderColor: theme.colors.card === '#ffffff' ? '#E5E5E5' : '#333333',
+            backgroundColor: 'transparent',
+        },
     });
+
+export const SkeletonTimelineEventCard: React.FC<{ isFirst?: boolean; isLast?: boolean }> = ({ isFirst, isLast }) => {
+    const { theme } = useTheme();
+    const styles = useMemo(() => getStyles(theme), [theme]);
+
+    const pulseAnim = React.useRef(new Animated.Value(0.5)).current;
+
+    React.useEffect(() => {
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(pulseAnim, {
+                    toValue: 1,
+                    duration: 1000,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(pulseAnim, {
+                    toValue: 0.5,
+                    duration: 1000,
+                    useNativeDriver: true,
+                }),
+            ])
+        ).start();
+    }, [pulseAnim]);
+
+    const lineColor = theme.colors.card === '#ffffff' ? '#E5E5E5' : '#333333';
+
+    return (
+        <Animated.View style={[styles.eventRow, { opacity: pulseAnim }]}>
+            {/* Column A */}
+            <View style={styles.timeCol}>
+                <View style={[styles.skeletonBox, { width: 36, height: 12, borderRadius: 6, marginBottom: 4 }]} />
+                <View style={[styles.skeletonBox, { width: 24, height: 12, borderRadius: 6 }]} />
+            </View>
+
+            {/* Column B */}
+            <View style={styles.nodeCol}>
+                {!isFirst && <View style={[styles.dashedSegment, { backgroundColor: lineColor }]} />}
+                <View style={[styles.skeletonCircle]} />
+                {!isLast && <View style={[styles.dashedSegment, styles.dashedSegmentBottom, { backgroundColor: lineColor }]} />}
+            </View>
+
+            {/* Column C */}
+            <View style={styles.textCol}>
+                <View style={[styles.skeletonBox, { width: 60, height: 14, borderRadius: 7, marginBottom: 6 }]} />
+                <View style={[styles.skeletonBox, { width: 120, height: 20, borderRadius: 10, marginBottom: 8 }]} />
+                <View style={[styles.skeletonBox, { width: 180, height: 14, borderRadius: 7 }]} />
+            </View>
+
+            {/* Column D */}
+            <View style={styles.ringCol}>
+                <View style={[styles.skeletonRing]} />
+            </View>
+        </Animated.View>
+    );
+};
