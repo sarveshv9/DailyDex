@@ -1,11 +1,12 @@
 import * as Haptics from '../../utils/haptics';
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useEffect } from 'react';
 import {
     Pressable,
     ScrollView,
     StyleSheet,
     Text,
     View,
+    Dimensions,
 } from 'react-native';
 import { Theme } from '../../constants/shared';
 import { useTheme } from '../../context/ThemeContext';
@@ -59,11 +60,11 @@ export const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({
     }, []);
 
     // Generate multiple weeks centered on today — enough to swipe forward/backward
-    // We show 5 weeks total (prev 2 + current + next 2)
+    const RANGE_WEEKS = 130; // 130 weeks ~ 2.5 years
     const weeks = useMemo(() => {
-        return Array.from({ length: 5 }, (_, wi) => {
+        return Array.from({ length: RANGE_WEEKS * 2 + 1 }, (_, wi) => {
             const anchor = new Date(today);
-            anchor.setDate(anchor.getDate() + (wi - 2) * 7);
+            anchor.setDate(anchor.getDate() + (wi - RANGE_WEEKS) * 7);
             return getWeekDates(anchor);
         });
     }, [today]);
@@ -75,8 +76,15 @@ export const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({
             const end = weeks[i][6];
             if (selectedDate >= start && selectedDate <= end) return i;
         }
-        return 2; // default to middle (current week)
+        return RANGE_WEEKS; // default to middle (current week)
     }, [weeks, selectedDate]);
+
+    // Auto-scroll horizontally when selectedWeekIndex changes
+    useEffect(() => {
+        // Assume screen width for the ScrollView layout (or close to it)
+        const SCREEN_WIDTH = Dimensions.get('window').width;
+        scrollRef.current?.scrollTo({ x: selectedWeekIndex * SCREEN_WIDTH, animated: true });
+    }, [selectedWeekIndex]);
 
     const todayKey = formatDateKey(today);
     const selectedKey = formatDateKey(selectedDate);
@@ -94,7 +102,11 @@ export const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({
             <View style={styles.headerRow}>
                 <Pressable
                     style={styles.headerDateBlock}
-                    onPress={() => onSelectDate(today)}
+                    onPress={() => {
+                        onSelectDate(today);
+                        const SCREEN_WIDTH = Dimensions.get('window').width;
+                        scrollRef.current?.scrollTo({ x: RANGE_WEEKS * SCREEN_WIDTH, animated: true });
+                    }}
                 >
                     <Text style={styles.headerText} testID="calendar-header-date">{monthHeader}</Text>
                     <Text style={styles.headerArrow}> ›</Text>
@@ -118,9 +130,11 @@ export const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({
                 pagingEnabled
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContent}
-                onLayout={() => {
-                    // Scroll to the current week page
-                    // Each page = full width (we'll use fixed column width * 7)
+                onLayout={(e) => {
+                    const width = e.nativeEvent.layout.width;
+                    if (width > 0) {
+                        scrollRef.current?.scrollTo({ x: selectedWeekIndex * width, animated: false });
+                    }
                 }}
             >
                 {weeks.map((weekDates, wi) => (
@@ -157,6 +171,8 @@ export const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({
                                         onPress={() => {
                                             Haptics.selectionAsync();
                                             onSelectDate(date);
+                                            const SCREEN_WIDTH = Dimensions.get('window').width;
+                                            scrollRef.current?.scrollTo({ x: wi * SCREEN_WIDTH, animated: true });
                                         }}
                                     >
                                         <View

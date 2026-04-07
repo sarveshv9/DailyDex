@@ -659,6 +659,21 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
     }, [pages, selectedDate, initialPageIndex]);
 
     const flatListRef = useRef<FlatList>(null);
+    const scrollSnapTimer = useRef<any>(null);
+
+    // Web: JS-based scroll snapping (CSS scroll-snap blocks virtualized scrolling)
+    const handleWebScrollSnap = useCallback((e: any) => {
+        if (Platform.OS !== 'web') return;
+        const offsetX = e.nativeEvent.contentOffset.x;
+        if (scrollSnapTimer.current) clearTimeout(scrollSnapTimer.current);
+        scrollSnapTimer.current = setTimeout(() => {
+            const pageIndex = Math.round(offsetX / SCREEN_WIDTH);
+            flatListRef.current?.scrollToOffset({
+                offset: pageIndex * SCREEN_WIDTH,
+                animated: true,
+            });
+        }, 150);
+    }, [SCREEN_WIDTH]);
 
     // Sync scroll when viewMode changes
     React.useEffect(() => {
@@ -669,9 +684,9 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
         const indexToScroll = targetIndex !== -1 ? targetIndex : initialPageIndex;
 
         setTimeout(() => {
-            flatListRef.current?.scrollToIndex({ index: indexToScroll, animated: false });
+            flatListRef.current?.scrollToOffset({ offset: indexToScroll * SCREEN_WIDTH, animated: true });
         }, 50);
-    }, [viewMode, is7Day, selectedDate]);
+    }, [viewMode, is7Day, selectedDate, SCREEN_WIDTH]);
 
     const renderPage = useCallback(({ item: pageDates }: { item: Date[] }) => (
         <TimelinePage
@@ -717,7 +732,18 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                     )}
                 </Pressable>
 
-                <Pressable style={styles.headerDateBlock} onPress={() => handleSelectDate(today)}>
+                <Pressable
+                    style={styles.headerDateBlock}
+                    onPress={() => {
+                        handleSelectDate(today);
+                        if (viewMode !== 'month' && flatListRef.current) {
+                            const dateStr = formatDateKey(today);
+                            const targetIndex = pages.findIndex(page => page.some(d => formatDateKey(d) === dateStr));
+                            const indexToScroll = targetIndex !== -1 ? targetIndex : initialPageIndex;
+                            flatListRef.current.scrollToIndex({ index: indexToScroll, animated: true });
+                        }
+                    }}
+                >
                     <View style={styles.headerDateInner}>
                         <Animated.Text style={[styles.headerWeekday, { fontSize: headerFontSize }]}>
                             {weekdayStr}
@@ -779,9 +805,6 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                             keyExtractor={(_, index) => `page-${index}`}
                             horizontal
                             pagingEnabled={Platform.OS !== 'web'}
-                            snapToInterval={Platform.OS === 'web' ? SCREEN_WIDTH : undefined}
-                            snapToAlignment="start"
-                            decelerationRate={Platform.OS === 'web' ? "fast" : "normal"}
                             showsHorizontalScrollIndicator={false}
                             initialScrollIndex={initialTargetIndex}
                             getItemLayout={(_, idx) => ({
@@ -790,7 +813,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                                 index: idx,
                             })}
                             // Performance optimizations
-                            windowSize={3}
+                            windowSize={Platform.OS === 'web' ? 7 : 3}
                             maxToRenderPerBatch={2}
                             updateCellsBatchingPeriod={50}
                             removeClippedSubviews={Platform.OS === 'android'}
@@ -800,6 +823,10 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                                     animated: false,
                                 });
                             }}
+                            {...(Platform.OS === 'web' ? {
+                                onScroll: handleWebScrollSnap,
+                                scrollEventThrottle: 16,
+                            } : {})}
                         />
                     </Animated.View>
 
