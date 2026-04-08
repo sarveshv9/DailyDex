@@ -49,7 +49,7 @@ export default function FocusScreen() {
     };
 
     const toggleTimer = () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         if (timer.isActive) {
             timer.pauseTimer();
         } else {
@@ -242,7 +242,7 @@ export default function FocusScreen() {
                                     <Pressable
                                         style={({ pressed }) => [styles.skipBtn, pressed && { opacity: 0.6 }]}
                                         onPress={() => {
-                                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                             timer.advancePomodoroPhase();
                                         }}
                                     >

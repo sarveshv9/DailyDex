@@ -160,7 +160,7 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
         setTimeLeft(nextDuration);
         setIsCompleted(false);
         setIsActive(true);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }, []);
 
     const pauseTimer = useCallback(() => setIsActive(false), []);

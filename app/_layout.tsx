@@ -1,3 +1,4 @@
+import "../utils/suppressWarnings";
 import { useFonts } from "expo-font";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -95,7 +96,7 @@ function RootLayoutNav() {
               <StatusBar style="dark" />
               <Stack>
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                <Stack.Screen name="(auth)/sign-in" options={{ headerShown: false }} />
                 <Stack.Screen name="routine" options={{ headerShown: false }} />
                 <Stack.Screen name="setup" options={{ headerShown: false }} />
                 <Stack.Screen name="privacy" options={{ headerShown: false, presentation: "card" }} />

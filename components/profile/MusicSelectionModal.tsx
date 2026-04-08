@@ -40,7 +40,7 @@ export function MusicSelectionModal({
                     <Pressable
                         onPress={() => {
                             if (activeSongId === 0) return;
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                             onSelectSong(0);
                             setTimeout(() => onClose(), 300);
                         }}
@@ -68,7 +68,7 @@ export function MusicSelectionModal({
                                 <Pressable
                                     onPress={() => {
                                         if (isApplied) return;
-                                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                         onSelectSong(song.id);
                                         // Auto-close on selection
                                         setTimeout(() => onClose(), 300);

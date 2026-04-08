@@ -160,7 +160,7 @@ export function ThemeSelectionModal({
     };
 
     const handleDeleteCustom = (id: string, isCurrentlyActive: boolean) => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         removeCustomTheme(id);
         if (isCurrentlyActive) {
             onSelectTheme('pokeball');
@@ -235,7 +235,7 @@ export function ThemeSelectionModal({
                                 <Pressable
                                     onPress={() => {
                                         if (isApplied) return;
-                                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                         onSelectTheme(tName);
                                         if (isAutoTheme) onToggleAutoTheme(false);
                                         setTimeout(() => onClose(), 300);
@@ -279,7 +279,7 @@ export function ThemeSelectionModal({
                                     <Pressable
                                         onPress={() => {
                                             if (isApplied) return;
-                                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                             onSelectTheme(`custom_${id}`);
                                             if (isAutoTheme) onToggleAutoTheme(false);
                                             setTimeout(() => onClose(), 300);

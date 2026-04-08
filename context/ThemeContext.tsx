@@ -6,7 +6,10 @@ import { supabase } from '../lib/supabase';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
+  const isNewArchitecture = Boolean((global as any).nativeFabricUIManager) || Boolean((global as any).__turboModuleProxy);
+  if (!isNewArchitecture) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+  }
 }
 
 export interface CustomThemeConfig {

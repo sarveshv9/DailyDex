@@ -30,7 +30,7 @@ export default function SettingsScreen() {
   const styles = useMemo(() => makeStyles(theme), [theme]);
 
   const handleToggleHaptics = (value: boolean) => {
-    if (value) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (value) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setHapticsEnabled(value);
   };
 

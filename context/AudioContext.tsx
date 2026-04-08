@@ -1,5 +1,5 @@
 // context/AudioContext.tsx
-import { Audio } from 'expo-av';
+import { createAudioPlayer, setAudioModeAsync, AudioPlayer } from 'expo-audio';
 import React, { createContext, useContext, useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { SONG_LIST } from '../constants/songs';
 
@@ -17,17 +17,15 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({
   const [selectedSong, _setSelectedSong] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const soundRef = useRef<Audio.Sound | null>(null);
+  const soundRef = useRef<AudioPlayer | null>(null);
   const selectedSongRef = useRef(selectedSong);
 
   // Set audio mode on mount
   useEffect(() => {
     const setupAudio = async () => {
       try {
-        await Audio.setAudioModeAsync({
-          playsInSilentModeIOS: true,
-          staysActiveInBackground: false,
-          shouldDuckAndroid: true,
+        await setAudioModeAsync({
+          playsInSilentMode: true,
         });
       } catch (error) {
         // Error handling
@@ -40,15 +38,15 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     return () => {
       if (soundRef.current) {
-        soundRef.current.unloadAsync().catch(() => {});
+        soundRef.current.release();
       }
     };
   }, []);
 
   const stopSound = useCallback(async () => {
     if (soundRef.current) {
-      await soundRef.current.stopAsync();
-      await soundRef.current.unloadAsync();
+      soundRef.current.pause();
+      soundRef.current.release();
       soundRef.current = null;
     }
     setIsPlaying(false);
@@ -61,8 +59,8 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({
     // Always unload previous sound when loading a new one
     if (soundRef.current) {
       try {
-        await soundRef.current.stopAsync();
-        await soundRef.current.unloadAsync();
+        soundRef.current.pause();
+        soundRef.current.release();
       } catch (error) {
         // Ignore unload error
       }
@@ -70,21 +68,10 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({
     }
 
     try {
-      const { sound } = await Audio.Sound.createAsync(
-        song.file,
-        { 
-          shouldPlay: true, 
-          isLooping: true,
-          progressUpdateIntervalMillis: 500,
-          positionMillis: 0,
-        },
-        (status) => {
-          if (!status.isLoaded && 'error' in status) {
-            // Silently handle error
-          }
-        }
-      );
-      soundRef.current = sound;
+      const player = createAudioPlayer(song.file);
+      player.loop = true;
+      player.play();
+      soundRef.current = player;
       setIsPlaying(true);
     } catch (error) {
       setIsPlaying(false);
