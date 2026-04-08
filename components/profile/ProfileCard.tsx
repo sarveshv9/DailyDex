@@ -8,7 +8,8 @@ import {
   Text,
   TextInput,
   View,
-  Platform
+  Platform,
+  Image
 } from "react-native";
 import { Theme } from "../../constants/shared";
 import { useTheme } from "../../context/ThemeContext";
@@ -55,7 +56,16 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
       {/* Avatar */}
       <View style={styles.avatarContainer}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{userProfile.avatar}</Text>
+          {userProfile.avatar?.startsWith('http') ? (
+            <Image 
+              source={{ uri: userProfile.avatar }} 
+              style={styles.avatarImage} 
+            />
+          ) : (
+            <Text style={styles.avatarText}>
+              {userProfile.avatar ? userProfile.avatar.charAt(0).toUpperCase() : 'U'}
+            </Text>
+          )}
         </View>
       </View>
 
@@ -177,6 +187,11 @@ const getStyles = (theme: Theme) =>
         },
         android: { elevation: theme.glows.primary.elevation },
       }),
+    },
+    avatarImage: {
+      width: "100%",
+      height: "100%",
+      borderRadius: 38,
     },
     avatarText: {
       fontSize: 50,

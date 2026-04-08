@@ -5,6 +5,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../lib/supabase';
 import { useRouter } from 'expo-router';
+import * as Linking from 'expo-linking';
+import * as WebBrowser from 'expo-web-browser';
+
+// Optional: Complete the auth session if the app is returning from an OAuth flow
+if (Platform.OS !== 'web') {
+  WebBrowser.maybeCompleteAuthSession();
+}
 
 export default function SignInScreen() {
   const { theme, isDarkMode } = useTheme();
@@ -12,14 +19,37 @@ export default function SignInScreen() {
 
   const handleGoogleSignIn = async () => {
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const redirectUrl = Linking.createURL('/(auth)/sign-in');
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: Platform.OS === 'web' ? window.location.origin : undefined,
+          redirectTo: Platform.OS === 'web' ? window.location.origin : redirectUrl,
+          skipBrowserRedirect: Platform.OS !== 'web',
         },
       });
+
       if (error) {
         console.error("Google sign in error", error.message);
+      } else if (data?.url && Platform.OS !== 'web') {
+        const res = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
+        if (res.type === 'success' && res.url) {
+          // Parse tokens or code from the URL manually since getSessionFromUrl is not available
+          const getParam = (name: string) => {
+            const match = res.url.match(new RegExp(`[#?&]${name}=([^&]+)`));
+            return match ? decodeURIComponent(match[1]) : null;
+          };
+          
+          const access_token = getParam('access_token');
+          const refresh_token = getParam('refresh_token');
+          const code = getParam('code');
+          
+          if (access_token && refresh_token) {
+            await supabase.auth.setSession({ access_token, refresh_token });
+          } else if (code) {
+            await supabase.auth.exchangeCodeForSession(code);
+          }
+        }
       }
     } catch (err) {
       console.error(err);
