@@ -18,6 +18,8 @@ if (Platform.OS !== 'web') {
 
 const CHANNEL_ID = "zen-routine";
 const NOTIFICATION_ID_PREFIX = "zen-routine-";
+export const FOCUS_CHANNEL_ID = "zen-focus-alarms";
+export const FOCUS_NOTIFICATION_ID = "zen-focus-timer";
 
 /**
  * Request user permission for local notifications.
@@ -31,6 +33,14 @@ export const requestNotificationPermissions = async (): Promise<boolean> => {
             importance: Notifications.AndroidImportance.HIGH,
             vibrationPattern: [0, 250, 250, 250],
             lightColor: "#FF231F7C",
+        });
+        await Notifications.setNotificationChannelAsync(FOCUS_CHANNEL_ID, {
+            name: "Focus Timer Alarms",
+            importance: Notifications.AndroidImportance.MAX,
+            vibrationPattern: [0, 500, 250, 500],
+            lightColor: "#4DA6FF",
+            lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+            bypassDnd: true,
         });
     }
 
@@ -102,5 +112,46 @@ export const cancelAllRoutineNotifications = async (): Promise<void> => {
         if (notif.identifier.startsWith(NOTIFICATION_ID_PREFIX)) {
             await Notifications.cancelScheduledNotificationAsync(notif.identifier);
         }
+    }
+};
+
+/**
+ * Schedule a high-priority alarm notification for the end of a focus timer.
+ */
+export const scheduleFocusTimerAlarm = async (
+    title: string,
+    body: string,
+    seconds: number
+): Promise<void> => {
+    if (Platform.OS === 'web' || seconds <= 0) return;
+    try {
+        await cancelFocusTimerAlarm();
+        await Notifications.scheduleNotificationAsync({
+            identifier: FOCUS_NOTIFICATION_ID,
+            content: {
+                title,
+                body,
+                sound: true,
+            },
+            trigger: {
+                type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+                seconds: Math.max(1, Math.round(seconds)),
+                channelId: FOCUS_CHANNEL_ID,
+            },
+        });
+    } catch (e) {
+        console.error("Failed to schedule focus timer notification", e);
+    }
+};
+
+/**
+ * Cancel any scheduled focus timer alarm notification.
+ */
+export const cancelFocusTimerAlarm = async (): Promise<void> => {
+    if (Platform.OS === 'web') return;
+    try {
+        await Notifications.cancelScheduledNotificationAsync(FOCUS_NOTIFICATION_ID);
+    } catch (e) {
+        // ignore cancellation failure
     }
 };
