@@ -29,6 +29,7 @@ import { StatCard } from "../../components/profile/StatCard";
 import { StatsModal } from "../../components/profile/StatsModal";
 import { ThemeSelectionModal } from "../../components/profile/ThemeSelectionModal";
 import { BottomSheet } from "../../components/profile/BottomSheet";
+import { RestoreModal } from "../../components/profile/RestoreModal";
 import { useAudio } from "../../context/AudioContext";
 import { useSettings } from "../../context/SettingsContext";
 import { useTheme } from "../../context/ThemeContext";
@@ -221,6 +222,7 @@ export default function ProfileScreen() {
   // Profile setup state
   const [profileCreated, setProfileCreated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [restoreModalOpen, setRestoreModalOpen] = useState(false);
 
   // Real user stats from utils/stats
   const [userStats, setUserStats] = useState<UserStats | null>(null);
@@ -357,6 +359,25 @@ export default function ProfileScreen() {
         Alert.alert("Error", "Failed to create backup.");
       }
       console.error(e);
+    }
+  };
+
+  const handleRestore = () => {
+    if (settings.hapticsEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setRestoreModalOpen(true);
+  };
+
+  const handleRestoreSuccess = async () => {
+    try {
+      const storedProfile = await AsyncStorage.getItem("@zen_user_profile");
+      if (storedProfile) {
+        setUser(JSON.parse(storedProfile));
+        setProfileCreated(true);
+      }
+      const statsData = await loadStats();
+      setUserStats(statsData);
+    } catch (e) {
+      console.error("Error refreshing state after restore:", e);
     }
   };
 
@@ -681,6 +702,7 @@ export default function ProfileScreen() {
           <SettingsSection
             theme={theme}
             handleBackup={handleBackup}
+            handleRestore={handleRestore}
             handleResetTasks={handleResetTasks}
           />
         </View>
@@ -718,6 +740,14 @@ export default function ProfileScreen() {
         theme={theme}
         user={user}
         setUser={setUser}
+      />
+
+      {/* -------------------- Restore Backup Modal -------------------- */}
+      <RestoreModal
+        visible={restoreModalOpen}
+        onClose={() => setRestoreModalOpen(false)}
+        theme={theme}
+        onRestoreSuccess={handleRestoreSuccess}
       />
 
     </SafeAreaView>

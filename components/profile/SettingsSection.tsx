@@ -37,6 +37,7 @@ interface Theme {
 interface SettingsSectionProps {
   theme: Theme;
   handleBackup: () => void;
+  handleRestore?: () => void;
   handleResetTasks: () => void;
 }
 
@@ -73,7 +74,7 @@ const SettingItem = React.memo<{
   );
 });
 
-export const SettingsSection: React.FC<SettingsSectionProps> = ({ theme, handleBackup, handleResetTasks }) => {
+export const SettingsSection: React.FC<SettingsSectionProps> = ({ theme, handleBackup, handleRestore, handleResetTasks }) => {
   const router = useRouter();
   const styles = useMemo(() => makeStyles(theme), [theme]);
 
@@ -108,6 +109,14 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ theme, handleB
           text="Backup & Export"
           onPress={handleBackup}
         />
+        {handleRestore && (
+          <SettingItem
+            theme={theme}
+            iconName="cloud-download-outline"
+            text="Restore Backup"
+            onPress={handleRestore}
+          />
+        )}
         <SettingItem
           theme={theme}
           iconName="warning-outline"
