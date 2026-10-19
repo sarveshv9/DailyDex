@@ -99,7 +99,7 @@ const useModalAnimation = (screenWidth: number, screenHeight: number) => {
 const ConfirmModal = ({ visible, title, message, confirmText, onCancel, onConfirm, theme }: any) => {
   if (!visible) return null;
   return (
-    <Modal visible={visible} transparent animationType="fade">
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
         <View style={{ backgroundColor: theme.colors.card, width: '80%', borderRadius: 24, padding: 24, alignItems: 'center' }}>
           <Text style={{ fontSize: 20, fontFamily: theme.fonts.bold, color: theme.colors.text, marginBottom: 8, textAlign: 'center' }}>{title}</Text>

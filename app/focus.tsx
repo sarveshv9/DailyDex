@@ -1,8 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "../utils/haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
+    Alert,
+    BackHandler,
     Dimensions,
     Pressable,
     StyleSheet,
@@ -38,6 +40,8 @@ export default function FocusScreen() {
 
     // If the timer in context perfectly matches the one we are looking at:
     const isCurrentTimer = timer.taskId === paramTaskId;
+    const isActive = isCurrentTimer && timer.isActive;
+    const isCompleted = isCurrentTimer && timer.isCompleted;
 
     // Local state for picking duration before starting
     const [selectedDuration, setSelectedDuration] = useState(25 * 60);
@@ -57,10 +61,41 @@ export default function FocusScreen() {
         }
     };
 
-    const quitTimer = () => {
+    const requestQuit = useCallback(() => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        router.back();
-    };
+        if (isActive) {
+            Alert.alert(
+                "Leave Focus Session?",
+                "Your focus timer is currently running. Leaving now will stop this session.",
+                [
+                    { text: "Keep Focusing", style: "cancel" },
+                    {
+                        text: "Leave Session",
+                        style: "destructive",
+                        onPress: () => {
+                            timer.stopTimer();
+                            router.back();
+                        }
+                    }
+                ]
+            );
+        } else {
+            router.back();
+        }
+    }, [isActive, timer, router]);
+
+    useEffect(() => {
+        const onBackPress = () => {
+            if (isActive) {
+                requestQuit();
+                return true;
+            }
+            return false;
+        };
+
+        const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+        return () => sub.remove();
+    }, [isActive, requestQuit]);
 
     const handleComplete = () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -74,8 +109,6 @@ export default function FocusScreen() {
     const displayTime = showDurationPicker 
         ? (selectedMode === "Pomodoro" ? 25 * 60 : selectedDuration) 
         : timer.timeLeft;
-    const isActive = isCurrentTimer && timer.isActive;
-    const isCompleted = isCurrentTimer && timer.isCompleted;
 
     const formatTime = (seconds: number) => {
         const m = Math.floor(seconds / 60);
@@ -88,7 +121,7 @@ export default function FocusScreen() {
             <View style={styles.header}>
                 {/* Press feedback on close: acknowledges tap on a frequent navigation action */}
                 <Pressable
-                    onPress={quitTimer}
+                    onPress={requestQuit}
                     hitSlop={12}
                     style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1, transform: [{ scale: pressed ? 0.9 : 1 }] })}
                 >

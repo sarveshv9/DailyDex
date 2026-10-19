@@ -15,12 +15,14 @@ import { BlurView } from 'expo-blur';
 import React, { useEffect, useRef } from 'react';
 import {
   Animated,
+  BackHandler,
   Platform,
   Pressable,
   StyleSheet,
   View,
   useWindowDimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   GestureHandlerRootView,
   State as GestureState,
@@ -45,10 +47,27 @@ function CustomTabBar({
 }: MaterialTopTabBarProps) {
   const { theme } = useTheme();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const bottomOffset = Math.max(16, insets.bottom + 8);
   const prevIndex = useRef(state.index);
 
   const tabBarWidth = width * 0.9;
   const tabWidth = tabBarWidth / state.routes.length;
+
+  // Android hardware back button: return to 'index' (Home) tab if on another tab
+  useEffect(() => {
+    const onBackPress = () => {
+      const currentRoute = state.routes[state.index]?.name;
+      if (currentRoute !== 'index') {
+        navigation.navigate('index');
+        return true;
+      }
+      return false;
+    };
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => subscription.remove();
+  }, [state.index, state.routes, navigation]);
 
   // Use interpolation to move the indicator
   const translateX = position.interpolate({
@@ -99,7 +118,7 @@ function CustomTabBar({
   };
 
   return (
-    <View style={styles.tabBarContainer}>
+    <View style={[styles.tabBarContainer, { bottom: bottomOffset }]}>
       <PanGestureHandler
         onGestureEvent={onGestureEvent}
         onHandlerStateChange={onHandlerStateChange}
