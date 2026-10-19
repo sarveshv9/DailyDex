@@ -2,8 +2,10 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
+    Alert,
+    BackHandler,
     Dimensions,
     Pressable,
     ScrollView,
@@ -16,6 +18,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { InlineTimePicker } from "../components/common/InlineTimePicker";
 import { Theme } from "../constants/shared";
 import { useTheme } from "../context/ThemeContext";
+import { supabase } from "../lib/supabase";
 import { scheduleRoutineNotifications } from "../utils/notifications";
 import { getRoutineIcon, RoutineItem, timeToMinutes } from "../utils/utils";
 
@@ -352,6 +355,7 @@ function StepPick({
                 style={{ flex: 1 }}
                 contentContainerStyle={styles.gridContainer}
                 showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
             >
                 {filtered.map((tmpl) => {
                     const isMandatory = tmpl.task === "Wake Up" || tmpl.task === "Sleep";
@@ -568,6 +572,7 @@ function StepTimes({
             <ScrollView
                 contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 130 }}
                 showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
             >
                 {/* Timeline */}
                 <View style={styles.timeline}>
@@ -717,6 +722,20 @@ export default function SetupScreen() {
     const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
     const [saving, setSaving] = useState(false);
 
+    // Hardware back button: navigate to previous step on Android
+    useEffect(() => {
+        const onBackPress = () => {
+            if (step > 1) {
+                setStep((prev) => (prev - 1) as 1 | 2 | 3 | 4);
+                return true;
+            }
+            return false;
+        };
+
+        const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+        return () => sub.remove();
+    }, [step]);
+
     // Initial state with default wake/sleep times
     const [wakeTime, setWakeTime] = useState("07:00 AM");
     const [sleepTime, setSleepTime] = useState("10:00 PM");
@@ -746,10 +765,30 @@ export default function SetupScreen() {
         try {
             await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(minimalItems));
             await AsyncStorage.setItem(SETUP_KEY, "true");
+
+            // Sync to Supabase if signed in
+            const { data: userAuth } = await supabase.auth.getUser();
+            if (userAuth?.user) {
+                const dbItems = minimalItems.map(item => ({
+                    id: item.id,
+                    user_id: userAuth.user.id,
+                    time: item.time,
+                    task: item.task,
+                    description: item.description || null,
+                    image_key: item.imageKey || null,
+                    insertion_order: item.insertionOrder,
+                    duration: item.duration || 30,
+                    days_of_week: item.daysOfWeek || [0, 1, 2, 3, 4, 5, 6],
+                    date: item.date || null,
+                }));
+                await supabase.from('routines').upsert(dbItems);
+            }
+
             await scheduleRoutineNotifications(minimalItems);
             router.replace("/(tabs)");
         } catch (e) {
             console.error("Failed to skip setup", e);
+            Alert.alert("Setup Error", "Failed to complete setup. Please try again.");
             setSaving(false);
         }
     };
@@ -844,10 +883,30 @@ export default function SetupScreen() {
         try {
             await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(items));
             await AsyncStorage.setItem(SETUP_KEY, "true");
+
+            // Sync to Supabase if signed in
+            const { data: userAuth } = await supabase.auth.getUser();
+            if (userAuth?.user) {
+                const dbItems = items.map(item => ({
+                    id: item.id,
+                    user_id: userAuth.user.id,
+                    time: item.time,
+                    task: item.task,
+                    description: item.description || null,
+                    image_key: item.imageKey || null,
+                    insertion_order: item.insertionOrder,
+                    duration: item.duration || 30,
+                    days_of_week: item.daysOfWeek || [0, 1, 2, 3, 4, 5, 6],
+                    date: item.date || null,
+                }));
+                await supabase.from('routines').upsert(dbItems);
+            }
+
             await scheduleRoutineNotifications(items);
             router.replace("/(tabs)");
         } catch (e) {
             console.error("Failed to save setup data", e);
+            Alert.alert("Setup Error", "Failed to save your routine. Please try again.");
             setSaving(false);
         }
     };
