@@ -15,8 +15,11 @@ import { BlurView } from 'expo-blur';
 import CrossPlatformSegmentedControl from '../components/common/CrossPlatformSegmentedControl';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Theme } from "../constants/shared";
+import { SONG_LIST } from "../constants/songs";
+import { useAudio } from "../context/AudioContext";
 import { useTheme } from "../context/ThemeContext";
 import { useTimer } from "../context/TimerContext";
+import { MusicSelectionModal } from "../components/profile/MusicSelectionModal";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -37,6 +40,8 @@ export default function FocusScreen() {
     const paramTaskName = (params.taskName as string) || "Focus Session";
 
     const timer = useTimer();
+    const audio = useAudio();
+    const [musicModalVisible, setMusicModalVisible] = useState(false);
 
     // If the timer in context perfectly matches the one we are looking at:
     const isCurrentTimer = timer.taskId === paramTaskId;
@@ -129,9 +134,42 @@ export default function FocusScreen() {
                 <Pressable
                     onPress={requestQuit}
                     hitSlop={12}
+                    accessibilityLabel="Close focus session"
                     style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1, transform: [{ scale: pressed ? 0.9 : 1 }] })}
                 >
                     <Ionicons name="close" size={28} color={theme.colors.primary} />
+                </Pressable>
+
+                {/* Focus Music Selector */}
+                <Pressable
+                    onPress={() => {
+                        Haptics.selectionAsync();
+                        setMusicModalVisible(true);
+                    }}
+                    hitSlop={10}
+                    accessibilityLabel="Select focus music"
+                    style={({ pressed }) => [
+                        styles.musicButton,
+                        audio.isPlaying && styles.musicButtonActive,
+                        pressed && { opacity: 0.8, transform: [{ scale: 0.95 }] },
+                    ]}
+                >
+                    <Ionicons
+                        name={audio.isPlaying ? "musical-notes" : "musical-notes-outline"}
+                        size={18}
+                        color={audio.isPlaying ? theme.colors.white : theme.colors.primary}
+                    />
+                    <Text
+                        style={[
+                            styles.musicButtonText,
+                            audio.isPlaying && styles.musicButtonTextActive,
+                        ]}
+                        numberOfLines={1}
+                    >
+                        {audio.selectedSong > 0
+                            ? (SONG_LIST.find((s) => s.id === audio.selectedSong)?.title || "Music")
+                            : "Ambient"}
+                    </Text>
                 </Pressable>
             </View>
 
@@ -326,6 +364,14 @@ export default function FocusScreen() {
                 )}
 
             </View>
+
+            <MusicSelectionModal
+                visible={musicModalVisible}
+                onClose={() => setMusicModalVisible(false)}
+                currentTheme={theme}
+                activeSongId={audio.selectedSong}
+                onSelectSong={audio.setSelectedSong}
+            />
         </SafeAreaView>
     );
 }
@@ -339,7 +385,30 @@ const getStyles = (theme: Theme) =>
         header: {
             paddingHorizontal: theme.spacing.lg,
             paddingTop: theme.spacing.md,
-            alignItems: "flex-end",
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+        },
+        musicButton: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+            paddingHorizontal: 12,
+            paddingVertical: 7,
+            borderRadius: 20,
+            backgroundColor: `${theme.colors.primary}15`,
+        },
+        musicButtonActive: {
+            backgroundColor: theme.colors.primary,
+        },
+        musicButtonText: {
+            fontFamily: theme.fonts.medium,
+            fontSize: 13,
+            color: theme.colors.primary,
+            maxWidth: 130,
+        },
+        musicButtonTextActive: {
+            color: theme.colors.white,
         },
         content: {
             flex: 1,
