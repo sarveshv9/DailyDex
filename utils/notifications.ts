@@ -66,6 +66,8 @@ export const scheduleRoutineNotifications = async (
     if (!hasPermission) return;
 
     for (const item of routines) {
+        if (item.isSkipped) continue;
+
         const minutes = timeToMinutes(item.time);
         if (minutes === Number.MAX_SAFE_INTEGER) continue; // skip invalid times
 
@@ -86,17 +88,68 @@ export const scheduleRoutineNotifications = async (
                                                     : item.imageKey === "sleep" ? "😴"
                                                         : "⭐";
 
+        const title = `Time for ${item.task}! ${emoji}`;
+        const body = item.description || "Your Zen routine awaits.";
+
+        // Case 1: Specific one-off date ("YYYY-MM-DD")
+        if (item.date) {
+            const [y, m, d] = item.date.split('-').map(Number);
+            const targetDate = new Date(y, m - 1, d, hours, mins, 0);
+            if (targetDate.getTime() > Date.now()) {
+                await Notifications.scheduleNotificationAsync({
+                    identifier: `${NOTIFICATION_ID_PREFIX}${item.id}`,
+                    content: {
+                        title,
+                        body,
+                        sound: true,
+                    },
+                    trigger: {
+                        type: Notifications.SchedulableTriggerInputTypes.DATE,
+                        date: targetDate,
+                        channelId: FOCUS_CHANNEL_ID,
+                    },
+                });
+            }
+            continue;
+        }
+
+        // Case 2: Specific days of week (daysOfWeek: 0 = Sun, 1 = Mon ... 6 = Sat)
+        if (item.daysOfWeek && item.daysOfWeek.length > 0 && item.daysOfWeek.length < 7) {
+            for (const day of item.daysOfWeek) {
+                // expo-notifications weekday: 1 (Sun) through 7 (Sat)
+                const weekday = day + 1;
+                await Notifications.scheduleNotificationAsync({
+                    identifier: `${NOTIFICATION_ID_PREFIX}${item.id}_${day}`,
+                    content: {
+                        title,
+                        body,
+                        sound: true,
+                    },
+                    trigger: {
+                        type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+                        weekday,
+                        hour: hours,
+                        minute: mins,
+                        channelId: FOCUS_CHANNEL_ID,
+                    },
+                });
+            }
+            continue;
+        }
+
+        // Case 3: Daily repeating routine
         await Notifications.scheduleNotificationAsync({
             identifier: `${NOTIFICATION_ID_PREFIX}${item.id}`,
             content: {
-                title: `Time for ${item.task}! ${emoji}`,
-                body: item.description || "Your Zen routine awaits.",
+                title,
+                body,
                 sound: true,
             },
             trigger: {
                 type: Notifications.SchedulableTriggerInputTypes.DAILY,
                 hour: hours,
                 minute: mins,
+                channelId: FOCUS_CHANNEL_ID,
             },
         });
     }
