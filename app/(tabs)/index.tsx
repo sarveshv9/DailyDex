@@ -6,6 +6,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AccessibilityRole,
   ActivityIndicator,
+  Alert,
   Dimensions,
   Platform,
   Pressable,
@@ -14,6 +15,7 @@ import {
   Text,
   View,
 } from "react-native";
+import * as Haptics from "../../utils/haptics";
 import Animated, {
   FadeIn,
   FadeInDown,
@@ -89,27 +91,66 @@ const formatDate = (date: Date): string =>
     month: "long",
   });
 
-const getCurrentTask = (
+interface ScheduleStatus {
+  isBetween: boolean;
+  activeTask: RoutineItem | null;
+  nextTask: RoutineItem | null;
+  progress: number;
+}
+
+const getScheduleStatus = (
   now: Date,
   routines: RoutineItem[]
-): RoutineItem | null => {
-  if (routines.length === 0) return null;
+): ScheduleStatus => {
+  if (routines.length === 0) {
+    return { isBetween: false, activeTask: null, nextTask: null, progress: 0 };
+  }
+
   const currentMinutes = (now.getHours() < 4 ? now.getHours() + 24 : now.getHours()) * 60 + now.getMinutes();
 
-  let current = routines[0];
+  let active: RoutineItem | null = null;
+  let nextUpcoming: RoutineItem | null = null;
+
   for (let i = 0; i < routines.length; i++) {
-    const rMinutes = timeToMinutes(routines[i].time);
-    if (currentMinutes >= rMinutes) {
-      current = routines[i];
+    const rStart = timeToMinutes(routines[i].time);
+    const rDuration = routines[i].duration || 30;
+    const rEnd = rStart + rDuration;
+
+    if (currentMinutes >= rStart && currentMinutes < rEnd) {
+      active = routines[i];
+    } else if (currentMinutes < rStart && !nextUpcoming) {
+      nextUpcoming = routines[i];
     }
   }
 
-  const firstMinutes = timeToMinutes(routines[0].time);
-  if (currentMinutes < firstMinutes) {
-    return routines[routines.length - 1];
+  if (active) {
+    const startM = timeToMinutes(active.time);
+    const dur = active.duration || 30;
+    const progress = Math.min(1, Math.max(0, (currentMinutes - startM) / dur));
+    return {
+      isBetween: false,
+      activeTask: active,
+      nextTask: nextUpcoming,
+      progress,
+    };
   }
 
-  return current;
+  // If not currently inside a task duration, we are between tasks
+  if (nextUpcoming) {
+    return {
+      isBetween: true,
+      activeTask: null,
+      nextTask: nextUpcoming,
+      progress: 0,
+    };
+  }
+
+  return {
+    isBetween: true,
+    activeTask: null,
+    nextTask: null,
+    progress: 1,
+  };
 };
 
 const getNextTasks = (
@@ -124,28 +165,6 @@ const getNextTasks = (
     (r) => timeToMinutes(r.time) > currentMinutes
   );
   return upcoming.slice(0, count);
-};
-
-const getTaskProgress = (
-  now: Date,
-  routines: RoutineItem[],
-  current: RoutineItem | null
-): number => {
-  if (!current || routines.length === 0) return 0;
-  const currentMinutes = (now.getHours() < 4 ? now.getHours() + 24 : now.getHours()) * 60 + now.getMinutes();
-  const currentStart = timeToMinutes(current.time);
-
-  const currentIdx = routines.findIndex((r) => r.id === current.id);
-  const nextIdx = currentIdx + 1;
-  const nextStart =
-    nextIdx < routines.length
-      ? timeToMinutes(routines[nextIdx].time)
-      : currentStart + 60;
-
-  const elapsed = currentMinutes - currentStart;
-  const total = nextStart - currentStart;
-  if (total <= 0) return 0;
-  return Math.min(1, Math.max(0, elapsed / total));
 };
 
 const formatTaskTime = (timeStr: string): string => {
@@ -463,6 +482,17 @@ const getStyles = (theme: Theme) =>
       color: theme.colors.white,
       letterSpacing: 0.3,
     },
+    timelineLink: {
+      marginTop: 14,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 6,
+    },
+    timelineLinkText: {
+      fontSize: 14,
+      fontFamily: theme.fonts.medium,
+      color: theme.colors.primary,
+    },
 
     /* Up Next section */
     upNextList: {
@@ -653,23 +683,30 @@ function HomeScreen() {
     return getRoutineItemsForDate(routines, currentTime);
   }, [routines, currentTime]);
 
-  const currentTaskItem = useMemo(
-    () => getCurrentTask(currentTime, todayRoutines),
+  const scheduleStatus = useMemo(
+    () => getScheduleStatus(currentTime, todayRoutines),
     [currentTime, todayRoutines]
   );
-  const currentTaskText = currentTaskItem?.task || "🌸 Just Breathe";
+
+  const isBetween = scheduleStatus.isBetween;
+  const currentTaskItem = scheduleStatus.activeTask || scheduleStatus.nextTask;
+  const currentTaskText = isBetween
+    ? (scheduleStatus.nextTask ? `Next: ${scheduleStatus.nextTask.task}` : "Mindful Pause 🌿")
+    : (scheduleStatus.activeTask?.task || "🌸 Just Breathe");
+
+  const currentTaskDesc = isBetween
+    ? (scheduleStatus.nextTask ? `Starts at ${formatTaskTime(scheduleStatus.nextTask.time)}` : "All routines done for today!")
+    : (scheduleStatus.activeTask?.description || "Your mindful daily routine.");
+
   const taskIcon = useMemo(
-    () => getRoutineIcon(currentTaskItem?.imageKey),
-    [currentTaskItem]
+    () => getRoutineIcon(scheduleStatus.activeTask?.imageKey || (isBetween ? "breathe" : undefined)),
+    [scheduleStatus, isBetween]
   );
   const nextTasks = useMemo(
     () => getNextTasks(currentTime, todayRoutines, 5),
     [currentTime, todayRoutines]
   );
-  const taskProgress = useMemo(
-    () => getTaskProgress(currentTime, todayRoutines, currentTaskItem),
-    [currentTime, todayRoutines, currentTaskItem]
-  );
+  const taskProgress = scheduleStatus.progress;
 
   // Daily progress
   const todayStr = currentTime.toISOString().split("T")[0];
@@ -697,10 +734,34 @@ function HomeScreen() {
   }, [currentTaskItem, setThemeName, themeName, isAutoTheme, isLoading, isReady]);
 
   /* actions */
-  const handleStartDay = useCallback(
-    () => router.push("/routine"),
-    [router]
-  );
+  const handleStartFocus = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const target = scheduleStatus.activeTask || scheduleStatus.nextTask;
+    if (target) {
+      router.push(`/focus?taskId=${target.id}&taskName=${encodeURIComponent(target.task)}` as any);
+    } else {
+      router.push("/routine" as any);
+    }
+  }, [scheduleStatus, router]);
+
+  const handlePressUpcoming = useCallback((task: RoutineItem) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Alert.alert(
+      task.task,
+      `Scheduled for ${formatTaskTime(task.time)}${task.duration ? ` • ${task.duration} mins` : ""}${task.description ? `\n\n${task.description}` : ""}`,
+      [
+        {
+          text: "Start Focus Now",
+          onPress: () => router.push(`/focus?taskId=${task.id}&taskName=${encodeURIComponent(task.task)}` as any),
+        },
+        {
+          text: "View in Timeline",
+          onPress: () => router.push("/routine" as any),
+        },
+        { text: "Cancel", style: "cancel" },
+      ]
+    );
+  }, [router]);
 
   const buttonRole: AccessibilityRole = "button";
 
@@ -875,9 +936,9 @@ function HomeScreen() {
                   <Text style={styles.focusTaskName} accessibilityRole="header">
                     {currentTaskText}
                   </Text>
-                  {currentTaskItem?.description ? (
+                  {currentTaskDesc ? (
                     <Text style={styles.focusDescription} numberOfLines={1}>
-                      {currentTaskItem.description}
+                      {currentTaskDesc}
                     </Text>
                   ) : null}
                 </View>
@@ -911,7 +972,7 @@ function HomeScreen() {
               {/* Start Button */}
               <Pressable
                 accessibilityRole={buttonRole}
-                accessibilityLabel="Start my day"
+                accessibilityLabel="Start focus timer"
                 hitSlop={styles.touchableHitSlop}
                 android_ripple={{ color: "rgba(0,0,0,0.06)" }}
                 style={({ pressed }) => [
@@ -922,14 +983,29 @@ function HomeScreen() {
                   },
                   styles.primaryButton,
                 ]}
-                onPress={handleStartDay}
+                onPress={handleStartFocus}
               >
-                <Text style={styles.primaryButtonText}>Start My Day</Text>
+                <Text style={styles.primaryButtonText}>
+                  {scheduleStatus.activeTask
+                    ? "Start Focus Timer"
+                    : scheduleStatus.nextTask
+                    ? "Start Focus Ahead"
+                    : "View Day Timeline"}
+                </Text>
                 <Ionicons
                   name="arrow-forward"
                   size={18}
                   color={theme.colors.white}
                 />
+              </Pressable>
+
+              {/* Timeline shortcut link */}
+              <Pressable
+                style={styles.timelineLink}
+                onPress={() => router.push("/routine" as any)}
+                hitSlop={styles.touchableHitSlop}
+              >
+                <Text style={styles.timelineLinkText}>View Full Day Timeline →</Text>
               </Pressable>
             </View>
           </BlurView>
@@ -949,7 +1025,13 @@ function HomeScreen() {
                   key={task.id}
                   entering={FadeInDown.duration(400).delay(idx * 60)}
                 >
-                  <View style={styles.upNextCard}>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.upNextCard,
+                      pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] },
+                    ]}
+                    onPress={() => handlePressUpcoming(task)}
+                  >
                     <View style={styles.upNextIconCircle}>
                       <Ionicons
                         name={getRoutineIcon(task.imageKey)}
@@ -972,7 +1054,13 @@ function HomeScreen() {
                         </Text>
                       </View>
                     </View>
-                  </View>
+                    <Ionicons
+                      name="play-circle-outline"
+                      size={24}
+                      color={theme.colors.primary}
+                      style={{ opacity: 0.7 }}
+                    />
+                  </Pressable>
                 </Animated.View>
               ))}
             </View>
