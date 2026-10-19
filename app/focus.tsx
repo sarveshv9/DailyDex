@@ -65,15 +65,21 @@ export default function FocusScreen() {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         if (isActive) {
             Alert.alert(
-                "Leave Focus Session?",
-                "Your focus timer is currently running. Leaving now will stop this session.",
+                "Active Focus Session",
+                "Your timer is currently running. You can keep it running in the background or stop it now.",
                 [
-                    { text: "Keep Focusing", style: "cancel" },
+                    { text: "Keep Screen Open", style: "cancel" },
                     {
-                        text: "Leave Session",
+                        text: "Stop & Leave",
                         style: "destructive",
                         onPress: () => {
                             timer.stopTimer();
+                            router.back();
+                        }
+                    },
+                    {
+                        text: "Minimize (Keep Running)",
+                        onPress: () => {
                             router.back();
                         }
                     }

@@ -192,6 +192,9 @@ const TaskItem = ({
   const isTimerActive = isCurrentTimer && timer.isActive;
 
   const handleToggle = () => {
+    if (!task.completed && isCurrentTimer) {
+      timer.stopTimer();
+    }
     onToggle(task.id);
   };
 
@@ -204,12 +207,20 @@ const TaskItem = ({
     onEdit(task);
   };
 
-  const handleFocus = () => {
-    // Always open the modal to pick time or see the active timer details
+  const handleOpenFocus = () => {
     router.push({
       pathname: "/focus" as any,
       params: { taskId: task.id, taskName: task.text },
     });
+  };
+
+  const handleToggleTimer = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (timer.isActive) {
+      timer.pauseTimer();
+    } else {
+      timer.resumeTimer();
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -218,7 +229,7 @@ const TaskItem = ({
     return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
-  const ActionButton = ({ onPress, icon, color }: { onPress: () => void, icon: any, color: string }) => {
+  const ActionButton = ({ onPress, icon, color, label }: { onPress: () => void, icon: any, color: string, label?: string }) => {
     const scale = useSharedValue(1);
     const animStyle = useAnimatedStyle(() => ({
       transform: [{ scale: scale.value }],
@@ -226,6 +237,7 @@ const TaskItem = ({
 
     return (
       <AnimatedPressable
+        accessibilityLabel={label}
         style={[styles.taskActionButton, animStyle]}
         onPressIn={() => { scale.value = withSpring(0.85, { damping: 18, stiffness: 200 }); }}
         onPressOut={() => { scale.value = withSpring(1, { damping: 14, stiffness: 180 }); }}
@@ -269,28 +281,37 @@ const TaskItem = ({
       </Pressable>
 
       <View style={styles.taskActions}>
-        {isCurrentTimer && timer.timeLeft > 0 && (
-          <Text style={[
-            styles.timerText,
-            isTimerActive ? styles.timerTextActive : styles.timerTextPaused,
-          ]}>
-            {formatTime(timer.timeLeft)}
-          </Text>
+        {!task.completed && (
+          <>
+            {isCurrentTimer && timer.timeLeft > 0 && (
+              <Pressable onPress={handleOpenFocus} hitSlop={6} style={{ justifyContent: 'center' }}>
+                <Text style={[
+                  styles.timerText,
+                  isTimerActive ? styles.timerTextActive : styles.timerTextPaused,
+                ]}>
+                  {formatTime(timer.timeLeft)}
+                </Text>
+              </Pressable>
+            )}
+            <ActionButton
+              onPress={isCurrentTimer ? handleToggleTimer : handleOpenFocus}
+              icon={isTimerActive ? "pause" : isCurrentTimer ? "play" : "timer-outline"}
+              color={theme.colors.primary}
+              label={isCurrentTimer ? (isTimerActive ? "Pause Timer" : "Resume Timer") : "Start Focus Timer"}
+            />
+          </>
         )}
-        <ActionButton
-          onPress={handleFocus}
-          icon={isTimerActive ? "pause" : "play"}
-          color={theme.colors.primary}
-        />
         <ActionButton
           onPress={handleEdit}
           icon="pencil"
           color={theme.colors.secondary}
+          label="Edit Task"
         />
         <ActionButton
           onPress={handleDelete}
           icon="trash-outline"
           color={`${theme.colors.secondary}80`}
+          label="Delete Task"
         />
       </View>
     </View>
@@ -729,15 +750,7 @@ export default function TodoScreen() {
 
   const handleDeleteTask = (id: string) => {
     requestConfirm('Delete Task?', 'Are you sure you want to delete this task?', 'Delete', () => {
-      setTasks((prev) => {
-        const taskToDelete = prev.find((t) => t.id === id);
-        if (taskToDelete?.completed) {
-          import("../../utils/stats").then(({ removeTaskCompleted }) =>
-            removeTaskCompleted(1)
-          );
-        }
-        return prev.filter((t) => t.id !== id);
-      });
+      setTasks((prev) => prev.filter((t) => t.id !== id));
     });
   };
 
@@ -765,12 +778,6 @@ export default function TodoScreen() {
   const performClearCompleted = () => {
     // Use functional update and immediately persist
     setTasks((prev) => {
-      const completedTasks = prev.filter((t) => t.completed);
-      if (completedTasks.length > 0) {
-        import("../../utils/stats").then(({ removeTaskCompleted }) =>
-          removeTaskCompleted(completedTasks.length)
-        );
-      }
       const next = prev.filter((t) => !t.completed);
       // persist immediately to avoid races
       saveTasks(next).catch((e) => console.error("saveTasks:", e));
