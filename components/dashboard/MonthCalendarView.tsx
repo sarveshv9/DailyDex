@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
 import {
     Pressable,
@@ -6,6 +7,7 @@ import {
     Text,
     View
 } from 'react-native';
+import * as Haptics from '../../utils/haptics';
 import { Theme } from '../../styles/shared';
 import { RoutineItem } from '../../utils/utils';
 
@@ -78,33 +80,33 @@ function DayDetail({ date, items, theme }: DayDetailProps) {
             {/* Header */}
             <View style={detail.header}>
                 <View>
-                    <Text style={[detail.dayName, { color: theme.colors.textSecondary }]}>
+                    <Text style={[detail.dayName, { color: theme.colors.textSecondary, fontFamily: theme.fonts.bold }]}>
                         {DAY_FULL[date.getDay()].toUpperCase()}
                     </Text>
                     <View style={detail.dateLine}>
-                        <Text style={[detail.dateNum, { color: isToday ? '#FF453A' : theme.colors.text }]}>
+                        <Text style={[detail.dateNum, { color: isToday ? theme.colors.primary : theme.colors.text, fontFamily: theme.fonts.bold }]}>
                             {date.getDate()}
                         </Text>
-                        <Text style={[detail.monthYear, { color: theme.colors.textSecondary }]}>
+                        <Text style={[detail.monthYear, { color: theme.colors.textSecondary, fontFamily: theme.fonts.medium }]}>
                             {MONTH_SHORT[date.getMonth()]} {date.getFullYear()}
                         </Text>
                     </View>
                 </View>
-                <View style={[detail.badge, { backgroundColor: isToday ? 'rgba(255,69,58,0.12)' : 'rgba(150,150,150,0.1)' }]}>
-                    <Text style={[detail.badgeText, { color: isToday ? '#FF453A' : theme.colors.textSecondary }]}>
+                <View style={[detail.badge, { backgroundColor: isToday ? `${theme.colors.primary}18` : `${theme.colors.textSecondary}15` }]}>
+                    <Text style={[detail.badgeText, { color: isToday ? theme.colors.primary : theme.colors.textSecondary, fontFamily: theme.fonts.bold }]}>
                         {items.length} {items.length === 1 ? 'task' : 'tasks'}
                     </Text>
                 </View>
             </View>
 
             {/* Divider */}
-            <View style={[detail.divider, { backgroundColor: 'rgba(150,150,150,0.15)' }]} />
+            <View style={[detail.divider, { backgroundColor: theme.glass.borderColor }]} />
 
             {/* Task list */}
             {items.length === 0 ? (
                 <View style={detail.emptyState}>
-                    <Text style={[detail.emptyIcon]}>○</Text>
-                    <Text style={[detail.emptyText, { color: theme.colors.textSecondary }]}>
+                    <Ionicons name="calendar-outline" size={28} color={theme.colors.textSecondary} style={{ opacity: 0.4 }} />
+                    <Text style={[detail.emptyText, { color: theme.colors.textSecondary, fontFamily: theme.fonts.medium }]}>
                         No tasks scheduled
                     </Text>
                 </View>
@@ -117,16 +119,16 @@ function DayDetail({ date, items, theme }: DayDetailProps) {
                             <View key={i} style={detail.taskRow}>
                                 <View style={[detail.taskDot, { backgroundColor: color }]} />
                                 <View style={detail.taskInfo}>
-                                    <Text style={[detail.taskName, { color: theme.colors.text }]}>
+                                    <Text style={[detail.taskName, { color: theme.colors.text, fontFamily: theme.fonts.medium }]}>
                                         {label}
                                     </Text>
-                                    <Text style={[detail.taskMeta, { color: theme.colors.textSecondary }]}>
+                                    <Text style={[detail.taskMeta, { color: theme.colors.textSecondary, fontFamily: theme.fonts.regular }]}>
                                         {fmtTime(item.time)}
                                         {item.duration ? ` · ${item.duration}min` : ''}
                                     </Text>
                                 </View>
                                 <View style={[detail.taskPill, { backgroundColor: color + '22' }]}>
-                                    <Text style={[detail.taskPillText, { color }]}>
+                                    <Text style={[detail.taskPillText, { color, fontFamily: theme.fonts.bold }]}>
                                         {fmtTime(item.time)}
                                     </Text>
                                 </View>
@@ -182,10 +184,12 @@ export function MonthCalendarView({ currentDate, routineItems, onSelectDate, the
 
     // Tapping a grid cell only highlights it; tapping the detail card fires onSelectDate
     const handleCellPress = (date: Date) => {
+        Haptics.selectionAsync();
         setSelectedDate(date);
     };
 
     const handleDetailCardPress = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         onSelectDate(selectedDate);
     };
 
@@ -204,21 +208,35 @@ export function MonthCalendarView({ currentDate, routineItems, onSelectDate, the
         >
             {/* ── Month Navigation ── */}
             <View style={[nav.container]}>
-                <Pressable onPress={prevMonth} hitSlop={16} style={nav.chevronBtn}>
-                    <Text style={[nav.chevron, { color: theme.colors.textSecondary }]}>‹</Text>
+                <Pressable
+                    onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        prevMonth();
+                    }}
+                    hitSlop={16}
+                    style={({ pressed }) => [nav.chevronBtn, pressed && { opacity: 0.6 }]}
+                >
+                    <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
                 </Pressable>
 
                 <View style={nav.center}>
-                    <Text style={[nav.monthName, { color: theme.colors.text }]}>
+                    <Text style={[nav.monthName, { color: theme.colors.text, fontFamily: theme.fonts.bold }]}>
                         {MONTH_NAMES[month]}
                     </Text>
-                    <Text style={[nav.yearLabel, { color: theme.colors.textSecondary }]}>
+                    <Text style={[nav.yearLabel, { color: theme.colors.textSecondary, fontFamily: theme.fonts.medium }]}>
                         {year}
                     </Text>
                 </View>
 
-                <Pressable onPress={nextMonth} hitSlop={16} style={nav.chevronBtn}>
-                    <Text style={[nav.chevron, { color: theme.colors.textSecondary }]}>›</Text>
+                <Pressable
+                    onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        nextMonth();
+                    }}
+                    hitSlop={16}
+                    style={({ pressed }) => [nav.chevronBtn, pressed && { opacity: 0.6 }]}
+                >
+                    <Ionicons name="chevron-forward" size={24} color={theme.colors.text} />
                 </Pressable>
             </View>
 
@@ -228,7 +246,10 @@ export function MonthCalendarView({ currentDate, routineItems, onSelectDate, the
                     <View key={i} style={grid.headerCell}>
                         <Text style={[
                             grid.headerText,
-                            { color: (i === 0 || i === 6) ? '#FF453A' : theme.colors.textSecondary },
+                            {
+                                color: (i === 0 || i === 6) ? theme.colors.primary : theme.colors.textSecondary,
+                                fontFamily: theme.fonts.bold,
+                            },
                         ]}>
                             {d}
                         </Text>
@@ -258,17 +279,18 @@ export function MonthCalendarView({ currentDate, routineItems, onSelectDate, the
                                     style={({ pressed }) => [
                                         grid.cell,
                                         isSelected && [grid.cellSelected, { backgroundColor: theme.colors.primary }],
-                                        isToday && !isSelected && grid.cellToday,
+                                        isToday && !isSelected && [grid.cellToday, { borderColor: theme.colors.primary }],
                                         pressed && !isSelected && { opacity: 0.6 },
                                     ]}
                                 >
                                     {/* Date Number */}
                                     <Text style={[
                                         grid.cellNum,
+                                        { fontFamily: theme.fonts.medium },
                                         isSelected
-                                            ? grid.cellNumSelected
+                                            ? [grid.cellNumSelected, { fontFamily: theme.fonts.bold }]
                                             : isToday
-                                                ? [grid.cellNumToday, { color: '#FF453A' }]
+                                                ? [grid.cellNumToday, { color: theme.colors.primary, fontFamily: theme.fonts.bold }]
                                                 : { color: isWeekend ? theme.colors.textSecondary : theme.colors.text },
                                     ]}>
                                         {date.getDate()}
@@ -287,7 +309,7 @@ export function MonthCalendarView({ currentDate, routineItems, onSelectDate, the
                                                 />
                                             ))}
                                             {taskCount > 3 && (
-                                                <Text style={[grid.dotMore, { color: isSelected ? 'rgba(255,255,255,0.7)' : theme.colors.textSecondary }]}>
+                                                <Text style={[grid.dotMore, { color: isSelected ? 'rgba(255,255,255,0.7)' : theme.colors.textSecondary, fontFamily: theme.fonts.bold }]}>
                                                     +{taskCount - 3}
                                                 </Text>
                                             )}
@@ -301,7 +323,7 @@ export function MonthCalendarView({ currentDate, routineItems, onSelectDate, the
             </View>
 
             {/* ── Thin separator ── */}
-            <View style={[sep.line, { backgroundColor: 'rgba(150,150,150,0.15)', marginHorizontal: 16, marginTop: 16 }]} />
+            <View style={[sep.line, { backgroundColor: theme.glass.borderColor, marginHorizontal: 16, marginTop: 16 }]} />
 
             {/* ── Selected Day Detail ── tap the card to confirm selection ── */}
             <Pressable

@@ -23,6 +23,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle } from "react-native-svg";
 import TaskModal from "../../components/dashboard/TaskModal";
 import { useTheme } from "../../context/ThemeContext";
+import { useTimer } from "../../context/TimerContext";
 import { supabase } from "../../lib/supabase";
 import { Theme, themes } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
@@ -266,6 +267,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
   const tileBg = `${theme.colors.primary}${theme.glass?.iconTintAlpha ?? (isDarkMode ? "29" : "1C")
     }`;
   const neutralFill = isDarkMode ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.06)";
+  const activeTint = `${theme.colors.primary}18`;
 
   return StyleSheet.create({
     safeArea: {
@@ -440,6 +442,35 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       fontFamily: theme.fonts.bold,
       color: theme.colors.textSecondary,
       letterSpacing: 0.3,
+    },
+    focusTopActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    focusTimerIconButton: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: neutralFill,
+    },
+    activeTimerBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+      backgroundColor: activeTint,
+      borderWidth: 1,
+      borderColor: `${theme.colors.primary}30`,
+      paddingHorizontal: 8,
+      paddingVertical: 5,
+      borderRadius: 999,
+    },
+    activeTimerText: {
+      fontSize: 12,
+      fontFamily: theme.fonts.bold,
+      color: theme.colors.primary,
     },
     /* Progress section */
     progressSection: {
@@ -721,6 +752,7 @@ const SETUP_KEY = "@zen_setup_complete";
 
 function HomeScreen() {
   const router = useRouter();
+  const timer = useTimer();
   const [isReady, setIsReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [routines, setRoutines] = useState<RoutineItem[]>([]);
@@ -837,15 +869,45 @@ function HomeScreen() {
     }
   }, [currentTaskItem, setThemeName, themeName, isAutoTheme, isLoading, isReady]);
 
-  /* Primary CTA action: Start Focus if active task exists; otherwise "Start My Day" / redirect to timeline */
-  const handleStartFocus = useCallback(() => {
+  const isCurrentTimer = Boolean(currentTaskItem && timer.taskId === currentTaskItem.id);
+  const isTimerActive = isCurrentTimer && timer.isActive;
+
+  /* Primary CTA action: Defaults to timeline */
+  const handleOpenTimeline = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (scheduleStatus.activeTask) {
-      router.push(`/focus?taskId=${scheduleStatus.activeTask.id}&taskName=${encodeURIComponent(scheduleStatus.activeTask.task)}` as any);
+    router.push("/routine" as any);
+  }, [router]);
+
+  /* Focus Timer icon button action */
+  const handleOpenFocus = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (currentTaskItem) {
+      router.push({
+        pathname: "/focus" as any,
+        params: {
+          taskId: currentTaskItem.id,
+          taskName: currentTaskItem.task,
+        },
+      });
     } else {
-      router.push("/routine" as any);
+      router.push("/focus" as any);
     }
-  }, [scheduleStatus, router]);
+  }, [currentTaskItem, router]);
+
+  const handleToggleTimer = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (timer.isActive) {
+      timer.pauseTimer();
+    } else {
+      timer.resumeTimer();
+    }
+  }, [timer]);
+
+  const formatTimerSeconds = useCallback((seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  }, []);
 
   const handlePressUpcoming = useCallback((task: RoutineItem) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -1220,7 +1282,7 @@ function HomeScreen() {
             >
               <View style={styles.cardTint} />
               <View style={styles.focusCardInner}>
-                {/* Top: Icon + Name + Description + Duration */}
+                {/* Top: Icon + Name + Description + Duration + Focus Timer Button */}
                 <View style={styles.focusTopRow}>
                   <View style={styles.focusIconSquircle}>
                     <Ionicons
@@ -1243,18 +1305,66 @@ function HomeScreen() {
                       </Text>
                     ) : null}
                   </View>
-                  {currentTaskItem?.duration ? (
-                    <View style={styles.durationBadge}>
-                      <Ionicons
-                        name="time-outline"
-                        size={13}
-                        color={theme.colors.textSecondary}
-                      />
-                      <Text style={styles.durationBadgeText}>
-                        {currentTaskItem.duration}m
-                      </Text>
-                    </View>
-                  ) : null}
+                  <View style={styles.focusTopActions}>
+                    {currentTaskItem?.duration ? (
+                      <View style={styles.durationBadge}>
+                        <Ionicons
+                          name="time-outline"
+                          size={13}
+                          color={theme.colors.textSecondary}
+                        />
+                        <Text style={styles.durationBadgeText}>
+                          {currentTaskItem.duration}m
+                        </Text>
+                      </View>
+                    ) : null}
+
+                    {currentTaskItem ? (
+                      isCurrentTimer && timer.timeLeft > 0 ? (
+                        <Pressable
+                          onPress={handleOpenFocus}
+                          hitSlop={6}
+                          style={styles.activeTimerBadge}
+                          accessibilityLabel="View Active Focus Timer"
+                        >
+                          <Ionicons
+                            name={isTimerActive ? "pulse" : "pause"}
+                            size={12}
+                            color={theme.colors.primary}
+                          />
+                          <Text style={styles.activeTimerText}>
+                            {formatTimerSeconds(timer.timeLeft)}
+                          </Text>
+                          <Pressable
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              handleToggleTimer();
+                            }}
+                            hitSlop={6}
+                          >
+                            <Ionicons
+                              name={isTimerActive ? "pause-circle" : "play-circle"}
+                              size={16}
+                              color={theme.colors.primary}
+                            />
+                          </Pressable>
+                        </Pressable>
+                      ) : (
+                        <Pressable
+                          style={styles.focusTimerIconButton}
+                          onPress={handleOpenFocus}
+                          hitSlop={8}
+                          accessibilityLabel="Start Focus Timer"
+                        >
+                          <Ionicons
+                            name="timer-outline"
+                            size={18}
+                            color={theme.colors.primary}
+                          />
+                        </Pressable>
+                      )
+                    ) : null}
+                  </View>
                 </View>
 
                 {/* Progress Bar & Indicators */}
@@ -1275,14 +1385,10 @@ function HomeScreen() {
                   </View>
                 </View>
 
-                {/* Main CTA Button: "Start Focus Timer" if active task, otherwise "Start My Day" (redirects to timeline) */}
+                {/* Main CTA Button: Default redirect to timeline */}
                 <Pressable
                   accessibilityRole={buttonRole}
-                  accessibilityLabel={
-                    scheduleStatus.activeTask
-                      ? "Start focus timer"
-                      : "Start my day"
-                  }
+                  accessibilityLabel="View day timeline"
                   hitSlop={styles.touchableHitSlop}
                   android_ripple={{ color: "rgba(0,0,0,0.06)" }}
                   style={({ pressed }) => [
@@ -1292,11 +1398,11 @@ function HomeScreen() {
                       transform: [{ scale: pressed ? 0.98 : 1 }],
                     },
                   ]}
-                  onPress={handleStartFocus}
+                  onPress={handleOpenTimeline}
                 >
                   <Text style={styles.primaryButtonText}>
                     {scheduleStatus.activeTask
-                      ? "Start Focus Timer"
+                      ? "View Day Timeline"
                       : scheduleStatus.nextTask
                         ? "Start My Day"
                         : "View Day Timeline"}

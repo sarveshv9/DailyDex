@@ -724,7 +724,14 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
             {/* ── Header ── */}
             <Animated.View style={[styles.header, { paddingTop: headerPaddingTop }]}>
 
-                <Pressable onPress={() => router.back()} style={styles.backButton} testID="back-button">
+                <Pressable
+                    onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        router.back();
+                    }}
+                    style={styles.backButton}
+                    testID="back-button"
+                >
                     {({ pressed }) => (
                         <View style={[styles.backIconCircle, pressed && { opacity: 0.6, transform: [{ scale: 0.93 }] }]}>
                             <Ionicons name="arrow-back" size={20} color={theme.colors.text} />
@@ -735,6 +742,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                 <Pressable
                     style={styles.headerDateBlock}
                     onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         handleSelectDate(today);
                         if (viewMode !== 'month' && flatListRef.current) {
                             const dateStr = formatDateKey(today);
@@ -839,7 +847,10 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                                     styles.peekCard,
                                     pressed && { opacity: 0.88, transform: [{ scale: 0.975 }] },
                                 ]}
-                                onPress={onPressPeek}
+                                onPress={() => {
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                    if (onPressPeek) onPressPeek();
+                                }}
                                 testID="peek-card"
                             >
                                 <BlurView intensity={100} tint={isDarkMode ? 'systemThickMaterialDark' : 'systemThickMaterialLight'} style={StyleSheet.absoluteFill} pointerEvents="none" />
@@ -875,9 +886,12 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                                             style={{ marginRight: 4 }}
                                         />
                                         <Text style={styles.peekTime}>{firstItem.time}</Text>
-                                        <View style={[styles.peekBadge, { backgroundColor: `${theme.colors.primary}14` }]}>
+                                        <View style={[styles.peekBadge, { backgroundColor: `${theme.colors.primary}14`, flexDirection: 'row', alignItems: 'center' }]}>
+                                            {firstItem.daysOfWeek?.length ? (
+                                                <Ionicons name="repeat" size={11} color={theme.colors.primary} style={{ marginRight: 3 }} />
+                                            ) : null}
                                             <Text style={[styles.peekBadgeText, { color: theme.colors.primary }]}>
-                                                {firstItem.daysOfWeek?.length ? "↺ Daily" : "Once"}
+                                                {firstItem.daysOfWeek?.length ? "Daily" : "Once"}
                                             </Text>
                                         </View>
                                     </View>

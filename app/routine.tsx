@@ -1,8 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../lib/supabase";
+import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import * as Haptics from "../utils/haptics";
 import {
   ActionSheetIOS,
   Alert,
@@ -29,7 +31,7 @@ import { TimelineEventCard, SkeletonTimelineEventCard } from "../components/dash
 import { Theme } from "../styles/shared";
 import { useTheme } from "../context/ThemeContext";
 import { scheduleRoutineNotifications } from "../utils/notifications";
-import { FormData, RoutineItem, getDateString, sortRoutineItems, timeToMinutes, getRoutineItemsForDate } from "../utils/utils";
+import { FormData, RoutineItem, getDateString, sortRoutineItems, timeToMinutes, getRoutineItemsForDate, addMinutesToTime, guessRoutineIconKey } from "../utils/utils";
 
 /* -------------------- Assets & Constants -------------------- */
 
@@ -96,20 +98,82 @@ const useModalAnimation = (screenWidth: number, screenHeight: number) => {
 };
 
 /* -------------------- CONFIRM MODAL (IN-APP) -------------------- */
-const ConfirmModal = ({ visible, title, message, confirmText, onCancel, onConfirm, theme }: any) => {
+const ConfirmModal = ({ visible, title, message, confirmText, onCancel, onConfirm, theme, isDarkMode }: any) => {
   if (!visible) return null;
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
-        <View style={{ backgroundColor: theme.colors.card, width: '80%', borderRadius: 24, padding: 24, alignItems: 'center' }}>
-          <Text style={{ fontSize: 20, fontFamily: theme.fonts.bold, color: theme.colors.text, marginBottom: 8, textAlign: 'center' }}>{title}</Text>
-          <Text style={{ fontSize: 16, color: theme.colors.textSecondary, textAlign: 'center', marginBottom: 24, lineHeight: 22 }}>{message}</Text>
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+        <BlurView
+          intensity={Platform.OS === 'ios' ? 25 : 100}
+          tint={isDarkMode ? 'dark' : 'light'}
+          style={StyleSheet.absoluteFill}
+        />
+        <View
+          style={{
+            backgroundColor: theme.colors.card,
+            width: '100%',
+            maxWidth: 340,
+            borderRadius: 24,
+            padding: 24,
+            alignItems: 'center',
+            borderWidth: 1,
+            borderColor: theme.glass.borderColor,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 12 },
+            shadowOpacity: 0.15,
+            shadowRadius: 20,
+            elevation: 10,
+          }}
+        >
+          <Text style={{ fontSize: 19, fontFamily: theme.fonts.bold, color: theme.colors.text, marginBottom: 8, textAlign: 'center' }}>
+            {title}
+          </Text>
+          <Text style={{ fontSize: 15, fontFamily: theme.fonts.regular, color: theme.colors.textSecondary, textAlign: 'center', marginBottom: 24, lineHeight: 22 }}>
+            {message}
+          </Text>
           <View style={{ flexDirection: 'row', gap: 12, width: '100%' }}>
-            <Pressable style={{ flex: 1, paddingVertical: 14, backgroundColor: theme.colors.background, borderRadius: 14, alignItems: 'center' }} onPress={onCancel}>
-              <Text style={{ fontSize: 16, fontFamily: theme.fonts.bold, color: theme.colors.text }}>Cancel</Text>
+            <Pressable
+              style={({ pressed }) => [
+                {
+                  flex: 1,
+                  paddingVertical: 14,
+                  backgroundColor: theme.colors.background,
+                  borderRadius: 14,
+                  alignItems: 'center',
+                  borderWidth: 1,
+                  borderColor: theme.glass.borderColor,
+                },
+                pressed && { opacity: 0.7 }
+              ]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onCancel();
+              }}
+            >
+              <Text style={{ fontSize: 15, fontFamily: theme.fonts.bold, color: theme.colors.text }}>Cancel</Text>
             </Pressable>
-            <Pressable style={{ flex: 1, paddingVertical: 14, backgroundColor: theme.colors.primary, borderRadius: 14, alignItems: 'center' }} onPress={onConfirm}>
-              <Text style={{ fontSize: 16, fontFamily: theme.fonts.bold, color: theme.colors.white }}>{confirmText}</Text>
+            <Pressable
+              style={({ pressed }) => [
+                {
+                  flex: 1,
+                  paddingVertical: 14,
+                  backgroundColor: theme.colors.primary,
+                  borderRadius: 14,
+                  alignItems: 'center',
+                  shadowColor: theme.colors.primary,
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 8,
+                  elevation: 4,
+                },
+                pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] }
+              ]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                onConfirm();
+              }}
+            >
+              <Text style={{ fontSize: 15, fontFamily: theme.fonts.bold, color: theme.colors.white }}>{confirmText}</Text>
             </Pressable>
           </View>
         </View>
@@ -120,7 +184,7 @@ const ConfirmModal = ({ visible, title, message, confirmText, onCancel, onConfir
 
 /* -------------------- Screen Component -------------------- */
 export default function RoutineScreen() {
-  const { theme } = useTheme();
+  const { theme, isDarkMode } = useTheme();
   const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = useWindowDimensions();
   const styles = useMemo(() => getStyles(theme), [theme]);
 
@@ -153,7 +217,10 @@ export default function RoutineScreen() {
           message,
         },
         (buttonIndex) => {
-          if (buttonIndex === 1) action();
+          if (buttonIndex === 1) {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            action();
+          }
         }
       );
     } else {
@@ -254,6 +321,7 @@ export default function RoutineScreen() {
   const pendingReset = useRef(false);
 
   const shiftDate = useCallback((delta: number) => {
+    Haptics.selectionAsync();
     // Do NOT reset pagerX here — if we do it before React commits the new
     // pageDates the center panel briefly shows stale content (the flicker).
     // Instead, flag a reset and let useLayoutEffect do it after the commit.
@@ -334,6 +402,7 @@ export default function RoutineScreen() {
                 }).start();
               }
             } else if (g.dy > 50 || g.vy > 1) {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               closeList();
             }
             isDraggingHorizontal.current = false;
@@ -348,7 +417,10 @@ export default function RoutineScreen() {
           onStartShouldSetPanResponder: () => true,
           onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dy) > 10,
           onPanResponderRelease: (_, g) => {
-            if (g.dy > 50 || g.vy > 1) closeList();
+            if (g.dy > 50 || g.vy > 1) {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              closeList();
+            }
           },
         })
   ).current;
@@ -404,6 +476,7 @@ export default function RoutineScreen() {
 
         // Pull down to close the list if scrolled to top
         if (y < -60 && listOpen) {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           closeList();
         }
         lastScrollY.current = y;
@@ -569,7 +642,7 @@ export default function RoutineScreen() {
     });
   }, [closeAnimation]);
 
-  const openForm = useCallback((item?: RoutineItem) => {
+  const openForm = useCallback((item?: RoutineItem, customSuggestedTime?: string) => {
     if (item) {
       setEditingId(item.id);
       setFormData({
@@ -584,8 +657,27 @@ export default function RoutineScreen() {
       });
     } else {
       setEditingId(null);
+      let defaultTime = customSuggestedTime;
+      if (!defaultTime) {
+        const dayTasks = getRoutineItemsForDate(allRoutines, selectedDate);
+        if (dayTasks.length > 0) {
+          const sorted = sortRoutineItems(dayTasks);
+          const last = sorted[sorted.length - 1];
+          if (last && last.time) {
+            defaultTime = addMinutesToTime(last.time, last.duration || 30);
+          }
+        }
+        if (!defaultTime) {
+          const now = new Date();
+          const mins = now.getMinutes();
+          const roundedMins = Math.ceil(mins / 15) * 15;
+          now.setMinutes(roundedMins, 0, 0);
+          defaultTime = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        }
+      }
+
       setFormData({
-        time: "",
+        time: defaultTime,
         task: "",
         description: "",
         daysOfWeek: [],
@@ -595,13 +687,67 @@ export default function RoutineScreen() {
       });
     }
     setFormVisible(true);
-  }, [selectedDate]);
+  }, [selectedDate, allRoutines]);
 
   const closeForm = useCallback(() => {
     setFormVisible(false);
     setEditingId(null);
     setFormData({ time: "", task: "", description: "", daysOfWeek: [], date: "", subtasks: [] });
   }, []);
+
+  const handleSaveAndAddAnother = useCallback(() => {
+    const { time, task, description, daysOfWeek, duration, date, subtasks, imageKey } = formData;
+    if (!time.trim() || !task.trim()) {
+      Alert.alert("Missing Information", "Please enter a task name and time.");
+      return;
+    }
+
+    let finalDays = (daysOfWeek || []).sort();
+    let finalDate = (finalDays.length > 0) ? undefined : date;
+
+    const newItem: RoutineItem = {
+      id: Date.now().toString(),
+      time: time.trim(),
+      task: task.trim(),
+      description: description.trim(),
+      imageKey: (imageKey && imageKey !== "breathe") ? imageKey : guessRoutineIconKey(task.trim()),
+      insertionOrder: nextInsertionOrder,
+      daysOfWeek: finalDays,
+      date: finalDate,
+      duration: duration || 30,
+      subtasks: subtasks || [],
+    };
+
+    saveRoutines([...allRoutines, newItem]);
+    setNextInsertionOrder(prev => prev + 1);
+
+    const nextTime = addMinutesToTime(time.trim(), duration || 30);
+    setFormData({
+      time: nextTime,
+      task: "",
+      description: "",
+      daysOfWeek: finalDays,
+      date: finalDate,
+      duration: duration || 30,
+      subtasks: [],
+      imageKey: "breathe",
+    });
+  }, [formData, nextInsertionOrder, allRoutines, saveRoutines]);
+
+  const handleBatchSave = useCallback((newItems: RoutineItem[]) => {
+    if (!newItems || newItems.length === 0) return;
+
+    let order = nextInsertionOrder;
+    const itemsWithOrder = newItems.map((item, idx) => ({
+      ...item,
+      insertionOrder: order + idx,
+    }));
+
+    const updated = [...allRoutines, ...itemsWithOrder];
+    saveRoutines(updated);
+    setNextInsertionOrder(prev => prev + newItems.length);
+    closeForm();
+  }, [allRoutines, nextInsertionOrder, saveRoutines, closeForm]);
 
   const handleSaveInstance = useCallback(() => {
     const { time, task, description, duration } = formData;
@@ -670,7 +816,7 @@ export default function RoutineScreen() {
             time: time.trim(),
             task: task.trim(),
             description: description.trim(),
-            imageKey: formData.imageKey || item.imageKey || "breathe",
+            imageKey: (formData.imageKey && formData.imageKey !== "breathe") ? formData.imageKey : (item.imageKey || guessRoutineIconKey(task.trim())),
             daysOfWeek: finalDays,
             date: finalDate,
             duration: duration || item.duration || 30,
@@ -685,7 +831,7 @@ export default function RoutineScreen() {
         time: time.trim(),
         task: task.trim(),
         description: description.trim(),
-        imageKey: formData.imageKey || "breathe",
+        imageKey: (formData.imageKey && formData.imageKey !== "breathe") ? formData.imageKey : guessRoutineIconKey(task.trim()),
         insertionOrder: nextInsertionOrder,
         daysOfWeek: finalDays,
         date: finalDate,
@@ -870,7 +1016,14 @@ export default function RoutineScreen() {
         />
 
         <View style={styles.listHeader} {...listHeaderPanResponder.panHandlers}>
-          <Pressable style={styles.closeBar} onPress={closeList} />
+          <Pressable
+            style={({ pressed }) => [styles.closeBar, pressed && { opacity: 0.6 }]}
+            hitSlop={14}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              closeList();
+            }}
+          />
           <Text style={styles.listTitle}>Daily Routine</Text>
         </View>
 
@@ -914,8 +1067,11 @@ export default function RoutineScreen() {
                       ))
                     ) : pageItems.length === 0 ? (
                       <View style={styles.emptyStateContainer}>
-                        <Text style={styles.emptyStateTitle}>Your deck is empty!</Text>
-                        <Text style={styles.emptyStateSub}>Tap the + below to start building your routine.</Text>
+                        <View style={styles.emptyStateIconCircle}>
+                          <Ionicons name="sparkles-outline" size={30} color={theme.colors.primary} />
+                        </View>
+                        <Text style={styles.emptyStateTitle}>No Rituals Scheduled</Text>
+                        <Text style={styles.emptyStateSub}>Tap the + below to add a ritual to your day.</Text>
                       </View>
                     ) : (
                       pageItems.map((entry, itemIdx) => {
@@ -959,7 +1115,10 @@ export default function RoutineScreen() {
                 styles.fab,
                 pressed && styles.fabPressed,
               ]}
-              onPress={() => openForm()}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                openForm();
+              }}
               testID="routine-fab"
             >
               <Ionicons name="add" size={32} color={theme.colors.white} />
@@ -977,6 +1136,7 @@ export default function RoutineScreen() {
         onEdit={handleEditFromModal}
         onSaveTask={handleSaveFromModal}
         onDelete={handleDelete}
+        onChainNextTask={(endTime) => openForm(undefined, endTime)}
       />
 
       <TaskForm
@@ -985,8 +1145,12 @@ export default function RoutineScreen() {
         formData={formData}
         onUpdateField={updateFormField}
         onSave={handleSave}
+        onSaveAndAddAnother={handleSaveAndAddAnother}
+        onBatchSave={handleBatchSave}
         onSaveInstance={handleSaveInstance}
         onClose={closeForm}
+        existingRoutines={allRoutines}
+        selectedDate={selectedDate}
       />
 
       <ConfirmModal
@@ -997,6 +1161,7 @@ export default function RoutineScreen() {
         onCancel={() => setConfirmState(prev => ({ ...prev, visible: false }))}
         onConfirm={() => confirmState.action()}
         theme={theme}
+        isDarkMode={isDarkMode}
       />
     </SafeAreaView >
   );
@@ -1051,7 +1216,7 @@ const getStyles = (theme: Theme) =>
       width: 40,
       height: 5,
       borderRadius: 2.5,
-      backgroundColor: `${theme.colors.text}`,
+      backgroundColor: `${theme.colors.text}35`,
       marginBottom: 8,
     },
     listTitle: {
@@ -1111,21 +1276,31 @@ const getStyles = (theme: Theme) =>
     emptyStateContainer: {
       alignItems: "center",
       justifyContent: "center",
-      paddingVertical: 60,
-      paddingHorizontal: 20,
+      paddingVertical: 64,
+      paddingHorizontal: 24,
+    },
+    emptyStateIconCircle: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: `${theme.colors.primary}15`,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 16,
     },
     emptyStateTitle: {
-      fontSize: 20,
+      fontSize: 19,
       fontFamily: theme.fonts.bold,
-      color: theme.colors.primary,
+      color: theme.colors.text,
       marginBottom: 8,
+      textAlign: "center",
     },
     emptyStateSub: {
-      fontSize: 15,
+      fontSize: 14,
       fontFamily: theme.fonts.medium,
-      color: theme.colors.secondary,
+      color: theme.colors.textSecondary,
       textAlign: "center",
-      lineHeight: 22,
-      opacity: 0.8,
+      lineHeight: 20,
+      maxWidth: 260,
     }
   });

@@ -17,6 +17,7 @@ import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View, Animated } from 'react-native';
 import { Theme } from '../../styles/shared';
 import { useTheme } from '../../context/ThemeContext';
+import * as Haptics from '../../utils/haptics';
 import { RoutineItem, ICON_MAP } from '../../utils/utils';
 
 const TASK_COLORS: Record<string, string> = {
@@ -84,7 +85,10 @@ export const TimelineEventCard: React.FC<TimelineEventCardProps> = ({
                         <View style={[styles.dashedSegment, { backgroundColor: lineColor, height: 36 }]} />
                     </View>
                     <View style={styles.breakTextCol}>
-                        <Text style={styles.breakText}>ᶻz</Text>
+                        <View style={styles.breakBadge}>
+                            <Ionicons name="pause-outline" size={12} color={theme.colors.textSecondary} style={{ opacity: 0.7, marginRight: 4 }} />
+                            <Text style={styles.breakText}>Rest Break</Text>
+                        </View>
                     </View>
                 </View>
             )}
@@ -95,7 +99,12 @@ export const TimelineEventCard: React.FC<TimelineEventCardProps> = ({
                     styles.eventRow,
                     pressed && onPress && { opacity: 0.8, transform: [{ scale: 0.98 }] }
                 ]}
-                onPress={onPress}
+                onPress={() => {
+                    if (onPress) {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        onPress();
+                    }
+                }}
                 disabled={!onPress}
                 testID="timeline-event-card"
             >
@@ -157,12 +166,21 @@ const getStyles = (theme: Theme) =>
             flex: 1,
             paddingLeft: 12,
         },
+        breakBadge: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            alignSelf: 'flex-start',
+            paddingHorizontal: 8,
+            paddingVertical: 3,
+            borderRadius: 8,
+            backgroundColor: `${theme.colors.textSecondary}14`,
+        },
         breakText: {
-            fontSize: 12,
-            fontFamily: theme.fonts.regular,
+            fontSize: 11,
+            fontFamily: theme.fonts.medium,
             color: theme.colors.textSecondary,
-            fontStyle: 'italic',
-            opacity: 0.6,
+            letterSpacing: 0.3,
+            opacity: 0.8,
         },
 
         /* Main event row */
@@ -252,21 +270,21 @@ const getStyles = (theme: Theme) =>
         },
         /* Skeleton specific styles */
         skeletonBox: {
-            backgroundColor: theme.colors.card === '#ffffff' ? '#E5E5E5' : '#333333',
+            backgroundColor: `${theme.colors.textSecondary}25`,
             borderRadius: 4,
         },
         skeletonCircle: {
             width: ICON_SIZE,
             height: ICON_SIZE,
             borderRadius: ICON_SIZE / 2,
-            backgroundColor: theme.colors.card === '#ffffff' ? '#E5E5E5' : '#333333',
+            backgroundColor: `${theme.colors.textSecondary}25`,
         },
         skeletonRing: {
             width: 26,
             height: 26,
             borderRadius: 13,
             borderWidth: 2,
-            borderColor: theme.colors.card === '#ffffff' ? '#E5E5E5' : '#333333',
+            borderColor: `${theme.colors.textSecondary}25`,
             backgroundColor: 'transparent',
         },
     });
@@ -294,7 +312,7 @@ export const SkeletonTimelineEventCard: React.FC<{ isFirst?: boolean; isLast?: b
         ).start();
     }, [pulseAnim]);
 
-    const lineColor = theme.colors.card === '#ffffff' ? '#E5E5E5' : '#333333';
+    const lineColor = `${theme.colors.textSecondary}25`;
 
     return (
         <Animated.View style={[styles.eventRow, { opacity: pulseAnim }]}>

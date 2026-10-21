@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
@@ -16,8 +16,10 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Theme } from "../../styles/shared";
 import { useTheme } from "../../context/ThemeContext";
-import { RoutineItem, SubTask, parseTime, getRoutineIcon } from "../../utils/utils";
+import * as Haptics from "../../utils/haptics";
+import { RoutineItem, SubTask, parseTime, getRoutineIcon, addMinutesToTime, guessRoutineIconKey, ICON_GROUPS } from "../../utils/utils";
 import { InlineTimePicker } from "../common/InlineTimePicker";
 
 interface TaskModalProps {
@@ -28,6 +30,7 @@ interface TaskModalProps {
   onEdit: () => void; // Legacy edit handler (optional now)
   onSaveTask?: (updatedTask: RoutineItem) => void;
   onDelete: () => void;
+  onChainNextTask?: (endTime: string) => void;
 }
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -56,6 +59,18 @@ const TASK_COLORS: Record<string, string> = {
     reflect: '#A0C4FF',
     prepare_sleep: '#BDB2FF',
     breathe: '#B9FBC0',
+    commute: '#79B4B7',
+    gym: '#FF9F80',
+    cleaning: '#80CED7',
+    pet: '#E3C75F',
+    shopping: '#F6B8B8',
+    coding: '#7EA0B7',
+    gaming: '#BD93F9',
+    finances: '#9AD0C2',
+    laundry: '#C5DFF8',
+    travel: '#7BC9FF',
+    health: '#F875AA',
+    podcast: '#C683D7',
 };
 
 const FALLBACK_COLORS = ['#7B8CDE', '#C084FC', '#4DA8DA', '#6BCB77', '#E8975E', '#B89B72'];
@@ -66,8 +81,10 @@ const TaskModal: React.FC<TaskModalProps> = ({
   onClose,
   onSaveTask,
   onDelete,
+  onChainNextTask,
 }) => {
   const { theme, isDarkMode } = useTheme();
+  const styles = useMemo(() => getStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
 
@@ -75,6 +92,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
   const [showInlineTimePicker, setShowInlineTimePicker] = useState(false);
   const [showDays, setShowDays] = useState(false);
   const [newSubtaskText, setNewSubtaskText] = useState("");
+  const [showIconPicker, setShowIconPicker] = useState(false);
+  const [iconPickerCat, setIconPickerCat] = useState<number>(0);
 
   const scrollOffset = useRef(0);
   const handleSaveRef = useRef<(() => void) | null>(null);
@@ -214,6 +233,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
   };
 
   const toggleDay = (dayValue: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setEditedTask((prev) => {
       if (!prev) return prev;
       const current = prev.daysOfWeek || [];
@@ -225,6 +245,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
   };
 
   const toggleSubtask = (id: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setEditedTask((prev) => {
       if (!prev) return prev;
       const subtasks = prev.subtasks?.map(st => st.id === id ? { ...st, completed: !st.completed } : st);
@@ -234,6 +255,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
 
   const addSubtask = () => {
     if (!newSubtaskText.trim()) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setEditedTask((prev) => {
       if (!prev) return prev;
       const newSt: SubTask = { id: Date.now().toString(), title: newSubtaskText.trim(), completed: false };
@@ -251,6 +273,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
   };
 
   const deleteSubtask = (id: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setEditedTask((prev) => {
       if (!prev) return prev;
       const subtasks = prev.subtasks?.filter(st => st.id !== id);
@@ -282,7 +305,12 @@ const TaskModal: React.FC<TaskModalProps> = ({
     <View>
       <TouchableOpacity
         style={styles.cardRow}
-        onPress={onPress}
+        onPress={() => {
+          if (onPress) {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            onPress();
+          }
+        }}
         disabled={!onPress}
         activeOpacity={0.7}
       >
@@ -376,12 +404,22 @@ const TaskModal: React.FC<TaskModalProps> = ({
             <View style={styles.handle} />
 
             <View style={styles.topActions}>
-              <TouchableOpacity style={styles.iconBtn} onPress={closeWithoutSave} hitSlop={10}>
+              <TouchableOpacity
+                style={styles.iconBtn}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  closeWithoutSave();
+                }}
+                hitSlop={10}
+              >
                 <Ionicons name="close" size={24} color="#FFFFFF" />
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.iconBtn, { backgroundColor: 'rgba(255,255,255,0.2)' }]}
-                onPress={closeAndSave}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  closeAndSave();
+                }}
                 hitSlop={10}
               >
                 <Ionicons name="checkmark" size={24} color="#FFFFFF" />
@@ -392,7 +430,15 @@ const TaskModal: React.FC<TaskModalProps> = ({
               <View style={styles.dashedLineContainer}>
                 <View style={styles.dashedLine} />
               </View>
-              <View style={styles.iconPill}>
+              <TouchableOpacity
+                style={styles.iconPill}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setShowIconPicker(true);
+                }}
+                activeOpacity={0.75}
+                hitSlop={10}
+              >
                 <Ionicons 
                   name={getRoutineIcon(editedTask.imageKey)} 
                   size={42} 
@@ -401,7 +447,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 <View style={[styles.paletteBadge, { borderColor: taskColor }]}>
                   <Ionicons name="color-palette" size={16} color="#FFFFFF" />
                 </View>
-              </View>
+              </TouchableOpacity>
 
               <View style={styles.titleDetails}>
                 <Text style={styles.timeTag}>{getDisplayTime()}</Text>
@@ -410,7 +456,18 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     <TextInput
                       style={styles.taskTitleInput}
                       value={editedTask.task}
-                      onChangeText={(t) => setEditedTask(prev => prev ? { ...prev, task: t } : null)}
+                      onChangeText={(t) => {
+                        const autoKey = guessRoutineIconKey(t);
+                        setEditedTask(prev => {
+                          if (!prev) return null;
+                          const isDefault = !prev.imageKey || prev.imageKey === "breathe";
+                          return {
+                            ...prev,
+                            task: t,
+                            imageKey: (isDefault && autoKey !== "breathe") ? autoKey : prev.imageKey
+                          };
+                        });
+                      }}
                       placeholder="Task Name"
                       placeholderTextColor="rgba(255,255,255,0.4)"
                     />
@@ -433,6 +490,16 @@ const TaskModal: React.FC<TaskModalProps> = ({
             >
 
               <View style={[styles.card, { backgroundColor: theme.colors.card }]}>
+                <CardRow
+                  icon={getRoutineIcon(editedTask.imageKey)}
+                  iconColor={taskColor}
+                  title="Ritual Icon"
+                  value={editedTask.imageKey ? editedTask.imageKey.replace('_', ' ') : 'Select'}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setShowIconPicker(true);
+                  }}
+                />
                 <CardRow
                   icon="time-outline"
                   iconColor={taskColor}
@@ -459,7 +526,10 @@ const TaskModal: React.FC<TaskModalProps> = ({
                                styles.durPill,
                                editedTask.duration === dur && { backgroundColor: taskColor }
                              ]}
-                             onPress={() => setEditedTask(prev => prev ? { ...prev, duration: dur } : null)}
+                             onPress={() => {
+                               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                               setEditedTask(prev => prev ? { ...prev, duration: dur } : null);
+                             }}
                            >
                              <Text style={[styles.durPillText, editedTask.duration === dur && { color: '#FFF' }]}>
                                {dur < 60 ? `${dur}m` : `${dur/60}h${dur%60 === 0 ? '' : ' ' + (dur%60)+'m'}`}
@@ -551,21 +621,143 @@ const TaskModal: React.FC<TaskModalProps> = ({
 
             </ScrollView>
 
-            {(() => {
-              const taskName = editedTask?.task?.toLowerCase().trim();
-              const isProtected = taskName === "wake up" || taskName === "sleep";
-              if (isProtected) return null;
-              return (
-                <View style={[styles.bottomBar, { backgroundColor: theme.colors.background, paddingBottom: Math.max(insets.bottom, 20) }]}>
-                  <TouchableOpacity style={styles.deletePillBtn} onPress={() => { onDelete(); closeWithoutSave(); }} activeOpacity={0.7}>
+            <View style={[styles.bottomBar, { backgroundColor: theme.colors.background, paddingBottom: Math.max(insets.bottom, 20) }]}>
+              {onChainNextTask && (
+                <TouchableOpacity
+                  style={[styles.chainPillBtn, { backgroundColor: `${theme.colors.primary}18` }]}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    const dur = editedTask?.duration || 30;
+                    const nextTime = addMinutesToTime(editedTask?.time || "8:00 AM", dur);
+                    closeWithoutSave();
+                    setTimeout(() => onChainNextTask(nextTime), 250);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="add-circle-outline" size={18} color={theme.colors.primary} style={{ marginRight: 6 }} />
+                  <Text style={[styles.chainText, { color: theme.colors.primary, fontFamily: theme.fonts.bold }]}>
+                    Add Ritual After
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {(() => {
+                const taskName = editedTask?.task?.toLowerCase().trim();
+                const isProtected = taskName === "wake up" || taskName === "sleep";
+                if (isProtected) return null;
+                return (
+                  <TouchableOpacity 
+                    style={styles.deletePillBtn} 
+                    onPress={() => { 
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                      onDelete(); 
+                      closeWithoutSave(); 
+                    }} 
+                    activeOpacity={0.7}
+                  >
                     <Ionicons name="trash-outline" size={18} color="#FF453A" style={{ marginRight: 6 }} />
-                    <Text style={styles.deleteText}>Delete Task</Text>
+                    <Text style={styles.deleteText}>Delete</Text>
                   </TouchableOpacity>
-                </View>
-              );
-            })()}
+                );
+              })()}
+            </View>
           </View>
 
+          {/* --- Icon Picker Modal --- */}
+          <Modal
+            visible={showIconPicker}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setShowIconPicker(false)}
+            statusBarTranslucent
+          >
+            <Pressable
+              style={styles.iconModalOverlay}
+              onPress={() => setShowIconPicker(false)}
+            >
+              <Pressable
+                style={styles.iconModalCard}
+                onPress={(e) => e.stopPropagation()}
+              >
+                <View style={styles.iconModalHeader}>
+                  <View>
+                    <Text style={styles.iconModalTitle}>Choose an Icon</Text>
+                    <Text style={styles.iconModalSub}>Pick an icon for this ritual</Text>
+                  </View>
+                  <Pressable
+                    onPress={() => setShowIconPicker(false)}
+                    hitSlop={10}
+                    style={styles.iconModalCloseBtn}
+                  >
+                    <Ionicons name="close" size={20} color={theme.colors.textSecondary} />
+                  </Pressable>
+                </View>
+
+                {/* Category Pills */}
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.iconCatTabs}
+                >
+                  {ICON_GROUPS.map((grp, idx) => (
+                    <Pressable
+                      key={idx}
+                      style={[
+                        styles.iconCatTab,
+                        iconPickerCat === idx && styles.iconCatTabActive,
+                      ]}
+                      onPress={() => {
+                        Haptics.selectionAsync();
+                        setIconPickerCat(idx);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.iconCatTabText,
+                          iconPickerCat === idx && { color: theme.colors.white },
+                        ]}
+                      >
+                        {grp.category}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+
+                {/* Icons Grid */}
+                <ScrollView
+                  style={styles.iconGridScroll}
+                  contentContainerStyle={styles.iconGrid}
+                  showsVerticalScrollIndicator={false}
+                >
+                  {ICON_GROUPS[iconPickerCat].icons.map((item) => (
+                    <Pressable
+                      key={item.key}
+                      style={({ pressed }) => [
+                        styles.iconGridItem,
+                        pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] },
+                      ]}
+                      onPress={() => {
+                        Haptics.selectionAsync();
+                        setEditedTask((prev) => (prev ? { ...prev, imageKey: item.key } : null));
+                        setShowIconPicker(false);
+                      }}
+                    >
+                      <View style={styles.iconGridCircle}>
+                        <Ionicons
+                          name={getRoutineIcon(item.key)}
+                          size={22}
+                          color={theme.colors.primary}
+                        />
+                      </View>
+                      <Text style={styles.iconGridLabel} numberOfLines={1}>
+                        {item.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </Pressable>
+            </Pressable>
+          </Modal>
 
         </Animated.View>
       </View>
@@ -575,7 +767,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
 
 export default TaskModal;
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   overlay: { flex: 1, justifyContent: "flex-end" },
   sheet: {
     borderTopLeftRadius: 36,
@@ -606,47 +798,167 @@ const styles = StyleSheet.create({
   iconPill: { width: 80, height: 154, borderRadius: 40, backgroundColor: '#4A4A4A', borderWidth: 3, borderColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', marginRight: 20, position: 'relative' },
   paletteBadge: { position: 'absolute', bottom: -6, left: -10, width: 34, height: 34, borderRadius: 17, backgroundColor: '#1F3C5E', justifyContent: 'center', alignItems: 'center', borderWidth: 2 },
   titleDetails: { flex: 1, justifyContent: 'center', paddingTop: 15 },
-  timeTag: { color: 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: '500', marginBottom: 4 },
+  timeTag: { color: 'rgba(255,255,255,0.7)', fontSize: 13, fontFamily: theme.fonts.medium, marginBottom: 4 },
   titleWithCheckRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   titleBox: { flex: 1, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.4)', paddingBottom: 6, marginRight: 16 },
-  taskTitleInput: { color: '#FFFFFF', fontSize: 26, fontWeight: '700', padding: 0, margin: 0 },
+  taskTitleInput: { color: '#FFFFFF', fontSize: 26, fontFamily: theme.fonts.bold, padding: 0, margin: 0 },
   bodySection: { flex: 1, paddingHorizontal: 16, paddingTop: 20 },
   card: { borderRadius: 16, marginBottom: 16, paddingVertical: 4 },
   cardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16 },
   cardRowLeft: { flexDirection: 'row', alignItems: 'center' },
   cardRowRight: { flexDirection: 'row', alignItems: 'center' },
-  cardRowTitle: { fontSize: 16, marginLeft: 12, fontWeight: '400' },
-  cardRowValue: { color: '#8E8E93', fontSize: 16, marginRight: 8 },
-  divider: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(150,150,150,0.2)', marginLeft: 50 },
-  proBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(150,150,150,0.1)', paddingHorizontal: 6, paddingVertical: 4, borderRadius: 12, marginRight: 8, borderWidth: 1, borderColor: 'rgba(150,150,150,0.15)' },
-  proBadgeText: { color: '#8E8E93', fontSize: 10, fontWeight: '600' },
-  daysContainer: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(150,150,150,0.2)' },
-  dayBtn: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: 'rgba(150,150,150,0.2)', alignItems: 'center', justifyContent: 'center' },
-  dayBtnText: { fontSize: 14, fontWeight: 'bold' },
+  cardRowTitle: { fontSize: 16, marginLeft: 12, fontFamily: theme.fonts.medium, color: theme.colors.text },
+  cardRowValue: { color: theme.colors.textSecondary, fontSize: 16, fontFamily: theme.fonts.regular, marginRight: 8 },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: `${theme.colors.textSecondary}20`, marginLeft: 50 },
+  proBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: `${theme.colors.textSecondary}15`, paddingHorizontal: 6, paddingVertical: 4, borderRadius: 12, marginRight: 8, borderWidth: 1, borderColor: `${theme.colors.textSecondary}25` },
+  proBadgeText: { color: theme.colors.textSecondary, fontSize: 10, fontFamily: theme.fonts.bold },
+  daysContainer: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: `${theme.colors.textSecondary}20` },
+  dayBtn: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: `${theme.colors.textSecondary}30`, alignItems: 'center', justifyContent: 'center' },
+  dayBtnText: { fontSize: 14, fontFamily: theme.fonts.bold },
   subtaskRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 16 },
   addSubtaskRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 16 },
   subtaskCheck: { marginRight: 10 },
-  subtaskInput: { flex: 1, fontSize: 16 },
+  subtaskInput: { flex: 1, fontSize: 16, fontFamily: theme.fonts.medium },
   subtaskDelete: { padding: 4 },
   subtaskAddBtn: { padding: 2 },
   textAreaContainer: { paddingHorizontal: 16, paddingBottom: 16, paddingTop: 10 },
-  textArea: { fontSize: 15, minHeight: 80, textAlignVertical: 'top' },
-  bottomBar: { alignItems: 'center', paddingTop: 16 },
-  deletePillBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, paddingHorizontal: 24, backgroundColor: 'rgba(255, 69, 58, 0.15)', borderRadius: 24 },
-  deleteText: { color: '#FF453A', fontSize: 16, fontWeight: '600' },
+  textArea: { fontSize: 15, fontFamily: theme.fonts.regular, minHeight: 80, textAlignVertical: 'top' },
+  bottomBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    paddingTop: 16,
+    paddingHorizontal: 20,
+  },
+  chainPillBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    borderRadius: 24,
+  },
+  chainText: {
+    fontSize: 15,
+    letterSpacing: -0.2,
+  },
+  deletePillBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 13,
+    paddingHorizontal: 18,
+    backgroundColor: 'rgba(255, 69, 58, 0.12)',
+    borderRadius: 24,
+  },
+  deleteText: { color: '#FF453A', fontSize: 15, fontFamily: theme.fonts.bold },
   durPill: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: 'rgba(150,150,150,0.1)',
+    backgroundColor: `${theme.colors.textSecondary}15`,
     borderWidth: 1,
-    borderColor: 'rgba(150,150,150,0.1)',
+    borderColor: `${theme.colors.textSecondary}25`,
   },
   durPillText: {
     fontSize: 13,
-    color: '#8E8E93',
-    fontWeight: '500',
+    color: theme.colors.textSecondary,
+    fontFamily: theme.fonts.medium,
   },
   pickerOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end", alignItems: "center", zIndex: 100 },
   pickerCard: { borderRadius: 28, paddingVertical: 24, paddingHorizontal: 20, width: "90%", maxWidth: 320 },
+
+  /* --- Icon Picker Modal Styles --- */
+  iconModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  iconModalCard: {
+    width: "100%",
+    maxWidth: 360,
+    backgroundColor: theme.colors.card,
+    borderRadius: 24,
+    padding: 18,
+    maxHeight: SCREEN_HEIGHT * 0.65,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.25,
+        shadowRadius: 20,
+      },
+      android: { elevation: 12 },
+    }),
+  },
+  iconModalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  iconModalTitle: {
+    fontSize: 17,
+    fontFamily: theme.fonts.bold,
+    color: theme.colors.text,
+  },
+  iconModalSub: {
+    fontSize: 12,
+    fontFamily: theme.fonts.regular,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
+  },
+  iconModalCloseBtn: {
+    padding: 4,
+  },
+  iconCatTabs: {
+    gap: 8,
+    paddingBottom: 12,
+  },
+  iconCatTab: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    backgroundColor: `${theme.colors.text}0A`,
+  },
+  iconCatTabActive: {
+    backgroundColor: theme.colors.primary,
+  },
+  iconCatTabText: {
+    fontSize: 12,
+    fontFamily: theme.fonts.bold,
+    color: theme.colors.textSecondary,
+  },
+  iconGridScroll: {
+    maxHeight: 260,
+  },
+  iconGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    paddingVertical: 6,
+  },
+  iconGridItem: {
+    width: "22%",
+    alignItems: "center",
+    gap: 6,
+  },
+  iconGridCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: `${theme.colors.primary}14`,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconGridLabel: {
+    fontSize: 11,
+    fontFamily: theme.fonts.medium,
+    color: theme.colors.text,
+    textAlign: "center",
+  },
 });

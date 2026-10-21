@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React, { memo } from 'react';
 import { Platform, View, Pressable } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import * as Haptics from '../../utils/haptics';
 import { Theme } from '../../styles/shared';
 import { RoutineItem, timeToMinutes, ICON_MAP } from '../../utils/utils';
 
@@ -49,8 +50,11 @@ export const TaskPill = memo<{
 
     return (
         <Pressable
-            onPress={() => onPressTask?.(item)}
-            style={[
+            onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onPressTask?.(item);
+            }}
+            style={({ pressed }) => [
                 {
                     width: size,
                     height: pillHeight,
@@ -59,6 +63,7 @@ export const TaskPill = memo<{
                     borderWidth: isSelected ? 1.5 : 1,
                     borderColor: isSelected ? `${taskColor}CC` : `${theme.colors.text}22`,
                 },
+                pressed && { opacity: 0.85, transform: [{ scale: 0.96 }] },
                 isSelected
                     ? Platform.select({
                         ios: { shadowColor: taskColor, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.6, shadowRadius: 10 },

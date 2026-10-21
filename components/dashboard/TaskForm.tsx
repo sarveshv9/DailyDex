@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Alert,
   Animated,
   Dimensions,
   Modal,
@@ -12,25 +13,49 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  useColorScheme,
   View
 } from "react-native";
 import { Theme } from "../../styles/shared";
 import { useTheme } from "../../context/ThemeContext";
 import * as Haptics from "../../utils/haptics";
-import { FormData, getRoutineIcon, SubTask } from "../../utils/utils";
+import {
+  addMinutesToTime,
+  FormData,
+  getDateString,
+  getRoutineIcon,
+  RoutineItem,
+  SubTask,
+  guessRoutineIconKey,
+  ICON_GROUPS,
+} from "../../utils/utils";
 import { InlineTimePicker } from "../common/InlineTimePicker";
 
 /* ─────────────────────────────── Types ──────────────────────────────── */
 
-interface TaskFormProps {
+export interface TaskFormProps {
   visible: boolean;
   isEditing: boolean;
   formData: FormData;
   onUpdateField: (field: keyof FormData, value: any) => void;
   onSave: () => void;
+  onSaveAndAddAnother?: () => void;
+  onBatchSave?: (items: RoutineItem[]) => void;
   onSaveInstance?: () => void;
   onClose: () => void;
+  existingRoutines?: RoutineItem[];
+  selectedDate?: Date;
+}
+
+interface StackedTask {
+  id: string;
+  task: string;
+  time: string;
+  duration: number;
+  imageKey: string;
+  daysOfWeek?: number[];
+  notes?: string;
+  subtasks?: SubTask[];
+  activePicker?: "none" | "time" | "duration" | "repeat" | "details";
 }
 
 /* ─────────────────────────────── Constants ──────────────────────────── */
@@ -47,99 +72,26 @@ const DAYS_OF_WEEK = [
   { label: "S", full: "Sat", value: 6 },
 ];
 
-/** Duration presets in minutes */
-const DURATION_PRESETS = [15, 30, 45, 60, 90, 120];
+const DURATION_PRESETS = [10, 15, 20, 30, 45, 60];
 
-const CATEGORIES = [
-  {
-    name: "Morning",
-    items: [
-       { task: "Wake Up", description: "Start your day with a clear mind.", imageKey: "wakeup" },
-       { task: "Hydrate", description: "Drink a full glass of water.", imageKey: "water" },
-       { task: "Cold Shower", description: "Invigorate your body.", imageKey: "cold_shower" },
-       { task: "Skincare", description: "Take care of your skin.", imageKey: "skincare" },
-       { task: "Affirmations", description: "Set positive intentions.", imageKey: "affirmations" },
-    ]
-  },
-  {
-    name: "Meals",
-    items: [
-       { task: "Breakfast", description: "Fuel up for the morning ahead.", imageKey: "breakfast" },
-       { task: "Coffee", description: "Enjoy a fresh cup of coffee.", imageKey: "coffee" },
-       { task: "Lunch", description: "Refuel and take a proper break.", imageKey: "lunch" },
-       { task: "Snack", description: "A quick bite for energy.", imageKey: "snack" },
-       { task: "Meal Prep", description: "Prepare food for the week.", imageKey: "meal_prep" },
-       { task: "Dinner", description: "Share a mindful evening meal.", imageKey: "dinner" },
-    ]
-  },
-  {
-    name: "Fitness",
-    items: [
-       { task: "Gym", description: "Strength training or cardio.", imageKey: "gym" },
-       { task: "Yoga", description: "Loosen up and improve flexibility.", imageKey: "yoga" },
-       { task: "Run", description: "Go for a jog or run.", imageKey: "run" },
-       { task: "Walk", description: "Clear your head outdoors.", imageKey: "walk" },
-       { task: "Home Workout", description: "Exercise from home.", imageKey: "home_workout" },
-       { task: "Cycling", description: "Go for a bike ride.", imageKey: "cycling" },
-    ]
-  },
-  {
-    name: "Productivity",
-    items: [
-       { task: "Study", description: "Deep work on a skill or subject.", imageKey: "study" },
-       { task: "Deep Work", description: "Focused distraction-free work.", imageKey: "deep_work" },
-       { task: "Read", description: "Read a book or articles.", imageKey: "read" },
-       { task: "Side Project", description: "Work on personal projects.", imageKey: "side_project" },
-       { task: "Emails", description: "Clear out your inbox.", imageKey: "emails" },
-       { task: "Planning", description: "Plan your day or week.", imageKey: "planning" },
-    ]
-  },
-  {
-    name: "Mindfulness",
-    items: [
-       { task: "Meditate", description: "Sit in silence and observe.", imageKey: "meditate" },
-       { task: "Breathe", description: "Focus on your breath.", imageKey: "breathe" },
-       { task: "Journal", description: "Write down your thoughts.", imageKey: "journal" },
-       { task: "Reflect", description: "Review the day and set intentions.", imageKey: "reflect" },
-       { task: "Gratitude", description: "List things you are grateful for.", imageKey: "gratitude" },
-    ]
-  },
-  {
-    name: "Creative",
-    items: [
-       { task: "Draw", description: "Sketch or paint something.", imageKey: "draw" },
-       { task: "Music Practice", description: "Practice an instrument.", imageKey: "music_practice" },
-       { task: "Write", description: "Creative writing or blogging.", imageKey: "write" },
-       { task: "Photography", description: "Take some photos.", imageKey: "photography" },
-       { task: "Craft", description: "Work on a DIY craft.", imageKey: "craft" },
-    ]
-  },
-  {
-    name: "Social",
-    items: [
-       { task: "Family Time", description: "Spend quality time with family.", imageKey: "family_time" },
-       { task: "Call Friend", description: "Catch up with someone.", imageKey: "call_friend" },
-       { task: "Date Night", description: "Spend time with a loved one.", imageKey: "date_night" },
-       { task: "Volunteer", description: "Give back to the community.", imageKey: "volunteer" },
-    ]
-  },
-  {
-    name: "Evening",
-    items: [
-       { task: "Wind Down", description: "Transition your body toward rest.", imageKey: "prepare_sleep" },
-       { task: "Screen Off", description: "Turn off digital devices.", imageKey: "screen_off" },
-       { task: "Night Walk", description: "A peaceful walk before bed.", imageKey: "night_walk" },
-       { task: "Sleep", description: "Rest deeply and recharge.", imageKey: "sleep" },
-    ]
-  }
+const QUICK_INSPIRATIONS = [
+  { task: "Meditate", duration: 15, icon: "meditate" },
+  { task: "Hydrate", duration: 5, icon: "water" },
+  { task: "Morning Stretch", duration: 15, icon: "yoga" },
+  { task: "Cold Shower", duration: 10, icon: "cold_shower" },
+  { task: "Gym Workout", duration: 45, icon: "gym" },
+  { task: "Deep Work", duration: 45, icon: "deep_work" },
+  { task: "Read", duration: 25, icon: "read" },
+  { task: "Journal", duration: 15, icon: "journal" },
+  { task: "Wind Down", duration: 20, icon: "prepare_sleep" },
 ];
 
-/** Format minutes → human-readable string (e.g. "1 hr 30 min") */
+/** Format minutes into clean text (e.g. "30m", "1h 15m") */
 const formatDuration = (minutes: number): string => {
-  if (minutes < 60) return `${minutes} min`;
+  if (minutes < 60) return `${minutes}m`;
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
-  return m === 0 ? `${h} hr` : `${h} hr ${m} min`;
+  return m === 0 ? `${h}h` : `${h}h ${m}m`;
 };
 
 /* ─────────────────────────────── Component ──────────────────────────── */
@@ -150,19 +102,54 @@ const TaskForm: React.FC<TaskFormProps> = ({
   formData,
   onUpdateField,
   onSave,
+  onBatchSave,
   onSaveInstance,
   onClose,
+  selectedDate,
 }) => {
   const { theme, isDarkMode } = useTheme();
   const isDark = isDarkMode;
   const styles = useMemo(() => getStyles(theme), [theme]);
 
-  const [showTimePicker, setShowTimePicker] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState(0);
-  const [newSubtaskText, setNewSubtaskText] = useState("");
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
 
-  /* ── Sheet open/close animation ── */
+  /* ── Stacked tasks for effortless sequential creation ── */
+  const [stackedTasks, setStackedTasks] = useState<StackedTask[]>([]);
+  const [editActivePicker, setEditActivePicker] = useState<"none" | "time" | "duration">("none");
+
+  /* ── Icon Picker Modal State ── */
+  const [iconPickerTarget, setIconPickerTarget] = useState<{
+    type: "editing" | "stacked";
+    id?: string;
+  } | null>(null);
+  const [iconPickerCat, setIconPickerCat] = useState<number>(0);
+
+  /* ── Initialize state when modal opens ── */
+  useEffect(() => {
+    if (visible) {
+      if (isEditing) {
+        setStackedTasks([]);
+      } else {
+        setStackedTasks([
+          {
+            id: Date.now().toString(),
+            task: formData.task || "",
+            time: formData.time || "8:00 AM",
+            duration: formData.duration || 30,
+            imageKey: formData.imageKey || "breathe",
+            daysOfWeek: formData.daysOfWeek && formData.daysOfWeek.length > 0 ? formData.daysOfWeek : [0, 1, 2, 3, 4, 5, 6],
+            notes: formData.description || "",
+            subtasks: formData.subtasks || [],
+            activePicker: "none",
+          },
+        ]);
+      }
+      setEditActivePicker("none");
+      setIconPickerTarget(null);
+    }
+  }, [visible, isEditing, formData.time]);
+
+  /* ── Smooth open/close spring animation ── */
   useEffect(() => {
     if (visible) {
       Animated.spring(slideAnim, {
@@ -174,82 +161,183 @@ const TaskForm: React.FC<TaskFormProps> = ({
     } else {
       Animated.timing(slideAnim, {
         toValue: SCREEN_HEIGHT,
-        duration: 280,
+        duration: 260,
         useNativeDriver: true,
       }).start();
     }
   }, [visible, slideAnim]);
 
-  /* ── Time picker ── */
-  const handleConfirmTime = useCallback(() => {
-    setShowTimePicker(false);
-  }, []);
+  /* ── Update a specific task in the stack ── */
+  const updateStackedItem = (id: string, updates: Partial<StackedTask>) => {
+    setStackedTasks((prev) => {
+      const idx = prev.findIndex((t) => t.id === id);
+      if (idx === -1) return prev;
 
-  /* ── Day toggle ── */
-  const toggleDay = useCallback(
-    (dayValue: number) => {
-      Haptics.selectionAsync();
-      const current = formData.daysOfWeek ?? [];
-      const next = current.includes(dayValue)
-        ? current.filter((d) => d !== dayValue)
-        : [...current, dayValue].sort();
-      onUpdateField("daysOfWeek", next as any);
-    },
-    [formData.daysOfWeek, onUpdateField]
-  );
+      const next = [...prev];
+      const updated = { ...next[idx], ...updates };
 
-  /* ── Duration helpers ── */
-  const currentDuration: number = formData.duration ?? 30;
+      // If user typed a task name and hasn't manually set an icon, auto-detect
+      if (updates.task !== undefined && !updates.imageKey) {
+        updated.imageKey = guessRoutineIconKey(updates.task);
+      }
 
-  const setDuration = useCallback(
-    (mins: number) => {
-      Haptics.selectionAsync();
-      onUpdateField("duration", mins);
-    },
-    [onUpdateField]
-  );
+      next[idx] = updated;
 
-  const adjustDuration = useCallback(
-    (delta: number) => {
-      const next = Math.max(5, Math.min(240, currentDuration + delta));
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      onUpdateField("duration", next);
-    },
-    [currentDuration, onUpdateField]
-  );
+      // If time or duration changed, automatically chain subsequent items consecutively
+      if (updates.time !== undefined || updates.duration !== undefined) {
+        let cursor = addMinutesToTime(updated.time, updated.duration);
+        for (let i = idx + 1; i < next.length; i++) {
+          next[i] = {
+            ...next[i],
+            time: cursor,
+          };
+          cursor = addMinutesToTime(cursor, next[i].duration);
+        }
+      }
 
-  const toggleSubtask = (id: string) => {
-    const st = formData.subtasks || [];
-    onUpdateField("subtasks", st.map(s => s.id === id ? { ...s, completed: !s.completed } : s));
+      // Sync the first item with outer formData for compatibility
+      if (idx === 0) {
+        if (updates.task !== undefined) onUpdateField("task", updates.task);
+        if (updates.time !== undefined) onUpdateField("time", updates.time);
+        if (updates.duration !== undefined) onUpdateField("duration", updates.duration);
+        if (updates.imageKey !== undefined) onUpdateField("imageKey", updates.imageKey);
+      }
+
+      return next;
+    });
   };
 
-  const addSubtask = () => {
-    if (!newSubtaskText.trim()) return;
-    const st = formData.subtasks || [];
-    onUpdateField("subtasks", [...st, { id: Date.now().toString(), title: newSubtaskText.trim(), completed: false }]);
-    setNewSubtaskText("");
+  /* ── Add another task to the stack ── */
+  const handleAddAnotherTask = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setStackedTasks((prev) => {
+      const last = prev[prev.length - 1];
+      const nextTime = last ? addMinutesToTime(last.time, last.duration) : "8:00 AM";
+      const newItem: StackedTask = {
+        id: `${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        task: "",
+        time: nextTime,
+        duration: 20,
+        imageKey: "breathe",
+        daysOfWeek: last?.daysOfWeek || [0, 1, 2, 3, 4, 5, 6],
+        notes: "",
+        subtasks: [],
+        activePicker: "none",
+      };
+      return [...prev, newItem];
+    });
   };
 
-  const editSubtask = (id: string, text: string) => {
-    const st = formData.subtasks || [];
-    onUpdateField("subtasks", st.map(s => s.id === id ? { ...s, title: text } : s));
+  /* ── Remove a stacked task ── */
+  const handleRemoveStackedTask = (id: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setStackedTasks((prev) => {
+      if (prev.length <= 1) return prev;
+      return prev.filter((t) => t.id !== id);
+    });
   };
 
-  const deleteSubtask = (id: string) => {
-    const st = formData.subtasks || [];
-    onUpdateField("subtasks", st.filter(s => s.id !== id));
+  /* ── Apply quick inspiration to the currently active/first task ── */
+  const applyInspiration = (item: typeof QUICK_INSPIRATIONS[number]) => {
+    Haptics.selectionAsync();
+    if (isEditing) {
+      onUpdateField("task", item.task);
+      onUpdateField("duration", item.duration);
+      onUpdateField("imageKey", item.icon);
+    } else {
+      setStackedTasks((prev) => {
+        if (prev.length === 0) return prev;
+        const targetIdx = prev.findIndex((t) => !t.task.trim());
+        const idx = targetIdx !== -1 ? targetIdx : prev.length - 1;
+        const next = [...prev];
+        next[idx] = {
+          ...next[idx],
+          task: item.task,
+          duration: item.duration,
+          imageKey: item.icon,
+        };
+        if (idx === 0) {
+          onUpdateField("task", item.task);
+          onUpdateField("duration", item.duration);
+          onUpdateField("imageKey", item.icon);
+        }
+        return next;
+      });
+    }
   };
 
-  /* ── Template fill ── */
-  const applyTemplate = useCallback(
-    (tmpl: typeof CATEGORIES[number]["items"][number]) => {
-      Haptics.selectionAsync();
-      onUpdateField("task", tmpl.task);
-      onUpdateField("description", tmpl.description);
-      onUpdateField("imageKey", tmpl.imageKey);
-    },
-    [onUpdateField]
-  );
+  /* ── Icon Selection from Modal ── */
+  const handleSelectIcon = (chosenKey: string) => {
+    Haptics.selectionAsync();
+    if (!iconPickerTarget) return;
+
+    if (iconPickerTarget.type === "editing") {
+      onUpdateField("imageKey", chosenKey);
+    } else if (iconPickerTarget.type === "stacked" && iconPickerTarget.id) {
+      updateStackedItem(iconPickerTarget.id, { imageKey: chosenKey });
+    }
+
+    setIconPickerTarget(null);
+  };
+
+  /* ── Master Save Handler ── */
+  const handleSaveAll = () => {
+    if (isEditing) {
+      if (!formData.task.trim() || !formData.time.trim()) {
+        Alert.alert("Missing Information", "Please enter a task name and start time.");
+        return;
+      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      onSave();
+      return;
+    }
+
+    const validTasks = stackedTasks.filter((t) => t.task.trim().length > 0);
+    if (validTasks.length === 0) {
+      Alert.alert("Empty Task", "Please enter at least one task name.");
+      return;
+    }
+
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    if (validTasks.length === 1) {
+      const first = validTasks[0];
+      onUpdateField("task", first.task.trim());
+      onUpdateField("time", first.time);
+      onUpdateField("duration", first.duration);
+      onUpdateField("imageKey", first.imageKey);
+      onUpdateField("description", first.notes || "");
+      onUpdateField("daysOfWeek", first.daysOfWeek || [0, 1, 2, 3, 4, 5, 6]);
+      onSave();
+    } else {
+      const finalDate = selectedDate ? getDateString(selectedDate) : undefined;
+      const routineItems: RoutineItem[] = validTasks.map((t, idx) => ({
+        id: `${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 5)}`,
+        time: t.time,
+        task: t.task.trim(),
+        description: t.notes?.trim() || "",
+        imageKey: t.imageKey || guessRoutineIconKey(t.task),
+        duration: t.duration,
+        date: finalDate,
+        daysOfWeek: t.daysOfWeek && t.daysOfWeek.length > 0 ? t.daysOfWeek : [0, 1, 2, 3, 4, 5, 6],
+        subtasks: t.subtasks || [],
+      }));
+      onBatchSave?.(routineItems);
+    }
+  };
+
+  /* ── Calculate total sequence summary for stacked tasks ── */
+  const sequenceSummary = useMemo(() => {
+    if (stackedTasks.length <= 1) return null;
+    const totalMins = stackedTasks.reduce((sum, t) => sum + t.duration, 0);
+    const firstTime = stackedTasks[0].time;
+    const endTime = addMinutesToTime(firstTime, totalMins);
+    return {
+      count: stackedTasks.length,
+      totalDuration: formatDuration(totalMins),
+      timeRange: `${firstTime} – ${endTime}`,
+    };
+  }, [stackedTasks]);
 
   return (
     <Modal
@@ -266,22 +354,22 @@ const TaskForm: React.FC<TaskFormProps> = ({
             opacity: slideAnim.interpolate({
               inputRange: [0, SCREEN_HEIGHT],
               outputRange: [1, 0],
-              extrapolate: 'clamp'
-            })
-          }
+              extrapolate: "clamp",
+            }),
+          },
         ]}
       >
-        {Platform.OS === 'web' ? (
-          <View 
+        {Platform.OS === "web" ? (
+          <View
             style={[
-              StyleSheet.absoluteFill, 
-              { backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.6)' }
-            ]} 
+              StyleSheet.absoluteFill,
+              { backgroundColor: isDark ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.35)" },
+            ]}
           />
         ) : (
           <BlurView
             style={StyleSheet.absoluteFill}
-            intensity={Platform.OS === 'ios' ? 20 : 40}
+            intensity={Platform.OS === "ios" ? 25 : 45}
             tint={isDark ? "dark" : "light"}
             experimentalBlurMethod="dimezisBlurView"
           />
@@ -294,251 +382,264 @@ const TaskForm: React.FC<TaskFormProps> = ({
           style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}
           testID="task-form-content"
         >
-          {Platform.OS === 'web' ? (
-            <View 
+          {Platform.OS === "web" ? (
+            <View
               style={[
-                StyleSheet.absoluteFill, 
-                { backgroundColor: isDark ? theme.colors.card : theme.colors.background }
-              ]} 
+                StyleSheet.absoluteFill,
+                { backgroundColor: isDark ? theme.colors.card : theme.colors.background },
+              ]}
             />
           ) : (
             <BlurView
               style={StyleSheet.absoluteFill}
-              intensity={Platform.OS === 'ios' ? 60 : 100}
+              intensity={Platform.OS === "ios" ? 70 : 100}
               tint={isDark ? "dark" : "light"}
               experimentalBlurMethod="dimezisBlurView"
             />
           )}
-          {/* ── Handle ── */}
+
+          {/* ── Drag Handle ── */}
           <View style={styles.handle} />
 
-          {/* ── Header ── */}
+          {/* ── Minimal Header ── */}
           <View style={styles.header}>
-            <Pressable onPress={onClose} style={styles.headerBtn} hitSlop={10}>
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onClose();
+              }}
+              style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.6 }]}
+              hitSlop={12}
+            >
               <Text style={styles.cancelText}>Cancel</Text>
             </Pressable>
 
             <Text style={styles.headerTitle}>
-              {isEditing ? "Edit Task" : "New Task"}
+              {isEditing ? "Edit Ritual" : "New Ritual"}
             </Text>
 
             <Pressable
-              onPress={onSave}
-              style={styles.saveBtn}
+              onPress={handleSaveAll}
+              style={({ pressed }) => [
+                styles.saveBtn,
+                pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] },
+              ]}
               testID="task-form-save-btn"
+              hitSlop={8}
             >
-              <Text style={styles.saveText}>Save</Text>
+              <Text style={styles.saveText}>
+                {stackedTasks.length > 1 ? `Save (${stackedTasks.length})` : "Save"}
+              </Text>
             </Pressable>
           </View>
 
-          {/* ── Scrollable body ── */}
+          {/* ── Scrollable Body ── */}
           <ScrollView
             style={styles.scroll}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-
-            {/* ── Quick templates (new task only) ── */}
+            {/* ── Subtle Inspiration Bar (New Task only) ── */}
             {!isEditing && (
-              <View style={styles.section}>
-                <Text style={styles.sectionLabel}>Quick Start</Text>
-                
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 12 }}>
-                  {CATEGORIES.map((cat, idx) => (
-                    <Pressable
-                      key={idx}
-                      onPress={() => setSelectedCategory(idx)}
-                      style={[
-                        styles.categoryChip,
-                        selectedCategory === idx && { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }
-                      ]}
-                    >
-                      <Text style={[
-                        styles.categoryChipText,
-                        selectedCategory === idx ? { color: theme.colors.white } : { color: theme.colors.textSecondary }
-                      ]}>{cat.name}</Text>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-
+              <View style={styles.inspirationSection}>
+                <Text style={styles.inspirationLabel}>
+                  Quick suggestions (or type any task below):
+                </Text>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.templateRow}
+                  contentContainerStyle={styles.inspirationScroll}
                 >
-                  {CATEGORIES[selectedCategory].items.map((tmpl, idx) => (
+                  {QUICK_INSPIRATIONS.map((item, idx) => (
                     <Pressable
                       key={idx}
                       style={({ pressed }) => [
-                        styles.templateChip,
-                        pressed && styles.templateChipPressed,
+                        styles.inspirationChip,
+                        pressed && { opacity: 0.7, transform: [{ scale: 0.97 }] },
                       ]}
-                      onPress={() => applyTemplate(tmpl)}
+                      onPress={() => applyInspiration(item)}
                     >
                       <Ionicons
-                        name={getRoutineIcon(tmpl.imageKey)}
-                        size={20}
+                        name={getRoutineIcon(item.icon)}
+                        size={14}
                         color={theme.colors.primary}
-                        style={{ marginRight: 8 }}
+                        style={{ marginRight: 6 }}
                       />
-                      <Text style={styles.templateLabel}>{tmpl.task}</Text>
+                      <Text style={styles.inspirationText}>{item.task}</Text>
                     </Pressable>
                   ))}
                 </ScrollView>
               </View>
             )}
 
-            {/* ── Time ── */}
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Start Time</Text>
-              <Pressable
-                style={styles.fieldCard}
-                onPress={() => setShowTimePicker(!showTimePicker)}
-              >
-                <View style={styles.fieldIconWrap}>
-                  <Ionicons name="time-outline" size={18} color={theme.colors.primary} />
-                </View>
-                <Text
-                  style={[
-                    styles.fieldValue,
-                    !formData.time && styles.fieldPlaceholder,
-                  ]}
-                >
-                  {formData.time || "Set time"}
-                </Text>
-                <Ionicons
-                  name={showTimePicker ? "chevron-up" : "chevron-forward"}
-                  size={16}
-                  color={`${theme.colors.textSecondary}60`}
-                />
-              </Pressable>
-
-              {showTimePicker && (
-                <View style={[styles.fieldCard, { marginTop: 8, paddingVertical: 10 }]}>
-                  <InlineTimePicker
-                    value={formData.time || "1:00 AM"}
-                    onChange={(time) => onUpdateField("time", time)}
-                  />
-                </View>
-              )}
-            </View>
-
-            {/* ── Task name ── */}
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Task Name</Text>
-              <View style={styles.fieldCard}>
-                <View style={styles.fieldIconWrap}>
-                  <Ionicons name="pencil-outline" size={18} color={theme.colors.primary} />
-                </View>
-                <TextInput
-                  style={styles.textInput}
-                  value={formData.task}
-                  onChangeText={(t) => onUpdateField("task", t)}
-                  placeholder="e.g. ☕ Morning coffee"
-                  placeholderTextColor={`${theme.colors.textSecondary}50`}
-                  multiline={false}
-                  returnKeyType="done"
-                />
-              </View>
-            </View>
-
-            {/* ── Duration ── */}
-            <View style={styles.section}>
-              <View style={styles.sectionLabelRow}>
-                <Text style={styles.sectionLabel}>Duration</Text>
-                <View style={styles.durationBadge}>
-                  <Text style={[styles.durationBadgeText, { color: theme.colors.primary }]}>
-                    {formatDuration(currentDuration)}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Stepper */}
-              <View style={styles.fieldCard}>
-                <View style={styles.fieldIconWrap}>
-                  <Ionicons name="hourglass-outline" size={18} color={theme.colors.primary} />
-                </View>
-                <Pressable
-                  style={styles.stepperBtn}
-                  onPress={() => adjustDuration(-5)}
-                  hitSlop={8}
-                >
-                  <Ionicons name="remove" size={20} color={theme.colors.text} />
-                </Pressable>
-                <View style={styles.stepperTrack}>
-                  {/* Visual fill bar */}
-                  <View
-                    style={[
-                      styles.stepperFill,
-                      {
-                        width: `${Math.min(100, (currentDuration / 120) * 100)}%`,
-                        backgroundColor: theme.colors.primary,
-                      },
-                    ]}
-                  />
-                  <Text style={styles.stepperValue}>{currentDuration} min</Text>
-                </View>
-                <Pressable
-                  style={styles.stepperBtn}
-                  onPress={() => adjustDuration(5)}
-                  hitSlop={8}
-                >
-                  <Ionicons name="add" size={20} color={theme.colors.text} />
-                </Pressable>
-              </View>
-
-              {/* Preset chips */}
-              <View style={styles.presetRow}>
-                {DURATION_PRESETS.map((mins) => (
+            {/* ══════════════════════════════════════════════════════════
+                MODE A: EDITING AN EXISTING TASK
+               ══════════════════════════════════════════════════════════ */}
+            {isEditing ? (
+              <View style={styles.taskCard}>
+                <View style={styles.taskInputRow}>
+                  {/* Tap icon circle to choose any custom icon */}
                   <Pressable
-                    key={mins}
-                    style={[
-                      styles.presetChip,
-                      currentDuration === mins && {
-                        backgroundColor: theme.colors.primary,
-                        borderColor: theme.colors.primary,
-                      },
-                    ]}
-                    onPress={() => setDuration(mins)}
+                    style={styles.iconCircle}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setIconPickerTarget({ type: "editing" });
+                    }}
+                    hitSlop={8}
                   >
+                    <Ionicons
+                      name={getRoutineIcon(formData.imageKey) || "pencil-outline"}
+                      size={20}
+                      color={theme.colors.primary}
+                    />
+                    <View style={styles.iconEditPencilDot}>
+                      <Ionicons name="pencil" size={8} color={theme.colors.white} />
+                    </View>
+                  </Pressable>
+
+                  <TextInput
+                    style={styles.taskTitleInput}
+                    value={formData.task}
+                    onChangeText={(t) => {
+                      onUpdateField("task", t);
+                      onUpdateField("imageKey", guessRoutineIconKey(t));
+                    }}
+                    placeholder="Ritual name..."
+                    placeholderTextColor={`${theme.colors.textSecondary}50`}
+                    autoFocus
+                  />
+                </View>
+
+                {/* Pill Controls */}
+                <View style={styles.pillsRow}>
+                  <Pressable
+                    style={[
+                      styles.controlPill,
+                      editActivePicker === "time" && styles.controlPillActive,
+                    ]}
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      setEditActivePicker((prev) => (prev === "time" ? "none" : "time"));
+                    }}
+                  >
+                    <Ionicons
+                      name="time-outline"
+                      size={15}
+                      color={editActivePicker === "time" ? theme.colors.white : theme.colors.primary}
+                    />
                     <Text
                       style={[
-                        styles.presetChipText,
-                        currentDuration === mins && { color: theme.colors.white },
+                        styles.controlPillText,
+                        editActivePicker === "time" && { color: theme.colors.white },
                       ]}
                     >
-                      {formatDuration(mins)}
+                      {formData.time || "Set time"}
                     </Text>
+                    <Ionicons
+                      name={editActivePicker === "time" ? "chevron-up" : "chevron-down"}
+                      size={12}
+                      color={editActivePicker === "time" ? theme.colors.white : theme.colors.textSecondary}
+                    />
                   </Pressable>
-                ))}
-              </View>
-            </View>
 
-            {/* ── Repeat days ── */}
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Repeat On</Text>
+                  <Pressable
+                    style={[
+                      styles.controlPill,
+                      editActivePicker === "duration" && styles.controlPillActive,
+                    ]}
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      setEditActivePicker((prev) => (prev === "duration" ? "none" : "duration"));
+                    }}
+                  >
+                    <Ionicons
+                      name="hourglass-outline"
+                      size={15}
+                      color={editActivePicker === "duration" ? theme.colors.white : theme.colors.primary}
+                    />
+                    <Text
+                      style={[
+                        styles.controlPillText,
+                        editActivePicker === "duration" && { color: theme.colors.white },
+                      ]}
+                    >
+                      {formData.duration || 30}m
+                    </Text>
+                    <Ionicons
+                      name={editActivePicker === "duration" ? "chevron-up" : "chevron-down"}
+                      size={12}
+                      color={editActivePicker === "duration" ? theme.colors.white : theme.colors.textSecondary}
+                    />
+                  </Pressable>
+                </View>
 
-              <View style={[styles.fieldCard, styles.fieldCardPadded]}>
-                <View style={styles.daysRow}>
+                {/* Time Picker Accordion */}
+                {editActivePicker === "time" && (
+                  <View style={styles.accordionBox}>
+                    <InlineTimePicker
+                      value={formData.time || "8:00 AM"}
+                      onChange={(t) => onUpdateField("time", t)}
+                    />
+                  </View>
+                )}
+
+                {/* Duration Picker Accordion */}
+                {editActivePicker === "duration" && (
+                  <View style={styles.accordionBox}>
+                    <View style={styles.durPresetRow}>
+                      {DURATION_PRESETS.map((dur) => (
+                        <Pressable
+                          key={dur}
+                          style={[
+                            styles.durChip,
+                            formData.duration === dur && {
+                              backgroundColor: theme.colors.primary,
+                              borderColor: theme.colors.primary,
+                            },
+                          ]}
+                          onPress={() => {
+                            Haptics.selectionAsync();
+                            onUpdateField("duration", dur);
+                          }}
+                        >
+                          <Text
+                            style={[
+                              styles.durChipText,
+                              formData.duration === dur && { color: theme.colors.white },
+                            ]}
+                          >
+                            {dur}m
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
+                {/* Repeat Days */}
+                <View style={styles.repeatRow}>
                   {DAYS_OF_WEEK.map((day) => {
                     const active = (formData.daysOfWeek ?? []).includes(day.value);
                     return (
                       <TouchableOpacity
                         key={day.value}
                         style={[
-                          styles.dayBtn,
-                          active && {
-                            backgroundColor: theme.colors.primary,
-                            borderColor: theme.colors.primary,
-                          },
+                          styles.dayCircle,
+                          active && { backgroundColor: theme.colors.primary },
                         ]}
-                        onPress={() => toggleDay(day.value)}
-                        activeOpacity={0.7}
+                        onPress={() => {
+                          Haptics.selectionAsync();
+                          const current = formData.daysOfWeek ?? [];
+                          const next = current.includes(day.value)
+                            ? current.filter((d) => d !== day.value)
+                            : [...current, day.value].sort();
+                          onUpdateField("daysOfWeek", next as any);
+                        }}
                       >
                         <Text
                           style={[
-                            styles.dayBtnText,
+                            styles.dayCircleText,
                             active && { color: theme.colors.white },
                           ]}
                         >
@@ -549,128 +650,448 @@ const TaskForm: React.FC<TaskFormProps> = ({
                   })}
                 </View>
 
-                {/* Quick-select row */}
-                <View style={styles.quickRow}>
-                  {[
-                    { label: "Every day", days: [0, 1, 2, 3, 4, 5, 6] },
-                    { label: "Weekdays", days: [1, 2, 3, 4, 5] },
-                    { label: "Weekends", days: [0, 6] },
-                  ].map(({ label, days }) => {
-                    const active =
-                      days.length === (formData.daysOfWeek ?? []).length &&
-                      days.every((d) => (formData.daysOfWeek ?? []).includes(d));
-                    return (
-                      <Pressable
-                        key={label}
-                        style={[
-                          styles.quickChip,
-                          active && {
-                            backgroundColor: `${theme.colors.primary}18`,
-                            borderColor: `${theme.colors.primary}60`,
-                          },
-                        ]}
-                        onPress={() => {
-                          Haptics.selectionAsync();
-                          onUpdateField("daysOfWeek", days as any);
-                        }}
-                      >
-                        <Text
-                          style={[
-                            styles.quickChipText,
-                            active && { color: theme.colors.primary, fontWeight: "700" },
-                          ]}
-                        >
-                          {label}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </View>
-            </View>
-
-            {/* ── Subtasks ── */}
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Subtasks</Text>
-              <View style={[styles.fieldCard, styles.fieldCardPadded, { minHeight: 0 }]}>
-                {formData.subtasks?.map((st) => (
-                  <View key={st.id} style={styles.subtaskRow}>
-                    <TouchableOpacity onPress={() => toggleSubtask(st.id)} style={styles.subtaskCheck}>
-                      <Ionicons name={st.completed ? "checkmark-circle" : "ellipse-outline"} size={22} color={st.completed ? theme.colors.primary : theme.colors.textSecondary} />
-                    </TouchableOpacity>
-                    <TextInput
-                      style={[styles.subtaskInput, { color: theme.colors.text }, st.completed && { textDecorationLine: 'line-through', opacity: 0.5 }]}
-                      value={st.title}
-                      onChangeText={(t) => editSubtask(st.id, t)}
-                    />
-                    <TouchableOpacity onPress={() => deleteSubtask(st.id)} style={styles.subtaskDelete}>
-                      <Ionicons name="close" size={20} color={theme.colors.textSecondary} />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-
-                <View style={styles.addSubtaskRow}>
-                  <Ionicons name="add" size={22} color={theme.colors.textSecondary} style={{ marginRight: 10 }} />
-                  <TextInput
-                    style={[styles.subtaskInput, { color: theme.colors.text }]}
-                    placeholder="Add Subtask"
-                    placeholderTextColor={`${theme.colors.textSecondary}60`}
-                    value={newSubtaskText}
-                    onChangeText={setNewSubtaskText}
-                    onSubmitEditing={addSubtask}
-                    returnKeyType="done"
-                  />
-                  {newSubtaskText.length > 0 && (
-                    <TouchableOpacity onPress={addSubtask} style={styles.subtaskAddBtn}>
-                      <Ionicons name="arrow-up-circle" size={26} color={theme.colors.primary} />
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-            </View>
-
-            {/* ── Description ── */}
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Notes</Text>
-              <View style={[styles.fieldCard, styles.fieldCardPadded, styles.descCard]}>
+                {/* Notes Input */}
                 <TextInput
-                  style={styles.descInput}
+                  style={styles.notesInput}
                   value={formData.description}
                   onChangeText={(t) => onUpdateField("description", t)}
-                  placeholder="Add a note or intention for this task…"
-                  placeholderTextColor={`${theme.colors.textSecondary}50`}
+                  placeholder="Add intention or note (optional)..."
+                  placeholderTextColor={`${theme.colors.textSecondary}40`}
                   multiline
-                  numberOfLines={4}
-                  textAlignVertical="top"
                 />
-              </View>
-            </View>
 
-            {/* ── Single Instance Exception Button ── */}
-            {isEditing && (formData.daysOfWeek?.length ?? 0) > 0 && onSaveInstance && (
-              <View style={{ marginBottom: 24 }}>
+                {/* Save for this date only */}
+                {isEditing && (formData.daysOfWeek?.length ?? 0) > 0 && onSaveInstance && (
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.saveInstanceBtn,
+                      pressed && { opacity: 0.8 },
+                    ]}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                      onSaveInstance();
+                    }}
+                  >
+                    <Ionicons name="calendar-outline" size={16} color={theme.colors.textSecondary} />
+                    <Text style={styles.saveInstanceText}>Apply to this date only</Text>
+                  </Pressable>
+                )}
+              </View>
+            ) : (
+              /* ══════════════════════════════════════════════════════════
+                  MODE B: MINIMAL STACKED TASK CREATION FLOW
+                 ══════════════════════════════════════════════════════════ */
+              <View style={styles.stackedList}>
+                {/* Consecutive Sequence summary pill if more than 1 task */}
+                {sequenceSummary && (
+                  <View style={styles.sequenceSummaryBar}>
+                    <Ionicons name="sparkles" size={14} color={theme.colors.primary} />
+                    <Text style={styles.sequenceSummaryText}>
+                      Sequence: {sequenceSummary.count} rituals • {sequenceSummary.timeRange} (
+                      {sequenceSummary.totalDuration})
+                    </Text>
+                  </View>
+                )}
+
+                {stackedTasks.map((item, index) => {
+                  const isFirst = index === 0;
+
+                  return (
+                    <View key={item.id} style={styles.taskCard}>
+                      {/* Top Row: Icon + Task Title + Delete */}
+                      <View style={styles.taskInputRow}>
+                        {/* Tap icon circle to pick ANY icon */}
+                        <Pressable
+                          style={styles.iconCircle}
+                          onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            setIconPickerTarget({ type: "stacked", id: item.id });
+                          }}
+                          hitSlop={8}
+                        >
+                          <Ionicons
+                            name={getRoutineIcon(item.imageKey)}
+                            size={20}
+                            color={theme.colors.primary}
+                          />
+                          <View style={styles.iconEditPencilDot}>
+                            <Ionicons name="pencil" size={8} color={theme.colors.white} />
+                          </View>
+                        </Pressable>
+
+                        <TextInput
+                          style={styles.taskTitleInput}
+                          value={item.task}
+                          onChangeText={(t) => updateStackedItem(item.id, { task: t })}
+                          placeholder={
+                            isFirst
+                              ? "Type any task (e.g. Walk Dog, Clean)..."
+                              : "Next task in flow..."
+                          }
+                          placeholderTextColor={`${theme.colors.textSecondary}50`}
+                          autoFocus={isFirst}
+                          returnKeyType="done"
+                        />
+
+                        {stackedTasks.length > 1 && (
+                          <Pressable
+                            style={styles.cardDeleteBtn}
+                            onPress={() => handleRemoveStackedTask(item.id)}
+                            hitSlop={8}
+                          >
+                            <Ionicons
+                              name="close"
+                              size={18}
+                              color={`${theme.colors.textSecondary}70`}
+                            />
+                          </Pressable>
+                        )}
+                      </View>
+
+                      {/* Pill Controls: Time & Duration */}
+                      <View style={styles.pillsRow}>
+                        {/* Time Pill */}
+                        <Pressable
+                          style={[
+                            styles.controlPill,
+                            item.activePicker === "time" && styles.controlPillActive,
+                          ]}
+                          onPress={() => {
+                            Haptics.selectionAsync();
+                            updateStackedItem(item.id, {
+                              activePicker: item.activePicker === "time" ? "none" : "time",
+                            });
+                          }}
+                        >
+                          <Ionicons
+                            name="time-outline"
+                            size={14}
+                            color={item.activePicker === "time" ? theme.colors.white : theme.colors.primary}
+                          />
+                          <Text
+                            style={[
+                              styles.controlPillText,
+                              item.activePicker === "time" && { color: theme.colors.white },
+                            ]}
+                          >
+                            {item.time}
+                          </Text>
+                          <Ionicons
+                            name={item.activePicker === "time" ? "chevron-up" : "chevron-down"}
+                            size={12}
+                            color={item.activePicker === "time" ? theme.colors.white : theme.colors.textSecondary}
+                          />
+                        </Pressable>
+
+                        {/* Duration Pill */}
+                        <Pressable
+                          style={[
+                            styles.controlPill,
+                            item.activePicker === "duration" && styles.controlPillActive,
+                          ]}
+                          onPress={() => {
+                            Haptics.selectionAsync();
+                            updateStackedItem(item.id, {
+                              activePicker: item.activePicker === "duration" ? "none" : "duration",
+                            });
+                          }}
+                        >
+                          <Ionicons
+                            name="hourglass-outline"
+                            size={14}
+                            color={item.activePicker === "duration" ? theme.colors.white : theme.colors.primary}
+                          />
+                          <Text
+                            style={[
+                              styles.controlPillText,
+                              item.activePicker === "duration" && { color: theme.colors.white },
+                            ]}
+                          >
+                            {item.duration}m
+                          </Text>
+                          <Ionicons
+                            name={item.activePicker === "duration" ? "chevron-up" : "chevron-down"}
+                            size={12}
+                            color={item.activePicker === "duration" ? theme.colors.white : theme.colors.textSecondary}
+                          />
+                        </Pressable>
+
+                        {/* Repeat Pill (shows on EVERY task) */}
+                        <Pressable
+                          style={[
+                            styles.controlPill,
+                            item.activePicker === "repeat" && styles.controlPillActive,
+                          ]}
+                          onPress={() => {
+                            Haptics.selectionAsync();
+                            updateStackedItem(item.id, {
+                              activePicker: item.activePicker === "repeat" ? "none" : "repeat",
+                            });
+                          }}
+                        >
+                          <Ionicons
+                            name="repeat-outline"
+                            size={14}
+                            color={item.activePicker === "repeat" ? theme.colors.white : theme.colors.primary}
+                          />
+                          <Text
+                            style={[
+                              styles.controlPillText,
+                              item.activePicker === "repeat" && { color: theme.colors.white },
+                            ]}
+                          >
+                            {(item.daysOfWeek ?? []).length === 7
+                              ? "Daily"
+                              : (item.daysOfWeek ?? []).length === 5 && !(item.daysOfWeek ?? []).includes(0) && !(item.daysOfWeek ?? []).includes(6)
+                              ? "Weekdays"
+                              : (item.daysOfWeek ?? []).length === 2 && (item.daysOfWeek ?? []).includes(0) && (item.daysOfWeek ?? []).includes(6)
+                              ? "Weekends"
+                              : (item.daysOfWeek ?? []).length === 0
+                              ? "Once"
+                              : `${(item.daysOfWeek ?? []).length}d/wk`}
+                          </Text>
+                          <Ionicons
+                            name={item.activePicker === "repeat" ? "chevron-up" : "chevron-down"}
+                            size={12}
+                            color={item.activePicker === "repeat" ? theme.colors.white : theme.colors.textSecondary}
+                          />
+                        </Pressable>
+                      </View>
+
+                      {/* Expandable Time Picker */}
+                      {item.activePicker === "time" && (
+                        <View style={styles.accordionBox}>
+                          <InlineTimePicker
+                            value={item.time}
+                            onChange={(newTime) => updateStackedItem(item.id, { time: newTime })}
+                          />
+                        </View>
+                      )}
+
+                      {/* Expandable Duration Presets */}
+                      {item.activePicker === "duration" && (
+                        <View style={styles.accordionBox}>
+                          <View style={styles.durPresetRow}>
+                            {DURATION_PRESETS.map((mins) => (
+                              <Pressable
+                                key={mins}
+                                style={[
+                                  styles.durChip,
+                                  item.duration === mins && {
+                                    backgroundColor: theme.colors.primary,
+                                    borderColor: theme.colors.primary,
+                                  },
+                                ]}
+                                onPress={() => {
+                                  Haptics.selectionAsync();
+                                  updateStackedItem(item.id, { duration: mins, activePicker: "none" });
+                                }}
+                              >
+                                <Text
+                                  style={[
+                                    styles.durChipText,
+                                    item.duration === mins && { color: theme.colors.white },
+                                  ]}
+                                >
+                                  {mins}m
+                                </Text>
+                              </Pressable>
+                            ))}
+                          </View>
+                        </View>
+                      )}
+
+                      {/* Expandable Repeat Days */}
+                      {item.activePicker === "repeat" && (
+                        <View style={styles.accordionBox}>
+                          <View style={styles.repeatRow}>
+                            {DAYS_OF_WEEK.map((day) => {
+                              const active = (item.daysOfWeek ?? []).includes(day.value);
+                              return (
+                                <TouchableOpacity
+                                  key={day.value}
+                                  style={[
+                                    styles.dayCircle,
+                                    active && { backgroundColor: theme.colors.primary },
+                                  ]}
+                                  onPress={() => {
+                                    Haptics.selectionAsync();
+                                    const current = item.daysOfWeek ?? [];
+                                    const next = current.includes(day.value)
+                                      ? current.filter((d) => d !== day.value)
+                                      : [...current, day.value].sort();
+                                    updateStackedItem(item.id, { daysOfWeek: next });
+                                  }}
+                                >
+                                  <Text
+                                    style={[
+                                      styles.dayCircleText,
+                                      active && { color: theme.colors.white },
+                                    ]}
+                                  >
+                                    {day.label}
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+
+                          {/* Quick Presets for Days */}
+                          <View style={styles.repeatPresetRow}>
+                            {[
+                              { label: "Daily", days: [0, 1, 2, 3, 4, 5, 6] },
+                              { label: "Weekdays", days: [1, 2, 3, 4, 5] },
+                              { label: "Weekends", days: [0, 6] },
+                            ].map((preset) => {
+                              const isSelected =
+                                (item.daysOfWeek ?? []).length === preset.days.length &&
+                                preset.days.every((d) => (item.daysOfWeek ?? []).includes(d));
+                              return (
+                                <Pressable
+                                  key={preset.label}
+                                  style={[
+                                    styles.repeatPresetChip,
+                                    isSelected && styles.repeatPresetChipActive,
+                                  ]}
+                                  onPress={() => {
+                                    Haptics.selectionAsync();
+                                    updateStackedItem(item.id, { daysOfWeek: preset.days });
+                                  }}
+                                >
+                                  <Text
+                                    style={[
+                                      styles.repeatPresetText,
+                                      isSelected && { color: theme.colors.primary, fontFamily: theme.fonts.bold },
+                                    ]}
+                                  >
+                                    {preset.label}
+                                  </Text>
+                                </Pressable>
+                              );
+                            })}
+                          </View>
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
+
+                {/* ── "+ Add another ritual" button ── */}
                 <Pressable
                   style={({ pressed }) => [
-                    styles.primaryButton,
-                    { backgroundColor: theme.colors.textSecondary },
-                    pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }
+                    styles.addAnotherCardBtn,
+                    pressed && { opacity: 0.75, transform: [{ scale: 0.99 }] },
                   ]}
-                  onPress={onSaveInstance}
+                  onPress={handleAddAnotherTask}
                 >
-                  <Ionicons name="calendar-outline" size={18} color={theme.colors.white} />
-                  <Text style={styles.primaryButtonText}>Save for this date only</Text>
+                  <Ionicons
+                    name="add-circle-outline"
+                    size={20}
+                    color={theme.colors.primary}
+                    style={{ marginRight: 8 }}
+                  />
+                  <Text style={styles.addAnotherCardText}>Add another ritual to flow</Text>
                 </Pressable>
-                <Text style={{ textAlign: 'center', marginTop: 8, fontSize: 12, color: theme.colors.textSecondary }}>
-                  Creates a one-time override without changing other days.
-                </Text>
               </View>
             )}
 
-            {/* Bottom safe-area breathing room */}
-            <View style={{ height: 16 }} />
+            <View style={{ height: 40 }} />
           </ScrollView>
-        </Animated.View>
 
+          {/* ══════════════════════════════════════════════════════════
+              ICON PICKER MODAL (FOR ANY CUSTOM RITUAL)
+             ══════════════════════════════════════════════════════════ */}
+          <Modal
+            visible={!!iconPickerTarget}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setIconPickerTarget(null)}
+            statusBarTranslucent
+          >
+            <Pressable
+              style={styles.iconModalOverlay}
+              onPress={() => setIconPickerTarget(null)}
+            >
+              <Pressable
+                style={styles.iconModalCard}
+                onPress={(e) => e.stopPropagation()}
+              >
+                <View style={styles.iconModalHeader}>
+                  <View>
+                    <Text style={styles.iconModalTitle}>Choose an Icon</Text>
+                    <Text style={styles.iconModalSub}>Pick an icon for your custom ritual</Text>
+                  </View>
+                  <Pressable
+                    onPress={() => setIconPickerTarget(null)}
+                    hitSlop={10}
+                    style={styles.iconModalCloseBtn}
+                  >
+                    <Ionicons name="close" size={20} color={theme.colors.textSecondary} />
+                  </Pressable>
+                </View>
+
+                {/* Category Pills */}
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.iconCatTabs}
+                >
+                  {ICON_GROUPS.map((grp, idx) => (
+                    <Pressable
+                      key={idx}
+                      style={[
+                        styles.iconCatTab,
+                        iconPickerCat === idx && styles.iconCatTabActive,
+                      ]}
+                      onPress={() => {
+                        Haptics.selectionAsync();
+                        setIconPickerCat(idx);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.iconCatTabText,
+                          iconPickerCat === idx && { color: theme.colors.white },
+                        ]}
+                      >
+                        {grp.category}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+
+                {/* Icons Grid */}
+                <ScrollView
+                  style={styles.iconGridScroll}
+                  contentContainerStyle={styles.iconGrid}
+                  showsVerticalScrollIndicator={false}
+                >
+                  {ICON_GROUPS[iconPickerCat].icons.map((item) => (
+                    <Pressable
+                      key={item.key}
+                      style={({ pressed }) => [
+                        styles.iconGridItem,
+                        pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] },
+                      ]}
+                      onPress={() => handleSelectIcon(item.key)}
+                    >
+                      <View style={styles.iconGridCircle}>
+                        <Ionicons
+                          name={getRoutineIcon(item.key)}
+                          size={22}
+                          color={theme.colors.primary}
+                        />
+                      </View>
+                      <Text style={styles.iconGridLabel} numberOfLines={1}>
+                        {item.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </Pressable>
+            </Pressable>
+          </Modal>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -680,57 +1101,50 @@ const TaskForm: React.FC<TaskFormProps> = ({
 
 const getStyles = (theme: Theme) =>
   StyleSheet.create({
-
-    /* ── Modal shell ── */
     overlay: {
       flex: 1,
       justifyContent: "flex-end",
     },
     sheet: {
       backgroundColor: theme.glass.cardBg,
-      borderTopLeftRadius: 36,
-      borderTopRightRadius: 36,
+      borderTopLeftRadius: 32,
+      borderTopRightRadius: 32,
       paddingTop: 10,
-      paddingBottom: 40,
+      paddingBottom: 34,
       height: SCREEN_HEIGHT * 0.85,
       maxHeight: SCREEN_HEIGHT * 0.92,
-      overflow: 'hidden',
+      overflow: "hidden",
       ...Platform.select({
         ios: {
           shadowColor: "#000",
           shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 0.18,
-          shadowRadius: 20,
+          shadowOpacity: 0.16,
+          shadowRadius: 18,
         },
         android: { elevation: 20 },
       }),
     },
-
-    /* ── Handle ── */
     handle: {
-      width: 40,
+      width: 36,
       height: 4,
       borderRadius: 2,
       backgroundColor: `${theme.colors.text}20`,
       alignSelf: "center",
-      marginBottom: 16,
+      marginBottom: 12,
     },
-
-    /* ── Header ── */
     header: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
       paddingHorizontal: 20,
-      paddingBottom: 16,
+      paddingBottom: 14,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: `${theme.colors.text}10`,
-      marginBottom: 8,
     },
     headerBtn: {
       paddingVertical: 6,
       paddingHorizontal: 4,
-      minWidth: 60,
+      minWidth: 50,
     },
     cancelText: {
       fontSize: 15,
@@ -744,301 +1158,352 @@ const getStyles = (theme: Theme) =>
       letterSpacing: -0.2,
     },
     saveBtn: {
-      paddingVertical: 9,
-      paddingHorizontal: 20,
+      paddingVertical: 7,
+      paddingHorizontal: 16,
       backgroundColor: theme.colors.primary,
-      borderRadius: 22,
-      minWidth: 60,
+      borderRadius: 18,
       alignItems: "center",
-      ...Platform.select({
-        ios: {
-          shadowColor: theme.colors.primary,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.35,
-          shadowRadius: 8,
-        },
-        android: { elevation: 5 },
-      }),
     },
     saveText: {
-      fontSize: 15,
+      fontSize: 14,
       fontFamily: theme.fonts.bold,
       color: theme.colors.white,
     },
-
-    /* ── Scroll ── */
     scroll: {
       flex: 1,
     },
     scrollContent: {
-      paddingHorizontal: 20,
+      paddingHorizontal: 18,
       paddingTop: 12,
     },
 
-    /* ── Section ── */
-    section: {
-      marginBottom: 24,
+    /* ── Quick Inspiration Bar ── */
+    inspirationSection: {
+      marginBottom: 14,
     },
-    sectionLabel: {
+    inspirationLabel: {
       fontSize: 12,
-      fontFamily: theme.fonts.bold,
+      fontFamily: theme.fonts.medium,
       color: theme.colors.textSecondary,
-      textTransform: "uppercase",
-      letterSpacing: 0.9,
-      marginBottom: 10,
+      marginBottom: 8,
       marginLeft: 2,
-      opacity: 0.75,
     },
-    sectionLabelRow: {
+    inspirationScroll: {
+      gap: 8,
+      paddingRight: 10,
+    },
+    inspirationChip: {
       flexDirection: "row",
       alignItems: "center",
-      justifyContent: "space-between",
-      marginBottom: 10,
+      backgroundColor: `${theme.colors.text}08`,
+      borderWidth: 1,
+      borderColor: `${theme.colors.text}0E`,
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+      borderRadius: 16,
     },
-
-    fieldCard: {
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: `${theme.colors.text}0A`,
-      borderRadius: 24,
-      paddingVertical: 14,
-      paddingHorizontal: 16,
-      minHeight: 56,
-    },
-    fieldCardPadded: {
-      flexDirection: "column",
-      alignItems: "stretch",
-      paddingVertical: 16,
-    },
-    fieldIconWrap: {
-      width: 34,
-      height: 34,
-      borderRadius: 17,
-      backgroundColor: `${theme.colors.primary}14`,
-      alignItems: "center",
-      justifyContent: "center",
-      marginRight: 12,
-      flexShrink: 0,
-    },
-    fieldValue: {
-      flex: 1,
-      fontSize: 16,
+    inspirationText: {
+      fontSize: 12,
       fontFamily: theme.fonts.medium,
       color: theme.colors.text,
     },
-    fieldPlaceholder: {
-      color: theme.colors.textSecondary,
-      opacity: 0.6,
+
+    /* ── Stacked List ── */
+    stackedList: {
+      gap: 12,
+    },
+    sequenceSummaryBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: `${theme.colors.primary}12`,
+      paddingVertical: 7,
+      paddingHorizontal: 12,
+      borderRadius: 14,
+      gap: 8,
+      marginBottom: 2,
+    },
+    sequenceSummaryText: {
+      fontSize: 12,
+      fontFamily: theme.fonts.bold,
+      color: theme.colors.primary,
+      flex: 1,
     },
 
-    /* ── Text input inside card ── */
-    textInput: {
+    /* ── Minimalist Task Card ── */
+    taskCard: {
+      backgroundColor: `${theme.colors.text}08`,
+      borderRadius: 22,
+      borderWidth: 1,
+      borderColor: `${theme.colors.text}0E`,
+      padding: 14,
+      gap: 12,
+    },
+    taskInputRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+    iconCircle: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      backgroundColor: `${theme.colors.primary}15`,
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
+      position: "relative",
+    },
+    iconEditPencilDot: {
+      position: "absolute",
+      bottom: -2,
+      right: -2,
+      width: 14,
+      height: 14,
+      borderRadius: 7,
+      backgroundColor: theme.colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1.5,
+      borderColor: theme.colors.card,
+    },
+    taskTitleInput: {
       flex: 1,
       fontSize: 16,
-      fontFamily: theme.fonts.medium,
+      fontFamily: theme.fonts.bold,
       color: theme.colors.text,
       padding: 0,
       margin: 0,
     },
-
-    /* ── Duration stepper ── */
-    durationBadge: {
-      paddingHorizontal: 10,
-      paddingVertical: 3,
-      borderRadius: 8,
-      backgroundColor: `${theme.colors.primary}14`,
+    cardDeleteBtn: {
+      padding: 4,
     },
-    durationBadgeText: {
+
+    /* ── Clean Control Pills ── */
+    pillsRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    controlPill: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: `${theme.colors.text}0A`,
+      paddingVertical: 6,
+      paddingHorizontal: 11,
+      borderRadius: 14,
+      gap: 5,
+    },
+    controlPillActive: {
+      backgroundColor: theme.colors.primary,
+    },
+    controlPillText: {
       fontSize: 12,
       fontFamily: theme.fonts.bold,
-      letterSpacing: 0.1,
-    },
-    stepperBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: `${theme.colors.text}0D`,
-      alignItems: "center",
-      justifyContent: "center",
-      flexShrink: 0,
-    },
-    stepperTrack: {
-      flex: 1,
-      height: 8,
-      borderRadius: 4,
-      backgroundColor: `${theme.colors.text}0E`,
-      marginHorizontal: 12,
-      overflow: "hidden",
-      position: "relative",
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    stepperFill: {
-      position: "absolute",
-      left: 0,
-      top: 0,
-      bottom: 0,
-      borderRadius: 4,
-    },
-    stepperValue: {
-      fontSize: 11,
-      fontFamily: theme.fonts.bold,
       color: theme.colors.text,
-      zIndex: 1,
-      letterSpacing: 0.1,
     },
 
-    /* Duration presets */
-    presetRow: {
+    /* ── Accordion Box for Time / Duration ── */
+    accordionBox: {
+      paddingTop: 8,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: `${theme.colors.text}10`,
+    },
+    durPresetRow: {
       flexDirection: "row",
       flexWrap: "wrap",
       gap: 8,
-      marginTop: 12,
+      paddingVertical: 4,
     },
-    presetChip: {
-      paddingVertical: 8,
-      paddingHorizontal: 16,
-      borderRadius: 24,
-      backgroundColor: `${theme.colors.text}08`,
-    },
-    presetChipText: {
-      fontSize: 13,
-      fontFamily: theme.fonts.medium,
-      color: theme.colors.textSecondary,
-    },
-
-    /* ── Days of week ── */
-    daysRow: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-    },
-    dayBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: `${theme.colors.text}0A`,
-    },
-    dayBtnText: {
-      fontSize: 14,
-      fontFamily: theme.fonts.bold,
-      color: theme.colors.textSecondary,
-    },
-    quickRow: {
-      flexDirection: "row",
-      gap: 8,
-      marginTop: 14,
-    },
-    quickChip: {
+    durChip: {
       paddingVertical: 6,
-      paddingHorizontal: 13,
-      borderRadius: 16,
-      backgroundColor: `${theme.colors.text}06`,
+      paddingHorizontal: 12,
+      borderRadius: 14,
+      backgroundColor: `${theme.colors.text}08`,
+      borderWidth: 1,
+      borderColor: "transparent",
     },
-    quickChipText: {
+    durChipText: {
       fontSize: 12,
       fontFamily: theme.fonts.medium,
       color: theme.colors.textSecondary,
     },
 
-    /* ── Description ── */
-    descCard: {
-      minHeight: 110,
-    },
-    descInput: {
-      fontSize: 15,
-      fontFamily: theme.fonts.medium,
-      color: theme.colors.text,
-      lineHeight: 22,
-      padding: 0,
-      minHeight: 80,
-    },
-
-    /* ── Templates ── */
-    templateRow: {
-      paddingVertical: 2,
-      gap: 10,
-    },
-    templateChip: {
+    /* ── Repeat Days ── */
+    repeatRow: {
       flexDirection: "row",
+      justifyContent: "space-between",
+      paddingVertical: 4,
+    },
+    dayCircle: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
       alignItems: "center",
-      backgroundColor: `${theme.colors.primary}10`,
-      paddingVertical: 9,
-      paddingHorizontal: 14,
-      borderRadius: 22,
-    },
-    templateChipPressed: {
-      opacity: 0.7,
-      transform: [{ scale: 0.97 }],
-    },
-    templateImg: {
-      width: 22,
-      height: 22,
-      marginRight: 7,
-    },
-    templateLabel: {
-      fontSize: 14,
-      fontFamily: theme.fonts.bold,
-      color: theme.colors.text,
-    },
-
-    categoryChip: {
-      paddingVertical: 6,
-      paddingHorizontal: 12,
-      borderRadius: 20,
+      justifyContent: "center",
       backgroundColor: `${theme.colors.text}0A`,
     },
-    categoryChipText: {
-      fontSize: 13,
+    dayCircleText: {
+      fontSize: 12,
       fontFamily: theme.fonts.bold,
+      color: theme.colors.textSecondary,
     },
-    subtaskRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 16 },
-    addSubtaskRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 16 },
-    subtaskCheck: { marginRight: 10 },
-    subtaskInput: { flex: 1, fontSize: 16, fontFamily: theme.fonts.medium, padding: 0 },
-    subtaskDelete: { padding: 4 },
-    subtaskAddBtn: { padding: 2 },
-    /* ── Single Instance Button ── */
-    primaryButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 14,
-      borderRadius: 18,
-      marginHorizontal: 10,
+    repeatPresetRow: {
+      flexDirection: "row",
+      gap: 8,
+      marginTop: 10,
     },
-    primaryButtonText: {
-      marginLeft: 8,
-      fontSize: 15,
-      fontFamily: theme.fonts.bold,
-      color: theme.colors.white,
+    repeatPresetChip: {
+      paddingVertical: 5,
+      paddingHorizontal: 12,
+      borderRadius: 14,
+      backgroundColor: `${theme.colors.text}08`,
+      borderWidth: 1,
+      borderColor: "transparent",
+    },
+    repeatPresetChipActive: {
+      backgroundColor: `${theme.colors.primary}18`,
+      borderColor: `${theme.colors.primary}40`,
+    },
+    repeatPresetText: {
+      fontSize: 12,
+      fontFamily: theme.fonts.medium,
+      color: theme.colors.textSecondary,
     },
 
-    /* ── Time picker ── */
-    pickerOverlay: {
-      position: "absolute",
-      top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: theme.colors.background,
-      justifyContent: "flex-end",
-      alignItems: "center",
+    /* ── Notes Input ── */
+    notesInput: {
+      fontSize: 13,
+      fontFamily: theme.fonts.regular,
+      color: theme.colors.text,
+      padding: 8,
+      backgroundColor: `${theme.colors.text}05`,
+      borderRadius: 12,
+      minHeight: 50,
+      textAlignVertical: "top",
     },
-    pickerCard: {
+
+    /* ── Save Instance Option ── */
+    saveInstanceBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      paddingVertical: 8,
+    },
+    saveInstanceText: {
+      fontSize: 12,
+      fontFamily: theme.fonts.medium,
+      color: theme.colors.textSecondary,
+    },
+
+    /* ── "+ Add another ritual" dashed button ── */
+    addAnotherCardBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: `${theme.colors.text}05`,
+      borderWidth: 1,
+      borderStyle: "dashed",
+      borderColor: `${theme.colors.primary}50`,
+      paddingVertical: 14,
+      borderRadius: 20,
+    },
+    addAnotherCardText: {
+      fontSize: 14,
+      fontFamily: theme.fonts.bold,
+      color: theme.colors.primary,
+    },
+
+    /* ── Icon Picker Modal ── */
+    iconModalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.55)",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 20,
+    },
+    iconModalCard: {
+      width: "100%",
+      maxWidth: 360,
       backgroundColor: theme.colors.card,
-      borderRadius: 28,
-      paddingVertical: 24,
-      paddingHorizontal: 20,
-      width: "90%",
-      maxWidth: 320,
+      borderRadius: 24,
+      padding: 18,
+      maxHeight: SCREEN_HEIGHT * 0.65,
       ...Platform.select({
         ios: {
           shadowColor: "#000",
-          shadowOffset: { width: 0, height: 20 },
-          shadowOpacity: 0.22,
-          shadowRadius: 28,
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.25,
+          shadowRadius: 20,
         },
-        android: { elevation: 24 },
+        android: { elevation: 12 },
       }),
+    },
+    iconModalHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 12,
+    },
+    iconModalTitle: {
+      fontSize: 17,
+      fontFamily: theme.fonts.bold,
+      color: theme.colors.text,
+    },
+    iconModalSub: {
+      fontSize: 12,
+      fontFamily: theme.fonts.regular,
+      color: theme.colors.textSecondary,
+      marginTop: 2,
+    },
+    iconModalCloseBtn: {
+      padding: 4,
+    },
+    iconCatTabs: {
+      gap: 8,
+      paddingBottom: 12,
+    },
+    iconCatTab: {
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+      borderRadius: 16,
+      backgroundColor: `${theme.colors.text}0A`,
+    },
+    iconCatTabActive: {
+      backgroundColor: theme.colors.primary,
+    },
+    iconCatTabText: {
+      fontSize: 12,
+      fontFamily: theme.fonts.bold,
+      color: theme.colors.textSecondary,
+    },
+    iconGridScroll: {
+      maxHeight: 260,
+    },
+    iconGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 12,
+      paddingVertical: 6,
+    },
+    iconGridItem: {
+      width: "22%",
+      alignItems: "center",
+      gap: 6,
+    },
+    iconGridCircle: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: `${theme.colors.primary}14`,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    iconGridLabel: {
+      fontSize: 11,
+      fontFamily: theme.fonts.medium,
+      color: theme.colors.text,
+      textAlign: "center",
     },
   });
 

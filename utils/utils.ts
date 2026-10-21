@@ -83,6 +83,20 @@ export const ICON_MAP: Record<string, keyof typeof Ionicons.glyphMap> = {
   night_walk: "cloudy-night-outline",
   sleep: "moon-outline",
 
+  // Everyday Life & Chores
+  pet: "paw-outline",
+  cleaning: "sparkles-outline",
+  laundry: "shirt-outline",
+  shopping: "cart-outline",
+  plant: "leaf-outline",
+  finances: "wallet-outline",
+  commute: "car-outline",
+  travel: "airplane-outline",
+  health: "medkit-outline",
+  coding: "code-slash-outline",
+  gaming: "game-controller-outline",
+  podcast: "headset-outline",
+
   // Fallback
   custom: "add-circle-outline",
 };
@@ -93,6 +107,145 @@ export const getRoutineIcon = (key?: string): keyof typeof Ionicons.glyphMap => 
   }
   return ICON_MAP["breathe"];
 };
+
+export const guessRoutineIconKey = (text: string): string => {
+  const lower = text.toLowerCase().trim();
+  if (!lower) return "breathe";
+  if (lower.includes("wake") || lower.includes("alarm") || lower.includes("morning")) return "wakeup";
+  if (lower.includes("water") || lower.includes("drink") || lower.includes("hydrat")) return "water";
+  if (lower.includes("shower") || lower.includes("bath")) return "cold_shower";
+  if (lower.includes("skin") || lower.includes("wash face")) return "skincare";
+  if (lower.includes("coffee") || lower.includes("tea") || lower.includes("cafe")) return "coffee";
+  if (lower.includes("breakfast") || lower.includes("brunch")) return "breakfast";
+  if (lower.includes("lunch")) return "lunch";
+  if (lower.includes("dinner") || lower.includes("supper")) return "dinner";
+  if (lower.includes("snack") || lower.includes("fruit")) return "snack";
+  if (lower.includes("gym") || lower.includes("workout") || lower.includes("lift") || lower.includes("fitness")) return "gym";
+  if (lower.includes("yoga") || lower.includes("stretch")) return "yoga";
+  if (lower.includes("run") || lower.includes("jog")) return "run";
+  if (lower.includes("walk")) return "walk";
+  if (lower.includes("cycling") || lower.includes("bike")) return "cycling";
+  if (lower.includes("meditat")) return "meditate";
+  if (lower.includes("breath")) return "breathe";
+  if (lower.includes("journal") || lower.includes("diary")) return "journal";
+  if (lower.includes("reflect") || lower.includes("gratitude")) return "reflect";
+  if (lower.includes("read") || lower.includes("book")) return "read";
+  if (lower.includes("study") || lower.includes("class") || lower.includes("learn")) return "study";
+  if (lower.includes("work") || lower.includes("code") || lower.includes("project")) return "deep_work";
+  if (lower.includes("email") || lower.includes("inbox")) return "emails";
+  if (lower.includes("draw") || lower.includes("art") || lower.includes("sketch")) return "draw";
+  if (lower.includes("music") || lower.includes("piano") || lower.includes("guitar")) return "music_practice";
+  if (lower.includes("write")) return "write";
+  if (lower.includes("sleep") || lower.includes("bed") || lower.includes("rest")) return "sleep";
+  if (lower.includes("wind down") || lower.includes("relax")) return "prepare_sleep";
+
+  // Everyday life & chores
+  if (lower.includes("drive") || lower.includes("car") || lower.includes("commut") || lower.includes("traffic") || lower.includes("office") || lower.includes("bus") || lower.includes("train")) return "commute";
+  if (lower.includes("pet") || lower.includes("dog") || lower.includes("cat") || lower.includes("puppy")) return "pet";
+  if (lower.includes("clean") || lower.includes("tidy") || lower.includes("dish") || lower.includes("vacuum") || lower.includes("mop")) return "cleaning";
+  if (lower.includes("laund") || lower.includes("clothes") || lower.includes("fold") || lower.includes("iron")) return "laundry";
+  if (lower.includes("shop") || lower.includes("grocer") || lower.includes("buy") || lower.includes("market")) return "shopping";
+  if (lower.includes("plant") || lower.includes("garden")) return "plant";
+  if (lower.includes("bill") || lower.includes("money") || lower.includes("financ") || lower.includes("budget") || lower.includes("tax")) return "finances";
+  if (lower.includes("travel") || lower.includes("flight") || lower.includes("trip") || lower.includes("hotel")) return "travel";
+  if (lower.includes("med") || lower.includes("doctor") || lower.includes("pill") || lower.includes("vitamin") || lower.includes("health")) return "health";
+  if (lower.includes("code") || lower.includes("dev") || lower.includes("program") || lower.includes("github")) return "coding";
+  if (lower.includes("game") || lower.includes("gaming") || lower.includes("play")) return "gaming";
+  if (lower.includes("podcast") || lower.includes("audio")) return "podcast";
+
+  return "breathe";
+};
+
+export const ICON_GROUPS: { category: string; icons: { key: string; label: string }[] }[] = [
+  {
+    category: "Mind & Focus",
+    icons: [
+      { key: "meditate", label: "Meditate" },
+      { key: "breathe", label: "Breathe" },
+      { key: "journal", label: "Journal" },
+      { key: "read", label: "Read" },
+      { key: "deep_work", label: "Deep Work" },
+      { key: "study", label: "Study" },
+      { key: "planning", label: "Planning" },
+      { key: "emails", label: "Emails" },
+    ],
+  },
+  {
+    category: "Health & Fitness",
+    icons: [
+      { key: "gym", label: "Gym" },
+      { key: "yoga", label: "Yoga" },
+      { key: "run", label: "Run" },
+      { key: "walk", label: "Walk" },
+      { key: "cycling", label: "Cycling" },
+      { key: "home_workout", label: "Workout" },
+      { key: "swim", label: "Swim" },
+      { key: "sports", label: "Sports" },
+      { key: "water", label: "Hydrate" },
+      { key: "health", label: "Health" },
+    ],
+  },
+  {
+    category: "Everyday & Chores",
+    icons: [
+      { key: "commute", label: "Commute / Drive" },
+      { key: "pet", label: "Pet / Dog" },
+      { key: "cleaning", label: "Clean" },
+      { key: "laundry", label: "Laundry" },
+      { key: "shopping", label: "Shopping" },
+      { key: "plant", label: "Plants" },
+      { key: "finances", label: "Finances" },
+      { key: "travel", label: "Travel" },
+    ],
+  },
+  {
+    category: "Food & Meals",
+    icons: [
+      { key: "coffee", label: "Coffee / Tea" },
+      { key: "breakfast", label: "Breakfast" },
+      { key: "lunch", label: "Lunch" },
+      { key: "dinner", label: "Dinner" },
+      { key: "snack", label: "Snack" },
+      { key: "meal_prep", label: "Meal Prep" },
+    ],
+  },
+  {
+    category: "Morning & Night",
+    icons: [
+      { key: "wakeup", label: "Wake Up" },
+      { key: "cold_shower", label: "Shower" },
+      { key: "skincare", label: "Skincare" },
+      { key: "affirmations", label: "Affirmations" },
+      { key: "prepare_sleep", label: "Wind Down" },
+      { key: "sleep", label: "Sleep" },
+      { key: "night_walk", label: "Night Walk" },
+      { key: "screen_off", label: "Screen Off" },
+    ],
+  },
+  {
+    category: "Creative & Play",
+    icons: [
+      { key: "draw", label: "Draw" },
+      { key: "music_practice", label: "Music" },
+      { key: "write", label: "Write" },
+      { key: "photography", label: "Photo" },
+      { key: "craft", label: "Craft" },
+      { key: "gaming", label: "Gaming" },
+      { key: "podcast", label: "Podcast" },
+      { key: "coding", label: "Coding" },
+    ],
+  },
+  {
+    category: "Social",
+    icons: [
+      { key: "family_time", label: "Family" },
+      { key: "call_friend", label: "Call" },
+      { key: "date_night", label: "Date" },
+      { key: "volunteer", label: "Volunteer" },
+      { key: "gratitude", label: "Gratitude" },
+    ],
+  },
+];
 
 export interface FormData {
   time: string;
@@ -151,6 +304,22 @@ export const timeToMinutes = (timeStr: string): number => {
   // Shift late-night times (before 4 AM) so they logically appear at the end of the day
   const adjustedHours = hours < 4 ? hours + 24 : hours;
   return adjustedHours * 60 + minutes;
+};
+
+export const minutesToTimeStr = (totalMinutes: number): string => {
+  let m = ((totalMinutes % 1440) + 1440) % 1440;
+  const hours = Math.floor(m / 60);
+  const mins = m % 60;
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  const displayHours = hours % 12 || 12;
+  return `${displayHours}:${mins.toString().padStart(2, '0')} ${ampm}`;
+};
+
+export const addMinutesToTime = (timeStr: string, minutesToAdd: number): string => {
+  const { hours, minutes, isValid } = parseTime(timeStr);
+  if (!isValid) return timeStr;
+  const total = hours * 60 + minutes + minutesToAdd;
+  return minutesToTimeStr(total);
 };
 
 export const sortRoutineItems = (items: RoutineItem[]): RoutineItem[] => {
