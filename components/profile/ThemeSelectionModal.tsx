@@ -362,7 +362,7 @@ export function ThemeSelectionModal({
                                         {previewName || "Type a name below..."}
                                     </Text>
                                     <Text style={styles.previewHint}>
-                                        {previewError ? "❌ Not found — try another name" : previewId ? `#${previewId}` : "Your Pokémon mascot"}
+                                        {previewError ? "Not found — try another name" : previewId ? `#${previewId}` : "Your Pokémon mascot"}
                                     </Text>
                                 </View>
                             </View>
@@ -399,7 +399,8 @@ export function ThemeSelectionModal({
                                     onPress={handleSaveCustom}
                                     disabled={!previewId}
                                 >
-                                    <Text style={styles.customFormBtnTextSave}>Save & Apply</Text>
+                                    <Ionicons name="checkmark-circle-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+                                    <Text style={styles.customFormBtnTextSave}>Save & Apply Theme</Text>
                                 </Pressable>
                             </View>
                         </View>
@@ -585,15 +586,21 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         color: theme.colors.textSecondary,
     },
     customFormBtnSave: {
-        borderRadius: theme.borderRadius.md,
-        paddingVertical: theme.spacing.sm,
-        paddingHorizontal: theme.spacing.lg,
-        minWidth: 120,
+        height: 56,
+        borderRadius: 22,
+        width: "100%",
+        flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 10,
+        elevation: 6,
     },
     customFormBtnTextSave: {
         fontFamily: theme.fonts.bold,
+        fontSize: 16,
         color: "#FFF",
     },
 });

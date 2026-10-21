@@ -1,18 +1,19 @@
 // components/profile/ProfileCard.tsx
 import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "../../utils/haptics";
+import { BlurView } from "expo-blur";
 import React, { useMemo } from "react";
 import {
+  Image,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
-  Platform,
-  Image
 } from "react-native";
-import { Theme } from "../../styles/shared";
 import { useTheme } from "../../context/ThemeContext";
+import { Theme } from "../../styles/shared";
+import * as Haptics from "../../utils/haptics";
 
 interface ProfileCardProps {
   userProfile: any;
@@ -20,6 +21,7 @@ interface ProfileCardProps {
   setUserProfile: (fn: any) => void;
   setIsEditingProfile: (v: boolean) => void;
   handleSaveProfile: () => void;
+  onOpenEditModal?: () => void;
 }
 
 export const ProfileCard: React.FC<ProfileCardProps> = ({
@@ -28,116 +30,174 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
   setUserProfile,
   setIsEditingProfile,
   handleSaveProfile,
+  onOpenEditModal,
 }) => {
-  const { theme } = useTheme();
-  const styles = useMemo(() => getStyles(theme), [theme]);
+  const { theme, isDarkMode } = useTheme();
+  const styles = useMemo(() => getStyles(theme, isDarkMode), [theme, isDarkMode]);
+
+  const avatarInitial = userProfile.name?.trim()
+    ? userProfile.name.trim().charAt(0).toUpperCase()
+    : userProfile.avatar && !userProfile.avatar.startsWith("http")
+    ? userProfile.avatar.charAt(0).toUpperCase()
+    : "U";
+
+  const handleToggleEdit = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (onOpenEditModal) {
+      onOpenEditModal();
+    } else {
+      setIsEditingProfile(!isEditingProfile);
+    }
+  };
 
   return (
-    <View style={styles.card}>
-      {/* Edit Button */}
-      {/* Pressable with scale feedback replaced TouchableOpacity — consistent with app pattern */}
-      <Pressable
-        style={({ pressed }) => [
-          styles.editButton,
-          pressed && { opacity: 0.7, transform: [{ scale: 0.9 }] },
-        ]}
-        onPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          setIsEditingProfile(!isEditingProfile);
-        }}
+    <View style={styles.cardContainer}>
+      <BlurView
+        intensity={Platform.OS === "ios" ? 40 : 80}
+        tint={isDarkMode ? "dark" : "light"}
+        style={styles.blurWrapper}
       >
-        <Ionicons
-          name={isEditingProfile ? "checkmark" : "pencil"}
-          size={20}
-          color={theme.colors.white}
-        />
-      </Pressable>
+        <View style={styles.glassOverlay} />
 
-      {/* Avatar */}
-      <View style={styles.avatarContainer}>
-        <View style={styles.avatar}>
-          {userProfile.avatar?.startsWith('http') ? (
-            <Image 
-              source={{ uri: userProfile.avatar }} 
-              style={styles.avatarImage} 
-            />
-          ) : (
-            <Text style={styles.avatarText}>
-              {userProfile.avatar ? userProfile.avatar.charAt(0).toUpperCase() : 'U'}
+        {/* Top Action Affordance */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.editButton,
+            pressed && { opacity: 0.75, transform: [{ scale: 0.92 }] },
+          ]}
+          onPress={handleToggleEdit}
+          accessibilityRole="button"
+          accessibilityLabel="Edit profile"
+          hitSlop={8}
+        >
+          <Ionicons
+            name={isEditingProfile ? "checkmark" : "pencil-outline"}
+            size={18}
+            color={theme.colors.primary}
+          />
+        </Pressable>
+
+        {/* Squircle Avatar with Luminous Subtle Glow Ring */}
+        <View style={styles.avatarWrapper}>
+          <View style={styles.avatarGlowRing}>
+            <View style={styles.avatar}>
+              {userProfile.avatar?.startsWith("http") ? (
+                <Image
+                  source={{ uri: userProfile.avatar }}
+                  style={styles.avatarImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Text style={styles.avatarText}>{avatarInitial}</Text>
+              )}
+            </View>
+          </View>
+        </View>
+
+        {/* View / Edit Mode Content */}
+        {isEditingProfile ? (
+          <View style={styles.editModeContainer}>
+            <Text style={styles.inputSectionLabel}>Quick Edit</Text>
+
+            <View style={styles.inputWrapper}>
+              <Ionicons
+                name="person-outline"
+                size={18}
+                color={theme.colors.primary}
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={styles.input}
+                value={userProfile.name}
+                placeholder="Full Name"
+                placeholderTextColor={theme.colors.textSecondary + "70"}
+                onChangeText={(text) =>
+                  setUserProfile((prev: any) => ({ ...prev, name: text }))
+                }
+              />
+            </View>
+
+            <View style={styles.inputWrapper}>
+              <Ionicons
+                name="mail-outline"
+                size={18}
+                color={theme.colors.primary}
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={styles.input}
+                value={userProfile.email}
+                placeholder="Email Address"
+                placeholderTextColor={theme.colors.textSecondary + "70"}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                onChangeText={(text) =>
+                  setUserProfile((prev: any) => ({ ...prev, email: text }))
+                }
+              />
+            </View>
+
+            <View style={[styles.inputWrapper, { alignItems: "flex-start", paddingTop: 12 }]}>
+              <Ionicons
+                name="document-text-outline"
+                size={18}
+                color={theme.colors.primary}
+                style={[styles.inputIcon, { marginTop: 2 }]}
+              />
+              <TextInput
+                style={[styles.input, styles.bioInput]}
+                value={userProfile.bio}
+                placeholder="Mindful bio or daily intention..."
+                placeholderTextColor={theme.colors.textSecondary + "70"}
+                onChangeText={(text) =>
+                  setUserProfile((prev: any) => ({ ...prev, bio: text }))
+                }
+                multiline
+              />
+            </View>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.saveButton,
+                pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+              ]}
+              onPress={handleSaveProfile}
+            >
+              <Ionicons name="checkmark-circle-outline" size={20} color={theme.colors.white} />
+              <Text style={styles.saveButtonText}>Save Changes</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <View style={styles.viewModeContainer}>
+            <Text style={styles.userName} numberOfLines={1}>
+              {userProfile.name?.trim() || "Mindful Soul"}
             </Text>
-          )}
-        </View>
-      </View>
 
-      {/* Content */}
-      {isEditingProfile ? (
-        <View style={styles.editModeContainer}>
-          <TextInput
-            style={styles.input}
-            value={userProfile.name}
-            placeholder="Name"
-            placeholderTextColor={theme.colors.secondary}
-            onChangeText={(text) =>
-              setUserProfile((prev: any) => ({ ...prev, name: text }))
-            }
-          />
+            {userProfile.email ? (
+              <Text style={styles.userEmail} numberOfLines={1}>
+                {userProfile.email}
+              </Text>
+            ) : null}
 
-          <TextInput
-            style={styles.input}
-            value={userProfile.email}
-            placeholder="Email"
-            placeholderTextColor={theme.colors.secondary}
-            onChangeText={(text) =>
-              setUserProfile((prev: any) => ({ ...prev, email: text }))
-            }
-          />
-
-          <TextInput
-            style={[styles.input, styles.bioInput]}
-            value={userProfile.bio}
-            placeholder="Bio"
-            placeholderTextColor={theme.colors.secondary}
-            onChangeText={(text) =>
-              setUserProfile((prev: any) => ({ ...prev, bio: text }))
-            }
-            multiline
-          />
-
-          <Pressable
-            style={({ pressed }) => [
-              styles.saveButton,
-              pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] },
-            ]}
-            onPress={handleSaveProfile}
-          >
-            <Text style={styles.saveButtonText}>Save Changes</Text>
-          </Pressable>
-        </View>
-      ) : (
-        <View style={styles.viewModeContainer}>
-          <Text style={styles.userName}>{userProfile.name}</Text>
-          <Text style={styles.userEmail}>{userProfile.email}</Text>
-          <Text style={styles.userBio}>{userProfile.bio}</Text>
-        </View>
-      )}
+            {userProfile.bio ? (
+              <Text style={styles.userBio} numberOfLines={3}>
+                &ldquo;{userProfile.bio.trim()}&rdquo;
+              </Text>
+            ) : null}
+          </View>
+        )}
+      </BlurView>
     </View>
   );
 };
 
-// ------------------------------------------------------------
-// THEME-BASED MATERIAL YOU STYLING
-// ------------------------------------------------------------
-const getStyles = (theme: Theme) =>
+const getStyles = (theme: Theme, isDark: boolean) =>
   StyleSheet.create({
-    card: {
-      backgroundColor: theme.colors.card,
-      marginHorizontal: theme.spacing.lg,
-      marginTop: theme.spacing.xl + 60,
-      paddingBottom: theme.spacing.xl,
-      paddingHorizontal: theme.spacing.lg,
-      borderRadius: 32,
-      position: "relative",
-      alignItems: "center",
+    cardContainer: {
+      borderRadius: 28,
+      overflow: "hidden",
+      borderWidth: 1,
+      borderColor: theme.glass.borderColor,
       ...Platform.select({
         ios: {
           shadowColor: theme.glows.card.shadowColor,
@@ -145,115 +205,150 @@ const getStyles = (theme: Theme) =>
           shadowOpacity: theme.glows.card.shadowOpacity,
           shadowRadius: theme.glows.card.shadowRadius,
         },
-        android: { elevation: theme.glows.card.elevation },
+        android: { elevation: 6 },
       }),
     },
-
-    // Edit Icon
+    blurWrapper: {
+      paddingHorizontal: theme.spacing.lg,
+      paddingTop: theme.spacing.xl,
+      paddingBottom: theme.spacing.xl,
+      alignItems: "center",
+      position: "relative",
+    },
+    glassOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: theme.glass.cardBg,
+    },
     editButton: {
       position: "absolute",
       top: 16,
       right: 16,
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: theme.colors.primary,
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      backgroundColor: `${theme.colors.primary}18`,
+      borderWidth: 1,
+      borderColor: `${theme.colors.primary}30`,
       alignItems: "center",
       justifyContent: "center",
-      elevation: 4,
+      zIndex: 10,
     },
-
-    avatarContainer: {
+    avatarWrapper: {
       alignItems: "center",
-      marginTop: -70,
-      marginBottom: theme.spacing.lg,
-      zIndex: 100,
+      marginBottom: theme.spacing.md,
+      zIndex: 5,
+    },
+    avatarGlowRing: {
+      padding: 4,
+      borderRadius: 36,
+      backgroundColor: `${theme.colors.primary}15`,
+      borderWidth: 2,
+      borderColor: `${theme.colors.primary}45`,
+      shadowColor: theme.colors.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: isDark ? 0.45 : 0.25,
+      shadowRadius: 14,
+      elevation: 6,
     },
     avatar: {
-      width: 110,
-      height: 110,
-      borderRadius: 44,
+      width: 88,
+      height: 88,
+      borderRadius: 30,
       backgroundColor: theme.colors.primary,
       justifyContent: "center",
       alignItems: "center",
-      borderColor: theme.colors.card,
-      borderWidth: 6,
-      ...Platform.select({
-        ios: {
-          shadowColor: theme.glows.primary.shadowColor,
-          shadowOffset: theme.glows.primary.shadowOffset,
-          shadowOpacity: theme.glows.primary.shadowOpacity,
-          shadowRadius: theme.glows.primary.shadowRadius,
-        },
-        android: { elevation: theme.glows.primary.elevation },
-      }),
+      overflow: "hidden",
     },
     avatarImage: {
       width: "100%",
       height: "100%",
-      borderRadius: 38,
+      borderRadius: 30,
     },
     avatarText: {
-      fontSize: 50,
+      fontSize: 38,
       color: theme.colors.white,
       fontFamily: theme.fonts.bold,
     },
-
-    // View Mode
     viewModeContainer: {
       alignItems: "center",
-      paddingHorizontal: theme.spacing.lg,
+      width: "100%",
+      paddingHorizontal: theme.spacing.sm,
     },
     userName: {
-      fontSize: 26,
+      fontSize: 24,
       fontFamily: theme.fonts.bold,
       color: theme.colors.text,
-      marginBottom: 4,
+      letterSpacing: -0.4,
+      marginBottom: 2,
+      textAlign: "center",
     },
     userEmail: {
-      fontSize: 16,
+      fontSize: 14,
       fontFamily: theme.fonts.regular,
       color: theme.colors.textSecondary,
-      marginBottom: theme.spacing.sm,
+      marginBottom: 10,
+      textAlign: "center",
     },
     userBio: {
       textAlign: "center",
-      fontSize: 15,
+      fontSize: 14,
+      fontFamily: theme.fonts.regular,
       color: theme.colors.textSecondary,
-      lineHeight: 22,
-      maxWidth: 260,
-      opacity: 0.9,
+      lineHeight: 20,
+      maxWidth: 280,
+      opacity: 0.85,
     },
-
-    // Edit mode
     editModeContainer: {
       width: "100%",
-      marginTop: theme.spacing.sm,
+      marginTop: theme.spacing.xs,
+    },
+    inputSectionLabel: {
+      fontSize: 12,
+      fontFamily: theme.fonts.bold,
+      color: theme.colors.textSecondary,
+      textTransform: "uppercase",
+      letterSpacing: 0.8,
+      marginBottom: 10,
+    },
+    inputWrapper: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: `${theme.colors.secondary}0A`,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: `${theme.colors.secondary}15`,
+      paddingHorizontal: 14,
+      marginBottom: 10,
+    },
+    inputIcon: {
+      marginRight: 10,
     },
     input: {
-      backgroundColor: theme.colors.background,
-      borderRadius: 16,
-      padding: theme.spacing.md,
-      fontSize: 16,
+      flex: 1,
+      height: 48,
+      fontSize: 15,
       color: theme.colors.text,
-      fontFamily: theme.fonts.regular,
-      marginBottom: theme.spacing.md,
+      fontFamily: theme.fonts.medium,
     },
     bioInput: {
-      minHeight: 80,
+      height: 70,
       textAlignVertical: "top",
     },
     saveButton: {
+      height: 56,
+      borderRadius: 22,
       backgroundColor: theme.colors.primary,
-      paddingVertical: theme.spacing.md,
-      borderRadius: theme.borderRadius.lg,
+      flexDirection: "row",
       alignItems: "center",
-      marginTop: theme.spacing.md,
+      justifyContent: "center",
+      gap: 8,
+      marginTop: 10,
+      ...theme.glows.primary,
     },
     saveButtonText: {
       color: theme.colors.white,
       fontSize: 16,
-      fontFamily: theme.fonts.medium,
+      fontFamily: theme.fonts.bold,
     },
   });
 

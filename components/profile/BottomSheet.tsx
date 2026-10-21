@@ -11,6 +11,7 @@ import {
   ViewStyle,
 } from "react-native";
 import { Theme } from "../../styles/shared";
+import * as Haptics from "../../utils/haptics";
 
 type BottomSheetProps = {
   visible: boolean;
@@ -38,8 +39,11 @@ export function BottomSheet({
 }: BottomSheetProps) {
   const styles = useMemo(() => getStyles(theme), [theme]);
 
-  // Using a bottom-oriented Modal to create the Sheet effect
-  // Note: We use KeyboardAvoidingView to push the sheet up when keyboards open
+  const handleClose = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onClose();
+  };
+
   return (
     <Modal
       visible={visible}
@@ -51,7 +55,7 @@ export function BottomSheet({
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.container}
       >
-        <Pressable style={styles.backdrop} onPress={onClose} />
+        <Pressable style={styles.backdrop} onPress={handleClose} />
         
         <View style={styles.sheetContent}>
           {/* Handle for visual affordance */}
@@ -64,11 +68,16 @@ export function BottomSheet({
             <View style={styles.headerRow}>
               <Text style={styles.titleText}>{title}</Text>
               <Pressable
-                onPress={onClose}
+                onPress={handleClose}
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                style={styles.closeBtn}
+                style={({ pressed }) => [
+                  styles.closeBtn,
+                  pressed && { opacity: 0.6, transform: [{ scale: 0.94 }] }
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Close sheet"
               >
-                <Ionicons name="close" size={24} color={theme.colors.text} />
+                <Ionicons name="close" size={20} color={theme.colors.text} />
               </Pressable>
             </View>
           )}
@@ -90,43 +99,47 @@ const getStyles = (theme: Theme) => StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(0,0,0,0.55)",
   },
   sheetContent: {
     backgroundColor: theme.colors.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    borderTopWidth: 1,
+    borderColor: theme.glass.borderColor,
     width: "100%",
-    maxHeight: "90%",
+    maxHeight: "92%",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: -5 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOffset: { width: 0, height: -8 },
+    shadowOpacity: 0.16,
+    shadowRadius: 24,
+    elevation: 16,
     paddingHorizontal: theme.spacing.lg,
-    paddingBottom: Platform.OS === "ios" ? 40 : theme.spacing.xl, // safe area padding
+    paddingBottom: Platform.OS === "ios" ? 40 : theme.spacing.xl,
   },
   handleContainer: {
     alignItems: "center",
     paddingTop: 12,
-    paddingBottom: 8,
+    paddingBottom: 10,
   },
   handle: {
-    width: 40,
+    width: 44,
     height: 5,
     borderRadius: 3,
-    backgroundColor: `${theme.colors.textSecondary}40`,
+    backgroundColor: `${theme.colors.textSecondary}35`,
   },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: theme.spacing.md,
+    paddingTop: 4,
   },
   titleText: {
-    fontSize: 20,
+    fontSize: 22,
     fontFamily: theme.fonts.bold,
     color: theme.colors.text,
+    letterSpacing: -0.4,
   },
   closeBtn: {
     backgroundColor: `${theme.colors.textSecondary}15`,
@@ -137,6 +150,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     justifyContent: "center",
   },
   childrenContainer: {
-    flexShrink: 1, // Ensure children can scroll if needed
+    flexShrink: 1,
   },
 });
+
