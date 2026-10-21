@@ -7,7 +7,6 @@ import {
   ActionSheetIOS,
   ActivityIndicator,
   Alert,
-  Dimensions,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
@@ -20,6 +19,7 @@ import {
   View,
 } from "react-native";
 import Animated, {
+  Easing,
   FadeIn,
   FadeInDown,
   FadeOut,
@@ -195,26 +195,45 @@ const TaskItem = ({
   const strikeWidth = useSharedValue(task.completed ? 100 : 0);
   const textWidth = useSharedValue(0);
 
-  const checkScale = useSharedValue(task.completed ? 1 : 0);
+  const checkedProgress = useSharedValue(task.completed ? 1 : 0);
 
   useEffect(() => {
     if (task.completed) {
-      strikeWidth.value = withDelay(80, withTiming(100, { duration: 220 }));
-      checkScale.value = withSpring(1, { damping: 14, stiffness: 220 });
+      checkedProgress.value = withTiming(1, {
+        duration: 200,
+        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+      });
+      strikeWidth.value = withDelay(
+        50,
+        withTiming(100, {
+          duration: 200,
+          easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+        })
+      );
     } else {
-      strikeWidth.value = withTiming(0, { duration: 160 });
-      checkScale.value = withSpring(0, { damping: 14, stiffness: 220 });
+      checkedProgress.value = withTiming(0, {
+        duration: 150,
+        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+      });
+      strikeWidth.value = withTiming(0, {
+        duration: 150,
+        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+      });
     }
-  }, [task.completed, strikeWidth, checkScale]);
+  }, [task.completed, strikeWidth, checkedProgress]);
 
   const animatedStrikeStyle = useAnimatedStyle(() => ({
     width: (strikeWidth.value / 100) * textWidth.value,
     opacity: strikeWidth.value > 0 ? 0.6 : 0,
   }));
 
+  const animatedCheckboxFillStyle = useAnimatedStyle(() => ({
+    opacity: checkedProgress.value,
+  }));
+
   const checkAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: checkScale.value }],
-    opacity: checkScale.value,
+    transform: [{ scale: 0.88 + checkedProgress.value * 0.12 }],
+    opacity: checkedProgress.value,
   }));
 
   const isCurrentTimer = timer.taskId === task.id;
@@ -273,14 +292,12 @@ const TaskItem = ({
         onPress={handleToggle}
         hitSlop={10}
       >
-        <View
-          style={[
-            styles.checkbox,
-            task.completed && styles.checkboxDone,
-          ]}
-        >
+        <View style={styles.checkbox}>
+          <Animated.View
+            style={[styles.checkboxFill, animatedCheckboxFillStyle]}
+          />
           <Animated.View style={checkAnimatedStyle}>
-            <Ionicons name="checkmark" size={14} color={theme.colors.white} />
+            <Ionicons name="checkmark" size={13} color={theme.colors.white} />
           </Animated.View>
         </View>
       </Pressable>
@@ -1363,17 +1380,18 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       width: 22,
       height: 22,
       borderRadius: 7,
-      borderWidth: 1.8,
+      borderWidth: 1.6,
       borderColor: isDarkMode
-        ? "rgba(255,255,255,0.3)"
-        : "rgba(0,0,0,0.25)",
+        ? "rgba(255,255,255,0.28)"
+        : "rgba(0,0,0,0.22)",
       backgroundColor: "transparent",
       alignItems: "center",
       justifyContent: "center",
+      overflow: "hidden",
     },
-    checkboxDone: {
+    checkboxFill: {
+      ...StyleSheet.absoluteFillObject,
       backgroundColor: theme.colors.primary,
-      borderColor: theme.colors.primary,
     },
 
     taskContentCol: {
