@@ -21,11 +21,15 @@ import Animated, {
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle } from "react-native-svg";
+import TaskModal from "../../components/dashboard/TaskModal";
 import { useTheme } from "../../context/ThemeContext";
+import { supabase } from "../../lib/supabase";
 import { Theme, themes } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
+import { scheduleRoutineNotifications } from "../../utils/notifications";
 import { loadStats, UserStats } from "../../utils/stats";
 import {
+  getDateString,
   getRoutineIcon,
   getRoutineItemsForDate,
   RoutineItem,
@@ -722,6 +726,8 @@ function HomeScreen() {
   const [routines, setRoutines] = useState<RoutineItem[]>([]);
   const [todoTasks, setTodoTasks] = useState<any[]>([]);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [selectedTask, setSelectedTask] = useState<RoutineItem | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -843,22 +849,211 @@ function HomeScreen() {
 
   const handlePressUpcoming = useCallback((task: RoutineItem) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    Alert.alert(
-      task.task,
-      `Scheduled for ${formatTaskTime(task.time)}${task.duration ? `  •  ${task.duration} min` : ""}${task.description ? `\n\n${task.description}` : ""}`,
-      [
-        {
-          text: "Start Focus Now",
-          onPress: () => router.push(`/focus?taskId=${task.id}&taskName=${encodeURIComponent(task.task)}` as any),
-        },
-        {
-          text: "View in Timeline",
-          onPress: () => router.push("/routine" as any),
-        },
-        { text: "Cancel", style: "cancel" },
-      ]
-    );
-  }, [router]);
+    setSelectedTask(task);
+    setModalVisible(true);
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+    setModalVisible(false);
+    setSelectedTask(null);
+  }, []);
+
+  const persistRoutines = useCallback(async (updatedList: RoutineItem[]) => {
+    try {
+      const sorted = sortRoutineItems(updatedList);
+      setRoutines(sorted);
+      await AsyncStorage.setItem("@zen_routine", JSON.stringify(sorted));
+      await scheduleRoutineNotifications(sorted);
+
+      const { data: userAuth } = await supabase.auth.getUser();
+      if (!userAuth?.user) return;
+
+      const { data: remoteData } = await supabase.from("routines").select("id");
+      const remoteRecordIds = remoteData ? remoteData.map((t: any) => t.id) : [];
+      const incomingIds = sorted.map((t) => t.id);
+      const toDeleteIds = remoteRecordIds.filter((id) => !incomingIds.includes(id));
+
+      if (toDeleteIds.length > 0) {
+        await supabase.from("routines").delete().in("id", toDeleteIds);
+      }
+
+      const dbRoutines = sorted.map((item) => ({
+        id: item.id,
+        user_id: userAuth.user.id,
+        time: item.time,
+        task: item.task,
+        description: item.description,
+        image_key: item.imageKey,
+        insertion_order: item.insertionOrder,
+        duration: item.duration,
+        days_of_week: item.daysOfWeek,
+        date: item.date,
+      }));
+      if (dbRoutines.length > 0) {
+        await supabase.from("routines").upsert(dbRoutines);
+      }
+    } catch (err) {
+      console.error("Failed to persist routines from home dashboard:", err);
+    }
+  }, []);
+
+  const handleSaveTask = useCallback(
+    (updatedTask: RoutineItem) => {
+      const originalTask = routines.find((i) => i.id === updatedTask.id);
+      if (!originalTask) return;
+
+      const isDifferent =
+        originalTask.time !== updatedTask.time ||
+        originalTask.task !== updatedTask.task ||
+        originalTask.duration !== updatedTask.duration;
+      const isRepeating =
+        originalTask.daysOfWeek && originalTask.daysOfWeek.length > 0;
+
+      const doFinalSave = () => {
+        const updated = routines.map((item) =>
+          item.id === updatedTask.id ? updatedTask : item
+        );
+        persistRoutines(updated);
+      };
+
+      if (isRepeating && isDifferent) {
+        if (Platform.OS === "web") {
+          const wantsInstance = window.confirm(
+            "Do you want to save this change for THIS DATE ONLY? (Cancel saves for ALL days)"
+          );
+          if (wantsInstance) {
+            const dateStr = getDateString(currentTime);
+            const newItem: RoutineItem = {
+              ...updatedTask,
+              id: Date.now().toString(),
+              daysOfWeek: [],
+              date: dateStr,
+            };
+            persistRoutines([...routines, newItem]);
+            return;
+          }
+        } else {
+          Alert.alert(
+            "Edit Repeating Task",
+            "Do you want to save this change for this specific date only, or update the task for all days?",
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "This date only",
+                onPress: () => {
+                  const dateStr = getDateString(currentTime);
+                  const newItem: RoutineItem = {
+                    ...updatedTask,
+                    id: Date.now().toString(),
+                    daysOfWeek: [],
+                    date: dateStr,
+                  };
+                  persistRoutines([...routines, newItem]);
+                },
+              },
+              { text: "All days", style: "destructive", onPress: doFinalSave },
+            ]
+          );
+          return;
+        }
+      }
+      doFinalSave();
+    },
+    [routines, persistRoutines, currentTime]
+  );
+
+  const handleDeleteTask = useCallback(() => {
+    if (!selectedTask) return;
+    const taskToDelete = selectedTask;
+    const taskNameLower = taskToDelete.task?.toLowerCase().trim();
+    if (taskNameLower === "wake up" || taskNameLower === "sleep") return;
+
+    const isRepeating =
+      taskToDelete.daysOfWeek && taskToDelete.daysOfWeek.length > 0;
+
+    if (isRepeating) {
+      if (Platform.OS === "web") {
+        const wantsSkip = window.confirm(
+          "Do you want to SKIP this task for THIS DATE ONLY? (Cancel to delete for ALL days)"
+        );
+        if (wantsSkip) {
+          const dateStr = getDateString(currentTime);
+          const newItem: RoutineItem = {
+            ...taskToDelete,
+            id: Date.now().toString(),
+            isSkipped: true,
+            daysOfWeek: [],
+            date: dateStr,
+          };
+          persistRoutines([...routines, newItem]);
+          handleCloseModal();
+          return;
+        }
+      } else {
+        Alert.alert(
+          "Delete Repeating Task",
+          "Do you want to delete this task for all repeating days, or just skip it on this date?",
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Skip this date",
+              onPress: () => {
+                const dateStr = getDateString(currentTime);
+                const newItem: RoutineItem = {
+                  ...taskToDelete,
+                  id: Date.now().toString(),
+                  isSkipped: true,
+                  daysOfWeek: [],
+                  date: dateStr,
+                };
+                persistRoutines([...routines, newItem]);
+                handleCloseModal();
+              },
+            },
+            {
+              text: "Delete all days",
+              style: "destructive",
+              onPress: () => {
+                persistRoutines(
+                  routines.filter((item) => item.id !== taskToDelete.id)
+                );
+                setTimeout(() => handleCloseModal(), 50);
+              },
+            },
+          ]
+        );
+        return;
+      }
+    }
+
+    if (Platform.OS === "web") {
+      const confirmDelete = window.confirm(
+        `Are you sure you want to delete ${taskToDelete.task}?`
+      );
+      if (confirmDelete) {
+        persistRoutines(routines.filter((item) => item.id !== taskToDelete.id));
+        setTimeout(() => handleCloseModal(), 50);
+      }
+    } else {
+      Alert.alert(
+        "Delete Routine",
+        `Are you sure you want to delete ${taskToDelete.task}?`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: () => {
+              persistRoutines(
+                routines.filter((item) => item.id !== taskToDelete.id)
+              );
+              setTimeout(() => handleCloseModal(), 50);
+            },
+          },
+        ]
+      );
+    }
+  }, [selectedTask, routines, persistRoutines, handleCloseModal, currentTime]);
 
   const buttonRole: AccessibilityRole = "button";
 
@@ -1226,6 +1421,15 @@ function HomeScreen() {
           )}
         </Animated.View>
       </ScrollView>
+
+      <TaskModal
+        visible={modalVisible}
+        task={selectedTask}
+        onClose={handleCloseModal}
+        onEdit={() => {}}
+        onSaveTask={handleSaveTask}
+        onDelete={handleDeleteTask}
+      />
     </SafeAreaView>
   );
 }
