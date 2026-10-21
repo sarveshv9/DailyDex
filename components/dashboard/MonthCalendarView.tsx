@@ -6,7 +6,7 @@ import {
     Text,
     View
 } from 'react-native';
-import { Theme } from '../../constants/shared';
+import { Theme } from '../../styles/shared';
 import { RoutineItem } from '../../utils/utils';
 
 interface Props {

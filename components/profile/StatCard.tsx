@@ -1,7 +1,7 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { BlurView } from "expo-blur";
-import { Theme } from "../../constants/shared";
+import { Theme } from "../../styles/shared";
 import { useTheme } from "../../context/ThemeContext";
 
 export type StatCardProps = {

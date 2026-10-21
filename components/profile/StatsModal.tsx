@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useMemo, useState } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { Theme } from "../../constants/shared";
+import { Theme } from "../../styles/shared";
 import { getTodayString, getWeeklyData, getMonthlyData, getYearlyData, UserStats } from "../../utils/stats";
 import { ActivityChart } from "./ActivityChart";
 import { BottomSheet } from "./BottomSheet";

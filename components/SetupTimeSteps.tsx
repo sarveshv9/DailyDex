@@ -25,7 +25,7 @@ import Svg, {
     Rect,
     Stop,
 } from "react-native-svg";
-import type { Theme } from "../constants/shared";
+import type { Theme } from "../styles/shared";
 import { useTheme } from "../context/ThemeContext";
 import * as Haptics from "../utils/haptics";
 import { timeToMinutes } from "../utils/utils";

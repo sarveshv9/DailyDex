@@ -14,7 +14,7 @@ import {
 import { BlurView } from 'expo-blur';
 import CrossPlatformSegmentedControl from '../components/common/CrossPlatformSegmentedControl';
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Theme } from "../constants/shared";
+import { Theme } from "../styles/shared";
 import { SONG_LIST } from "../constants/songs";
 import { useAudio } from "../context/AudioContext";
 import { useTheme } from "../context/ThemeContext";

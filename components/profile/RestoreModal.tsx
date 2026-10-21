@@ -13,7 +13,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { Theme } from "../../constants/shared";
+import { Theme } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
 import { scheduleRoutineNotifications } from "../../utils/notifications";
 import { RoutineItem } from "../../utils/utils";

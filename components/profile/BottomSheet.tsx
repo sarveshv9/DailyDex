@@ -10,7 +10,7 @@ import {
   View,
   ViewStyle,
 } from "react-native";
-import { Theme } from "../../constants/shared";
+import { Theme } from "../../styles/shared";
 
 type BottomSheetProps = {
   visible: boolean;

@@ -28,7 +28,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { getSharedStyles, Theme } from "../../constants/shared";
+import { getSharedStyles, Theme } from "../../styles/shared";
 import { useTheme } from "../../context/ThemeContext";
 import { useTimer } from "../../context/TimerContext";
 

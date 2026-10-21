@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import { Theme, getSharedStyles } from '../constants/shared';
+import { Theme, getSharedStyles } from '../styles/shared';
 
 export default function PrivacyScreen() {
     const router = useRouter();

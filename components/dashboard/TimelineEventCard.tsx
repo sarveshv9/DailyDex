@@ -15,7 +15,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View, Animated } from 'react-native';
-import { Theme } from '../../constants/shared';
+import { Theme } from '../../styles/shared';
 import { useTheme } from '../../context/ThemeContext';
 import { RoutineItem, ICON_MAP } from '../../utils/utils';
 

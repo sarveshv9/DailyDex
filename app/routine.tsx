@@ -26,7 +26,7 @@ import { DayTimelineView } from "../components/dashboard/DayTimelineView";
 import TaskForm from "../components/dashboard/TaskForm";
 import TaskModal from "../components/dashboard/TaskModal";
 import { TimelineEventCard, SkeletonTimelineEventCard } from "../components/dashboard/TimelineEventCard";
-import { Theme } from "../constants/shared";
+import { Theme } from "../styles/shared";
 import { useTheme } from "../context/ThemeContext";
 import { scheduleRoutineNotifications } from "../utils/notifications";
 import { FormData, RoutineItem, getDateString, sortRoutineItems, timeToMinutes, getRoutineItemsForDate } from "../utils/utils";

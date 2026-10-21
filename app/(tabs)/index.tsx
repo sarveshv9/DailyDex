@@ -15,22 +15,22 @@ import {
   Text,
   View,
 } from "react-native";
-import * as Haptics from "../../utils/haptics";
 import Animated, {
   FadeIn,
   FadeInDown,
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle } from "react-native-svg";
-import { Theme, themes } from "../../constants/shared";
 import { useTheme } from "../../context/ThemeContext";
+import { Theme, themes } from "../../styles/shared";
+import * as Haptics from "../../utils/haptics";
 import { loadStats, UserStats } from "../../utils/stats";
 import {
   getRoutineIcon,
+  getRoutineItemsForDate,
   RoutineItem,
   sortRoutineItems,
   timeToMinutes,
-  getRoutineItemsForDate
 } from "../../utils/utils";
 
 /* ---------- Constants ---------- */
@@ -49,7 +49,19 @@ const TASK_THEME_MAP: Record<string, keyof typeof themes> = {
   sleep: "squirtle",
 };
 
+/* ---------- Icon system ----------
+   One rule for the whole screen: every icon is an Ionicons *outline* glyph,
+   colored with theme.colors.primary (or textSecondary when decorative),
+   sitting in the same rounded-square tile tinted from the primary color.
+   The old per-category rainbow (CATEGORY_TINTS) is gone on purpose.        */
+type IoniconName = keyof typeof Ionicons.glyphMap;
 
+/** Force the outline variant so stroke weight matches across every icon. */
+const toOutline = (name: string): IoniconName => {
+  if (name.endsWith("-outline") || name.endsWith("-sharp")) return name as IoniconName;
+  const outlined = `${name}-outline`;
+  return (outlined in Ionicons.glyphMap ? outlined : name) as IoniconName;
+};
 
 /* ---------- Hooks & Helpers ---------- */
 const useCurrentTime = () => {
@@ -68,20 +80,17 @@ const formatTime = (date: Date): string =>
     hour12: true,
   });
 
-const getGreeting = (hour: number): string => {
-  if (hour < 5) return "Good Night";
-  if (hour < 12) return "Good Morning";
-  if (hour < 17) return "Good Afternoon";
-  if (hour < 21) return "Good Evening";
-  return "Good Night";
-};
+interface GreetingDetails {
+  text: string;
+  icon: IoniconName;
+}
 
-const getGreetingEmoji = (hour: number): string => {
-  if (hour < 5) return "🌙";
-  if (hour < 12) return "☀️";
-  if (hour < 17) return "🌤️";
-  if (hour < 21) return "🌅";
-  return "🌙";
+const getGreetingDetails = (hour: number): GreetingDetails => {
+  if (hour < 5) return { text: "Good Night", icon: "moon-outline" };
+  if (hour < 12) return { text: "Good Morning", icon: "sunny-outline" };
+  if (hour < 17) return { text: "Good Afternoon", icon: "partly-sunny-outline" };
+  if (hour < 21) return { text: "Good Evening", icon: "cloudy-night-outline" };
+  return { text: "Good Night", icon: "moon-outline" };
 };
 
 const formatDate = (date: Date): string =>
@@ -185,13 +194,11 @@ const formatTaskTime = (timeStr: string): string => {
   return `${hours}:${minutes} ${ampm}`;
 };
 
-
-
 /* ---------- Progress Ring Component ---------- */
 const ProgressRing = ({
   progress,
-  size = 64,
-  strokeWidth = 5,
+  size = 52,
+  strokeWidth = 4.5,
   color,
   trackColor,
   children,
@@ -250,30 +257,40 @@ const { width: WINDOW_WIDTH } = Dimensions.get("window");
 const CARD_MAX_WIDTH = Math.min(760, WINDOW_WIDTH - 32);
 
 /* ---------- Styles generator (theme-aware) ---------- */
-const getStyles = (theme: Theme) =>
-  StyleSheet.create({
+const getStyles = (theme: Theme, isDarkMode: boolean) => {
+  // Single tint used by every icon tile: primary color at ~11% (light) / ~16% (dark).
+  const tileBg = `${theme.colors.primary}${theme.glass?.iconTintAlpha ?? (isDarkMode ? "29" : "1C")
+    }`;
+  const neutralFill = isDarkMode ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.06)";
+
+  return StyleSheet.create({
     safeArea: {
       flex: 1,
       backgroundColor: theme.colors.background,
     },
     scrollContent: {
-      paddingBottom: 120,
+      paddingBottom: 110,
     },
 
-    /* Hero header */
+    /* Header */
     heroBanner: {
       paddingHorizontal: 20,
       paddingTop: 16,
-      paddingBottom: 20,
+      paddingBottom: 16,
     },
     heroTopRow: {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
-      marginBottom: 4,
     },
     headerLeft: {
       flex: 1,
+      gap: 3,
+    },
+    greetingRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
     },
     greeting: {
       fontSize: 26,
@@ -284,7 +301,7 @@ const getStyles = (theme: Theme) =>
     dateRow: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 8,
+      gap: 6,
       marginTop: 2,
     },
     dateText: {
@@ -297,32 +314,18 @@ const getStyles = (theme: Theme) =>
       height: 3,
       borderRadius: 1.5,
       backgroundColor: theme.colors.textSecondary,
-      opacity: 0.5,
+      opacity: 0.4,
+      marginHorizontal: 1,
     },
     timeText: {
       fontSize: 13,
       color: theme.colors.textSecondary,
-      fontFamily: theme.fonts.regular,
-      opacity: 0.7,
+      fontFamily: theme.fonts.medium,
     },
     headerRight: {
       flexDirection: "row",
       alignItems: "center",
       gap: 12,
-    },
-    streakBadge: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 4,
-      backgroundColor: `${theme.colors.primary}18`,
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 20,
-    },
-    streakText: {
-      fontSize: 14,
-      fontFamily: theme.fonts.bold,
-      color: theme.colors.primary,
     },
     progressRingWrapper: {
       alignItems: "center",
@@ -345,7 +348,14 @@ const getStyles = (theme: Theme) =>
     /* Section shared */
     sectionContainer: {
       paddingHorizontal: 16,
-      marginBottom: 18,
+      marginBottom: 20,
+    },
+    sectionHeaderRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 10,
+      paddingHorizontal: 4,
     },
     sectionLabel: {
       fontSize: 12,
@@ -353,13 +363,15 @@ const getStyles = (theme: Theme) =>
       fontFamily: theme.fonts.bold,
       textTransform: "uppercase",
       letterSpacing: 1.2,
-      marginBottom: 10,
     },
 
     /* Current Focus Card */
     focusCard: {
-      borderRadius: 32,
+      borderRadius: 28,
       backgroundColor: theme.glass.cardBg,
+      borderWidth: 1,
+      borderColor: theme.glass.borderColor,
+      overflow: "hidden",
       ...Platform.select({
         ios: {
           shadowColor: theme.glows.card.shadowColor,
@@ -369,9 +381,6 @@ const getStyles = (theme: Theme) =>
         },
         android: { elevation: theme.glows.card.elevation },
       }),
-    },
-    cardBlur: {
-      ...StyleSheet.absoluteFillObject,
     },
     cardTint: {
       ...StyleSheet.absoluteFillObject,
@@ -386,46 +395,51 @@ const getStyles = (theme: Theme) =>
       flexDirection: "row",
       alignItems: "center",
       gap: 14,
-      marginBottom: 20,
+      marginBottom: 18,
     },
-    focusIconCircle: {
+    /* Shared icon tile: rounded square, tinted from primary, no border */
+    focusIconSquircle: {
       width: 52,
       height: 52,
-      borderRadius: 26,
-      backgroundColor: `${theme.colors.primary}20`,
+      borderRadius: 16,
+      backgroundColor: tileBg,
       alignItems: "center",
       justifyContent: "center",
     },
     focusTextCol: {
       flex: 1,
-      gap: 2,
+      gap: 3,
     },
     focusTaskName: {
-      fontSize: 22,
+      fontSize: 20,
       color: theme.colors.text,
       fontFamily: theme.fonts.bold,
+      letterSpacing: -0.3,
     },
     focusDescription: {
       fontSize: 13,
       color: theme.colors.textSecondary,
       fontFamily: theme.fonts.regular,
+      lineHeight: 18,
     },
     durationBadge: {
-      backgroundColor: `${theme.colors.textSecondary}25`,
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-      borderRadius: 12,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      backgroundColor: neutralFill,
+      paddingHorizontal: 9,
+      paddingVertical: 5,
+      borderRadius: 999,
     },
     durationBadgeText: {
       fontSize: 11,
       fontFamily: theme.fonts.bold,
-      color: theme.colors.text,
-      textTransform: "uppercase",
-      letterSpacing: 0.5,
+      color: theme.colors.textSecondary,
+      letterSpacing: 0.3,
     },
     /* Progress section */
     progressSection: {
-      marginBottom: 20,
+      marginBottom: 18,
     },
     progressLabelRow: {
       flexDirection: "row",
@@ -441,70 +455,74 @@ const getStyles = (theme: Theme) =>
       letterSpacing: 0.8,
     },
     progressPercent: {
-      fontSize: 16,
+      fontSize: 14,
       fontFamily: theme.fonts.bold,
       color: theme.colors.primary,
     },
     progressBarTrack: {
       width: "100%",
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: `${theme.colors.textSecondary}18`,
+      height: 7,
+      borderRadius: 3.5,
+      backgroundColor: neutralFill,
       overflow: "hidden",
     },
     progressBarFill: {
       height: "100%",
-      borderRadius: 3,
+      borderRadius: 3.5,
       backgroundColor: theme.colors.primary,
     },
-    /* Start button */
+    /* Primary Action Button */
     primaryButton: {
+      height: 56,
       width: "100%",
-      borderRadius: 50,
-      paddingVertical: 18,
+      borderRadius: 28,
+      backgroundColor: theme.colors.primary,
       alignItems: "center",
       justifyContent: "center",
       flexDirection: "row",
       gap: 10,
       ...Platform.select({
         ios: {
-          shadowColor: theme.glows.primary.shadowColor,
-          shadowOffset: theme.glows.primary.shadowOffset,
-          shadowOpacity: theme.glows.primary.shadowOpacity,
-          shadowRadius: theme.glows.primary.shadowRadius,
+          shadowColor: theme.colors.primary,
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: isDarkMode ? 0.5 : 0.3,
+          shadowRadius: 16,
         },
-        android: { elevation: theme.glows.primary.elevation },
+        android: { elevation: 6 },
       }),
     },
     primaryButtonText: {
-      fontSize: 17,
+      fontSize: 16,
       fontFamily: theme.fonts.bold,
       color: theme.colors.white,
       letterSpacing: 0.3,
     },
     timelineLink: {
       marginTop: 14,
+      flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
-      paddingVertical: 6,
+      gap: 6,
+      paddingVertical: 4,
     },
     timelineLinkText: {
-      fontSize: 14,
+      fontSize: 13,
       fontFamily: theme.fonts.medium,
       color: theme.colors.primary,
     },
 
     /* Up Next section */
     upNextList: {
-      paddingHorizontal: 16,
       gap: 10,
     },
     upNextCard: {
       flexDirection: "row",
       alignItems: "center",
       backgroundColor: theme.glass.cardBg,
-      borderRadius: 24,
-      paddingVertical: 18,
+      borderRadius: 22,
+      borderWidth: 1,
+      borderColor: theme.glass.borderColor,
+      paddingVertical: 14,
       paddingHorizontal: 16,
       gap: 14,
       ...Platform.select({
@@ -517,11 +535,11 @@ const getStyles = (theme: Theme) =>
         android: { elevation: theme.glows.card.elevation },
       }),
     },
-    upNextIconCircle: {
-      width: 46,
-      height: 46,
-      borderRadius: 23,
-      backgroundColor: `${theme.colors.textSecondary}18`,
+    upNextIconSquircle: {
+      width: 44,
+      height: 44,
+      borderRadius: 14,
+      backgroundColor: tileBg,
       alignItems: "center",
       justifyContent: "center",
     },
@@ -530,37 +548,118 @@ const getStyles = (theme: Theme) =>
       gap: 4,
     },
     upNextTaskName: {
-      fontSize: 17,
+      fontSize: 16,
       color: theme.colors.text,
       fontFamily: theme.fonts.bold,
     },
-    upNextTimeRow: {
+    upNextMetaRow: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 5,
+      gap: 8,
     },
-    upNextTimeText: {
-      fontSize: 13,
+    durationChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      backgroundColor: neutralFill,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 999,
+    },
+    upNextDurationText: {
+      fontSize: 11,
       color: theme.colors.textSecondary,
       fontFamily: theme.fonts.medium,
     },
-    emptyUpNext: {
-      fontSize: 14,
-      color: theme.colors.textSecondary,
-      fontFamily: theme.fonts.regular,
-      fontStyle: "italic",
-      textAlign: "center",
-      paddingVertical: 16,
-      paddingHorizontal: 20,
-      opacity: 0.7,
+    timeBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 14,
+      backgroundColor: neutralFill,
+      borderWidth: 1,
+      borderColor: theme.glass.borderColor,
+    },
+    timeBadgeText: {
+      fontSize: 12,
+      fontFamily: theme.fonts.bold,
+      color: theme.colors.text,
+      letterSpacing: 0.2,
     },
 
-
+    /* Empty state */
+    emptyCardContainer: {
+      borderRadius: 24,
+      borderWidth: 1,
+      borderColor: theme.glass.borderColor,
+      backgroundColor: theme.glass.cardBg,
+      overflow: "hidden",
+      ...Platform.select({
+        ios: {
+          shadowColor: theme.glows.card.shadowColor,
+          shadowOffset: theme.glows.card.shadowOffset,
+          shadowOpacity: theme.glows.card.shadowOpacity,
+          shadowRadius: theme.glows.card.shadowRadius,
+        },
+        android: { elevation: theme.glows.card.elevation },
+      }),
+    },
+    emptyCardInner: {
+      paddingVertical: 28,
+      paddingHorizontal: 20,
+      alignItems: "center",
+      zIndex: 1,
+    },
+    emptyIconCircle: {
+      width: 52,
+      height: 52,
+      borderRadius: 16,
+      backgroundColor: tileBg,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 12,
+    },
+    emptyTitle: {
+      fontSize: 16,
+      fontFamily: theme.fonts.bold,
+      color: theme.colors.text,
+      textAlign: "center",
+      marginBottom: 6,
+    },
+    emptySubtitle: {
+      fontSize: 13,
+      fontFamily: theme.fonts.regular,
+      color: theme.colors.textSecondary,
+      textAlign: "center",
+      lineHeight: 19,
+      marginBottom: 16,
+      paddingHorizontal: 12,
+    },
+    emptyActionButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 999,
+      backgroundColor: tileBg,
+    },
+    emptyActionText: {
+      fontSize: 13,
+      fontFamily: theme.fonts.bold,
+      color: theme.colors.primary,
+    },
 
     /* Setup card */
     setupCard: {
       width: "100%",
       borderRadius: 32,
+      borderWidth: 1,
+      borderColor: theme.glass.borderColor,
+      backgroundColor: theme.glass.cardBg,
+      overflow: "hidden",
       ...Platform.select({
         ios: {
           shadowColor: theme.glows.card.shadowColor,
@@ -572,19 +671,19 @@ const getStyles = (theme: Theme) =>
       }),
     },
     setupCardInner: {
-      paddingVertical: 32,
+      paddingVertical: 36,
       paddingHorizontal: 24,
       alignItems: "center",
       zIndex: 1,
     },
     setupIconCircle: {
-      width: 100,
-      height: 100,
-      borderRadius: 50,
-      backgroundColor: `${theme.colors.primary}12`,
+      width: 80,
+      height: 80,
+      borderRadius: 24,
+      backgroundColor: tileBg,
       alignItems: "center",
       justifyContent: "center",
-      marginBottom: 24,
+      marginBottom: 20,
     },
     setupTitle: {
       fontSize: 24,
@@ -598,9 +697,9 @@ const getStyles = (theme: Theme) =>
       color: theme.colors.textSecondary,
       fontFamily: theme.fonts.regular,
       textAlign: "center",
-      marginBottom: 24,
-      lineHeight: 21,
-      paddingHorizontal: 8,
+      marginBottom: 28,
+      lineHeight: 22,
+      paddingHorizontal: 12,
     },
 
     /* Accessibility */
@@ -611,6 +710,7 @@ const getStyles = (theme: Theme) =>
       right: 10,
     },
   });
+};
 
 /* ---------- Component ---------- */
 const SETUP_KEY = "@zen_setup_complete";
@@ -670,14 +770,11 @@ function HomeScreen() {
     () => formatDate(currentTime),
     [currentTime]
   );
-  const greeting = useMemo(
-    () => getGreeting(currentTime.getHours()),
+  const greetingInfo = useMemo(
+    () => getGreetingDetails(currentTime.getHours()),
     [currentTime]
   );
-  const greetingEmoji = useMemo(
-    () => getGreetingEmoji(currentTime.getHours()),
-    [currentTime]
-  );
+
   // Filter today's routines for the day of week
   const todayRoutines = useMemo(() => {
     return getRoutineItemsForDate(routines, currentTime);
@@ -691,17 +788,20 @@ function HomeScreen() {
   const isBetween = scheduleStatus.isBetween;
   const currentTaskItem = scheduleStatus.activeTask || scheduleStatus.nextTask;
   const currentTaskText = isBetween
-    ? (scheduleStatus.nextTask ? `Next: ${scheduleStatus.nextTask.task}` : "Mindful Pause 🌿")
-    : (scheduleStatus.activeTask?.task || "🌸 Just Breathe");
+    ? (scheduleStatus.nextTask ? `Next: ${scheduleStatus.nextTask.task}` : "Mindful Pause")
+    : (scheduleStatus.activeTask?.task || "Just Breathe");
 
   const currentTaskDesc = isBetween
-    ? (scheduleStatus.nextTask ? `Starts at ${formatTaskTime(scheduleStatus.nextTask.time)}` : "All routines done for today!")
-    : (scheduleStatus.activeTask?.description || "Your mindful daily routine.");
+    ? (scheduleStatus.nextTask ? `Starts at ${formatTaskTime(scheduleStatus.nextTask.time)}` : "All rituals completed for today")
+    : (scheduleStatus.activeTask ? `Started at ${formatTaskTime(scheduleStatus.activeTask.time)}` : "");
 
+  // FIX: use the task actually shown in the card (active OR next), so
+  // "Next: Sleep" gets the sleep icon instead of the "breathe" leaf fallback.
   const taskIcon = useMemo(
-    () => getRoutineIcon(scheduleStatus.activeTask?.imageKey || (isBetween ? "breathe" : undefined)),
-    [scheduleStatus, isBetween]
+    () => toOutline(getRoutineIcon(currentTaskItem?.imageKey || "breathe")),
+    [currentTaskItem]
   );
+
   const nextTasks = useMemo(
     () => getNextTasks(currentTime, todayRoutines, 5),
     [currentTime, todayRoutines]
@@ -719,9 +819,7 @@ function HomeScreen() {
   const dailyProgressFraction =
     totalIntentions > 0 ? Math.min(1, todayTasksDone / totalIntentions) : 0;
 
-  const streak = userStats?.currentStreak || 0;
-
-  const styles = useMemo(() => getStyles(theme), [theme]);
+  const styles = useMemo(() => getStyles(theme, isDarkMode), [theme, isDarkMode]);
 
   /* sync theme base with task */
   useEffect(() => {
@@ -733,12 +831,11 @@ function HomeScreen() {
     }
   }, [currentTaskItem, setThemeName, themeName, isAutoTheme, isLoading, isReady]);
 
-  /* actions */
+  /* Primary CTA action: Start Focus if active task exists; otherwise "Start My Day" / redirect to timeline */
   const handleStartFocus = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const target = scheduleStatus.activeTask || scheduleStatus.nextTask;
-    if (target) {
-      router.push(`/focus?taskId=${target.id}&taskName=${encodeURIComponent(target.task)}` as any);
+    if (scheduleStatus.activeTask) {
+      router.push(`/focus?taskId=${scheduleStatus.activeTask.id}&taskName=${encodeURIComponent(scheduleStatus.activeTask.task)}` as any);
     } else {
       router.push("/routine" as any);
     }
@@ -748,7 +845,7 @@ function HomeScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Alert.alert(
       task.task,
-      `Scheduled for ${formatTaskTime(task.time)}${task.duration ? ` • ${task.duration} mins` : ""}${task.description ? `\n\n${task.description}` : ""}`,
+      `Scheduled for ${formatTaskTime(task.time)}${task.duration ? `  •  ${task.duration} min` : ""}${task.description ? `\n\n${task.description}` : ""}`,
       [
         {
           text: "Start Focus Now",
@@ -807,52 +904,50 @@ function HomeScreen() {
             >
               <View style={styles.cardTint} />
               <View style={styles.setupCardInner}>
-              <View style={styles.setupIconCircle}>
-                <Ionicons
-                  name="leaf-outline"
-                  size={48}
-                  color={theme.colors.primary}
-                />
+                <View style={styles.setupIconCircle}>
+                  <Ionicons
+                    name="leaf-outline"
+                    size={40}
+                    color={theme.colors.primary}
+                  />
+                </View>
+
+                <Text style={styles.setupTitle}>Welcome to Zen</Text>
+                <Text style={styles.setupSubtitle}>
+                  Design your daily routine and build mindful habits, one step at
+                  a time.
+                </Text>
+
+                <Pressable
+                  accessibilityRole={buttonRole}
+                  accessibilityLabel="Create Routine"
+                  hitSlop={styles.touchableHitSlop}
+                  android_ripple={{ color: "rgba(0,0,0,0.06)" }}
+                  style={({ pressed }) => [
+                    styles.primaryButton,
+                    {
+                      opacity: pressed ? 0.92 : 1,
+                      transform: [{ scale: pressed ? 0.98 : 1 }],
+                    },
+                  ]}
+                  onPress={() => router.push("/setup")}
+                >
+                  <Ionicons
+                    name="sparkles-outline"
+                    size={20}
+                    color={theme.colors.white}
+                  />
+                  <Text style={styles.primaryButtonText}>Create Routine</Text>
+                </Pressable>
               </View>
-
-              <Text style={styles.setupTitle}>Welcome to Zen</Text>
-              <Text style={styles.setupSubtitle}>
-                Design your daily routine and build mindful habits, one step at
-                a time.
-              </Text>
-
-              <Pressable
-                accessibilityRole={buttonRole}
-                accessibilityLabel="Create Routine"
-                hitSlop={styles.touchableHitSlop}
-                android_ripple={{ color: "rgba(0,0,0,0.06)" }}
-                style={({ pressed }) => [
-                  {
-                    backgroundColor: theme.colors.primary,
-                    opacity: pressed ? 0.92 : 1,
-                    transform: [{ scale: pressed ? 0.97 : 1 }],
-                    width: "100%",
-                  },
-                  styles.primaryButton,
-                ]}
-                onPress={() => router.push("/setup")}
-              >
-                <Ionicons
-                  name="sparkles"
-                  size={18}
-                  color={theme.colors.white}
-                />
-                <Text style={styles.primaryButtonText}>Create Routine</Text>
-              </Pressable>
-            </View>
-          </BlurView>
-        </Animated.View>
+            </BlurView>
+          </Animated.View>
         </View>
       </SafeAreaView>
     );
   }
 
-  /* ---------- Main Home ---------- */
+  /* ---------- Main Home Dashboard ---------- */
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
@@ -860,16 +955,22 @@ function HomeScreen() {
         showsVerticalScrollIndicator={false}
         accessibilityRole="scrollbar"
       >
-        {/* ======= HEADER ======= */}
+        {/* ======= HEADER & DAILY PROGRESS ======= */}
         <Animated.View
           entering={FadeIn.duration(500)}
           style={styles.heroBanner}
         >
           <View style={styles.heroTopRow}>
             <View style={styles.headerLeft}>
-              <Text style={styles.greeting}>
-                {greeting} {greetingEmoji}
-              </Text>
+              <View style={styles.greetingRow}>
+                <Text style={styles.greeting}>{greetingInfo.text}</Text>
+                {/* Plain neutral glyph: decoration, so no tile and no color */}
+                <Ionicons
+                  name={greetingInfo.icon}
+                  size={20}
+                  color={theme.colors.textSecondary}
+                />
+              </View>
               <View style={styles.dateRow}>
                 <Text style={styles.dateText}>{formattedDate}</Text>
                 <View style={styles.timeDot} />
@@ -877,40 +978,41 @@ function HomeScreen() {
               </View>
             </View>
 
+            {/* Daily Dashboard Completion Ring */}
             <View style={styles.headerRight}>
-              <View style={styles.streakBadge}>
-                <Ionicons
-                  name="flame"
-                  size={16}
-                  color={theme.colors.primary}
-                />
-                <Text style={styles.streakText}>{streak}</Text>
-              </View>
-
               <View style={styles.progressRingWrapper}>
                 <ProgressRing
                   progress={dailyProgressFraction}
                   size={52}
-                  strokeWidth={4}
+                  strokeWidth={4.5}
                   color={theme.colors.primary}
-                  trackColor={`${theme.colors.textSecondary}20`}
+                  trackColor={
+                    isDarkMode
+                      ? "rgba(255, 255, 255, 0.08)"
+                      : "rgba(0, 0, 0, 0.06)"
+                  }
                 >
                   <Text style={styles.progressCount}>
                     {todayTasksDone}
                   </Text>
                 </ProgressRing>
-                <Text style={styles.progressLabel}>Today</Text>
+                <Text style={styles.progressLabel}>
+                  {totalIntentions > 0 ? `${todayTasksDone}/${totalIntentions}` : "Today"}
+                </Text>
               </View>
             </View>
           </View>
         </Animated.View>
 
-        {/* ======= CURRENT FOCUS ======= */}
+        {/* ======= CURRENT FOCUS HERO CARD ======= */}
         <Animated.View
           entering={FadeInDown.duration(600).delay(80)}
           style={styles.sectionContainer}
         >
-          <Text style={styles.sectionLabel}>Current Focus</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionLabel}>Current Focus</Text>
+          </View>
+
           <View style={styles.focusCard}>
             <BlurView
               intensity={100}
@@ -919,159 +1021,210 @@ function HomeScreen() {
                   ? "systemThickMaterialDark"
                   : "systemThickMaterialLight"
               }
-              style={{ borderRadius: 32, overflow: "hidden" }}
+              style={{ borderRadius: 28, overflow: "hidden" }}
             >
               <View style={styles.cardTint} />
               <View style={styles.focusCardInner}>
-              {/* Top: Icon + Name + Description + Duration */}
-              <View style={styles.focusTopRow}>
-                <View style={styles.focusIconCircle}>
-                  <Ionicons
-                    name={taskIcon}
-                    size={26}
-                    color={theme.colors.primary}
-                  />
-                </View>
-                <View style={styles.focusTextCol}>
-                  <Text style={styles.focusTaskName} accessibilityRole="header">
-                    {currentTaskText}
-                  </Text>
-                  {currentTaskDesc ? (
-                    <Text style={styles.focusDescription} numberOfLines={1}>
-                      {currentTaskDesc}
+                {/* Top: Icon + Name + Description + Duration */}
+                <View style={styles.focusTopRow}>
+                  <View style={styles.focusIconSquircle}>
+                    <Ionicons
+                      name={taskIcon}
+                      size={26}
+                      color={theme.colors.primary}
+                    />
+                  </View>
+                  <View style={styles.focusTextCol}>
+                    <Text
+                      style={styles.focusTaskName}
+                      numberOfLines={1}
+                      accessibilityRole="header"
+                    >
+                      {currentTaskText}
                     </Text>
+                    {currentTaskDesc ? (
+                      <Text style={styles.focusDescription} numberOfLines={1}>
+                        {currentTaskDesc}
+                      </Text>
+                    ) : null}
+                  </View>
+                  {currentTaskItem?.duration ? (
+                    <View style={styles.durationBadge}>
+                      <Ionicons
+                        name="time-outline"
+                        size={13}
+                        color={theme.colors.textSecondary}
+                      />
+                      <Text style={styles.durationBadgeText}>
+                        {currentTaskItem.duration}m
+                      </Text>
+                    </View>
                   ) : null}
                 </View>
-                {currentTaskItem?.duration ? (
-                  <View style={styles.durationBadge}>
-                    <Text style={styles.durationBadgeText}>
-                      {currentTaskItem.duration} min
+
+                {/* Progress Bar & Indicators */}
+                <View style={styles.progressSection}>
+                  <View style={styles.progressLabelRow}>
+                    <Text style={styles.progressLabelText}>Progress</Text>
+                    <Text style={styles.progressPercent}>
+                      {Math.round(taskProgress * 100)}%
                     </Text>
                   </View>
-                ) : null}
-              </View>
+                  <View style={styles.progressBarTrack}>
+                    <View
+                      style={[
+                        styles.progressBarFill,
+                        { width: `${Math.round(taskProgress * 100)}%` },
+                      ]}
+                    />
+                  </View>
+                </View>
 
-              {/* Progress */}
-              <View style={styles.progressSection}>
-                <View style={styles.progressLabelRow}>
-                  <Text style={styles.progressLabelText}>Progress</Text>
-                  <Text style={styles.progressPercent}>
-                    {Math.round(taskProgress * 100)}%
+                {/* Main CTA Button: "Start Focus Timer" if active task, otherwise "Start My Day" (redirects to timeline) */}
+                <Pressable
+                  accessibilityRole={buttonRole}
+                  accessibilityLabel={
+                    scheduleStatus.activeTask
+                      ? "Start focus timer"
+                      : "Start my day"
+                  }
+                  hitSlop={styles.touchableHitSlop}
+                  android_ripple={{ color: "rgba(0,0,0,0.06)" }}
+                  style={({ pressed }) => [
+                    styles.primaryButton,
+                    {
+                      opacity: pressed ? 0.92 : 1,
+                      transform: [{ scale: pressed ? 0.98 : 1 }],
+                    },
+                  ]}
+                  onPress={handleStartFocus}
+                >
+                  <Text style={styles.primaryButtonText}>
+                    {scheduleStatus.activeTask
+                      ? "Start Focus Timer"
+                      : scheduleStatus.nextTask
+                        ? "Start My Day"
+                        : "View Day Timeline"}
                   </Text>
-                </View>
-                <View style={styles.progressBarTrack}>
-                  <View
-                    style={[
-                      styles.progressBarFill,
-                      { width: `${Math.round(taskProgress * 100)}%` },
-                    ]}
+                  <Ionicons
+                    name="arrow-forward"
+                    size={20}
+                    color={theme.colors.white}
                   />
-                </View>
+                </Pressable>
+
               </View>
-
-              {/* Start Button */}
-              <Pressable
-                accessibilityRole={buttonRole}
-                accessibilityLabel="Start focus timer"
-                hitSlop={styles.touchableHitSlop}
-                android_ripple={{ color: "rgba(0,0,0,0.06)" }}
-                style={({ pressed }) => [
-                  {
-                    backgroundColor: theme.colors.primary,
-                    opacity: pressed ? 0.92 : 1,
-                    transform: [{ scale: pressed ? 0.97 : 1 }],
-                  },
-                  styles.primaryButton,
-                ]}
-                onPress={handleStartFocus}
-              >
-                <Text style={styles.primaryButtonText}>
-                  {scheduleStatus.activeTask
-                    ? "Start Focus Timer"
-                    : scheduleStatus.nextTask
-                    ? "Start Focus Ahead"
-                    : "View Day Timeline"}
-                </Text>
-                <Ionicons
-                  name="arrow-forward"
-                  size={18}
-                  color={theme.colors.white}
-                />
-              </Pressable>
-
-              {/* Timeline shortcut link */}
-              <Pressable
-                style={styles.timelineLink}
-                onPress={() => router.push("/routine" as any)}
-                hitSlop={styles.touchableHitSlop}
-              >
-                <Text style={styles.timelineLinkText}>View Full Day Timeline →</Text>
-              </Pressable>
-            </View>
-          </BlurView>
-        </View>
+            </BlurView>
+          </View>
         </Animated.View>
 
-        {/* ======= UP NEXT ======= */}
+        {/* ======= UP NEXT QUEUE ======= */}
         <Animated.View
           entering={FadeInDown.duration(600).delay(160)}
           style={styles.sectionContainer}
         >
-          <Text style={styles.sectionLabel}>Up Next</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionLabel}>Up Next</Text>
+          </View>
+
           {nextTasks.length > 0 ? (
             <View style={styles.upNextList}>
               {nextTasks.map((task, idx) => (
                 <Animated.View
                   key={task.id}
-                  entering={FadeInDown.duration(400).delay(idx * 60)}
+                  entering={FadeInDown.duration(400).delay(idx * 50)}
                 >
                   <Pressable
                     style={({ pressed }) => [
                       styles.upNextCard,
-                      pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] },
+                      pressed && { opacity: 0.82, transform: [{ scale: 0.985 }] },
                     ]}
                     onPress={() => handlePressUpcoming(task)}
                   >
-                    <View style={styles.upNextIconCircle}>
+                    <View style={styles.upNextIconSquircle}>
                       <Ionicons
-                        name={getRoutineIcon(task.imageKey)}
+                        name={toOutline(getRoutineIcon(task.imageKey))}
                         size={22}
-                        color={theme.colors.textSecondary}
+                        color={theme.colors.primary}
                       />
                     </View>
                     <View style={styles.upNextInfo}>
                       <Text style={styles.upNextTaskName} numberOfLines={1}>
                         {task.task}
                       </Text>
-                      <View style={styles.upNextTimeRow}>
-                        <Ionicons
-                          name="time-outline"
-                          size={14}
-                          color={theme.colors.textSecondary}
-                        />
-                        <Text style={styles.upNextTimeText}>
-                          {formatTaskTime(task.time)}
-                        </Text>
-                      </View>
+                      {task.duration ? (
+                        <View style={styles.upNextMetaRow}>
+                          <View style={styles.durationChip}>
+                            <Ionicons
+                              name="hourglass-outline"
+                              size={11}
+                              color={theme.colors.textSecondary}
+                            />
+                            <Text style={styles.upNextDurationText}>
+                              {task.duration}m
+                            </Text>
+                          </View>
+                        </View>
+                      ) : null}
                     </View>
-                    <Ionicons
-                      name="play-circle-outline"
-                      size={24}
-                      color={theme.colors.primary}
-                      style={{ opacity: 0.7 }}
-                    />
+
+                    <View style={styles.timeBadge}>
+                      <Ionicons
+                        name="time-outline"
+                        size={12}
+                        color={theme.colors.primary}
+                      />
+                      <Text style={styles.timeBadgeText}>
+                        {formatTaskTime(task.time)}
+                      </Text>
+                    </View>
                   </Pressable>
                 </Animated.View>
               ))}
             </View>
           ) : (
-            <Text style={styles.emptyUpNext}>
-              No more tasks today — you're all done! 🎉
-            </Text>
+            <View style={styles.emptyCardContainer}>
+              <BlurView
+                intensity={80}
+                tint={
+                  isDarkMode
+                    ? "systemThickMaterialDark"
+                    : "systemThickMaterialLight"
+                }
+                style={{ borderRadius: 24, overflow: "hidden" }}
+              >
+                <View style={styles.cardTint} />
+                <View style={styles.emptyCardInner}>
+                  <View style={styles.emptyIconCircle}>
+                    <Ionicons
+                      name="sparkles-outline"
+                      size={26}
+                      color={theme.colors.primary}
+                    />
+                  </View>
+                  <Text style={styles.emptyTitle}>All Caught Up For Today</Text>
+                  <Text style={styles.emptySubtitle}>
+                    You have finished all scheduled rituals for today. Take time to relax, breathe, and recharge.
+                  </Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="View full routine timeline"
+                    style={styles.emptyActionButton}
+                    onPress={() => router.push("/routine" as any)}
+                    hitSlop={styles.touchableHitSlop}
+                  >
+                    <Ionicons
+                      name="calendar-outline"
+                      size={16}
+                      color={theme.colors.primary}
+                    />
+                    <Text style={styles.emptyActionText}>View Full Timeline</Text>
+                  </Pressable>
+                </View>
+              </BlurView>
+            </View>
           )}
         </Animated.View>
-
-
       </ScrollView>
     </SafeAreaView>
   );

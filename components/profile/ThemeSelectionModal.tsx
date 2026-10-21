@@ -13,7 +13,7 @@ import {
     ActivityIndicator,
     Alert,
 } from "react-native";
-import { darkThemes, lightThemes, Theme } from "../../constants/shared";
+import { darkThemes, lightThemes, Theme } from "../../styles/shared";
 import { BottomSheet } from "./BottomSheet";
 import { useTheme } from "../../context/ThemeContext";
 

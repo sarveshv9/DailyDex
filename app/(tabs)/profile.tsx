@@ -40,7 +40,7 @@ import { RoutineItem } from "../../utils/utils";
 import {
   getSharedStyles,
   Theme
-} from "../../constants/shared";
+} from "../../styles/shared";
 
 /**
  * Modernized Profile Screen

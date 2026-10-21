@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useTheme } from "../../context/ThemeContext";
-import { Theme } from "../../constants/shared";
+import { Theme } from "../../styles/shared";
 
 interface CrossPlatformSegmentedControlProps {
   values: string[];

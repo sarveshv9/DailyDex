@@ -5,7 +5,7 @@ import Animated, {
     useSharedValue,
     withSpring
 } from "react-native-reanimated";
-import { Theme } from "../../constants/shared";
+import { Theme } from "../../styles/shared";
 
 type ActivityData = {
     dateStr: string;

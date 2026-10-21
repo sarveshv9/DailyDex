@@ -10,7 +10,7 @@ import {
     View,
 } from "react-native";
 import { SONG_LIST } from "../../constants/songs";
-import { Theme } from "../../constants/shared";
+import { Theme } from "../../styles/shared";
 import { BottomSheet } from "./BottomSheet";
 
 type MusicSelectionModalProps = {

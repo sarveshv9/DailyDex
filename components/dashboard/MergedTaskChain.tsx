@@ -3,7 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React, { memo } from 'react';
 import { Platform, View, Pressable } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { Theme } from '../../constants/shared';
+import { Theme } from '../../styles/shared';
 import { RoutineItem, timeToMinutes, ICON_MAP } from '../../utils/utils';
 
 export const getTimelineMinute = (timeStr: string, startHour: number) => {

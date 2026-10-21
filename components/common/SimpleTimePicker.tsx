@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
-import { Theme } from "../../constants/shared";
+import { Theme } from "../../styles/shared";
 import { useTheme } from "../../context/ThemeContext";
 
 interface SimpleTimePickerProps {

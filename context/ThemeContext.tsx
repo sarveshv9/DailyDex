@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 import { LayoutAnimation, Platform, UIManager } from 'react-native';
-import { darkThemes, lightThemes, Theme, ThemeName } from '../constants/shared';
+import { darkThemes, lightThemes, Theme, ThemeName } from '../styles/shared';
 import { supabase } from '../lib/supabase';
 
 // Enable LayoutAnimation on Android

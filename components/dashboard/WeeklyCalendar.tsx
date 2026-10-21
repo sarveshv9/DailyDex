@@ -8,7 +8,7 @@ import {
     View,
     Dimensions,
 } from 'react-native';
-import { Theme } from '../../constants/shared';
+import { Theme } from '../../styles/shared';
 import { useTheme } from '../../context/ThemeContext';
 
 interface WeeklyCalendarProps {

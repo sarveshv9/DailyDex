@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { Animated, Platform, Pressable, StyleSheet, Text, View } from "react-native";
-import { Theme } from "../../constants/shared";
+import { Theme } from "../../styles/shared";
 import { useTheme } from "../../context/ThemeContext";
 import { RoutineItem } from "../../utils/utils";
 

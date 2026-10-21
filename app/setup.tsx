@@ -16,7 +16,7 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Theme } from "../constants/shared";
+import { Theme } from "../styles/shared";
 import { useTheme } from "../context/ThemeContext";
 import { supabase } from "../lib/supabase";
 import * as Haptics from "../utils/haptics";

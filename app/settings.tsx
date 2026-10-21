@@ -18,7 +18,7 @@ import { useAudio } from "../context/AudioContext";
 import { ThemeSelectionModal } from "../components/profile/ThemeSelectionModal";
 import { MusicSelectionModal } from "../components/profile/MusicSelectionModal";
 import { SONG_LIST } from "../constants/songs";
-import { Theme } from "../constants/shared";
+import { Theme } from "../styles/shared";
 
 export default function SettingsScreen() {
   const { theme, themeName, setThemeName, isAutoTheme, setIsAutoTheme, isDarkMode, setIsDarkMode } = useTheme();
