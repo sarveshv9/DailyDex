@@ -1,12 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
-import { supabase } from "../../lib/supabase";
-import * as Haptics from "../../utils/haptics";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActionSheetIOS,
   ActivityIndicator,
   Alert,
+  Dimensions,
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -19,6 +21,7 @@ import {
 } from "react-native";
 import Animated, {
   FadeIn,
+  FadeInDown,
   FadeOut,
   LinearTransition,
   useAnimatedStyle,
@@ -28,13 +31,17 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { getSharedStyles, Theme } from "../../styles/shared";
 import { useTheme } from "../../context/ThemeContext";
 import { useTimer } from "../../context/TimerContext";
+import { supabase } from "../../lib/supabase";
+import { getSharedStyles, Theme } from "../../styles/shared";
+import * as Haptics from "../../utils/haptics";
+import { addTaskCompleted, removeTaskCompleted } from "../../utils/stats";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-interface Task {
+/* ---------------------- TYPES & CONSTANTS ------------------------ */
+export interface Task {
   id: string;
   text: string;
   completed: boolean;
@@ -42,7 +49,10 @@ interface Task {
   category: "today" | "later";
 }
 
-type TaskCategory = Task["category"];
+export type TaskCategory = Task["category"];
+export type FilterTab = "all" | "today" | "later";
+
+const STORAGE_KEY = "@zen_tasks";
 
 const generateTaskId = (): string =>
   `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
@@ -55,42 +65,41 @@ const createNewTask = (text: string, category: TaskCategory): Task => ({
   category,
 });
 
-import AsyncStorage from "@react-native-async-storage/async-storage";
-
-const STORAGE_KEY = "@zen_tasks";
-
+/* ---------------------- STORAGE & SYNC ------------------------ */
 const loadTasks = async (): Promise<Task[]> => {
   try {
     let finalTasks: Task[] | null = null;
     let localTasks: Task[] | null = null;
-    
-    // 1. Load from local storage
+
+    // 1. Load from local AsyncStorage
     const localData = await AsyncStorage.getItem(STORAGE_KEY);
     if (localData) {
       try {
         localTasks = JSON.parse(localData);
-      } catch (e) {}
+      } catch (e) {
+        console.error("Failed to parse local tasks:", e);
+      }
     }
 
     // 2. Fetch from Supabase if authenticated
     const { data: userAuth } = await supabase.auth.getUser();
-    
+
     if (userAuth?.user) {
-      const { data: stored, error } = await supabase.from('tasks').select('*').order('created_at', { ascending: true });
-      
+      const { data: stored, error } = await supabase
+        .from("tasks")
+        .select("*")
+        .order("created_at", { ascending: true });
+
       if (!error && stored && stored.length > 0) {
-        // Remote data exists, use it and update local
-        finalTasks = stored.map(d => ({
+        finalTasks = stored.map((d: any) => ({
           id: d.id,
           text: d.text,
           completed: d.completed,
           category: d.category,
-          createdAt: d.created_at
+          createdAt: d.created_at,
         }));
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(finalTasks));
-        
       } else if (localTasks && localTasks.length > 0) {
-        // No remote data but local data exists, sync local to remote
         finalTasks = localTasks;
         const dbTasks = localTasks.map((t) => ({
           id: t.id,
@@ -98,13 +107,13 @@ const loadTasks = async (): Promise<Task[]> => {
           text: t.text,
           completed: t.completed,
           category: t.category,
-          created_at: t.createdAt
+          created_at: t.createdAt,
         }));
-        await supabase.from('tasks').insert(dbTasks);
+        await supabase.from("tasks").insert(dbTasks);
       }
     }
 
-    // 3. Fallback to local if unauthenticated or Supabase failed
+    // 3. Fallback to local
     if (!finalTasks && localTasks) {
       finalTasks = localTasks;
     }
@@ -118,96 +127,113 @@ const loadTasks = async (): Promise<Task[]> => {
 
 const saveTasks = async (tasks: Task[]) => {
   try {
-    // Immediately save locally
+    // Save locally immediately
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-    
+
     // Sync to Supabase if authenticated
     const { data: user } = await supabase.auth.getUser();
     if (!user?.user) return;
-    
-    // Handle remote deletes
-    const { data: remoteData } = await supabase.from('tasks').select('id');
+
+    // Remote deletes
+    const { data: remoteData } = await supabase.from("tasks").select("id");
     const remoteRecordIds = remoteData ? remoteData.map((t: any) => t.id) : [];
-    
-    const incomingIds = tasks.map(t => t.id);
-    const toDeleteIds = remoteRecordIds.filter(id => !incomingIds.includes(id));
-    
+
+    const incomingIds = tasks.map((t) => t.id);
+    const toDeleteIds = remoteRecordIds.filter(
+      (id: string) => !incomingIds.includes(id)
+    );
+
     if (toDeleteIds.length > 0) {
-      await supabase.from('tasks').delete().in('id', toDeleteIds);
+      await supabase.from("tasks").delete().in("id", toDeleteIds);
     }
-    
-    // Handle remote inserts/updates
+
+    // Remote upserts
     const dbTasks = tasks.map((t) => ({
       id: t.id,
       user_id: user.user.id,
       text: t.text,
       completed: t.completed,
       category: t.category,
-      created_at: t.createdAt
+      created_at: t.createdAt,
     }));
-    
+
     if (dbTasks.length > 0) {
-      await supabase.from('tasks').upsert(dbTasks);
+      await supabase.from("tasks").upsert(dbTasks);
     }
   } catch (error) {
     console.error("Error saving tasks:", error);
   }
 };
 
-/* ---------------------- TASK ITEM ------------------------ */
+/* ---------------------- TASK ITEM CARD ------------------------ */
+interface TaskItemProps {
+  task: Task;
+  onToggle: (id: string) => void;
+  onEdit: (task: Task) => void;
+  onDelete: (id: string) => void;
+  theme: Theme;
+  isDarkMode: boolean;
+}
+
 const TaskItem = ({
   task,
   onToggle,
   onEdit,
   onDelete,
   theme,
-}: {
-  task: Task;
-  onToggle: (id: string) => void;
-  onEdit: (task: Task) => void;
-  onDelete: (id: string) => void;
-  theme: Theme;
-}) => {
+  isDarkMode,
+}: TaskItemProps) => {
   const router = useRouter();
   const timer = useTimer();
-  const styles = useMemo(() => getStyles(theme), [theme]);
+  const styles = useMemo(() => getStyles(theme, isDarkMode), [theme, isDarkMode]);
+
+  const cardScale = useSharedValue(1);
+  const cardAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: cardScale.value }],
+  }));
 
   const strikeWidth = useSharedValue(task.completed ? 100 : 0);
   const textWidth = useSharedValue(0);
 
+  const checkScale = useSharedValue(task.completed ? 1 : 0);
+
   useEffect(() => {
     if (task.completed) {
-      strikeWidth.value = withDelay(100, withTiming(100, { duration: 250 }));
+      strikeWidth.value = withDelay(80, withTiming(100, { duration: 220 }));
+      checkScale.value = withSpring(1, { damping: 14, stiffness: 220 });
     } else {
-      strikeWidth.value = withTiming(0, { duration: 180 });
+      strikeWidth.value = withTiming(0, { duration: 160 });
+      checkScale.value = withSpring(0, { damping: 14, stiffness: 220 });
     }
-  }, [task.completed, strikeWidth]);
+  }, [task.completed, strikeWidth, checkScale]);
 
   const animatedStrikeStyle = useAnimatedStyle(() => ({
     width: (strikeWidth.value / 100) * textWidth.value,
-    opacity: strikeWidth.value > 0 ? 0.55 : 0,
+    opacity: strikeWidth.value > 0 ? 0.6 : 0,
+  }));
+
+  const checkAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: checkScale.value }],
+    opacity: checkScale.value,
   }));
 
   const isCurrentTimer = timer.taskId === task.id;
   const isTimerActive = isCurrentTimer && timer.isActive;
 
   const handleToggle = () => {
+    if (!task.completed) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } else {
+      Haptics.selectionAsync();
+    }
     if (!task.completed && isCurrentTimer) {
       timer.stopTimer();
     }
     onToggle(task.id);
   };
 
-  const handleDelete = () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    onDelete(task.id);
-  };
-
-  const handleEdit = () => {
-    onEdit(task);
-  };
-
   const handleOpenFocus = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push({
       pathname: "/focus" as any,
       params: { taskId: task.id, taskName: task.text },
@@ -223,193 +249,215 @@ const TaskItem = ({
     }
   };
 
-  const formatTime = (seconds: number) => {
+  const formatSeconds = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
-  const ActionButton = ({ onPress, icon, color, label }: { onPress: () => void, icon: any, color: string, label?: string }) => {
-    const scale = useSharedValue(1);
-    const animStyle = useAnimatedStyle(() => ({
-      transform: [{ scale: scale.value }],
-    }));
-
-    return (
-      <AnimatedPressable
-        accessibilityLabel={label}
-        style={[styles.taskActionButton, animStyle]}
-        onPressIn={() => { scale.value = withSpring(0.85, { damping: 18, stiffness: 200 }); }}
-        onPressOut={() => { scale.value = withSpring(1, { damping: 14, stiffness: 180 }); }}
-        onPress={onPress}
-        hitSlop={8}
-      >
-        <Ionicons name={icon} size={18} color={color} />
-      </AnimatedPressable>
-    );
-  };
-
   return (
-    <View style={styles.taskItemWrapper}>
+    <AnimatedPressable
+      style={[styles.taskCard, cardAnimatedStyle]}
+      onPressIn={() => {
+        cardScale.value = withSpring(0.985, { damping: 18, stiffness: 220 });
+      }}
+      onPressOut={() => {
+        cardScale.value = withSpring(1, { damping: 14, stiffness: 180 });
+      }}
+      onPress={handleToggle}
+      android_ripple={{ color: "rgba(0,0,0,0.04)" }}
+    >
+      {/* Tactile Checkbox */}
       <Pressable
-        style={styles.taskItemContainer}
+        style={styles.checkboxTouchTarget}
         onPress={handleToggle}
-        android_ripple={{ color: "rgba(0,0,0,0.05)" }}
+        hitSlop={10}
       >
-        <View style={styles.checkboxWrapper}>
-          <View style={[styles.checkbox, task.completed && styles.checkboxDone]}>
-            {task.completed && (
-              <Ionicons name="checkmark" size={14} color={theme.colors.white} />
-            )}
-          </View>
-        </View>
-
-        <View style={styles.taskTextContainer}>
-          <View style={styles.strikeContainer}>
-            <Text
-              style={[
-                styles.taskItemText,
-                task.completed && styles.taskItemTextDone,
-              ]}
-              onLayout={(e) => { textWidth.value = e.nativeEvent.layout.width; }}
-            >
-              {task.text}
-            </Text>
-            <Animated.View style={[styles.strikeThrough, animatedStrikeStyle]} />
-          </View>
+        <View
+          style={[
+            styles.checkbox,
+            task.completed && styles.checkboxDone,
+          ]}
+        >
+          <Animated.View style={checkAnimatedStyle}>
+            <Ionicons name="checkmark" size={14} color={theme.colors.white} />
+          </Animated.View>
         </View>
       </Pressable>
 
-      <View style={styles.taskActions}>
+      {/* Task Content */}
+      <View style={styles.taskContentCol}>
+        <View style={styles.taskTextRow}>
+          <View style={styles.strikeContainer}>
+            <Text
+              style={[
+                styles.taskTitleText,
+                task.completed && styles.taskTitleTextDone,
+              ]}
+              onLayout={(e) => {
+                textWidth.value = e.nativeEvent.layout.width;
+              }}
+              numberOfLines={2}
+            >
+              {task.text}
+            </Text>
+            <Animated.View style={[styles.strikeLine, animatedStrikeStyle]} />
+          </View>
+        </View>
+
+        {/* Priority & Category Tag Row */}
+        <View style={styles.taskMetaRow}>
+          <View
+            style={[
+              styles.categoryTag,
+              task.category === "today"
+                ? styles.categoryTagToday
+                : styles.categoryTagLater,
+            ]}
+          >
+            <Ionicons
+              name={task.category === "today" ? "star" : "time-outline"}
+              size={11}
+              color={
+                task.category === "today"
+                  ? theme.colors.primary
+                  : theme.colors.textSecondary
+              }
+              style={{ marginRight: 3 }}
+            />
+            <Text
+              style={[
+                styles.categoryTagText,
+                task.category === "today"
+                  ? { color: theme.colors.primary }
+                  : { color: theme.colors.textSecondary },
+              ]}
+            >
+              {task.category === "today" ? "Today" : "Later"}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Action Buttons */}
+      <View style={styles.taskActionsRow}>
         {!task.completed && (
           <>
-            {isCurrentTimer && timer.timeLeft > 0 && (
-              <Pressable onPress={handleOpenFocus} hitSlop={6} style={{ justifyContent: 'center' }}>
-                <Text style={[
-                  styles.timerText,
-                  isTimerActive ? styles.timerTextActive : styles.timerTextPaused,
-                ]}>
-                  {formatTime(timer.timeLeft)}
+            {isCurrentTimer && timer.timeLeft > 0 ? (
+              <Pressable
+                onPress={handleOpenFocus}
+                hitSlop={6}
+                style={styles.activeTimerBadge}
+              >
+                <Ionicons
+                  name={isTimerActive ? "pulse" : "pause"}
+                  size={12}
+                  color={theme.colors.primary}
+                />
+                <Text style={styles.activeTimerText}>
+                  {formatSeconds(timer.timeLeft)}
                 </Text>
+                <Pressable
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleToggleTimer();
+                  }}
+                  hitSlop={6}
+                >
+                  <Ionicons
+                    name={isTimerActive ? "pause-circle" : "play-circle"}
+                    size={16}
+                    color={theme.colors.primary}
+                  />
+                </Pressable>
+              </Pressable>
+            ) : (
+              <Pressable
+                style={styles.iconActionButton}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  handleOpenFocus();
+                }}
+                hitSlop={8}
+                accessibilityLabel="Start Focus Timer"
+              >
+                <Ionicons
+                  name="timer-outline"
+                  size={18}
+                  color={theme.colors.primary}
+                />
               </Pressable>
             )}
-            <ActionButton
-              onPress={isCurrentTimer ? handleToggleTimer : handleOpenFocus}
-              icon={isTimerActive ? "pause" : isCurrentTimer ? "play" : "timer-outline"}
-              color={theme.colors.primary}
-              label={isCurrentTimer ? (isTimerActive ? "Pause Timer" : "Resume Timer") : "Start Focus Timer"}
-            />
           </>
         )}
-        <ActionButton
-          onPress={handleEdit}
-          icon="pencil"
-          color={theme.colors.secondary}
-          label="Edit Task"
-        />
-        <ActionButton
-          onPress={handleDelete}
-          icon="trash-outline"
-          color={`${theme.colors.secondary}80`}
-          label="Delete Task"
-        />
-      </View>
-    </View>
-  );
-};
 
-/* ---------------------- CONFIRM MODAL (IN-APP) ------------------------ */
-const ConfirmModal = ({
-  visible,
-  title,
-  message,
-  confirmText = "Confirm",
-  onCancel,
-  onConfirm,
-  theme,
-}: {
-  visible: boolean;
-  title: string;
-  message: string;
-  confirmText?: string;
-  onCancel: () => void;
-  onConfirm: () => void;
-  theme: Theme;
-}) => {
-  const styles = useMemo(() => getStyles(theme), [theme]);
-  const cancelScale = useSharedValue(1);
-  const confirmScale = useSharedValue(1);
-  const cancelStyle = useAnimatedStyle(() => ({ transform: [{ scale: cancelScale.value }] }));
-  const confirmStyle = useAnimatedStyle(() => ({ transform: [{ scale: confirmScale.value }] }));
-
-  if (!visible) return null;
-
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
-      <KeyboardAvoidingView
-        style={styles.modalOverlay}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
-        <Pressable style={styles.modalOverlayPressable} onPress={onCancel}>
-          <Pressable
-            style={styles.modalContainer}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <Text style={styles.modalTitle}>{title}</Text>
-            <Text style={styles.modalMessage}>{message}</Text>
-
-            <View style={styles.modalButtons}>
-              <AnimatedPressable
-                style={[styles.modalButton, styles.cancelButton, cancelStyle]}
-                onPressIn={() => { cancelScale.value = withSpring(0.95, { damping: 18 }); }}
-                onPressOut={() => { cancelScale.value = withSpring(1, { damping: 12 }); }}
-                onPress={onCancel}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </AnimatedPressable>
-
-              <AnimatedPressable
-                style={[styles.modalButton, styles.saveButton, confirmStyle]}
-                onPressIn={() => { confirmScale.value = withSpring(0.95, { damping: 18 }); }}
-                onPressOut={() => { confirmScale.value = withSpring(1, { damping: 12 }); }}
-                onPress={onConfirm}
-              >
-                <Text style={styles.saveButtonText}>{confirmText}</Text>
-              </AnimatedPressable>
-            </View>
-          </Pressable>
+        {/* Edit Button */}
+        <Pressable
+          style={styles.iconActionButton}
+          onPress={(e) => {
+            e.stopPropagation();
+            Haptics.selectionAsync();
+            onEdit(task);
+          }}
+          hitSlop={8}
+          accessibilityLabel="Edit Task"
+        >
+          <Ionicons
+            name="create-outline"
+            size={18}
+            color={theme.colors.textSecondary}
+          />
         </Pressable>
-      </KeyboardAvoidingView>
-    </Modal>
+
+        {/* Delete Button */}
+        <Pressable
+          style={styles.iconActionButton}
+          onPress={(e) => {
+            e.stopPropagation();
+            onDelete(task.id);
+          }}
+          hitSlop={8}
+          accessibilityLabel="Delete Task"
+        >
+          <Ionicons
+            name="trash-outline"
+            size={18}
+            color={`${theme.colors.textSecondary}99`}
+          />
+        </Pressable>
+      </View>
+    </AnimatedPressable>
   );
 };
 
-/* ---------------------- TASK MODAL ------------------------ */
-const TaskModal = ({
-  visible,
-  task,
-  onSave,
-  onClose,
-  theme,
-}: {
+/* ---------------------- TASK MODAL (ADD / EDIT) ------------------------ */
+interface TaskModalProps {
   visible: boolean;
   task: Task | null;
+  defaultCategory: TaskCategory;
   onSave: (text: string, category: TaskCategory) => void;
   onClose: () => void;
   theme: Theme;
-}) => {
-  const styles = useMemo(() => getStyles(theme), [theme]);
+  isDarkMode: boolean;
+}
 
+const TaskModal = ({
+  visible,
+  task,
+  defaultCategory,
+  onSave,
+  onClose,
+  theme,
+  isDarkMode,
+}: TaskModalProps) => {
+  const styles = useMemo(() => getStyles(theme, isDarkMode), [theme, isDarkMode]);
   const [taskText, setTaskText] = useState("");
-  const [category, setCategory] = useState<TaskCategory>("today");
+  const [category, setCategory] = useState<TaskCategory>(defaultCategory);
 
-  const todayBtnScale = useSharedValue(1);
-  const laterBtnScale = useSharedValue(1);
   const saveBtnScale = useSharedValue(1);
-
-  const todayBtnStyle = useAnimatedStyle(() => ({ transform: [{ scale: todayBtnScale.value }] }));
-  const laterBtnStyle = useAnimatedStyle(() => ({ transform: [{ scale: laterBtnScale.value }] }));
-  const saveBtnStyle = useAnimatedStyle(() => ({ transform: [{ scale: saveBtnScale.value }] }));
+  const saveBtnAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: saveBtnScale.value }],
+  }));
 
   useEffect(() => {
     if (visible) {
@@ -418,18 +466,18 @@ const TaskModal = ({
         setCategory(task.category);
       } else {
         setTaskText("");
-        setCategory("today");
+        setCategory(defaultCategory);
       }
     }
-  }, [visible, task]);
+  }, [visible, task, defaultCategory]);
 
   const handleSave = () => {
     const trimmed = taskText.trim();
     if (!trimmed) {
-      if (Platform.OS === 'web') {
-        window.alert("Enter a task description");
+      if (Platform.OS === "web") {
+        window.alert("Please enter a task description");
       } else {
-        Alert.alert("Error", "Enter a task description");
+        Alert.alert("Task Required", "Please enter what you want to accomplish.");
       }
       return;
     }
@@ -441,225 +489,328 @@ const TaskModal = ({
   if (!visible) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <KeyboardAvoidingView
-        style={styles.modalOverlay}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
-        <Pressable style={styles.modalOverlayPressable} onPress={onClose}>
-          <Pressable
-            style={styles.modalContainer}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {task ? "Edit Task" : "Add Task"}
-              </Text>
-              <Pressable onPress={onClose} hitSlop={8}>
-                <Ionicons name="close" size={24} color={theme.colors.primary} />
-              </Pressable>
-            </View>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalBackdrop}>
+        {Platform.OS === "web" ? (
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              {
+                backgroundColor: isDarkMode
+                  ? "rgba(0,0,0,0.7)"
+                  : "rgba(0,0,0,0.35)",
+              },
+            ]}
+          />
+        ) : (
+          <BlurView
+            style={StyleSheet.absoluteFill}
+            intensity={isDarkMode ? 35 : 25}
+            tint={isDarkMode ? "dark" : "light"}
+          />
+        )}
 
-            <TextInput
-              style={styles.taskInput}
-              placeholder="What do you want to accomplish?"
-              placeholderTextColor={theme.colors.secondary}
-              value={taskText}
-              onChangeText={setTaskText}
-              multiline
-              autoFocus
-            />
-
-            <Text style={styles.categoryLabel}>Focus Area</Text>
-
-            <View style={styles.categoryContainer}>
-              <AnimatedPressable
-                style={[
-                  styles.categoryButton,
-                  category === "today" && styles.categoryButtonActive,
-                  todayBtnStyle,
-                ]}
-                onPressIn={() => { todayBtnScale.value = withSpring(0.95, { damping: 18 }); }}
-                onPressOut={() => { todayBtnScale.value = withSpring(1, { damping: 12 }); }}
-                onPress={() => {
-                  Haptics.selectionAsync();
-                  setCategory("today");
-                }}
-              >
-                <Text
-                  style={[
-                    styles.categoryButtonText,
-                    category === "today" && styles.categoryButtonTextActive,
-                  ]}
-                >
-                  Priority (Today)
-                </Text>
-              </AnimatedPressable>
-
-              <AnimatedPressable
-                style={[
-                  styles.categoryButton,
-                  category === "later" && styles.categoryButtonActive,
-                  laterBtnStyle,
-                ]}
-                onPressIn={() => { laterBtnScale.value = withSpring(0.95, { damping: 18 }); }}
-                onPressOut={() => { laterBtnScale.value = withSpring(1, { damping: 12 }); }}
-                onPress={() => {
-                  Haptics.selectionAsync();
-                  setCategory("later");
-                }}
-              >
-                <Text
-                  style={[
-                    styles.categoryButtonText,
-                    category === "later" && styles.categoryButtonTextActive,
-                  ]}
-                >
-                  Later
-                </Text>
-              </AnimatedPressable>
-            </View>
-
-            <AnimatedPressable
-              style={[styles.saveActionButton, saveBtnStyle]}
-              onPressIn={() => { saveBtnScale.value = withSpring(0.96, { damping: 18 }); }}
-              onPressOut={() => { saveBtnScale.value = withSpring(1, { damping: 12 }); }}
-              onPress={handleSave}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalKeyboardAvoid}
+        >
+          <Pressable style={styles.modalOverlayDismiss} onPress={onClose}>
+            <Pressable
+              style={styles.modalCard}
+              onPress={(e) => e.stopPropagation()}
             >
-              <Text style={styles.saveActionButtonText}>
-                {task ? "Update Task" : "Save Task"}
-              </Text>
-            </AnimatedPressable>
+              {/* Top Handle */}
+              <View style={styles.sheetHandle} />
+
+              {/* Header */}
+              <View style={styles.modalHeaderRow}>
+                <View>
+                  <Text style={styles.modalHeaderTitle}>
+                    {task ? "Edit Task" : "New Task"}
+                  </Text>
+                  <Text style={styles.modalHeaderSubtitle}>
+                    {task
+                      ? "Refine your intention for this item"
+                      : "Define a clear, actionable goal"}
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={onClose}
+                  hitSlop={10}
+                  style={styles.modalCloseButton}
+                  accessibilityLabel="Close"
+                >
+                  <Ionicons
+                    name="close"
+                    size={20}
+                    color={theme.colors.textSecondary}
+                  />
+                </Pressable>
+              </View>
+
+              {/* Task Text Input */}
+              <View style={styles.modalInputWrapper}>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="What do you want to accomplish?"
+                  placeholderTextColor={theme.colors.textSecondary}
+                  value={taskText}
+                  onChangeText={setTaskText}
+                  multiline
+                  autoFocus
+                  maxLength={240}
+                  selectionColor={theme.colors.primary}
+                />
+              </View>
+
+              {/* Category Chips */}
+              <Text style={styles.modalSectionLabel}>Priority & Timeline</Text>
+              <View style={styles.categoryChipsRow}>
+                <Pressable
+                  style={[
+                    styles.modalCategoryChip,
+                    category === "today" && styles.modalCategoryChipActive,
+                  ]}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    setCategory("today");
+                  }}
+                >
+                  <Ionicons
+                    name={category === "today" ? "star" : "star-outline"}
+                    size={16}
+                    color={
+                      category === "today"
+                        ? theme.colors.primary
+                        : theme.colors.textSecondary
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.modalCategoryChipText,
+                      category === "today" && styles.modalCategoryChipTextActive,
+                    ]}
+                  >
+                    Priority (Today)
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  style={[
+                    styles.modalCategoryChip,
+                    category === "later" && styles.modalCategoryChipActive,
+                  ]}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    setCategory("later");
+                  }}
+                >
+                  <Ionicons
+                    name={category === "later" ? "time" : "time-outline"}
+                    size={16}
+                    color={
+                      category === "later"
+                        ? theme.colors.primary
+                        : theme.colors.textSecondary
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.modalCategoryChipText,
+                      category === "later" && styles.modalCategoryChipTextActive,
+                    ]}
+                  >
+                    Later
+                  </Text>
+                </Pressable>
+              </View>
+
+              {/* Primary Action Button - 56px height, 22px border radius */}
+              <AnimatedPressable
+                style={[styles.modalSaveButton, saveBtnAnimatedStyle]}
+                onPressIn={() => {
+                  saveBtnScale.value = withSpring(0.97, {
+                    damping: 18,
+                    stiffness: 240,
+                  });
+                }}
+                onPressOut={() => {
+                  saveBtnScale.value = withSpring(1, {
+                    damping: 14,
+                    stiffness: 180,
+                  });
+                }}
+                onPress={handleSave}
+              >
+                <Ionicons
+                  name={task ? "checkmark-circle-outline" : "add-circle-outline"}
+                  size={20}
+                  color={theme.colors.white}
+                />
+                <Text style={styles.modalSaveButtonText}>
+                  {task ? "Update Task" : "Save Task"}
+                </Text>
+              </AnimatedPressable>
+            </Pressable>
           </Pressable>
-        </Pressable>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 };
 
-/* ---------------------- TASK SECTION ------------------------ */
-const TaskSection = ({
-  title,
-  tasks,
-  onToggle,
-  onEdit,
-  onDelete,
-  theme,
-  icon,
-  delayIndex = 0
-}: {
+/* ---------------------- CONFIRM MODAL ------------------------ */
+interface ConfirmModalProps {
+  visible: boolean;
   title: string;
-  tasks: Task[];
-  onToggle: (id: string) => void;
-  onEdit: (task: Task) => void;
-  onDelete: (id: string) => void;
+  message: string;
+  confirmText?: string;
+  onCancel: () => void;
+  onConfirm: () => void;
   theme: Theme;
-  icon: keyof typeof Ionicons.glyphMap;
-  delayIndex?: number;
-}) => {
-  const styles = useMemo(() => getStyles(theme), [theme]);
+  isDarkMode: boolean;
+}
 
-  if (tasks.length === 0) return null;
-
-  const completedInSection = tasks.filter((t) => t.completed).length;
+const ConfirmModal = ({
+  visible,
+  title,
+  message,
+  confirmText = "Confirm",
+  onCancel,
+  onConfirm,
+  theme,
+  isDarkMode,
+}: ConfirmModalProps) => {
+  const styles = useMemo(() => getStyles(theme, isDarkMode), [theme, isDarkMode]);
+  if (!visible) return null;
 
   return (
-    <Animated.View
-      style={styles.sectionContainer}
-      entering={FadeIn.delay(delayIndex * 80 + 80).duration(200)}
-      layout={LinearTransition.duration(200)}
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onCancel}
     >
-      <View style={styles.sectionHeader}>
-        <View style={styles.sectionIconWrap}>
-          <Ionicons name={icon} size={18} color={theme.colors.primary} />
-        </View>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        <View style={styles.sectionBadge}>
-          <Text style={styles.sectionBadgeText}>
-            {completedInSection}/{tasks.length}
-          </Text>
-        </View>
-      </View>
+      <View style={styles.modalBackdrop}>
+        {Platform.OS === "web" ? (
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              {
+                backgroundColor: isDarkMode
+                  ? "rgba(0,0,0,0.7)"
+                  : "rgba(0,0,0,0.35)",
+              },
+            ]}
+          />
+        ) : (
+          <BlurView
+            style={StyleSheet.absoluteFill}
+            intensity={isDarkMode ? 35 : 25}
+            tint={isDarkMode ? "dark" : "light"}
+          />
+        )}
+        <View style={styles.confirmCenterWrapper}>
+          <View style={styles.confirmCard}>
+            <View style={styles.confirmIconWrap}>
+              <Ionicons
+                name="alert-circle-outline"
+                size={32}
+                color={theme.colors.primary}
+              />
+            </View>
+            <Text style={styles.confirmTitle}>{title}</Text>
+            <Text style={styles.confirmMessage}>{message}</Text>
 
-      <View style={styles.sectionTasks}>
-        {tasks.map((task, index) => (
-          <Animated.View
-            key={task.id}
-            entering={FadeIn.delay(index * 30).duration(180)}
-            exiting={FadeOut.duration(150)}
-            layout={LinearTransition.duration(200)}
-          >
-            {index > 0 && <View style={styles.taskDivider} />}
-            <TaskItem
-              task={task}
-              onToggle={onToggle}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              theme={theme}
-            />
-          </Animated.View>
-        ))}
+            <View style={styles.confirmButtonsRow}>
+              <Pressable
+                style={[styles.confirmButton, styles.confirmCancelBtn]}
+                onPress={onCancel}
+              >
+                <Text style={styles.confirmCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.confirmButton, styles.confirmActionBtn]}
+                onPress={onConfirm}
+              >
+                <Text style={styles.confirmActionText}>{confirmText}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
       </View>
-    </Animated.View>
+    </Modal>
   );
 };
 
 /* ---------------------- EMPTY STATE ------------------------ */
-const EmptyState = ({ styles, theme }: { styles: any, theme: Theme }) => (
-  <Animated.View
-    style={styles.emptyState}
-    entering={FadeIn.delay(200).duration(250)}
-    layout={LinearTransition.duration(200)}
-  >
-    <View style={styles.emptyStateIconWrap}>
-      <Ionicons name="leaf-outline" size={48} color={theme.colors.primary} />
-    </View>
-    <Text style={styles.emptyStateTitle}>A blank slate.</Text>
-    <Text style={styles.emptyStateSubtitle}>
-      Every great day starts with intention.{"\n"}What do you want to make happen?
-    </Text>
-  </Animated.View>
-);
+interface EmptyStateProps {
+  filter: FilterTab;
+  onAddTask: () => void;
+  theme: Theme;
+  isDarkMode: boolean;
+}
 
-/* ---------------------- PROGRESS BAR ------------------------ */
-const ProgressFill = ({ progress, color, style }: { progress: number, color: string, style: any }) => {
-  const width = useSharedValue(0);
+const EmptyState = ({
+  filter,
+  onAddTask,
+  theme,
+  isDarkMode,
+}: EmptyStateProps) => {
+  const styles = useMemo(() => getStyles(theme, isDarkMode), [theme, isDarkMode]);
 
-  useEffect(() => {
-    width.value = withSpring(progress * 100, { damping: 20, stiffness: 60, mass: 0.8 });
-  }, [progress]);
+  const message =
+    filter === "today"
+      ? "No tasks set for today. Plan your key priorities."
+      : filter === "later"
+      ? "Nothing pending for later. All caught up!"
+      : "A clean slate. Intention is the first step to progress.";
 
-  const animStyle = useAnimatedStyle(() => ({
-    width: `${width.value}%`,
-  }));
+  return (
+    <Animated.View
+      style={styles.emptyContainer}
+      entering={FadeIn.delay(120).duration(260)}
+      layout={LinearTransition.springify()}
+    >
+      <View style={styles.emptyIconCircle}>
+        <Ionicons
+          name="sparkles-outline"
+          size={36}
+          color={theme.colors.primary}
+        />
+      </View>
+      <Text style={styles.emptyTitle}>Clear & Focused</Text>
+      <Text style={styles.emptySubtitle}>{message}</Text>
 
-  return <Animated.View style={[style, { backgroundColor: color }, animStyle]} />;
+      <Pressable style={styles.emptyCtaButton} onPress={onAddTask}>
+        <Ionicons name="add" size={20} color={theme.colors.white} />
+        <Text style={styles.emptyCtaButtonText}>Add a Task</Text>
+      </Pressable>
+    </Animated.View>
+  );
 };
 
-/* ---------------------- MAIN SCREEN ------------------------ */
+/* ---------------------- MAIN TODO SCREEN ------------------------ */
 export default function TodoScreen() {
-  const { theme } = useTheme();
-  const styles = useMemo(() => getStyles(theme), [theme]);
+  const { theme, isDarkMode } = useTheme();
+  const styles = useMemo(() => getStyles(theme, isDarkMode), [theme, isDarkMode]);
   const sharedStyles = useMemo(() => getSharedStyles(theme), [theme]);
-
-  const AnimatedSubGreeting = ({ text }: { text: string }) => {
-    return (
-      <Animated.View
-        key={text}
-        entering={FadeIn.duration(400)}
-        exiting={FadeOut.duration(400)}
-      >
-        <Text style={styles.greetingSubtitle}>{text}</Text>
-      </Animated.View>
-    );
-  };
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
+  const [quickInputText, setQuickInputText] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
-  // Confirm modal state
+  const quickInputRef = useRef<TextInput>(null);
+
+  // Confirm dialog state
   const [confirmState, setConfirmState] = useState<{
     visible: boolean;
     title: string;
@@ -674,11 +825,16 @@ export default function TodoScreen() {
     action: () => {},
   });
 
-  const requestConfirm = (title: string, message: string, confirmText: string, action: () => void) => {
-    if (Platform.OS === 'ios') {
+  const requestConfirm = (
+    title: string,
+    message: string,
+    confirmText: string,
+    action: () => void
+  ) => {
+    if (Platform.OS === "ios") {
       ActionSheetIOS.showActionSheetWithOptions(
         {
-          options: ['Cancel', confirmText],
+          options: ["Cancel", confirmText],
           destructiveButtonIndex: 1,
           cancelButtonIndex: 0,
           title,
@@ -694,16 +850,16 @@ export default function TodoScreen() {
     }
   };
 
+  // 1. Initial Load
   useEffect(() => {
     (async () => {
       const loaded = await loadTasks();
-      console.log("[TodoScreen] loaded tasks:", loaded.length);
       setTasks(loaded);
       setIsLoading(false);
     })();
   }, []);
 
-  // Persist whenever tasks change
+  // 2. Persist whenever tasks change
   useEffect(() => {
     if (!isLoading) {
       saveTasks(tasks).catch((e) =>
@@ -712,10 +868,26 @@ export default function TodoScreen() {
     }
   }, [tasks, isLoading]);
 
-  const completedCount = tasks.filter((t) => t.completed).length;
-  const todayTasks = tasks.filter((t) => t.category === "today");
-  const laterTasks = tasks.filter((t) => t.category === "later");
+  const completedCount = useMemo(
+    () => tasks.filter((t) => t.completed).length,
+    [tasks]
+  );
+  const todayTasks = useMemo(
+    () => tasks.filter((t) => t.category === "today"),
+    [tasks]
+  );
+  const laterTasks = useMemo(
+    () => tasks.filter((t) => t.category === "later"),
+    [tasks]
+  );
 
+  const displayedTasks = useMemo(() => {
+    if (activeFilter === "today") return todayTasks;
+    if (activeFilter === "later") return laterTasks;
+    return tasks;
+  }, [activeFilter, todayTasks, laterTasks, tasks]);
+
+  // Task actions
   const handleSaveTask = (text: string, category: TaskCategory) => {
     if (editingTask) {
       setTasks((prev) =>
@@ -724,68 +896,82 @@ export default function TodoScreen() {
         )
       );
     } else {
-      setTasks((prev) => [...prev, createNewTask(text, category)]);
+      const newTask = createNewTask(text, category);
+      setTasks((prev) => [newTask, ...prev]);
     }
     setModalVisible(false);
     setEditingTask(null);
   };
 
-  const handleToggleTask = (id: string) =>
+  const handleQuickAdd = () => {
+    const trimmed = quickInputText.trim();
+    if (!trimmed) return;
+
+    const defaultCategory: TaskCategory =
+      activeFilter === "later" ? "later" : "today";
+    const newTask = createNewTask(trimmed, defaultCategory);
+
+    setTasks((prev) => [newTask, ...prev]);
+    setQuickInputText("");
+    Keyboard.dismiss();
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
+  const handleToggleTask = (id: string) => {
     setTasks((prev) =>
       prev.map((t) => {
         if (t.id === id) {
           const newlyCompleted = !t.completed;
-          import("../../utils/stats").then(({ addTaskCompleted, removeTaskCompleted }) => {
-            if (newlyCompleted) {
-              addTaskCompleted();
-            } else {
-              removeTaskCompleted();
-            }
-          });
+          if (newlyCompleted) {
+            addTaskCompleted();
+          } else {
+            removeTaskCompleted(1);
+          }
           return { ...t, completed: newlyCompleted };
         }
         return t;
       })
     );
-
-  const handleDeleteTask = (id: string) => {
-    requestConfirm('Delete Task?', 'Are you sure you want to delete this task?', 'Delete', () => {
-      setTasks((prev) => prev.filter((t) => t.id !== id));
-    });
   };
 
-  const buttonScale = useSharedValue(1);
-  const buttonAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: buttonScale.value }],
-  }));
+  const handleDeleteTask = (id: string) => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    requestConfirm(
+      "Delete Task?",
+      "Are you sure you want to permanently delete this task?",
+      "Delete",
+      () => {
+        setTasks((prev) => prev.filter((t) => t.id !== id));
+      }
+    );
+  };
 
-  /* show in-app confirm modal */
   const handleClearCompleted = () => {
     if (completedCount === 0) {
-      if (Platform.OS === 'web') {
+      if (Platform.OS === "web") {
         window.alert("There are no completed tasks to clear.");
       } else {
-        Alert.alert("No completed tasks", "There are no completed tasks to clear.");
+        Alert.alert("No Completed Tasks", "There are no completed tasks to clear.");
       }
       return;
     }
 
-    requestConfirm('Clear Completed?', 'Are you sure you want to clear all completed tasks?', 'Clear', () => {
-      performClearCompleted();
-    });
-  };
-
-  const performClearCompleted = () => {
-    // Use functional update and immediately persist
-    setTasks((prev) => {
-      const next = prev.filter((t) => !t.completed);
-      // persist immediately to avoid races
-      saveTasks(next).catch((e) => console.error("saveTasks:", e));
-      console.log(`[TodoScreen] cleared ${prev.length - next.length} completed tasks`);
-      return next;
-    });
-    setConfirmState(prev => ({ ...prev, visible: false }));
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    requestConfirm(
+      "Clear Completed?",
+      `Are you sure you want to clear ${completedCount} completed task${
+        completedCount === 1 ? "" : "s"
+      }?`,
+      "Clear All",
+      () => {
+        setTasks((prev) => {
+          const next = prev.filter((t) => !t.completed);
+          saveTasks(next).catch((e) => console.error("saveTasks:", e));
+          return next;
+        });
+        setConfirmState((prev) => ({ ...prev, visible: false }));
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    );
   };
 
   if (isLoading) {
@@ -798,591 +984,773 @@ export default function TodoScreen() {
     );
   }
 
-  const hour = new Date().getHours();
-  const greeting =
-    hour < 5 ? "Still up?" :
-      hour < 12 ? "Good morning." :
-        hour < 17 ? "Good afternoon." :
-          hour < 21 ? "Good evening." :
-            "Late night grind.";
-
-  const subGreeting =
-    tasks.length === 0 ? "Nothing on the list yet." :
-      completedCount === tasks.length ? "All done — you crushed it." :
-        completedCount === 0 ? `${tasks.length} thing${tasks.length === 1 ? "" : "s"} waiting for you.` :
-          `${tasks.length - completedCount} left to go.`;
+  // Greeting & Date formatting
+  const now = new Date();
+  const dateFormatted = now
+    .toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "short",
+      day: "numeric",
+    })
+    .toUpperCase();
 
   return (
-    <SafeAreaView style={sharedStyles.container}>
-      {/* ── Hero Header ── */}
-      <View style={styles.heroHeader}>
-        {/* Decorative dot grid */}
-        <View style={styles.dotGrid} pointerEvents="none">
-          {Array.from({ length: 35 }).map((_, i) => (
-            <View key={i} style={styles.dot} />
-          ))}
-        </View>
-
-        <View style={styles.heroContent}>
-          <Text style={styles.greetingEyebrow}>
-            {new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }).toUpperCase()}
-          </Text>
-          <Text style={styles.greetingTitle}>{greeting}</Text>
-          <AnimatedSubGreeting text={subGreeting} />
-
-          {/* Progress pill */}
-          {tasks.length > 0 && (
-            <View style={styles.heroPillRow}>
-              <View style={styles.heroPill}>
-                <View style={styles.heroPillTrack}>
-                  <ProgressFill
-                    progress={completedCount / tasks.length}
-                    color={theme.colors.primary}
-                    style={styles.heroPillFill}
-                  />
-                </View>
-                <Text style={styles.heroPillLabel}>
-                  {Math.round((completedCount / tasks.length) * 100)}% complete
-                </Text>
-              </View>
-              {completedCount > 0 && (
-                <Pressable style={styles.clearButton} onPress={handleClearCompleted} hitSlop={8}>
-                  <Text style={styles.clearButtonText}>Clear done</Text>
-                </Pressable>
-              )}
-            </View>
-          )}
-        </View>
-      </View>
-
+    <SafeAreaView style={sharedStyles.container} edges={["top", "left", "right"]}>
       <ScrollView
-        style={styles.scrollContainer}
+        style={styles.mainScrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        <AnimatedPressable
-          style={[styles.topAddButton, buttonAnimatedStyle]}
-          onPressIn={() => {
-            buttonScale.value = withSpring(0.96, { damping: 18 });
-          }}
-          onPressOut={() => {
-            buttonScale.value = withSpring(1, { damping: 12 });
-          }}
-          onPress={() => {
-            setEditingTask(null);
-            setModalVisible(true);
-          }}
-          android_ripple={{ color: "rgba(0,0,0,0.05)" }}
-        >
-          <View style={styles.topAddButtonIcon}>
-            <Ionicons name="add" size={20} color={theme.colors.white} />
+        {/* ── 1. Header & Controls ── */}
+        <View style={styles.heroHeader}>
+          {/* Eyebrow, Title & Action */}
+          <View style={styles.headerTitleRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.headerEyebrow}>{dateFormatted}</Text>
+              <Text style={styles.headerTitle}>Tasks Hub</Text>
+            </View>
+
+            {completedCount > 0 && (
+              <Pressable
+                style={styles.clearDoneBtn}
+                onPress={handleClearCompleted}
+                hitSlop={8}
+                accessibilityLabel="Clear completed tasks"
+              >
+                <Ionicons
+                  name="trash-outline"
+                  size={14}
+                  color={theme.colors.primary}
+                />
+                <Text style={styles.clearDoneBtnText}>Clear done</Text>
+              </Pressable>
+            )}
           </View>
-          <Text style={styles.topAddButtonText}>New task</Text>
-          <Ionicons name="chevron-forward" size={16} color={`${theme.colors.primary}50`} style={{ marginLeft: 'auto' as any }} />
-        </AnimatedPressable>
 
-        <TaskSection
-          title="Priority (Today)"
-          tasks={todayTasks}
-          onToggle={handleToggleTask}
-          onEdit={(t) => {
-            setEditingTask(t);
-            setModalVisible(true);
-          }}
-          onDelete={handleDeleteTask}
-          theme={theme}
-          icon="star"
-          delayIndex={0}
-        />
+          {/* Category Filter Tabs */}
+          <View style={styles.filterTabsRow}>
+            {(
+              [
+                { id: "all", label: "All", count: tasks.length },
+                { id: "today", label: "Today", count: todayTasks.length },
+                { id: "later", label: "Later", count: laterTasks.length },
+              ] as const
+            ).map((tab) => {
+              const isActive = activeFilter === tab.id;
+              return (
+                <Pressable
+                  key={tab.id}
+                  style={[
+                    styles.filterTabButton,
+                    isActive && styles.filterTabButtonActive,
+                  ]}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    setActiveFilter(tab.id);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.filterTabLabel,
+                      isActive && styles.filterTabLabelActive,
+                    ]}
+                  >
+                    {tab.label}
+                  </Text>
+                  <View
+                    style={[
+                      styles.filterTabBadge,
+                      isActive && styles.filterTabBadgeActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.filterTabBadgeText,
+                        isActive && styles.filterTabBadgeTextActive,
+                      ]}
+                    >
+                      {tab.count}
+                    </Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
 
-        <TaskSection
-          title="Later"
-          tasks={laterTasks}
-          onToggle={handleToggleTask}
-          onEdit={(t) => {
-            setEditingTask(t);
-            setModalVisible(true);
-          }}
-          onDelete={handleDeleteTask}
-          theme={theme}
-          icon="time"
-          delayIndex={1}
-        />
+          {/* Quick-Add Inline Input */}
+          <View style={styles.quickAddBar}>
+            <Ionicons
+              name="add-circle-outline"
+              size={22}
+              color={theme.colors.primary}
+              style={{ marginLeft: 2 }}
+            />
+            <TextInput
+              ref={quickInputRef}
+              style={styles.quickAddInput}
+              placeholder={
+                activeFilter === "later"
+                  ? "Quick-add task for Later..."
+                  : "Quick-add task for Today..."
+              }
+              placeholderTextColor={theme.colors.textSecondary}
+              value={quickInputText}
+              onChangeText={setQuickInputText}
+              onSubmitEditing={handleQuickAdd}
+              returnKeyType="done"
+            />
+            {quickInputText.trim().length > 0 && (
+              <Pressable
+                style={styles.quickAddSubmitBtn}
+                onPress={handleQuickAdd}
+                hitSlop={8}
+              >
+                <Ionicons
+                  name="arrow-up"
+                  size={18}
+                  color={theme.colors.white}
+                />
+              </Pressable>
+            )}
+          </View>
+        </View>
 
-        {tasks.length === 0 && <EmptyState styles={styles} theme={theme} />}
+        {/* ── 2. Task Cards List ── */}
+        <View style={styles.tasksListSection}>
+          {displayedTasks.length > 0 ? (
+            displayedTasks.map((task, index) => (
+              <Animated.View
+                key={task.id}
+                entering={FadeInDown.delay(index * 35).duration(200)}
+                exiting={FadeOut.duration(160)}
+                layout={LinearTransition.springify().damping(18).stiffness(180)}
+              >
+                <TaskItem
+                  task={task}
+                  onToggle={handleToggleTask}
+                  onEdit={(t) => {
+                    setEditingTask(t);
+                    setModalVisible(true);
+                  }}
+                  onDelete={handleDeleteTask}
+                  theme={theme}
+                  isDarkMode={isDarkMode}
+                />
+              </Animated.View>
+            ))
+          ) : (
+            <EmptyState
+              filter={activeFilter}
+              onAddTask={() => {
+                setEditingTask(null);
+                setModalVisible(true);
+              }}
+              theme={theme}
+              isDarkMode={isDarkMode}
+            />
+          )}
+        </View>
       </ScrollView>
 
+      {/* ── 3. Add / Edit Task Modal ── */}
       <TaskModal
         visible={modalVisible}
         task={editingTask}
+        defaultCategory={activeFilter === "later" ? "later" : "today"}
         onSave={handleSaveTask}
         onClose={() => {
           setModalVisible(false);
           setEditingTask(null);
         }}
         theme={theme}
+        isDarkMode={isDarkMode}
       />
 
+      {/* ── 4. Confirm Dialog ── */}
       <ConfirmModal
         visible={confirmState.visible}
         title={confirmState.title}
         message={confirmState.message}
         confirmText={confirmState.confirmText}
-        onCancel={() => setConfirmState(prev => ({ ...prev, visible: false }))}
+        onCancel={() => setConfirmState((prev) => ({ ...prev, visible: false }))}
         onConfirm={() => {
           confirmState.action();
-          setConfirmState(prev => ({ ...prev, visible: false }));
+          setConfirmState((prev) => ({ ...prev, visible: false }));
         }}
         theme={theme}
+        isDarkMode={isDarkMode}
       />
     </SafeAreaView>
   );
 }
 
-/* ---------------------- STYLES ------------------------ */
-const getStyles = (theme: Theme) =>
-  StyleSheet.create({
-    // Timer display
-    timerText: {
-      fontFamily: theme.fonts.bold,
-      fontSize: 13,
-      marginRight: 2,
-      alignSelf: 'center',
-      fontVariant: ["tabular-nums"] as any,
-    },
-    timerTextActive: {
-      color: theme.colors.primary,
-    },
-    timerTextPaused: {
-      color: theme.colors.secondary,
-    },
+/* ---------------------- STYLES GENERATOR ------------------------ */
+const getStyles = (theme: Theme, isDarkMode: boolean) => {
+  const neutralFill = isDarkMode
+    ? "rgba(255, 255, 255, 0.08)"
+    : "rgba(0, 0, 0, 0.05)";
+  const activeTint = `${theme.colors.primary}${
+    theme.glass?.iconTintAlpha ?? (isDarkMode ? "29" : "1C")
+  }`;
 
-    // Section badge
-    sectionBadge: {
-      marginLeft: 'auto' as any,
-      backgroundColor: `${theme.colors.primary}12`,
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-      borderRadius: 10,
-    },
-    sectionBadgeText: {
-      fontFamily: theme.fonts.medium,
-      fontSize: 12,
-      color: theme.colors.primary,
-    },
-
-    scrollContainer: { flex: 1 },
-    scrollContent: {
-      paddingHorizontal: theme.spacing.lg,
-      paddingTop: theme.spacing.md,
-      paddingBottom: 120,
-    },
+  return StyleSheet.create({
     loadingContainer: {
       flex: 1,
       justifyContent: "center",
       alignItems: "center",
     },
+    mainScrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingBottom: 110,
+    },
 
-    // ── Hero Header ──────────────────────────────────────────
+    /* Header & Hero */
     heroHeader: {
-      paddingHorizontal: theme.spacing.lg,
-      paddingTop: theme.spacing.lg,
-      paddingBottom: theme.spacing.xl,
-      overflow: 'hidden',
-      position: 'relative',
+      paddingHorizontal: 20,
+      paddingTop: 14,
+      paddingBottom: 12,
     },
-    dotGrid: {
-      position: 'absolute',
-      top: 0,
-      right: 0,
-      width: 140,
-      height: 120,
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 10,
-      padding: theme.spacing.md,
-      opacity: 0.08,
+    headerTitleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 16,
     },
-    dot: {
-      width: 3,
-      height: 3,
-      borderRadius: 1.5,
-      backgroundColor: theme.colors.primary,
-    },
-    heroContent: {
-      gap: 4,
-    },
-    greetingEyebrow: {
-      fontFamily: theme.fonts.medium,
+    headerEyebrow: {
+      fontFamily: theme.fonts.bold,
       fontSize: 11,
-      letterSpacing: 2,
-      color: theme.colors.secondary,
+      letterSpacing: 1.5,
+      color: theme.colors.textSecondary,
       marginBottom: 2,
     },
-    greetingTitle: {
+    headerTitle: {
       fontFamily: theme.fonts.bold,
-      fontSize: 32,
-      lineHeight: 38,
-      color: theme.colors.primary,
-      letterSpacing: -0.5,
+      fontSize: 28,
+      color: theme.colors.text,
+      letterSpacing: -0.6,
     },
-    greetingSubtitle: {
-      fontFamily: theme.fonts.regular,
-      fontSize: 15,
-      color: theme.colors.secondary,
-      marginTop: 2,
-      marginBottom: theme.spacing.md,
+    clearDoneBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 999,
+      backgroundColor: activeTint,
+      borderWidth: 1,
+      borderColor: `${theme.colors.primary}20`,
     },
-    heroPillRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: theme.spacing.md,
-      marginTop: 4,
-    },
-    heroPill: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: theme.spacing.sm,
-    },
-    heroPillTrack: {
-      flex: 1,
-      height: 3,
-      borderRadius: 2,
-      backgroundColor: `${theme.colors.secondary}20`,
-      overflow: 'hidden',
-    },
-    heroPillFill: {
-      height: '100%',
-      borderRadius: 2,
-      backgroundColor: theme.colors.primary,
-    },
-    heroPillLabel: {
+    clearDoneBtnText: {
       fontFamily: theme.fonts.medium,
       fontSize: 12,
-      color: theme.colors.secondary,
-    },
-
-    // Header (kept for clear button)
-    headerArea: {
-      paddingHorizontal: theme.spacing.lg,
-      paddingTop: theme.spacing.lg,
-      paddingBottom: theme.spacing.md,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between'
-    },
-    screenTitle: {
-      fontFamily: theme.fonts.bold,
-      fontSize: 22,
-      color: theme.colors.primary,
-    },
-    clearButton: {
-      backgroundColor: `${theme.colors.secondary}15`,
-      paddingHorizontal: theme.spacing.md,
-      paddingVertical: 6,
-      borderRadius: 20,
-    },
-    clearButtonText: {
-      fontFamily: theme.fonts.medium,
-      fontSize: 13,
       color: theme.colors.primary,
     },
 
-    // Top Add Button
-    topAddButton: {
-      backgroundColor: theme.colors.card,
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: theme.spacing.md,
-      paddingHorizontal: theme.spacing.md,
-      borderRadius: theme.borderRadius.lg,
-      marginBottom: theme.spacing.lg,
-      gap: theme.spacing.md,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.04,
-      shadowRadius: 8,
-      elevation: 2,
-    },
-    topAddButtonIcon: {
-      width: 32,
-      height: 32,
-      borderRadius: 10,
-      backgroundColor: theme.colors.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    topAddButtonText: {
-      fontFamily: theme.fonts.bold,
-      fontSize: 15,
-      color: theme.colors.primary,
-    },
-
-    // Section 
-    sectionContainer: {
-      backgroundColor: theme.colors.card,
-      borderRadius: theme.borderRadius.lg,
-      padding: theme.spacing.lg,
-      marginBottom: theme.spacing.lg,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.05,
-      shadowRadius: 12,
-      elevation: 4,
-    },
-    sectionHeader: {
+    /* Category Filter Tabs */
+    filterTabsRow: {
       flexDirection: "row",
-      alignItems: "center",
-      marginBottom: theme.spacing.md,
-      gap: theme.spacing.sm,
+      gap: 8,
+      marginBottom: 16,
     },
-    sectionIconWrap: {
-      width: 32,
-      height: 32,
-      borderRadius: 10,
-      backgroundColor: `${theme.colors.primary}15`,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    sectionTitle: {
-      fontSize: 16,
-      fontFamily: theme.fonts.bold,
-      color: theme.colors.primary,
-    },
-    sectionTasks: {
-      gap: 0,
-    },
-
-    // Task Item
-    taskDivider: {
-      height: 1,
-      backgroundColor: `${theme.colors.secondary}15`,
-      marginVertical: 4,
-    },
-    taskItemWrapper: {
-      flexDirection: "row",
-      alignItems: "center",
-      paddingVertical: theme.spacing.sm,
-      gap: theme.spacing.sm,
-    },
-    taskItemContainer: {
+    filterTabButton: {
       flex: 1,
       flexDirection: "row",
       alignItems: "center",
-      paddingVertical: theme.spacing.xs,
-      borderRadius: theme.borderRadius.sm,
+      justifyContent: "center",
+      gap: 6,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderRadius: 16,
+      backgroundColor: neutralFill,
+      borderWidth: 1,
+      borderColor: theme.glass.borderColor,
     },
-    checkboxWrapper: {
-      position: 'relative',
-      marginRight: theme.spacing.md,
-      alignItems: 'center',
-      justifyContent: 'center',
+    filterTabButtonActive: {
+      backgroundColor: activeTint,
+      borderColor: `${theme.colors.primary}40`,
+    },
+    filterTabLabel: {
+      fontFamily: theme.fonts.medium,
+      fontSize: 13,
+      color: theme.colors.textSecondary,
+    },
+    filterTabLabelActive: {
+      fontFamily: theme.fonts.bold,
+      color: theme.colors.primary,
+    },
+    filterTabBadge: {
+      paddingHorizontal: 6,
+      paddingVertical: 1,
+      borderRadius: 10,
+      backgroundColor: isDarkMode
+        ? "rgba(255,255,255,0.12)"
+        : "rgba(0,0,0,0.08)",
+    },
+    filterTabBadgeActive: {
+      backgroundColor: theme.colors.primary,
+    },
+    filterTabBadgeText: {
+      fontFamily: theme.fonts.bold,
+      fontSize: 11,
+      color: theme.colors.textSecondary,
+    },
+    filterTabBadgeTextActive: {
+      color: theme.colors.white,
+    },
+
+    /* Quick-Add Bar */
+    quickAddBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.glass.cardBg,
+      borderWidth: 1,
+      borderColor: theme.glass.borderColor,
+      borderRadius: 22,
+      paddingHorizontal: 14,
+      height: 52,
+      gap: 10,
+    },
+    quickAddInput: {
+      flex: 1,
+      fontFamily: theme.fonts.regular,
+      fontSize: 14,
+      color: theme.colors.text,
+      paddingVertical: 0,
+    },
+    quickAddSubmitBtn: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: theme.colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    /* Task List Section */
+    tasksListSection: {
+      paddingHorizontal: 20,
+      gap: 10,
+    },
+
+    /* Task Card */
+    taskCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.glass.cardBg,
+      borderWidth: 1,
+      borderColor: theme.glass.borderColor,
+      borderRadius: 20,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      ...Platform.select({
+        ios: {
+          shadowColor: theme.glows.card.shadowColor,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: isDarkMode ? 0.2 : 0.05,
+          shadowRadius: 8,
+        },
+        android: { elevation: 2 },
+      }),
+    },
+    checkboxTouchTarget: {
+      padding: 4,
+      marginRight: 10,
     },
     checkbox: {
       width: 22,
       height: 22,
-      borderRadius: 11,
-      borderWidth: 2,
-      borderColor: theme.colors.secondary,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: theme.colors.card,
+      borderRadius: 7,
+      borderWidth: 1.8,
+      borderColor: isDarkMode
+        ? "rgba(255,255,255,0.3)"
+        : "rgba(0,0,0,0.25)",
+      backgroundColor: "transparent",
+      alignItems: "center",
+      justifyContent: "center",
     },
     checkboxDone: {
       backgroundColor: theme.colors.primary,
       borderColor: theme.colors.primary,
     },
-    taskTextContainer: {
+
+    taskContentCol: {
       flex: 1,
-      justifyContent: 'center',
-      alignItems: 'flex-start',
+      justifyContent: "center",
+      gap: 4,
+    },
+    taskTextRow: {
+      flexDirection: "row",
+      alignItems: "center",
     },
     strikeContainer: {
-      alignSelf: 'flex-start',
-      position: 'relative',
+      alignSelf: "flex-start",
+      position: "relative",
     },
-    taskItemText: {
-      fontSize: 16,
+    taskTitleText: {
       fontFamily: theme.fonts.medium,
-      color: theme.colors.primary,
+      fontSize: 15,
+      color: theme.colors.text,
+      lineHeight: 20,
     },
-    strikeThrough: {
-      position: 'absolute',
+    taskTitleTextDone: {
+      color: theme.colors.textSecondary,
+      opacity: 0.65,
+    },
+    strikeLine: {
+      position: "absolute",
       height: 1.5,
-      backgroundColor: theme.colors.secondary,
-      top: '52%',
+      backgroundColor: theme.colors.textSecondary,
+      top: "52%",
       left: 0,
       borderRadius: 1,
     },
-    taskItemTextDone: {
-      color: theme.colors.secondary,
-      opacity: 0.5,
-    },
-    taskActions: {
+
+    taskMetaRow: {
       flexDirection: "row",
-      gap: theme.spacing.sm,
+      alignItems: "center",
+      gap: 6,
     },
-    taskActionButton: {
-      padding: theme.spacing.xs,
-      borderRadius: theme.borderRadius.sm,
+    categoryTag: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 7,
+      paddingVertical: 2,
+      borderRadius: 8,
+    },
+    categoryTagToday: {
+      backgroundColor: activeTint,
+    },
+    categoryTagLater: {
+      backgroundColor: neutralFill,
+    },
+    categoryTagText: {
+      fontFamily: theme.fonts.bold,
+      fontSize: 10,
+      letterSpacing: 0.3,
     },
 
-    // Empty State
-    emptyState: {
+    taskActionsRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      marginLeft: 8,
+    },
+    iconActionButton: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
       alignItems: "center",
       justifyContent: "center",
-      paddingVertical: theme.spacing.xl * 2,
+      backgroundColor: neutralFill,
     },
-    emptyStateIconWrap: {
-      width: 100,
-      height: 100,
-      borderRadius: 50,
-      backgroundColor: `${theme.colors.primary}08`,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: theme.spacing.xl,
+    activeTimerBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+      backgroundColor: activeTint,
+      borderWidth: 1,
+      borderColor: `${theme.colors.primary}30`,
+      paddingHorizontal: 8,
+      paddingVertical: 5,
+      borderRadius: 14,
     },
-    emptyStateTitle: {
-      fontSize: 20,
+    activeTimerText: {
       fontFamily: theme.fonts.bold,
+      fontSize: 12,
       color: theme.colors.primary,
-      marginBottom: theme.spacing.sm,
+      fontVariant: ["tabular-nums"],
     },
-    emptyStateSubtitle: {
-      fontSize: 15,
+
+    /* Empty State */
+    emptyContainer: {
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 48,
+      paddingHorizontal: 24,
+    },
+    emptyIconCircle: {
+      width: 76,
+      height: 76,
+      borderRadius: 38,
+      backgroundColor: activeTint,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 16,
+    },
+    emptyTitle: {
+      fontFamily: theme.fonts.bold,
+      fontSize: 20,
+      color: theme.colors.text,
+      marginBottom: 6,
+    },
+    emptySubtitle: {
       fontFamily: theme.fonts.regular,
-      color: theme.colors.secondary,
+      fontSize: 14,
+      color: theme.colors.textSecondary,
       textAlign: "center",
-      paddingHorizontal: theme.spacing.xl,
+      lineHeight: 20,
+      marginBottom: 24,
+      maxWidth: 280,
+    },
+    emptyCtaButton: {
+      height: 56,
+      paddingHorizontal: 28,
+      borderRadius: 22,
+      backgroundColor: theme.colors.primary,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      ...Platform.select({
+        ios: {
+          shadowColor: theme.colors.primary,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: isDarkMode ? 0.45 : 0.3,
+          shadowRadius: 12,
+        },
+        android: { elevation: 5 },
+      }),
+    },
+    emptyCtaButtonText: {
+      fontFamily: theme.fonts.bold,
+      fontSize: 16,
+      color: theme.colors.white,
     },
 
-    // Modals
-    modalOverlay: {
+    /* Modal Styling */
+    modalBackdrop: {
       flex: 1,
-      backgroundColor: "rgba(0,0,0,0.35)",
-      justifyContent: "center",
-      alignItems: "center",
+      justifyContent: "flex-end",
     },
-    modalOverlayPressable: {
+    modalKeyboardAvoid: {
       flex: 1,
-      width: "100%",
-      justifyContent: "center",
-      alignItems: "center",
-      padding: theme.spacing.lg,
+      justifyContent: "flex-end",
     },
-    modalContainer: {
+    modalOverlayDismiss: {
+      flex: 1,
+      justifyContent: "flex-end",
+    },
+    modalCard: {
       backgroundColor: theme.colors.card,
-      borderRadius: theme.borderRadius.lg,
-      padding: theme.spacing.xl,
-      width: "100%",
-      maxWidth: 400,
-      maxHeight: "85%",
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.08,
-      shadowRadius: 16,
-      elevation: 8,
-    },
-    modalHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: theme.spacing.lg,
-    },
-    modalTitle: {
-      fontSize: 20,
-      fontFamily: theme.fonts.bold,
-      color: theme.colors.primary,
-    },
-    modalMessage: {
-      fontFamily: theme.fonts.regular,
-      fontSize: 16,
-      color: theme.colors.secondary,
-      marginBottom: theme.spacing.lg,
-    },
-    taskInput: {
+      borderTopLeftRadius: 32,
+      borderTopRightRadius: 32,
       borderWidth: 1,
-      borderColor: `${theme.colors.secondary}30`,
-      backgroundColor: `${theme.colors.background}`,
-      borderRadius: theme.borderRadius.md,
-      padding: theme.spacing.lg,
-      fontSize: 16,
-      fontFamily: theme.fonts.regular,
-      color: theme.colors.primary,
-      minHeight: 120,
-      textAlignVertical: "top",
-      marginBottom: theme.spacing.lg,
+      borderBottomWidth: 0,
+      borderColor: theme.glass.borderColor,
+      paddingHorizontal: 22,
+      paddingTop: 12,
+      paddingBottom: Platform.OS === "ios" ? 36 : 24,
+      ...Platform.select({
+        ios: {
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: 0.2,
+          shadowRadius: 20,
+        },
+        android: { elevation: 12 },
+      }),
     },
-    categoryLabel: {
-      fontSize: 15,
-      fontFamily: theme.fonts.bold,
-      color: theme.colors.primary,
-      marginBottom: theme.spacing.md,
+    sheetHandle: {
+      width: 38,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: isDarkMode
+        ? "rgba(255,255,255,0.2)"
+        : "rgba(0,0,0,0.15)",
+      alignSelf: "center",
+      marginBottom: 16,
     },
-    categoryContainer: {
+    modalHeaderRow: {
       flexDirection: "row",
-      gap: theme.spacing.md,
-      marginBottom: theme.spacing.xl,
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      marginBottom: 18,
     },
-    categoryButton: {
-      flex: 1,
-      paddingVertical: theme.spacing.md,
-      borderRadius: theme.borderRadius.md,
-      borderWidth: 1,
-      borderColor: `${theme.colors.secondary}30`,
+    modalHeaderTitle: {
+      fontFamily: theme.fonts.bold,
+      fontSize: 22,
+      color: theme.colors.text,
+      letterSpacing: -0.4,
+    },
+    modalHeaderSubtitle: {
+      fontFamily: theme.fonts.regular,
+      fontSize: 13,
+      color: theme.colors.textSecondary,
+      marginTop: 2,
+    },
+    modalCloseButton: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      backgroundColor: neutralFill,
       alignItems: "center",
+      justifyContent: "center",
     },
-    categoryButtonActive: {
-      backgroundColor: `${theme.colors.primary}15`,
+
+    modalInputWrapper: {
+      borderWidth: 1,
+      borderColor: theme.glass.borderColor,
+      backgroundColor: isDarkMode
+        ? "rgba(255,255,255,0.04)"
+        : "rgba(0,0,0,0.02)",
+      borderRadius: 18,
+      padding: 14,
+      marginBottom: 18,
+    },
+    modalInput: {
+      fontFamily: theme.fonts.regular,
+      fontSize: 16,
+      color: theme.colors.text,
+      minHeight: 80,
+      textAlignVertical: "top",
+    },
+
+    modalSectionLabel: {
+      fontFamily: theme.fonts.bold,
+      fontSize: 12,
+      textTransform: "uppercase",
+      letterSpacing: 0.8,
+      color: theme.colors.textSecondary,
+      marginBottom: 10,
+    },
+    categoryChipsRow: {
+      flexDirection: "row",
+      gap: 12,
+      marginBottom: 24,
+    },
+    modalCategoryChip: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      paddingVertical: 12,
+      borderRadius: 16,
+      borderWidth: 1.5,
+      borderColor: theme.glass.borderColor,
+      backgroundColor: neutralFill,
+    },
+    modalCategoryChipActive: {
+      backgroundColor: activeTint,
       borderColor: theme.colors.primary,
     },
-    categoryButtonText: {
-      fontSize: 14,
+    modalCategoryChipText: {
       fontFamily: theme.fonts.medium,
-      color: theme.colors.secondary,
+      fontSize: 13,
+      color: theme.colors.textSecondary,
     },
-    categoryButtonTextActive: {
+    modalCategoryChipTextActive: {
+      fontFamily: theme.fonts.bold,
       color: theme.colors.primary,
-      fontFamily: theme.fonts.bold,
     },
 
-    saveActionButton: {
+    /* Standardized 56px height, 22px border radius button */
+    modalSaveButton: {
+      height: 56,
+      borderRadius: 22,
       backgroundColor: theme.colors.primary,
-      borderRadius: theme.borderRadius.md,
-      paddingVertical: theme.spacing.md,
-      alignItems: 'center',
-    },
-    saveActionButtonText: {
-      fontFamily: theme.fonts.bold,
-      color: theme.colors.white,
-      fontSize: 16,
-    },
-
-    modalButtons: {
       flexDirection: "row",
-      gap: theme.spacing.md,
-    },
-    modalButton: {
-      flex: 1,
-      paddingVertical: theme.spacing.md,
-      borderRadius: theme.borderRadius.md,
       alignItems: "center",
+      justifyContent: "center",
+      gap: 10,
+      ...Platform.select({
+        ios: {
+          shadowColor: theme.colors.primary,
+          shadowOffset: { width: 0, height: 5 },
+          shadowOpacity: isDarkMode ? 0.45 : 0.35,
+          shadowRadius: 14,
+        },
+        android: { elevation: 6 },
+      }),
     },
-    cancelButton: {
-      backgroundColor: `${theme.colors.secondary}15`,
-    },
-    cancelButtonText: {
-      fontSize: 16,
+    modalSaveButtonText: {
       fontFamily: theme.fonts.bold,
-      color: theme.colors.primary,
+      fontSize: 16,
+      color: theme.colors.white,
     },
-    saveButton: {
+
+    /* Confirm Dialog */
+    confirmCenterWrapper: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 24,
+    },
+    confirmCard: {
+      width: "100%",
+      maxWidth: 360,
+      borderRadius: 26,
+      backgroundColor: theme.colors.card,
+      borderWidth: 1,
+      borderColor: theme.glass.borderColor,
+      padding: 22,
+      alignItems: "center",
+      ...Platform.select({
+        ios: {
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 10 },
+          shadowOpacity: 0.2,
+          shadowRadius: 20,
+        },
+        android: { elevation: 8 },
+      }),
+    },
+    confirmIconWrap: {
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      backgroundColor: activeTint,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 14,
+    },
+    confirmTitle: {
+      fontFamily: theme.fonts.bold,
+      fontSize: 19,
+      color: theme.colors.text,
+      marginBottom: 8,
+      textAlign: "center",
+    },
+    confirmMessage: {
+      fontFamily: theme.fonts.regular,
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+      textAlign: "center",
+      lineHeight: 20,
+      marginBottom: 20,
+    },
+    confirmButtonsRow: {
+      flexDirection: "row",
+      gap: 12,
+      width: "100%",
+    },
+    confirmButton: {
+      flex: 1,
+      height: 50,
+      borderRadius: 20,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    confirmCancelBtn: {
+      backgroundColor: neutralFill,
+      borderWidth: 1,
+      borderColor: theme.glass.borderColor,
+    },
+    confirmCancelText: {
+      fontFamily: theme.fonts.bold,
+      fontSize: 15,
+      color: theme.colors.text,
+    },
+    confirmActionBtn: {
       backgroundColor: theme.colors.primary,
     },
-    saveButtonText: {
-      fontSize: 16,
+    confirmActionText: {
       fontFamily: theme.fonts.bold,
+      fontSize: 15,
       color: theme.colors.white,
     },
   });
+};
