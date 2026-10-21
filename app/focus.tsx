@@ -3,9 +3,9 @@ import { BlurView } from "expo-blur";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-    Alert,
     BackHandler,
     Dimensions,
+    Modal,
     Platform,
     Pressable,
     ScrollView,
@@ -55,6 +55,10 @@ export default function FocusScreen() {
     const [selectedDuration, setSelectedDuration] = useState(25 * 60);
     const [selectedMode, setSelectedMode] = useState<"Free" | "Pomodoro">("Free");
 
+    // Custom Glassmorphic Confirmation Modal
+    const [confirmModalVisible, setConfirmModalVisible] = useState(false);
+    const [confirmModalType, setConfirmModalType] = useState<"end" | "minimize">("end");
+
     const startNewTimer = () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         timer.startTimer(paramTaskId, paramTaskName, selectedDuration);
@@ -75,7 +79,7 @@ export default function FocusScreen() {
     };
 
     /**
-     * Single top navigation back/close action
+     * Top navigation back/close action
      */
     const requestQuit = useCallback(() => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -83,68 +87,18 @@ export default function FocusScreen() {
             router.back();
             return;
         }
-
-        if (Platform.OS === "web") {
-            const leave = window.confirm(
-                "Your timer is active. Click OK to minimize and keep it running in the background, or Cancel to stay on this screen."
-            );
-            if (leave) {
-                router.back();
-            }
-        } else {
-            Alert.alert(
-                "Active Focus Session",
-                "Your timer is currently running in the background. What would you like to do?",
-                [
-                    { text: "Stay on Screen", style: "cancel" },
-                    {
-                        text: "Minimize (Keep Running)",
-                        onPress: () => router.back(),
-                    },
-                    {
-                        text: "End Session & Leave",
-                        style: "destructive",
-                        onPress: () => {
-                            timer.stopTimer();
-                            router.back();
-                        },
-                    },
-                ]
-            );
-        }
-    }, [isActive, timer, router]);
+        setConfirmModalType("minimize");
+        setConfirmModalVisible(true);
+    }, [isActive, router]);
 
     /**
-     * Dedicated End Session action that halts timer and navigates back
+     * Dedicated End Session action that opens custom glassmorphic modal
      */
-    const handleEndSession = useCallback(() => {
+    const handleEndSessionPress = useCallback(() => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-        const confirmEnd = () => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-            timer.stopTimer();
-            router.back();
-        };
-
-        if (Platform.OS === "web") {
-            if (window.confirm("Are you sure you want to end this focus session early?")) {
-                confirmEnd();
-            }
-        } else {
-            Alert.alert(
-                "End Focus Session",
-                "Are you sure you want to end this focus session early?",
-                [
-                    { text: "Keep Focusing", style: "cancel" },
-                    {
-                        text: "End Session",
-                        style: "destructive",
-                        onPress: confirmEnd,
-                    },
-                ]
-            );
-        }
-    }, [timer, router]);
+        setConfirmModalType("end");
+        setConfirmModalVisible(true);
+    }, []);
 
     useEffect(() => {
         const onBackPress = () => {
@@ -247,6 +201,15 @@ export default function FocusScreen() {
     };
 
     const statusInfo = getStatusInfo();
+
+    // Reset is only enabled when the timer is paused
+    const isResetEnabled = !isActive && !showDurationPicker && !isCompleted;
+
+    // Check if on final phase of Pomodoro
+    const isLastPomoPhase =
+        timer.pomodoroMode &&
+        timer.pomodoroSession >= 4 &&
+        timer.pomodoroPhase !== "work";
 
     return (
         <SafeAreaView style={styles.container}>
@@ -692,42 +655,58 @@ export default function FocusScreen() {
                     /* Active Session Controls (Standardized 56px Tactile Action Pills) */
                     <View style={styles.activeControlsSection}>
                         <View style={styles.controlsRow}>
-                            {/* Primary Play / Pause Pill */}
+                            {/* Primary Play / Pause Pill (Concise "Pause" / "Resume" with distinct states) */}
                             <Pressable
                                 onPress={toggleTimer}
                                 style={({ pressed }) => [
                                     styles.actionPillPrimary,
                                     !isActive && styles.actionPillResume,
+                                    isActive && styles.actionPillPause,
                                     pressed && styles.pressedScale,
                                 ]}
                             >
                                 <Ionicons
                                     name={isActive ? "pause" : "play"}
-                                    size={22}
-                                    color={theme.colors.white}
+                                    size={20}
+                                    color={isActive ? theme.colors.primary : theme.colors.white}
                                 />
-                                <Text style={styles.actionPillPrimaryText}>
-                                    {isActive ? "Pause Session" : "Resume Focus"}
+                                <Text
+                                    style={[
+                                        styles.actionPillPrimaryText,
+                                        isActive && styles.actionPillPauseText,
+                                    ]}
+                                >
+                                    {isActive ? "Pause" : "Resume"}
                                 </Text>
                             </Pressable>
 
-                            {/* Reset Pill (when paused or during session) */}
+                            {/* Reset Pill: Enabled ONLY when timer is paused */}
                             <Pressable
+                                disabled={!isResetEnabled}
                                 onPress={() => {
+                                    if (!isResetEnabled) return;
                                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                     timer.resetTimer();
                                 }}
                                 style={({ pressed }) => [
                                     styles.actionPillSecondary,
-                                    pressed && styles.pressedScale,
+                                    !isResetEnabled && styles.actionPillDisabled,
+                                    isResetEnabled && pressed && styles.pressedScale,
                                 ]}
                             >
                                 <Ionicons
                                     name="refresh-outline"
-                                    size={20}
-                                    color={theme.colors.primary}
+                                    size={19}
+                                    color={isResetEnabled ? theme.colors.primary : theme.colors.secondary}
                                 />
-                                <Text style={styles.actionPillSecondaryText}>Reset</Text>
+                                <Text
+                                    style={[
+                                        styles.actionPillSecondaryText,
+                                        !isResetEnabled && styles.actionPillDisabledText,
+                                    ]}
+                                >
+                                    Reset
+                                </Text>
                             </Pressable>
 
                             {/* Pomodoro Advance Phase Pill */}
@@ -739,22 +718,30 @@ export default function FocusScreen() {
                                     }}
                                     style={({ pressed }) => [
                                         styles.actionPillSecondary,
+                                        isLastPomoPhase && styles.actionPillFinish,
                                         pressed && styles.pressedScale,
                                     ]}
                                 >
                                     <Ionicons
-                                        name="play-skip-forward-outline"
-                                        size={20}
-                                        color={theme.colors.secondary}
+                                        name={isLastPomoPhase ? "checkmark-circle-outline" : "play-skip-forward-outline"}
+                                        size={19}
+                                        color={isLastPomoPhase ? theme.colors.primary : theme.colors.secondary}
                                     />
-                                    <Text style={styles.actionPillSecondaryText}>Next</Text>
+                                    <Text
+                                        style={[
+                                            styles.actionPillSecondaryText,
+                                            isLastPomoPhase && styles.actionPillFinishText,
+                                        ]}
+                                    >
+                                        {isLastPomoPhase ? "Finish" : "Next"}
+                                    </Text>
                                 </Pressable>
                             )}
                         </View>
 
-                        {/* End Session Button: Halts timer and navigates back with confirmation */}
+                        {/* End Session Button: Triggers custom glassmorphic confirmation modal */}
                         <Pressable
-                            onPress={handleEndSession}
+                            onPress={handleEndSessionPress}
                             style={({ pressed }) => [
                                 styles.endSessionButton,
                                 pressed && styles.pressedScale,
@@ -770,6 +757,173 @@ export default function FocusScreen() {
                     </View>
                 )}
             </ScrollView>
+
+            {/* Custom Glassmorphic Confirmation Modal */}
+            <Modal
+                visible={confirmModalVisible}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setConfirmModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <Pressable
+                        style={StyleSheet.absoluteFill}
+                        onPress={() => setConfirmModalVisible(false)}
+                    >
+                        <BlurView
+                            intensity={isDarkMode ? 50 : 35}
+                            tint={isDarkMode ? "systemThickMaterialDark" : "systemThickMaterialLight"}
+                            style={StyleSheet.absoluteFill}
+                        />
+                        <View
+                            style={[
+                                StyleSheet.absoluteFill,
+                                { backgroundColor: isDarkMode ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0.3)" },
+                            ]}
+                        />
+                    </Pressable>
+
+                    <View style={styles.modalCard}>
+                        <BlurView
+                            intensity={isDarkMode ? 40 : 60}
+                            tint={isDarkMode ? "systemThickMaterialDark" : "systemThickMaterialLight"}
+                            style={StyleSheet.absoluteFill}
+                            pointerEvents="none"
+                        />
+                        <View
+                            style={[
+                                StyleSheet.absoluteFill,
+                                { backgroundColor: theme.glass.cardBg },
+                            ]}
+                        />
+
+                        <View
+                            style={[
+                                styles.modalIconCircle,
+                                confirmModalType === "end" && styles.modalIconCircleDestructive,
+                            ]}
+                        >
+                            <Ionicons
+                                name={confirmModalType === "minimize" ? "leaf-outline" : "stop-circle-outline"}
+                                size={28}
+                                color={confirmModalType === "minimize" ? theme.colors.primary : "#EF4444"}
+                            />
+                        </View>
+
+                        <Text style={styles.modalTitle}>
+                            {confirmModalType === "minimize"
+                                ? "Active Focus Session"
+                                : "End Focus Session?"}
+                        </Text>
+
+                        <Text style={styles.modalDescription}>
+                            {confirmModalType === "minimize"
+                                ? "Your timer is running in the background. You can keep it running while you browse other screens, or end it now."
+                                : "Are you sure you want to end this focus session early? Your current progress will be reset."}
+                        </Text>
+
+                        <View style={styles.modalActionsCol}>
+                            {confirmModalType === "minimize" ? (
+                                <>
+                                    <Pressable
+                                        style={({ pressed }) => [
+                                            styles.modalPrimaryButton,
+                                            pressed && styles.pressedScale,
+                                        ]}
+                                        onPress={() => {
+                                            Haptics.selectionAsync();
+                                            setConfirmModalVisible(false);
+                                            router.back();
+                                        }}
+                                    >
+                                        <Ionicons
+                                            name="contract-outline"
+                                            size={18}
+                                            color={theme.colors.white}
+                                        />
+                                        <Text style={styles.modalPrimaryButtonText}>
+                                            Minimize (Keep Running)
+                                        </Text>
+                                    </Pressable>
+
+                                    <Pressable
+                                        style={({ pressed }) => [
+                                            styles.modalDestructiveButton,
+                                            pressed && styles.pressedScale,
+                                        ]}
+                                        onPress={() => {
+                                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                                            setConfirmModalVisible(false);
+                                            timer.stopTimer();
+                                            router.back();
+                                        }}
+                                    >
+                                        <Ionicons
+                                            name="stop-circle-outline"
+                                            size={18}
+                                            color="#EF4444"
+                                        />
+                                        <Text style={styles.modalDestructiveButtonText}>
+                                            End Session & Leave
+                                        </Text>
+                                    </Pressable>
+
+                                    <Pressable
+                                        style={({ pressed }) => [
+                                            styles.modalCancelButton,
+                                            pressed && styles.pressedScale,
+                                        ]}
+                                        onPress={() => {
+                                            Haptics.selectionAsync();
+                                            setConfirmModalVisible(false);
+                                        }}
+                                    >
+                                        <Text style={styles.modalCancelButtonText}>Stay on Screen</Text>
+                                    </Pressable>
+                                </>
+                            ) : (
+                                <>
+                                    <Pressable
+                                        style={({ pressed }) => [
+                                            styles.modalPrimaryButton,
+                                            pressed && styles.pressedScale,
+                                        ]}
+                                        onPress={() => {
+                                            Haptics.selectionAsync();
+                                            setConfirmModalVisible(false);
+                                        }}
+                                    >
+                                        <Ionicons name="play" size={18} color={theme.colors.white} />
+                                        <Text style={styles.modalPrimaryButtonText}>Keep Focusing</Text>
+                                    </Pressable>
+
+                                    <Pressable
+                                        style={({ pressed }) => [
+                                            styles.modalDestructiveButton,
+                                            pressed && styles.pressedScale,
+                                        ]}
+                                        onPress={() => {
+                                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                                            setConfirmModalVisible(false);
+                                            timer.stopTimer();
+                                            router.back();
+                                        }}
+                                    >
+                                        <Ionicons
+                                            name="stop-circle-outline"
+                                            size={18}
+                                            color="#EF4444"
+                                        />
+                                        <Text style={styles.modalDestructiveButtonText}>
+                                            End Session Early
+                                        </Text>
+                                    </Pressable>
+                                </>
+                            )}
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -1164,7 +1318,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
             marginBottom: 16,
         },
         actionPillPrimary: {
-            flex: 1.4,
+            flex: 1.2,
             height: 56,
             borderRadius: 22,
             backgroundColor: theme.colors.primary,
@@ -1185,10 +1339,20 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
         actionPillResume: {
             backgroundColor: theme.colors.primary,
         },
+        actionPillPause: {
+            backgroundColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.05)",
+            borderWidth: 1,
+            borderColor: theme.glass.borderColor,
+            shadowOpacity: 0,
+            elevation: 0,
+        },
         actionPillPrimaryText: {
             fontFamily: theme.fonts.bold,
-            fontSize: 16,
+            fontSize: 15,
             color: theme.colors.white,
+        },
+        actionPillPauseText: {
+            color: theme.colors.primary,
         },
         actionPillSecondary: {
             flex: 1,
@@ -1214,6 +1378,19 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
         actionPillSecondaryText: {
             fontFamily: theme.fonts.bold,
             fontSize: 14,
+            color: theme.colors.primary,
+        },
+        actionPillDisabled: {
+            opacity: 0.35,
+            borderStyle: "dashed",
+        },
+        actionPillDisabledText: {
+            color: theme.colors.secondary,
+        },
+        actionPillFinish: {
+            borderColor: `${theme.colors.primary}60`,
+        },
+        actionPillFinishText: {
             color: theme.colors.primary,
         },
         endSessionButton: {
@@ -1293,6 +1470,119 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
             fontFamily: theme.fonts.bold,
             fontSize: 12,
             color: theme.colors.primary,
+        },
+
+        /* Custom Confirmation Modal Styles */
+        modalOverlay: {
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "center",
+            paddingHorizontal: 24,
+        },
+        modalCard: {
+            width: "100%",
+            maxWidth: 340,
+            borderRadius: 26,
+            borderWidth: 1,
+            borderColor: theme.glass.borderColor,
+            backgroundColor: theme.glass.cardBg,
+            overflow: "hidden",
+            paddingHorizontal: 22,
+            paddingTop: 26,
+            paddingBottom: 22,
+            alignItems: "center",
+            ...Platform.select({
+                ios: {
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 10 },
+                    shadowOpacity: isDarkMode ? 0.45 : 0.12,
+                    shadowRadius: 24,
+                },
+                android: { elevation: 8 },
+            }),
+        },
+        modalIconCircle: {
+            width: 56,
+            height: 56,
+            borderRadius: 28,
+            backgroundColor: `${theme.colors.primary}15`,
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 14,
+        },
+        modalIconCircleDestructive: {
+            backgroundColor: "rgba(239, 68, 68, 0.12)",
+        },
+        modalTitle: {
+            fontFamily: theme.fonts.bold,
+            fontSize: 18,
+            color: theme.colors.primary,
+            marginBottom: 8,
+            textAlign: "center",
+        },
+        modalDescription: {
+            fontFamily: theme.fonts.regular,
+            fontSize: 13,
+            color: theme.colors.textSecondary,
+            textAlign: "center",
+            lineHeight: 19,
+            marginBottom: 20,
+        },
+        modalActionsCol: {
+            width: "100%",
+            gap: 10,
+        },
+        modalPrimaryButton: {
+            width: "100%",
+            height: 56,
+            borderRadius: 22,
+            backgroundColor: theme.colors.primary,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            ...Platform.select({
+                ios: {
+                    shadowColor: theme.colors.primary,
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: isDarkMode ? 0.4 : 0.25,
+                    shadowRadius: 10,
+                },
+                android: { elevation: 4 },
+            }),
+        },
+        modalPrimaryButtonText: {
+            fontFamily: theme.fonts.bold,
+            fontSize: 15,
+            color: theme.colors.white,
+        },
+        modalDestructiveButton: {
+            width: "100%",
+            height: 56,
+            borderRadius: 22,
+            borderWidth: 1,
+            borderColor: "rgba(239, 68, 68, 0.35)",
+            backgroundColor: isDarkMode ? "rgba(239, 68, 68, 0.12)" : "rgba(239, 68, 68, 0.08)",
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+        },
+        modalDestructiveButtonText: {
+            fontFamily: theme.fonts.bold,
+            fontSize: 15,
+            color: "#EF4444",
+        },
+        modalCancelButton: {
+            width: "100%",
+            height: 44,
+            alignItems: "center",
+            justifyContent: "center",
+        },
+        modalCancelButtonText: {
+            fontFamily: theme.fonts.medium,
+            fontSize: 14,
+            color: theme.colors.secondary,
         },
 
         /* Tactile Press Feedback */

@@ -166,19 +166,26 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
                 // Push alert for break
                 Notifications.scheduleNotificationAsync({
                     content: {
-                        title: nextPhase === "longBreak" ? "Long Break Time! 🏖️" : "Short Break! ☕",
+                        title: nextPhase === "longBreak" ? "Long Break Time" : "Short Break",
                         body: nextPhase === "longBreak" ? "You've earned a 15-minute rest!" : "Take a 5-minute breather.",
                         sound: true,
                     },
                     trigger: null,
                 }).catch(() => {});
             } else {
-                nextPhase = "work";
-                if (phase === "longBreak") {
-                    nextSession = 1;
-                } else {
-                    nextSession = session + 1;
+                if (phase === "longBreak" || session >= SESSIONS_BEFORE_LONG_BREAK) {
+                    // Full Pomodoro cycle complete!
+                    setIsActive(false);
+                    setIsCompleted(true);
+                    targetEndTimeRef.current = null;
+                    persistState({ isActive: false, isCompleted: true, targetEndTime: null });
+                    import("../utils/stats").then(({ addFocusSession }) => {
+                        addFocusSession(4 * 25);
+                    });
+                    return;
                 }
+                nextPhase = "work";
+                nextSession = session + 1;
             }
 
             setPomodoroPhase(nextPhase);
@@ -193,7 +200,7 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
                 setIsCompleted(false);
                 setIsActive(true);
 
-                const alertTitle = nextPhase === "work" ? "Break Over! 🚀" : "Break Finished! ☕";
+                const alertTitle = nextPhase === "work" ? "Break Over" : "Break Finished";
                 const alertBody = nextPhase === "work" ? "Ready for your next focused session?" : "Break has ended.";
                 scheduleFocusTimerAlarm(alertTitle, alertBody, nextDuration);
             }, 1500);
@@ -322,8 +329,21 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
         if (phase === "work") {
             nextPhase = session >= SESSIONS_BEFORE_LONG_BREAK ? "longBreak" : "shortBreak";
         } else {
+            if (phase === "longBreak" || session >= SESSIONS_BEFORE_LONG_BREAK) {
+                // Completed the entire Pomodoro cycle!
+                setIsActive(false);
+                setIsCompleted(true);
+                targetEndTimeRef.current = null;
+                cancelFocusTimerAlarm();
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                persistState({ isActive: false, isCompleted: true, targetEndTime: null });
+                import("../utils/stats").then(({ addFocusSession }) => {
+                    addFocusSession(4 * 25);
+                });
+                return;
+            }
             nextPhase = "work";
-            nextSession = phase === "longBreak" ? 1 : session + 1;
+            nextSession = session + 1;
         }
 
         const nextDuration = POMODORO_DURATIONS[nextPhase];
@@ -338,10 +358,10 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
         setIsActive(true);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-        const alertTitle = nextPhase === "work" ? "Break Over! 🚀" : "Break Finished! ☕";
+        const alertTitle = nextPhase === "work" ? "Break Over" : "Break Finished";
         const alertBody = nextPhase === "work" ? "Ready for your next focused session?" : "Break has ended.";
         scheduleFocusTimerAlarm(alertTitle, alertBody, nextDuration);
-    }, []);
+    }, [persistState]);
 
     const pauseTimer = useCallback(() => {
         setIsActive(false);
