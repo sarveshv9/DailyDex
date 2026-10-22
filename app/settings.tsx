@@ -22,6 +22,16 @@ export default function SettingsScreen() {
   const router = useRouter();
   const styles = useMemo(() => makeStyles(theme), [theme]);
 
+  const handleClose = () => {
+    if (settings.hapticsEnabled)
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tabs)/profile");
+    }
+  };
+
   const handleToggleHaptics = (value: boolean) => {
     if (value) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setHapticsEnabled(value);
@@ -33,8 +43,83 @@ export default function SettingsScreen() {
     value: boolean,
     onValueChange: (v: boolean) => void,
     isLast = false
+  ) => {
+    const toggle = () => {
+      if (settings.hapticsEnabled)
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      onValueChange(!value);
+    };
+
+    return (
+      <Pressable
+        onPress={toggle}
+        style={({ pressed }) => [
+          styles.row,
+          isLast && { borderBottomWidth: 0 },
+          pressed && {
+            backgroundColor: `${theme.colors.secondary}08`,
+            opacity: 0.85,
+          },
+        ]}
+        accessible={true}
+        accessibilityRole="switch"
+        accessibilityState={{ checked: value }}
+        accessibilityLabel={label}
+      >
+        <View style={styles.rowLeft}>
+          <View
+            style={[
+              styles.iconContainer,
+              { backgroundColor: `${theme.colors.primary}15` },
+            ]}
+          >
+            <Ionicons name={icon as any} size={20} color={theme.colors.primary} />
+          </View>
+          <Text style={styles.rowLabel}>{label}</Text>
+        </View>
+        <Switch
+          value={value}
+          onValueChange={(v) => {
+            if (settings.hapticsEnabled)
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            onValueChange(v);
+          }}
+          trackColor={{
+            false: `${theme.colors.secondary}40`,
+            true: theme.colors.primary,
+          }}
+          thumbColor="#FFFFFF"
+          {...({ activeThumbColor: "#FFFFFF" } as any)}
+        />
+      </Pressable>
+    );
+  };
+
+  const renderNavRow = (
+    icon: string,
+    label: string,
+    onPress: () => void,
+    isLast = false,
+    rightValue?: string
   ) => (
-    <View style={[styles.row, isLast && { borderBottomWidth: 0 }]}>
+    <Pressable
+      onPress={() => {
+        if (settings.hapticsEnabled)
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        onPress();
+      }}
+      style={({ pressed }) => [
+        styles.row,
+        isLast && { borderBottomWidth: 0 },
+        pressed && {
+          backgroundColor: `${theme.colors.secondary}08`,
+          opacity: 0.85,
+        },
+      ]}
+      accessible={true}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
       <View style={styles.rowLeft}>
         <View
           style={[
@@ -46,25 +131,16 @@ export default function SettingsScreen() {
         </View>
         <Text style={styles.rowLabel}>{label}</Text>
       </View>
-      <Switch
-        value={value}
-        onValueChange={(v) => {
-          if (settings.hapticsEnabled)
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          onValueChange(v);
-        }}
-        trackColor={{
-          false: `${theme.colors.secondary}40`,
-          true: theme.colors.primary,
-        }}
-        thumbColor="#FFFFFF"
-        {...({ activeThumbColor: "#FFFFFF" } as any)}
-      />
-    </View>
+      {rightValue ? (
+        <Text style={styles.rowRightValue}>{rightValue}</Text>
+      ) : (
+        <Ionicons name="chevron-forward" size={18} color={theme.colors.textSecondary} />
+      )}
+    </Pressable>
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={["bottom"]}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -74,23 +150,20 @@ export default function SettingsScreen() {
           <View style={styles.headerTopRow}>
             <Text style={styles.headerTitle}>General Settings</Text>
             <Pressable
-              onPress={() => {
-                if (settings.hapticsEnabled)
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.back();
-              }}
+              onPress={handleClose}
               style={({ pressed }) => [
                 styles.closeButton,
                 pressed && { opacity: 0.6, transform: [{ scale: 0.95 }] },
               ]}
               accessibilityRole="button"
               accessibilityLabel="Close settings"
+              hitSlop={8}
             >
               <Ionicons name="close" size={24} color={theme.colors.text} />
             </Pressable>
           </View>
           <Text style={styles.headerSubtitle}>
-            Configure your notifications and tactile interaction feedback.
+            Configure your notifications, tactile feedback, and app legal info.
           </Text>
         </View>
 
@@ -115,6 +188,28 @@ export default function SettingsScreen() {
             settings.hapticsEnabled,
             handleToggleHaptics,
             true
+          )}
+        </View>
+
+        {/* About & Legal Section */}
+        <Text style={styles.sectionTitle}>About & Legal</Text>
+        <View style={styles.group}>
+          {renderNavRow(
+            "document-text-outline",
+            "Privacy Policy",
+            () => router.push("/privacy")
+          )}
+          {renderNavRow(
+            "shield-checkmark-outline",
+            "Terms of Service",
+            () => router.push("/terms")
+          )}
+          {renderNavRow(
+            "information-circle-outline",
+            "App Version",
+            () => {},
+            true,
+            "v1.0.0 (Offline)"
           )}
         </View>
 
@@ -210,6 +305,11 @@ const makeStyles = (theme: Theme) =>
       fontSize: 16,
       fontFamily: theme.fonts.medium,
       color: theme.colors.text,
+    },
+    rowRightValue: {
+      fontSize: 14,
+      fontFamily: theme.fonts.medium,
+      color: theme.colors.textSecondary,
     },
     iconContainer: {
       width: 36,
