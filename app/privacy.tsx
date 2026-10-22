@@ -4,23 +4,37 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import { Theme, getSharedStyles } from '../styles/shared';
+import { useSettings } from '../context/SettingsContext';
+import { Theme } from '../styles/shared';
+import * as Haptics from '../utils/haptics';
 
 export default function PrivacyScreen() {
     const router = useRouter();
     const { theme } = useTheme();
+    const { settings } = useSettings();
     const styles = useMemo(() => makeStyles(theme), [theme]);
-    const sharedStyles = useMemo(() => getSharedStyles(theme), [theme]);
+
+    const handleBack = () => {
+        if (settings.hapticsEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        if (router.canGoBack()) {
+            router.back();
+        } else {
+            router.replace('/(tabs)/profile');
+        }
+    };
     
     return (
         <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
             <View style={styles.header}>
                 <Pressable 
-                    onPress={() => router.back()} 
+                    onPress={handleBack} 
                     style={({ pressed }) => [
                         styles.backBtn,
                         pressed && { opacity: 0.7, transform: [{ scale: 0.96 }] }
                     ]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Go back"
+                    hitSlop={8}
                 >
                     <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
                 </Pressable>
@@ -31,7 +45,7 @@ export default function PrivacyScreen() {
                 contentContainerStyle={styles.content}
                 showsVerticalScrollIndicator={false}
             >
-                <Text style={styles.paragraph}>Last Updated: {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</Text>
+                <Text style={styles.paragraph}>Last Updated: October 2026</Text>
                 <Text style={styles.paragraph}>
                     Your privacy is important to us. This Privacy Policy explains how we collect, use, and protect your information when you use the Zen app.
                 </Text>
