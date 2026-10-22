@@ -22,16 +22,16 @@ import { MonthCalendarView } from './MonthCalendarView';
 
 /* ─────────────────────────────── Config ─────────────────────────────── */
 
-/** Width reserved for the time-label column on the left */
-const TIME_AXIS_WIDTH = 44;
+/** Width reserved for the time-label column on the left and symmetric right margin */
+const TIME_AXIS_WIDTH = 26;
 
-/** Helper to compute column width dynamically based on screen width and view mode */
-const getColWidth = (screenWidth: number, columns: 3 | 7) => 
-    (screenWidth - TIME_AXIS_WIDTH - 16) / columns;
+/** Helper to compute column width dynamically based on screen width with symmetric margins */
+const getColWidth = (screenWidth: number) => 
+    (screenWidth - 2 * TIME_AXIS_WIDTH) / 7;
 
-/** Circle sizes — selected day is prominent and well-proportioned */
-const CIRCLE_SEL = 46;
-const CIRCLE_OTHER = 30;
+/** Circle sizes — well-proportioned for 7-day week timeline */
+const CIRCLE_SEL = 28;
+const CIRCLE_OTHER = 22;
 /** Warm color palette for task types (sleep = dark, alarm = amber, etc.) */
 export const TASK_COLORS: Record<string, string> = {
   wakeup: '#FFB347',
@@ -68,12 +68,6 @@ const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const formatDateKey = (date: Date) =>
     `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
-const get3DayDates = (centerDate: Date): Date[] =>
-    Array.from({ length: 3 }, (_, i) => {
-        const d = new Date(centerDate);
-        d.setDate(centerDate.getDate() + (i - 1));
-        return d;
-    });
 
 const getWeekStart = (date: Date): Date => {
     const d = new Date(date);
@@ -113,6 +107,7 @@ interface DayTimelineViewProps {
     onPressPeek?: () => void;
     scrollY?: Animated.Value;
     listAnim?: Animated.Value;
+    isTaskModalOpen?: boolean;
     onPressTask?: (item: RoutineItem) => void;
 }
 
@@ -128,18 +123,18 @@ const TimeAxisItem = memo<{
     <View
         style={{
             position: 'absolute',
-            top: topY - 8,
+            top: topY - 7,
             left: 0,
-            width: TIME_AXIS_WIDTH - 6,
+            width: TIME_AXIS_WIDTH,
             flexDirection: 'row',
-            justifyContent: 'flex-end',
-            alignItems: 'flex-start',
+            justifyContent: 'center',
+            alignItems: 'baseline',
         }}
     >
-        <Text style={{ fontSize: 11, fontFamily: theme.fonts.bold, color: theme.colors.textSecondary, opacity: 0.6 }}>
+        <Text style={{ fontSize: 9, fontFamily: theme.fonts.bold, color: theme.colors.textSecondary, opacity: 0.55 }}>
             {num}
         </Text>
-        <Text style={{ fontSize: 7, fontFamily: theme.fonts.bold, color: theme.colors.textSecondary, opacity: 0.6, marginTop: 1, marginLeft: 1 }}>
+        <Text style={{ fontSize: 5.5, fontFamily: theme.fonts.bold, color: theme.colors.textSecondary, opacity: 0.45, marginLeft: 0.5 }}>
             {ampm}
         </Text>
     </View>
@@ -232,7 +227,6 @@ const TimelinePage = memo<{
     todayKey: string;
     circleSel: number;
     circleOther: number;
-    is7Day: boolean;
     COL_WIDTH: number;
     screenWidth: number;
     theme: Theme;
@@ -243,11 +237,39 @@ const TimelinePage = memo<{
     totalMinutes: number;
     timeLabels: { hour: number; num: string; ampm: string }[];
     onPressTask?: (item: RoutineItem) => void;
+    listAnim?: Animated.Value;
 }>(({
     pageDates, allRoutines, selectedKey, todayKey,
-    circleSel, circleOther, is7Day, COL_WIDTH, screenWidth, theme, isDarkMode, styles, handleSelectDate,
-    startHour, totalMinutes, timeLabels, onPressTask
+    circleSel, circleOther, COL_WIDTH, screenWidth, theme, isDarkMode, styles, handleSelectDate,
+    startHour, totalMinutes, timeLabels, onPressTask, listAnim
 }) => {
+    const badgesOpacity = useMemo(() => {
+        if (!listAnim) return new Animated.Value(0);
+        return listAnim.interpolate({
+            inputRange: [0, 0.35, 1],
+            outputRange: [0, 0, 1],
+            extrapolate: 'clamp',
+        });
+    }, [listAnim]);
+
+    const badgesHeight = useMemo(() => {
+        if (!listAnim) return new Animated.Value(0);
+        return listAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, 16],
+            extrapolate: 'clamp',
+        });
+    }, [listAnim]);
+
+    const timelineOpacity = useMemo(() => {
+        if (!listAnim) return new Animated.Value(1);
+        return listAnim.interpolate({
+            inputRange: [0, 0.4, 0.85, 1],
+            outputRange: [1, 0.7, 0, 0],
+            extrapolate: 'clamp',
+        });
+    }, [listAnim]);
+
     const { cumY, dynamicBodyHeight, timeAxisPositions } = useMemo(() => {
         // Occupied-minute map (union across all visible days)
         const isOccupied = new Array(totalMinutes).fill(false);
@@ -289,10 +311,11 @@ const TimelinePage = memo<{
         });
 
         // ── First pass: build cumulative Y with expanded/compact rates ──
+        const TOP_TIMELINE_PAD = 16;
         const cY = new Array(totalMinutes + 1).fill(0);
-        let currentY = 0;
-        const expandedMult = is7Day ? 0.9 : 1.5;
-        const compactMult = is7Day ? 0.35 : 0.5;
+        let currentY = TOP_TIMELINE_PAD;
+        const expandedMult = 0.9;
+        const compactMult = 0.35;
 
         for (let i = 0; i < totalMinutes; i++) {
             cY[i] = currentY;
@@ -311,7 +334,7 @@ const TimelinePage = memo<{
         cY[totalMinutes] = currentY;
 
         // ── Second pass: two-layer minimum-height guarantee ──
-        const selCircle = is7Day ? 24 : CIRCLE_SEL;
+        const selCircle = circleSel;
         const minPillPx = selCircle + 4; // each pill needs at least this many px
 
         // Helper to inflate a minute range [rangeStart..rangeEnd] in cY
@@ -400,16 +423,12 @@ const TimelinePage = memo<{
             return { ...tl, topY };
         });
 
-        return { cumY: cY, dynamicBodyHeight: cY[totalMinutes], timeAxisPositions: positions };
-    }, [pageDates, allRoutines, is7Day, startHour, totalMinutes, timeLabels]);
+        return { cumY: cY, dynamicBodyHeight: cY[totalMinutes] + TOP_TIMELINE_PAD, timeAxisPositions: positions };
+    }, [pageDates, allRoutines, circleSel, startHour, totalMinutes, timeLabels]);
 
     return (
-        <ScrollView
-            style={{ width: screenWidth }}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 24 }}
-        >
-            {/* Day header row */}
+        <View style={{ width: screenWidth, flex: 1 }}>
+            {/* Pinned Day header row */}
             <View style={styles.dayHeaderRow}>
                 {/* Spacer for time axis */}
                 <View style={{ width: TIME_AXIS_WIDTH }} />
@@ -418,17 +437,35 @@ const TimelinePage = memo<{
                     const dayIndex = date.getDay();
                     const isSelected = key === selectedKey;
                     const isToday = key === todayKey;
+                    const dayTasks = getRoutineItemsForDate(allRoutines, date)
+                        .sort((a, b) => getTimelineMinute(a.time, startHour) - getTimelineMinute(b.time, startHour));
+
+                    const dayBadges = (() => {
+                        if (dayTasks.length === 0) return [];
+                        const wakeup = dayTasks.find(t => t.imageKey === 'wakeup' || t.task?.toLowerCase().includes('wake'));
+                        const sleep = dayTasks.find(t => t.imageKey === 'sleep' || t.task?.toLowerCase().includes('sleep'));
+                        const middle = dayTasks.filter(t => t !== wakeup && t !== sleep);
+                        const result: RoutineItem[] = [];
+                        if (wakeup) result.push(wakeup);
+                        const middleSlots = isSelected ? 2 : 1;
+                        result.push(...middle.slice(0, middleSlots));
+                        if (sleep && !result.includes(sleep)) {
+                            result.push(sleep);
+                        }
+                        return result;
+                    })();
+
                     return (
                         <Pressable
                             key={key}
                             style={[styles.dayHeaderCell, { flex: 1 }]}
                             onPress={() => handleSelectDate(date)}
                         >
-                            <View style={{ height: 16, justifyContent: 'center' }}>
+                            <View style={{ height: 18, justifyContent: 'center' }}>
                                 <Text style={[
                                     styles.dayLabel,
                                     isSelected && styles.dayLabelSelected,
-                                    isToday && !isSelected && { color: theme.colors.primary, opacity: 0.75 },
+                                    isToday && !isSelected && { color: theme.colors.primary },
                                 ]}>
                                     {DAY_LABELS[dayIndex]}
                                 </Text>
@@ -442,7 +479,7 @@ const TimelinePage = memo<{
                                 ]}>
                                     {isSelected ? (
                                         <LinearGradient
-                                            colors={[theme.colors.primary, `${theme.colors.primary}D9`]}
+                                            colors={[theme.colors.primary, `${theme.colors.primary}E6`]}
                                             style={styles.dateBadgeGradient}
                                             start={{ x: 0.2, y: 0 }}
                                             end={{ x: 0.8, y: 1 }}
@@ -460,17 +497,59 @@ const TimelinePage = memo<{
                                         </Text>
                                     )}
                                 </View>
-                                {isToday && !isSelected && (
-                                    <View style={styles.todayIndicatorDot} />
-                                )}
                             </View>
+
+                            {/* Overlapping task icon badges for this day (only when task modal is up) */}
+                            {dayBadges.length > 0 ? (
+                                <Animated.View
+                                    style={[
+                                        styles.taskBadgesRow,
+                                        {
+                                            opacity: badgesOpacity,
+                                            height: badgesHeight,
+                                            overflow: 'hidden',
+                                        },
+                                    ]}
+                                >
+                                    {dayBadges.map((task, bIdx) => {
+                                        const badgeColor = TASK_COLORS[task.imageKey ?? ''] ?? theme.colors.primary;
+                                        const iconName = ICON_MAP[task.imageKey ?? ''] ?? 'ellipse-outline';
+                                        return (
+                                            <View
+                                                key={`${task.id}-${bIdx}`}
+                                                style={[
+                                                    styles.taskBadgeDot,
+                                                    {
+                                                        backgroundColor: badgeColor,
+                                                        marginLeft: bIdx === 0 ? 0 : -3.5,
+                                                        zIndex: 10 + bIdx,
+                                                    },
+                                                ]}
+                                            >
+                                                <Ionicons name={iconName} size={7} color="#FFFFFF" />
+                                            </View>
+                                        );
+                                    })}
+                                </Animated.View>
+                            ) : (
+                                <Animated.View style={[styles.taskBadgesPlaceholder, { height: badgesHeight }]} />
+                            )}
                         </Pressable>
                     );
                 })}
+                {/* Right spacer for symmetry */}
+                <View style={{ width: TIME_AXIS_WIDTH }} />
             </View>
 
-            {/* Body row — time axis + columns */}
-            <View style={styles.bodyRow}>
+            {/* Vertically scrollable timeline body (hidden when task modal is up so it doesn't peek through rounded corners) */}
+            <Animated.View style={{ flex: 1, opacity: timelineOpacity }}>
+                <ScrollView
+                    style={{ flex: 1 }}
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ paddingBottom: 110 }}
+                >
+                {/* Body row — time axis + columns */}
+                <View style={styles.bodyRow}>
                 {/* ── Left time axis ── */}
                 <View style={[styles.timeAxis, { height: dynamicBodyHeight }]}>
                     {timeAxisPositions.map(tl => (
@@ -493,14 +572,14 @@ const TimelinePage = memo<{
                             position: 'absolute',
                             top: tl.topY,
                             left: TIME_AXIS_WIDTH,
-                            right: 8,
+                            right: TIME_AXIS_WIDTH,
                             height: StyleSheet.hairlineWidth,
                             backgroundColor: `${theme.colors.text}08`,
                         }}
                     />
                 ))}
 
-                {/* ── 3 day columns ── */}
+                {/* ── 7 day columns (Week timeline) ── */}
                 {pageDates.map(date => {
                     const key = formatDateKey(date);
                     const isSelected = key === selectedKey;
@@ -642,19 +721,11 @@ const TimelinePage = memo<{
                                 });
 
                                 // 4. Build SEGMENTED CONNECTOR LINES between elements
+                                // Line strictly starts from the first pill and ends at the last pill on that day.
+                                // Never extends above the first pill, and never extends below the last pill.
                                 const spineSegments: { key: string; top: number; height: number }[] = [];
-                                if (elements.length === 0) {
-                                    spineSegments.push({ key: 'spine-full', top: 0, height: dynamicBodyHeight });
-                                } else {
-                                    // Top connector (from 0 to first element top)
-                                    if (elements[0].top > 0) {
-                                        spineSegments.push({
-                                            key: 'spine-top',
-                                            top: 0,
-                                            height: elements[0].top,
-                                        });
-                                    }
-                                    // Connectors between adjacent elements
+                                if (elements.length >= 2) {
+                                    // Connectors between adjacent elements only
                                     for (let k = 0; k < elements.length - 1; k++) {
                                         const segTop = elements[k].bottom;
                                         const segHeight = elements[k + 1].top - segTop;
@@ -665,15 +736,6 @@ const TimelinePage = memo<{
                                                 height: segHeight,
                                             });
                                         }
-                                    }
-                                    // Bottom connector (from last element bottom to dynamicBodyHeight)
-                                    const lastBottom = elements[elements.length - 1].bottom;
-                                    if (lastBottom < dynamicBodyHeight) {
-                                        spineSegments.push({
-                                            key: 'spine-bottom',
-                                            top: lastBottom,
-                                            height: dynamicBodyHeight - lastBottom,
-                                        });
                                     }
                                 }
 
@@ -889,8 +951,12 @@ const TimelinePage = memo<{
                         </View>
                     );
                 })}
+                {/* Right spacer for symmetry */}
+                <View style={{ width: TIME_AXIS_WIDTH }} />
             </View>
-        </ScrollView>
+                </ScrollView>
+            </Animated.View>
+        </View>
     );
 });
 
@@ -903,19 +969,25 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
     onPressPeek,
     scrollY,
     listAnim,
+    isTaskModalOpen = false,
     onPressTask,
 }) => {
     const { theme, isDarkMode } = useTheme();
     const { width: SCREEN_WIDTH } = useWindowDimensions();
     const styles = useMemo(() => getStyles(theme), [theme]);
 
-    const [viewMode, setViewMode] = React.useState<'3-day' | '7-day' | 'month'>('3-day');
-    const is7Day = viewMode === '7-day';
-    const COL_WIDTH = getColWidth(SCREEN_WIDTH, is7Day ? 7 : 3);
+    const [viewMode, setViewMode] = React.useState<'week' | 'month'>('week');
+    const [todayTrigger, setTodayTrigger] = React.useState(0);
+    const COL_WIDTH = getColWidth(SCREEN_WIDTH);
 
-    // Circle sizes — in 7-day view everything is smaller to fit
-    const circleSel = is7Day ? 24 : CIRCLE_SEL;
-    const circleOther = is7Day ? 18 : CIRCLE_OTHER;
+    React.useEffect(() => {
+        if (isTaskModalOpen && viewMode === 'month') {
+            setViewMode('week');
+        }
+    }, [isTaskModalOpen, viewMode]);
+
+    const circleSel = CIRCLE_SEL;
+    const circleOther = CIRCLE_OTHER;
 
     /* ── Collapse animations (header shrinks when list scrolls) ── */
     const headerCollapseAnim = useMemo(() => {
@@ -1027,17 +1099,12 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
 
         for (let i = -RANGE_PAGES; i <= RANGE_PAGES; i++) {
             const anchor = new Date(today);
-            if (is7Day) {
-                anchor.setDate(anchor.getDate() + (i * 7));
-                p.push(getWeekDates(anchor));
-            } else {
-                anchor.setDate(anchor.getDate() + (i * 3));
-                p.push(get3DayDates(anchor));
-            }
+            anchor.setDate(anchor.getDate() + (i * 7));
+            p.push(getWeekDates(anchor));
             if (i === 0) todayIdx = p.length - 1;
         }
         return { pages: p, initialPageIndex: todayIdx };
-    }, [today, is7Day]);
+    }, [today]);
 
     const initialTargetIndex = useMemo(() => {
         const dateStr = formatDateKey(selectedDate);
@@ -1073,7 +1140,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
         setTimeout(() => {
             flatListRef.current?.scrollToOffset({ offset: indexToScroll * SCREEN_WIDTH, animated: true });
         }, 50);
-    }, [viewMode, is7Day, selectedDate, SCREEN_WIDTH]);
+    }, [viewMode, selectedDate, SCREEN_WIDTH]);
 
     const renderPage = useCallback(({ item: pageDates }: { item: Date[] }) => (
         <TimelinePage
@@ -1083,7 +1150,6 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
             todayKey={todayKey}
             circleSel={circleSel}
             circleOther={circleOther}
-            is7Day={is7Day}
             COL_WIDTH={COL_WIDTH}
             screenWidth={SCREEN_WIDTH}
             theme={theme}
@@ -1094,8 +1160,9 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
             totalMinutes={totalMinutes}
             timeLabels={timeLabels}
             onPressTask={onPressTask}
+            listAnim={listAnim}
         />
-    ), [routineItems, selectedKey, todayKey, circleSel, circleOther, is7Day, COL_WIDTH, SCREEN_WIDTH, theme, isDarkMode, styles, handleSelectDate, startHour, totalMinutes, timeLabels, onPressTask]);
+    ), [routineItems, selectedKey, todayKey, circleSel, circleOther, COL_WIDTH, SCREEN_WIDTH, theme, isDarkMode, styles, handleSelectDate, startHour, totalMinutes, timeLabels, onPressTask, listAnim]);
 
     // Split header date into weekday + rest
     const dateHeader = selectedDate.toLocaleDateString('en-US', {
@@ -1110,8 +1177,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
         <View style={styles.outer} testID="day-timeline-view">
 
             {/* ── Header ── */}
-            <Animated.View style={[styles.header, { paddingTop: headerPaddingTop }]}>
-
+            <View style={styles.header}>
                 <Pressable
                     onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -1132,68 +1198,71 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                     onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         handleSelectDate(today);
+                        setTodayTrigger(Date.now());
                         if (viewMode !== 'month' && flatListRef.current) {
                             const dateStr = formatDateKey(today);
                             const targetIndex = pages.findIndex(page => page.some(d => formatDateKey(d) === dateStr));
                             const indexToScroll = targetIndex !== -1 ? targetIndex : initialPageIndex;
-                            flatListRef.current.scrollToIndex({ index: indexToScroll, animated: true });
+                            flatListRef.current.scrollToOffset({
+                                offset: indexToScroll * SCREEN_WIDTH,
+                                animated: true,
+                            });
                         }
                     }}
                 >
-                    <View style={styles.headerDateInner}>
-                        <Animated.Text style={[styles.headerWeekday, { fontSize: headerFontSize }]}>
-                            {weekdayStr}
-                        </Animated.Text>
-                        <Animated.Text style={[
-                            styles.headerRest,
-                            {
-                                fontSize: headerCollapseAnim.interpolate({
-                                    inputRange: [0, 1], outputRange: [13, 15],
-                                }),
-                            },
-                        ]}>
-                            {restStr}
-                        </Animated.Text>
-                    </View>
+                    {({ pressed }) => (
+                        <View style={[styles.headerDateRow, pressed && { opacity: 0.6 }]}>
+                            <Text style={styles.headerDayMonthText}>
+                                {selectedDate.getDate()} {selectedDate.toLocaleDateString('en-US', { month: 'long' })}{' '}
+                            </Text>
+                            <Text style={styles.headerYearText}>
+                                {selectedDate.getFullYear()}
+                            </Text>
+                            <Ionicons name="chevron-forward" size={18} color={theme.colors.primary} style={{ marginLeft: 2 }} />
+                        </View>
+                    )}
                 </Pressable>
 
-                {/* ── View-mode toggle (calendar-outline = 3-day, calendar = 7-day, grid = month) ── */}
-                <Animated.View style={{ opacity: collapseOpacity }}>
-                    <Pressable
-                        onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                            setViewMode(prev => {
-                                if (prev === '3-day') return '7-day';
-                                if (prev === '7-day') return 'month';
-                                return '3-day';
-                            });
-                        }}
-                        style={styles.viewToggleBtn}
-                        testID="view-toggle-btn"
-                    >
-                        <Ionicons
-                            name={viewMode === '3-day' ? 'calendar' : viewMode === '7-day' ? 'grid' : 'calendar-outline'}
-                            size={22}
-                            color={theme.colors.primary}
-                        />
-                    </Pressable>
-                </Animated.View>
-            </Animated.View>
+                {/* ── View-mode toggle (calendar-outline = week, calendar = month) ── */}
+                <Pressable
+                    onPress={() => {
+                        if (isTaskModalOpen) return;
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setViewMode(prev => prev === 'week' ? 'month' : 'week');
+                    }}
+                    disabled={isTaskModalOpen}
+                    style={({ pressed }) => [
+                        styles.viewToggleBtn,
+                        isTaskModalOpen && { opacity: 0.35, borderColor: 'transparent' },
+                        pressed && !isTaskModalOpen && { opacity: 0.6, transform: [{ scale: 0.94 }] },
+                    ]}
+                    testID="view-toggle-btn"
+                    accessibilityLabel={viewMode === 'week' ? 'Switch to month calendar' : 'Switch to week timeline'}
+                    accessibilityState={{ disabled: isTaskModalOpen }}
+                >
+                    <Ionicons
+                        name={viewMode === 'week' ? 'calendar-outline' : 'calendar'}
+                        size={20}
+                        color={isTaskModalOpen ? theme.colors.textSecondary : theme.colors.primary}
+                    />
+                </Pressable>
+            </View>
 
             {viewMode === 'month' ? (
                 <MonthCalendarView
                     currentDate={selectedDate || today}
                     routineItems={routineItems}
+                    todayTrigger={todayTrigger}
                     onSelectDate={(date) => {
                         handleSelectDate(date);
-                        setViewMode('3-day');
+                        setViewMode('week');
                     }}
                     theme={theme}
                 />
             ) : (
                 <>
                     {/* ── Timeline (virtualized FlatList for multi-year calendar) ── */}
-                    <Animated.View style={[styles.timelineWrapper, { opacity: collapseOpacity }]}>
+                    <View style={styles.timelineWrapper}>
                         <FlatList
                             ref={flatListRef}
                             data={pages}
@@ -1224,79 +1293,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                                 scrollEventThrottle: 16,
                             } : {})}
                         />
-                    </Animated.View>
-
-                    {/* ── Peek card ── */}
-                    {firstItem && (() => {
-                        const firstItemColor = TASK_COLORS[firstItem.imageKey ?? ''] ?? theme.colors.primary;
-                        return (
-                            <Animated.View style={[styles.peekWrapper, { opacity: collapseOpacity }]}>
-                                <View style={styles.peekDivider} />
-                                <Pressable
-                                    style={({ pressed }) => [
-                                        styles.peekCard,
-                                        pressed && { opacity: 0.88, transform: [{ scale: 0.98 }] },
-                                    ]}
-                                    onPress={() => {
-                                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                        if (onPressPeek) onPressPeek();
-                                    }}
-                                    testID="peek-card"
-                                >
-                                    <BlurView
-                                        intensity={Platform.OS === 'ios' ? 70 : 100}
-                                        tint={isDarkMode ? 'dark' : 'light'}
-                                        style={StyleSheet.absoluteFill}
-                                        pointerEvents="none"
-                                    />
-                                    <View style={[styles.peekAccentBar, { backgroundColor: firstItemColor }]} />
-
-                                    <View
-                                        style={[
-                                            styles.peekCircle,
-                                            {
-                                                backgroundColor: `${firstItemColor}24`,
-                                                borderColor: `${firstItemColor}50`,
-                                            },
-                                        ]}
-                                    >
-                                        <Ionicons
-                                            name={ICON_MAP[firstItem.imageKey ?? ''] ?? 'ellipse-outline'}
-                                            size={20}
-                                            color={firstItemColor}
-                                        />
-                                    </View>
-
-                                    <View style={styles.peekText}>
-                                        <View style={styles.peekTimeRow}>
-                                            <Ionicons
-                                                name="time-outline"
-                                                size={11}
-                                                color={theme.colors.textSecondary}
-                                                style={{ marginRight: 3 }}
-                                            />
-                                            <Text style={styles.peekTime}>{firstItem.time}</Text>
-                                            <View style={[styles.peekBadge, { backgroundColor: `${firstItemColor}15` }]}>
-                                                {firstItem.daysOfWeek?.length ? (
-                                                    <Ionicons name="repeat" size={10} color={firstItemColor} style={{ marginRight: 3 }} />
-                                                ) : null}
-                                                <Text style={[styles.peekBadgeText, { color: firstItemColor }]}>
-                                                    {firstItem.daysOfWeek?.length ? "Daily" : "Once"}
-                                                </Text>
-                                            </View>
-                                        </View>
-                                        <Text style={styles.peekTitle} numberOfLines={1} testID="peek-title">
-                                            {firstItem.task}
-                                        </Text>
-                                    </View>
-
-                                    <View style={styles.peekChevronCircle}>
-                                        <Ionicons name="chevron-up" size={16} color={theme.colors.textSecondary} />
-                                    </View>
-                                </Pressable>
-                            </Animated.View>
-                        );
-                    })()}
+                    </View>
                 </>
             )}
         </View>
@@ -1317,7 +1314,7 @@ const getStyles = (theme: Theme) =>
             flexDirection: 'row',
             alignItems: 'center',
             paddingHorizontal: 20,
-            height: 68,
+            height: 56,
             backgroundColor: theme.colors.background,
             zIndex: 100,
         },
@@ -1340,6 +1337,22 @@ const getStyles = (theme: Theme) =>
             alignItems: 'center',
             justifyContent: 'flex-start',
             paddingLeft: 4,
+        },
+        headerDateRow: {
+            flexDirection: 'row',
+            alignItems: 'center',
+        },
+        headerDayMonthText: {
+            fontSize: 22,
+            fontFamily: theme.fonts.bold,
+            color: theme.colors.text,
+            letterSpacing: -0.4,
+        },
+        headerYearText: {
+            fontSize: 22,
+            fontFamily: theme.fonts.bold,
+            color: theme.colors.primary,
+            letterSpacing: -0.4,
         },
         headerDateInner: {
             alignItems: 'flex-start',
@@ -1388,7 +1401,7 @@ const getStyles = (theme: Theme) =>
             flexDirection: 'row',
             alignItems: 'center',
             paddingRight: 0,
-            paddingBottom: 10,
+            paddingBottom: 4,
             paddingTop: 4,
         },
         dayHeaderCell: {
@@ -1396,49 +1409,46 @@ const getStyles = (theme: Theme) =>
             gap: 3,
         },
         dayLabel: {
-            fontSize: 10.5,
-            fontFamily: theme.fonts.bold,
+            fontSize: 13,
+            fontFamily: theme.fonts.medium,
             color: theme.colors.textSecondary,
-            textTransform: 'uppercase',
-            letterSpacing: 0.8,
-            opacity: 0.45,
+            letterSpacing: -0.2,
         },
         dayLabelSelected: {
-            color: theme.colors.primary,
-            opacity: 1,
-            letterSpacing: 1.2,
+            color: theme.colors.textSecondary,
         },
         dateBadgeWrapper: {
             alignItems: 'center',
             justifyContent: 'center',
-            minHeight: 50,
+            minHeight: 38,
         },
         dateBadge: {
-            width: 38,
-            height: 38,
-            borderRadius: 19,
+            width: 34,
+            height: 34,
+            borderRadius: 17,
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor: 'transparent',
         },
         dateBadgeSelected: {
-            width: 46,
-            height: 46,
-            borderRadius: 23,
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            backgroundColor: theme.colors.primary,
             ...Platform.select({
                 ios: {
                     shadowColor: theme.colors.primary,
-                    shadowOffset: { width: 0, height: 3 },
+                    shadowOffset: { width: 0, height: 2 },
                     shadowOpacity: 0.35,
-                    shadowRadius: 6,
+                    shadowRadius: 5,
                 },
-                android: { elevation: 4 },
+                android: { elevation: 3 },
             }),
         },
         dateBadgeGradient: {
-            width: 46,
-            height: 46,
-            borderRadius: 23,
+            width: 36,
+            height: 36,
+            borderRadius: 18,
             alignItems: 'center',
             justifyContent: 'center',
         },
@@ -1448,27 +1458,44 @@ const getStyles = (theme: Theme) =>
             backgroundColor: `${theme.colors.primary}10`,
         },
         dateNum: {
-            fontSize: 14,
+            fontSize: 18,
             fontFamily: theme.fonts.bold,
             color: theme.colors.text,
-            opacity: 0.7,
+            letterSpacing: -0.2,
         },
         dateNumToday: {
             color: theme.colors.primary,
-            opacity: 1,
         },
         dateNumSelected: {
             fontSize: 18,
             fontFamily: theme.fonts.bold,
             color: '#FFFFFF',
-            letterSpacing: -0.3,
+            letterSpacing: -0.2,
+        },
+        taskBadgesRow: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginTop: 3,
+        },
+        taskBadgesPlaceholder: {
+            marginTop: 3,
+        },
+        taskBadgeDot: {
+            width: 13,
+            height: 13,
+            borderRadius: 6.5,
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderWidth: 1,
+            borderColor: theme.colors.background,
         },
         todayIndicatorDot: {
             width: 4,
             height: 4,
             borderRadius: 2,
             backgroundColor: theme.colors.primary,
-            marginTop: 3,
+            marginTop: 2,
         },
 
         /* Body row = time axis + columns */

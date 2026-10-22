@@ -22,16 +22,16 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { DayTimelineView } from "../components/dashboard/DayTimelineView";
+import { DayTimelineView, TASK_COLORS } from "../components/dashboard/DayTimelineView";
 import TaskForm from "../components/dashboard/TaskForm";
 import TaskModal from "../components/dashboard/TaskModal";
 import { TimelineEventCard, SkeletonTimelineEventCard } from "../components/dashboard/TimelineEventCard";
 import { Theme } from "../styles/shared";
 import { useTheme } from "../context/ThemeContext";
 import { scheduleRoutineNotifications } from "../utils/notifications";
-import { FormData, RoutineItem, getDateString, sortRoutineItems, timeToMinutes, getRoutineItemsForDate, addMinutesToTime, guessRoutineIconKey, isWakeupOrSleep } from "../utils/utils";
+import { FormData, RoutineItem, getDateString, sortRoutineItems, timeToMinutes, getRoutineItemsForDate, addMinutesToTime, guessRoutineIconKey, isWakeupOrSleep, ICON_MAP } from "../utils/utils";
 
 /* -------------------- Assets & Constants -------------------- */
 
@@ -186,6 +186,9 @@ const ConfirmModal = ({ visible, title, message, confirmText, onCancel, onConfir
 export default function RoutineScreen() {
   const { theme, isDarkMode } = useTheme();
   const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const bottomOffset = Math.max(16, insets.bottom + 8);
+  const tabBarWidth = Math.min(SCREEN_WIDTH * 0.9, 440);
   const styles = useMemo(() => getStyles(theme), [theme]);
 
   const [allRoutines, setAllRoutines] = useState<RoutineItem[]>([]);
@@ -239,6 +242,42 @@ export default function RoutineScreen() {
   const routineItems = useMemo(() => {
     return getRoutineItemsForDate(allRoutines, selectedDate);
   }, [allRoutines, selectedDate]);
+
+  const sortedDayTasks = useMemo(() => {
+    return [...routineItems].sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
+  }, [routineItems]);
+
+  const nextTask = useMemo(() => {
+    if (sortedDayTasks.length === 0) return null;
+    const now = new Date();
+    const currentMins = now.getHours() * 60 + now.getMinutes();
+    const isToday = getDateString(selectedDate) === getDateString(now);
+    if (isToday) {
+      const upcoming = sortedDayTasks.find(t => timeToMinutes(t.time) >= currentMins && !t.completed);
+      if (upcoming) return upcoming;
+    }
+    return sortedDayTasks.find(t => !t.completed) || sortedDayTasks[0];
+  }, [sortedDayTasks, selectedDate]);
+
+  const nextTaskBadgeColor = nextTask?.imageKey
+    ? (TASK_COLORS[nextTask.imageKey] ?? theme.colors.primary)
+    : theme.colors.primary;
+
+  const nextTaskIcon = nextTask?.imageKey
+    ? (ICON_MAP[nextTask.imageKey] ?? "alarm-outline")
+    : (sortedDayTasks.length > 0 ? "checkmark-circle-outline" : "calendar-outline");
+
+  const collapsedSubtitle = useMemo(() => {
+    if (sortedDayTasks.length === 0) return "No tasks scheduled for today";
+    const completedCount = sortedDayTasks.filter(t => t.completed).length;
+    if (completedCount === sortedDayTasks.length) {
+      return "All tasks completed";
+    }
+    if (nextTask) {
+      return `Next: ${nextTask.time} • ${nextTask.task}`;
+    }
+    return `${completedCount} of ${sortedDayTasks.length} tasks completed`;
+  }, [sortedDayTasks, nextTask]);
 
   /* -------------------- Timeline panel state -------------------- */
   const [panelOpen, setPanelOpen] = useState(false);
@@ -425,9 +464,36 @@ export default function RoutineScreen() {
         })
   ).current;
 
+  const collapsedPanResponder = useRef(
+    Platform.OS === 'web'
+      ? { panHandlers: {} }
+      : PanResponder.create({
+          onStartShouldSetPanResponder: () => false,
+          onMoveShouldSetPanResponder: (_, g) => g.dy < -8,
+          onPanResponderRelease: (_, g) => {
+            if (g.dy < -20 || g.vy < -0.5) {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              openList();
+            }
+          },
+        })
+  ).current;
+
   const listTranslateY = listAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [SCREEN_HEIGHT, 0],
+    outputRange: [SCREEN_HEIGHT - 142, 0],
+  });
+
+  const collapsedPillOpacity = listAnim.interpolate({
+    inputRange: [0, 0.25],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+
+  const collapsedPillTranslateY = listAnim.interpolate({
+    inputRange: [0, 0.25],
+    outputRange: [0, 16],
+    extrapolate: 'clamp',
   });
 
   const collapseTranslateY = scrollY.interpolate({
@@ -1003,9 +1069,121 @@ export default function RoutineScreen() {
           onPressPeek={toggleList}
           scrollY={scrollY}
           listAnim={listAnim}
+          isTaskModalOpen={listOpen || modalVisible || formVisible}
           onPressTask={(item) => openModal(item, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)}
         />
       </View>
+
+      {/* ---- Collapsed Task Modal (Styled Identically to Tab Bar Container) ---- */}
+      <Animated.View
+        style={[
+          styles.tabBarContainer,
+          {
+            bottom: bottomOffset,
+            opacity: collapsedPillOpacity,
+            transform: [{ translateY: collapsedPillTranslateY }],
+          },
+        ]}
+        pointerEvents={listOpen ? "none" : "auto"}
+      >
+        <Pressable
+          style={({ pressed }) => [
+            styles.tabBar,
+            { width: tabBarWidth },
+            pressed && { opacity: 0.85 },
+          ]}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            openList();
+          }}
+          {...collapsedPanResponder.panHandlers}
+        >
+          {/* Blur background - fallback to solid bg on web */}
+          {Platform.OS === 'web' ? (
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                { backgroundColor: theme.colors.background, opacity: 0.92 }
+              ]}
+              pointerEvents="none"
+            />
+          ) : (
+            <BlurView
+              intensity={100}
+              tint={theme.colors.background === '#FFFFFF' || theme.colors.background.startsWith('#F') ? 'systemMaterialLight' : 'systemMaterialDark'}
+              style={StyleSheet.absoluteFill}
+              pointerEvents="none"
+            />
+          )}
+          {/* Glass tint overlay */}
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.glass.cardBg }]} />
+
+          {/* Collapsed Pill Content */}
+          <View style={styles.collapsedPillContent}>
+            <View
+              style={[
+                styles.collapsedIconCircle,
+                {
+                  backgroundColor: `${nextTaskBadgeColor}22`,
+                  borderColor: `${nextTaskBadgeColor}45`,
+                },
+              ]}
+            >
+              <Ionicons
+                name={nextTaskIcon as any}
+                size={20}
+                color={nextTaskBadgeColor}
+              />
+            </View>
+
+            <View style={styles.collapsedTextWrapper}>
+              <View style={styles.collapsedTimeRow}>
+                <Ionicons
+                  name="time-outline"
+                  size={12}
+                  color={theme.colors.textSecondary}
+                  style={{ marginRight: 3 }}
+                />
+                <Text style={styles.collapsedTime}>
+                  {nextTask ? nextTask.time : "Today"}
+                </Text>
+                {nextTask && (
+                  <View
+                    style={[
+                      styles.collapsedBadge,
+                      { backgroundColor: `${nextTaskBadgeColor}18` },
+                    ]}
+                  >
+                    {nextTask.daysOfWeek?.length ? (
+                      <Ionicons
+                        name="repeat"
+                        size={10}
+                        color={nextTaskBadgeColor}
+                        style={{ marginRight: 3 }}
+                      />
+                    ) : null}
+                    <Text
+                      style={[
+                        styles.collapsedBadgeText,
+                        { color: nextTaskBadgeColor },
+                      ]}
+                    >
+                      {nextTask.daysOfWeek?.length ? "Daily" : "Once"}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.collapsedTitle} numberOfLines={1}>
+                {nextTask ? nextTask.task : "Daily Routine"}
+              </Text>
+            </View>
+
+            <View style={styles.collapsedChevronCircle}>
+              <Ionicons name="chevron-up" size={18} color={theme.colors.textSecondary} />
+            </View>
+          </View>
+        </Pressable>
+      </Animated.View>
 
       {/* ---- Detail Task List (Pager) ---- */}
       <Animated.View
@@ -1235,7 +1413,7 @@ const getStyles = (theme: Theme) =>
 
     listOverlay: {
       ...StyleSheet.absoluteFillObject,
-      top: 150, // Lowered for better accessibility and to reveal more timeline
+      top: 142, // Aligned directly beneath pinned week calendar header
       backgroundColor: theme.colors.card,
       borderTopLeftRadius: 50,
       borderTopRightRadius: 50,
@@ -1274,6 +1452,91 @@ const getStyles = (theme: Theme) =>
       fontSize: 16,
       fontFamily: theme.fonts.bold,
       color: theme.colors.text,
+    },
+
+    /* ── Collapsed Task Modal (Styled Identically to Tab Bar Container) ── */
+    tabBarContainer: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      height: 68,
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 50,
+    },
+    tabBar: {
+      flexDirection: 'row',
+      height: 68,
+      borderRadius: 99,
+      borderWidth: 1,
+      borderColor: theme.glass.borderColor,
+      overflow: 'hidden',
+      elevation: 6,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.08,
+      shadowRadius: 16,
+      alignItems: 'center',
+      paddingHorizontal: 16,
+    },
+    collapsedPillContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      width: '100%',
+    },
+    collapsedIconCircle: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1.5,
+      marginRight: 12,
+    },
+    collapsedTextWrapper: {
+      flex: 1,
+      justifyContent: 'center',
+    },
+    collapsedTimeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 3,
+    },
+    collapsedTime: {
+      fontSize: 11.5,
+      fontFamily: theme.fonts.medium,
+      color: theme.colors.textSecondary,
+      letterSpacing: 0.2,
+    },
+    collapsedBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 6,
+      paddingVertical: 1.5,
+      borderRadius: 6,
+      marginLeft: 5,
+    },
+    collapsedBadgeText: {
+      fontSize: 10,
+      fontFamily: theme.fonts.bold,
+      letterSpacing: 0.2,
+    },
+    collapsedTitle: {
+      fontSize: 16,
+      fontFamily: theme.fonts.bold,
+      color: theme.colors.text,
+      letterSpacing: -0.2,
+    },
+    collapsedChevronCircle: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      backgroundColor: `${theme.colors.text}08`,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginLeft: 8,
+      borderWidth: 1,
+      borderColor: `${theme.colors.text}10`,
     },
 
     /* Pager - these styles use initial dimensions but are overridden by inline styles in render */

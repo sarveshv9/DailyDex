@@ -1,21 +1,23 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
+    Platform,
     Pressable,
     ScrollView,
     StyleSheet,
     Text,
-    View
+    View,
 } from 'react-native';
 import * as Haptics from '../../utils/haptics';
 import { Theme } from '../../styles/shared';
-import { RoutineItem } from '../../utils/utils';
+import { RoutineItem, getRoutineItemsForDate, timeToMinutes } from '../../utils/utils';
 
 interface Props {
     currentDate: Date;
     routineItems: RoutineItem[];
     onSelectDate: (date: Date) => void;
     theme: Theme;
+    todayTrigger?: number;
 }
 
 const TASK_COLORS: Record<string, string> = {
@@ -52,7 +54,7 @@ const fmtTime = (time?: string): string => {
     const parts = time.split(':');
     const h = parseInt(parts[0], 10);
     const m = parseInt(parts[1] ?? '0', 10);
-    if (isNaN(h)) return time; // return raw if unparseable
+    if (isNaN(h)) return time;
     const suffix = h < 12 ? 'am' : 'pm';
     const hour = h % 12 || 12;
     const mins = isNaN(m) ? '00' : String(m).padStart(2, '0');
@@ -76,7 +78,15 @@ function DayDetail({ date, items, theme }: DayDetailProps) {
     const isToday = fmtDateKey(date) === fmtDateKey(new Date());
 
     return (
-        <View style={[detail.container, { backgroundColor: theme.colors.card }]}>
+        <View
+            style={[
+                detail.container,
+                {
+                    backgroundColor: theme.colors.card,
+                    borderColor: theme.glass.borderColor,
+                },
+            ]}
+        >
             {/* Header */}
             <View style={detail.header}>
                 <View>
@@ -105,7 +115,7 @@ function DayDetail({ date, items, theme }: DayDetailProps) {
             {/* Task list */}
             {items.length === 0 ? (
                 <View style={detail.emptyState}>
-                    <Ionicons name="calendar-outline" size={28} color={theme.colors.textSecondary} style={{ opacity: 0.4 }} />
+                    <Ionicons name="calendar-outline" size={26} color={theme.colors.textSecondary} style={{ opacity: 0.4 }} />
                     <Text style={[detail.emptyText, { color: theme.colors.textSecondary, fontFamily: theme.fonts.medium }]}>
                         No tasks scheduled
                     </Text>
@@ -116,7 +126,7 @@ function DayDetail({ date, items, theme }: DayDetailProps) {
                         const color = getTaskColor(item, i);
                         const label = item.task ?? item.imageKey?.replace(/_/g, ' ') ?? '';
                         return (
-                            <View key={i} style={detail.taskRow}>
+                            <View key={item.id ?? i} style={detail.taskRow}>
                                 <View style={[detail.taskDot, { backgroundColor: color }]} />
                                 <View style={detail.taskInfo}>
                                     <Text style={[detail.taskName, { color: theme.colors.text, fontFamily: theme.fonts.medium }]}>
@@ -124,10 +134,10 @@ function DayDetail({ date, items, theme }: DayDetailProps) {
                                     </Text>
                                     <Text style={[detail.taskMeta, { color: theme.colors.textSecondary, fontFamily: theme.fonts.regular }]}>
                                         {fmtTime(item.time)}
-                                        {item.duration ? ` · ${item.duration}min` : ''}
+                                        {item.duration ? ` · ${item.duration}m` : ''}
                                     </Text>
                                 </View>
-                                <View style={[detail.taskPill, { backgroundColor: color + '22' }]}>
+                                <View style={[detail.taskPill, { backgroundColor: `${color}18`, borderColor: `${color}30` }]}>
                                     <Text style={[detail.taskPillText, { color, fontFamily: theme.fonts.bold }]}>
                                         {fmtTime(item.time)}
                                     </Text>
@@ -143,13 +153,30 @@ function DayDetail({ date, items, theme }: DayDetailProps) {
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
-export function MonthCalendarView({ currentDate, routineItems, onSelectDate, theme }: Props) {
+export function MonthCalendarView({ currentDate, routineItems, onSelectDate, theme, todayTrigger }: Props) {
     const [year, setYear] = useState(currentDate.getFullYear());
     const [month, setMonth] = useState(currentDate.getMonth());
     const [selectedDate, setSelectedDate] = useState<Date>(currentDate);
 
+    useEffect(() => {
+        if (!todayTrigger) return;
+        const target = new Date();
+        setYear(target.getFullYear());
+        setMonth(target.getMonth());
+        setSelectedDate(target);
+    }, [todayTrigger]);
+
+    useEffect(() => {
+        setYear(currentDate.getFullYear());
+        setMonth(currentDate.getMonth());
+        setSelectedDate(currentDate);
+    }, [currentDate]);
+
     const todayStr = fmtDateKey(new Date());
     const selectedStr = fmtDateKey(selectedDate);
+
+    const now = new Date();
+    const isCurrentMonth = month === now.getMonth() && year === now.getFullYear();
 
     const prevMonth = () => {
         if (month === 0) { setYear(y => y - 1); setMonth(11); }
@@ -167,23 +194,25 @@ export function MonthCalendarView({ currentDate, routineItems, onSelectDate, the
         const cells: (Date | null)[] = [];
         for (let i = 0; i < firstDow; i++) cells.push(null);
         for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d));
-        // Pad to complete the last row
         while (cells.length % 7 !== 0) cells.push(null);
         return cells;
     }, [year, month]);
 
+    // Data-accurate routine item retrieval matching timeline
     const getDayItems = (date: Date) => {
-        const weekday = date.getDay();
-        const dateStr = fmtDateKey(date);
-        return routineItems
-            .filter(item => item.daysOfWeek?.includes(weekday) || item.date === dateStr)
-            .sort((a, b) => a.time.localeCompare(b.time));
+        return getRoutineItemsForDate(routineItems, date)
+            .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
     };
 
     const selectedItems = useMemo(() => getDayItems(selectedDate), [selectedDate, routineItems]);
 
-    // Tapping a grid cell only highlights it; tapping the detail card fires onSelectDate
+    // Tapping a grid cell selects it; tapping the already selected date confirms and navigates
     const handleCellPress = (date: Date) => {
+        const dateStr = fmtDateKey(date);
+        if (dateStr === selectedStr) {
+            handleDetailCardPress();
+            return;
+        }
         Haptics.selectionAsync();
         setSelectedDate(date);
     };
@@ -207,7 +236,7 @@ export function MonthCalendarView({ currentDate, routineItems, onSelectDate, the
             contentContainerStyle={{ paddingBottom: 120 }}
         >
             {/* ── Month Navigation ── */}
-            <View style={[nav.container]}>
+            <View style={nav.container}>
                 <Pressable
                     onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -244,13 +273,15 @@ export function MonthCalendarView({ currentDate, routineItems, onSelectDate, the
             <View style={[grid.headerRow, { paddingHorizontal: 16, marginBottom: 6 }]}>
                 {DAY_HEADERS.map((d, i) => (
                     <View key={i} style={grid.headerCell}>
-                        <Text style={[
-                            grid.headerText,
-                            {
-                                color: (i === 0 || i === 6) ? theme.colors.primary : theme.colors.textSecondary,
-                                fontFamily: theme.fonts.bold,
-                            },
-                        ]}>
+                        <Text
+                            style={[
+                                grid.headerText,
+                                {
+                                    color: (i === 0 || i === 6) ? theme.colors.primary : theme.colors.textSecondary,
+                                    fontFamily: theme.fonts.bold,
+                                },
+                            ]}
+                        >
                             {d}
                         </Text>
                     </View>
@@ -284,15 +315,17 @@ export function MonthCalendarView({ currentDate, routineItems, onSelectDate, the
                                     ]}
                                 >
                                     {/* Date Number */}
-                                    <Text style={[
-                                        grid.cellNum,
-                                        { fontFamily: theme.fonts.medium },
-                                        isSelected
-                                            ? [grid.cellNumSelected, { fontFamily: theme.fonts.bold }]
-                                            : isToday
-                                                ? [grid.cellNumToday, { color: theme.colors.primary, fontFamily: theme.fonts.bold }]
-                                                : { color: isWeekend ? theme.colors.textSecondary : theme.colors.text },
-                                    ]}>
+                                    <Text
+                                        style={[
+                                            grid.cellNum,
+                                            { fontFamily: theme.fonts.medium },
+                                            isSelected
+                                                ? [grid.cellNumSelected, { fontFamily: theme.fonts.bold }]
+                                                : isToday
+                                                    ? [grid.cellNumToday, { color: theme.colors.primary, fontFamily: theme.fonts.bold }]
+                                                    : { color: isWeekend ? theme.colors.textSecondary : theme.colors.text },
+                                        ]}
+                                    >
                                         {date.getDate()}
                                     </Text>
 
@@ -304,12 +337,20 @@ export function MonthCalendarView({ currentDate, routineItems, onSelectDate, the
                                                     key={di}
                                                     style={[
                                                         grid.dot,
-                                                        { backgroundColor: isSelected ? 'rgba(255,255,255,0.8)' : color },
+                                                        { backgroundColor: isSelected ? '#FFFFFF' : color },
                                                     ]}
                                                 />
                                             ))}
                                             {taskCount > 3 && (
-                                                <Text style={[grid.dotMore, { color: isSelected ? 'rgba(255,255,255,0.7)' : theme.colors.textSecondary, fontFamily: theme.fonts.bold }]}>
+                                                <Text
+                                                    style={[
+                                                        grid.dotMore,
+                                                        {
+                                                            color: isSelected ? '#FFFFFF' : theme.colors.textSecondary,
+                                                            fontFamily: theme.fonts.bold,
+                                                        },
+                                                    ]}
+                                                >
                                                     +{taskCount - 3}
                                                 </Text>
                                             )}
@@ -328,7 +369,7 @@ export function MonthCalendarView({ currentDate, routineItems, onSelectDate, the
             {/* ── Selected Day Detail ── tap the card to confirm selection ── */}
             <Pressable
                 onPress={handleDetailCardPress}
-                style={({ pressed }) => ({ paddingHorizontal: 16, marginTop: 16, opacity: pressed ? 0.85 : 1 })}
+                style={({ pressed }) => ({ paddingHorizontal: 16, marginTop: 16, opacity: pressed ? 0.9 : 1 })}
             >
                 <DayDetail
                     date={selectedDate}
@@ -357,25 +398,18 @@ const nav = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    chevron: {
-        fontSize: 32,
-        fontWeight: '300',
-        lineHeight: 36,
-    },
     center: {
         alignItems: 'center',
     },
     monthName: {
-        fontSize: 24,
-        fontWeight: '700',
-        letterSpacing: -0.5,
+        fontSize: 22,
+        letterSpacing: -0.4,
     },
     yearLabel: {
         fontSize: 13,
-        fontWeight: '500',
-        letterSpacing: 1,
-        marginTop: 1,
-        opacity: 0.6,
+        letterSpacing: 0.5,
+        marginTop: 2,
+        opacity: 0.65,
     },
 });
 
@@ -390,7 +424,6 @@ const grid = StyleSheet.create({
     },
     headerText: {
         fontSize: 12,
-        fontWeight: '600',
         letterSpacing: 0.5,
     },
     gridContainer: {
@@ -414,34 +447,28 @@ const grid = StyleSheet.create({
     },
     cellToday: {
         borderWidth: 1.5,
-        borderColor: '#FF453A',
         borderRadius: 10,
     },
     cellNum: {
         fontSize: 15,
-        fontWeight: '500',
         letterSpacing: -0.3,
     },
     cellNumSelected: {
-        color: '#fff',
-        fontWeight: '700',
+        color: '#FFFFFF',
     },
-    cellNumToday: {
-        fontWeight: '700',
-    },
+    cellNumToday: {},
     dotsRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 2,
+        gap: 2.5,
     },
     dot: {
         width: 5,
         height: 5,
-        borderRadius: 3,
+        borderRadius: 2.5,
     },
     dotMore: {
-        fontSize: 8,
-        fontWeight: '600',
+        fontSize: 8.5,
         marginLeft: 1,
     },
 });
@@ -454,20 +481,29 @@ const sep = StyleSheet.create({
 
 const detail = StyleSheet.create({
     container: {
-        borderRadius: 28,
-        padding: 24,
+        borderRadius: 24,
+        padding: 20,
         overflow: 'hidden',
+        borderWidth: 1,
+        ...Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.08,
+                shadowRadius: 16,
+            },
+            android: { elevation: 3 },
+        }),
     },
     header: {
         flexDirection: 'row',
         alignItems: 'flex-start',
         justifyContent: 'space-between',
-        marginBottom: 16,
+        marginBottom: 14,
     },
     dayName: {
         fontSize: 11,
-        fontWeight: '600',
-        letterSpacing: 1.5,
+        letterSpacing: 1.3,
         marginBottom: 2,
     },
     dateLine: {
@@ -476,47 +512,40 @@ const detail = StyleSheet.create({
         gap: 6,
     },
     dateNum: {
-        fontSize: 36,
-        fontWeight: '700',
-        letterSpacing: -1,
-        lineHeight: 40,
+        fontSize: 34,
+        letterSpacing: -0.8,
+        lineHeight: 38,
     },
     monthYear: {
-        fontSize: 14,
-        fontWeight: '600',
-        letterSpacing: 1,
+        fontSize: 13.5,
+        letterSpacing: 0.5,
     },
     badge: {
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderRadius: 16,
-        marginTop: 4,
+        paddingHorizontal: 9,
+        paddingVertical: 4.5,
+        borderRadius: 12,
+        marginTop: 2,
     },
     badgeText: {
-        fontSize: 12,
-        fontWeight: '600',
-        letterSpacing: 0.3,
+        fontSize: 11.5,
+        letterSpacing: 0.2,
     },
     divider: {
         height: 1,
-        marginBottom: 16,
+        marginBottom: 14,
     },
     emptyState: {
         alignItems: 'center',
-        paddingVertical: 20,
+        paddingVertical: 18,
         gap: 8,
     },
-    emptyIcon: {
-        fontSize: 22,
-        opacity: 0.25,
-    },
     emptyText: {
-        fontSize: 14,
-        opacity: 0.5,
-        letterSpacing: 0.2,
+        fontSize: 13.5,
+        opacity: 0.6,
+        letterSpacing: 0.1,
     },
     taskList: {
-        gap: 12,
+        gap: 10,
     },
     taskRow: {
         flexDirection: 'row',
@@ -524,20 +553,18 @@ const detail = StyleSheet.create({
         gap: 12,
     },
     taskDot: {
-        width: 10,
-        height: 10,
-        borderRadius: 5,
+        width: 9,
+        height: 9,
+        borderRadius: 4.5,
         flexShrink: 0,
     },
     taskInfo: {
         flex: 1,
-        gap: 1,
+        gap: 1.5,
     },
     taskName: {
         fontSize: 14,
-        fontWeight: '600',
-        textTransform: 'capitalize',
-        letterSpacing: 0.1,
+        letterSpacing: -0.1,
     },
     taskMeta: {
         fontSize: 12,
@@ -545,58 +572,12 @@ const detail = StyleSheet.create({
     },
     taskPill: {
         paddingHorizontal: 8,
-        paddingVertical: 3,
+        paddingVertical: 2.5,
         borderRadius: 8,
+        borderWidth: 1,
     },
     taskPillText: {
-        fontSize: 11,
-        fontWeight: '600',
-        letterSpacing: 0.2,
-    },
-});
-
-const detailCard = StyleSheet.create({
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 18,
-        paddingVertical: 14,
-        borderRadius: 18,
-    },
-    headerOpen: {
-        borderBottomLeftRadius: 0,
-        borderBottomRightRadius: 0,
-    },
-    headerLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-    },
-    colorBar: {
-        width: 3,
-        height: 36,
-        borderRadius: 2,
-    },
-    headerDay: {
-        fontSize: 10,
-        fontWeight: '600',
-        letterSpacing: 1.5,
-        marginBottom: 2,
-    },
-    headerDate: {
-        fontSize: 16,
-        fontWeight: '700',
-        letterSpacing: -0.3,
-    },
-    chevron: {
-        fontSize: 16,
-        opacity: 0.5,
-    },
-    body: {
-        paddingHorizontal: 18,
-        paddingBottom: 18,
-        borderBottomLeftRadius: 18,
-        borderBottomRightRadius: 18,
+        fontSize: 10.5,
+        letterSpacing: 0.1,
     },
 });
