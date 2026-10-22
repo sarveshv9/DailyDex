@@ -8,6 +8,8 @@ import {
     Animated,
     BackHandler,
     Dimensions,
+    KeyboardAvoidingView,
+    Platform,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -158,7 +160,7 @@ const TEMPLATES: ActivityTemplate[] = [
     { task: "Sleep", description: "Rest deeply and recharge.", imageKey: "sleep", defaultTime: "10:00 PM", category: "evening" },
 ];
 
-type DraftItem = Omit<RoutineItem, "id" | "insertionOrder"> & { duration?: number };
+type DraftItem = Omit<RoutineItem, "id" | "insertionOrder"> & { id: string; duration?: number };
 
 // ─── Step 0: Welcome / Manifesto Screen ───────────────────────────────────────
 function StepWelcome({
@@ -196,7 +198,13 @@ function StepWelcome({
             <View style={[styles.stepHeader, { paddingBottom: 0 }]}>
                 <View style={styles.headerTop}>
                     <View style={{ flex: 1 }} />
-                    <Pressable onPress={onSkip} style={styles.skipBtn} hitSlop={10}>
+                    <Pressable
+                        onPress={onSkip}
+                        style={styles.skipBtn}
+                        hitSlop={10}
+                        accessibilityRole="button"
+                        accessibilityLabel="Skip setup and use defaults"
+                    >
                         <Text style={styles.skipText}>Skip All</Text>
                     </Pressable>
                 </View>
@@ -252,6 +260,8 @@ function StepWelcome({
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         onStart();
                     }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Begin interactive setup"
                 >
                     <Text style={styles.nextBtnText}>Begin Setup</Text>
                     <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
@@ -554,63 +564,75 @@ function StepPick({
                         onPress={() => setShowCustomModal(false)}
                     >
                         <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} />
-                        <View style={styles.customModalCard}>
-                            <Text style={styles.customModalTitle}>Create Custom Habit</Text>
-                            <TextInput
-                                style={styles.customModalInput}
-                                placeholder="Habit name (e.g., Cold Plunge)"
-                                placeholderTextColor={`${theme.colors.textSecondary}80`}
-                                value={customName}
-                                onChangeText={setCustomName}
-                                maxLength={28}
-                                autoFocus
-                            />
+                        <KeyboardAvoidingView
+                            behavior={Platform.OS === "ios" ? "padding" : undefined}
+                            style={{ width: "100%", alignItems: "center", justifyContent: "center" }}
+                        >
+                            <Pressable style={styles.customModalCard} onPress={(e) => e.stopPropagation()}>
+                                <Text style={styles.customModalTitle}>Create Custom Habit</Text>
+                                <TextInput
+                                    style={styles.customModalInput}
+                                    placeholder="Habit name (e.g., Cold Plunge)"
+                                    placeholderTextColor={`${theme.colors.textSecondary}80`}
+                                    value={customName}
+                                    onChangeText={setCustomName}
+                                    maxLength={28}
+                                    autoFocus
+                                    accessibilityLabel="Habit name"
+                                />
 
-                            <Text style={styles.customModalLabel}>SELECT AN ICON</Text>
-                            <View style={styles.iconChoicesGrid}>
-                                {ICON_CHOICES.map((key) => {
-                                    const isIconChosen = selectedIcon === key;
-                                    return (
-                                        <Pressable
-                                            key={key}
-                                            style={[
-                                                styles.iconChoiceItem,
-                                                isIconChosen && styles.iconChoiceItemSelected,
-                                            ]}
-                                            onPress={() => setSelectedIcon(key)}
-                                        >
-                                            <Ionicons
-                                                name={getRoutineIcon(key)}
-                                                size={20}
-                                                color={isIconChosen ? theme.colors.white : theme.colors.primary}
-                                            />
-                                        </Pressable>
-                                    );
-                                })}
-                            </View>
+                                <Text style={styles.customModalLabel}>SELECT AN ICON</Text>
+                                <View style={styles.iconChoicesGrid}>
+                                    {ICON_CHOICES.map((key) => {
+                                        const isIconChosen = selectedIcon === key;
+                                        return (
+                                            <Pressable
+                                                key={key}
+                                                style={[
+                                                    styles.iconChoiceItem,
+                                                    isIconChosen && styles.iconChoiceItemSelected,
+                                                ]}
+                                                onPress={() => setSelectedIcon(key)}
+                                                accessibilityRole="button"
+                                                accessibilityLabel={`Select icon ${key}`}
+                                            >
+                                                <Ionicons
+                                                    name={getRoutineIcon(key)}
+                                                    size={20}
+                                                    color={isIconChosen ? theme.colors.white : theme.colors.primary}
+                                                />
+                                            </Pressable>
+                                        );
+                                    })}
+                                </View>
 
-                            <View style={{ flexDirection: "row", gap: 10, marginTop: 20 }}>
-                                <Pressable
-                                    style={styles.customModalCancelBtn}
-                                    onPress={() => {
-                                        setShowCustomModal(false);
-                                        setCustomName("");
-                                    }}
-                                >
-                                    <Text style={styles.customModalCancelText}>Cancel</Text>
-                                </Pressable>
-                                <Pressable
-                                    style={[
-                                        styles.customModalSubmitBtn,
-                                        !customName.trim() && { opacity: 0.4 },
-                                    ]}
-                                    onPress={handleAddCustom}
-                                    disabled={!customName.trim()}
-                                >
-                                    <Text style={styles.customModalSubmitText}>Add Habit</Text>
-                                </Pressable>
-                            </View>
-                        </View>
+                                <View style={{ flexDirection: "row", gap: 10, marginTop: 20 }}>
+                                    <Pressable
+                                        style={styles.customModalCancelBtn}
+                                        onPress={() => {
+                                            setShowCustomModal(false);
+                                            setCustomName("");
+                                        }}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Cancel custom habit"
+                                    >
+                                        <Text style={styles.customModalCancelText}>Cancel</Text>
+                                    </Pressable>
+                                    <Pressable
+                                        style={[
+                                            styles.customModalSubmitBtn,
+                                            !customName.trim() && { opacity: 0.4 },
+                                        ]}
+                                        onPress={handleAddCustom}
+                                        disabled={!customName.trim()}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Add custom habit"
+                                    >
+                                        <Text style={styles.customModalSubmitText}>Add Habit</Text>
+                                    </Pressable>
+                                </View>
+                            </Pressable>
+                        </KeyboardAvoidingView>
                     </Pressable>
                 </View>
             )}
@@ -623,8 +645,10 @@ function StepPick({
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         onBack();
                     }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Back to Sleep anchor"
                 >
-                    <Ionicons name="arrow-back" size={18} color="#FFFFFF" />
+                    <Ionicons name="arrow-back" size={18} color={theme.colors.text} />
                     <Text style={styles.backBtnText}>Back</Text>
                 </Pressable>
                 <Pressable
@@ -633,6 +657,8 @@ function StepPick({
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         onNext();
                     }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Continue to schedule with ${selected.length} habits`}
                 >
                     <Text style={styles.nextBtnText}>
                         Continue ({selected.length})
@@ -658,11 +684,11 @@ function StepTimes({
     saving,
 }: {
     routines: DraftItem[];
-    onUpdateTime: (index: number, val: string) => void;
-    onUpdateDesc: (index: number, val: string) => void;
-    onUpdateDuration: (index: number, duration: number) => void;
-    onRemove: (index: number) => void;
-    onMakeRecurring: (index: number, hoursInterval: number) => void;
+    onUpdateTime: (id: string, val: string) => void;
+    onUpdateDesc: (id: string, val: string) => void;
+    onUpdateDuration: (id: string, duration: number) => void;
+    onRemove: (id: string) => void;
+    onMakeRecurring: (id: string, hoursInterval: number) => void;
     onSave: () => void;
     onBack: () => void;
     onSkip: () => void;
@@ -670,8 +696,8 @@ function StepTimes({
 }) {
     const { theme } = useTheme();
     const styles = getStyles(theme);
-    const [expanded, setExpanded] = useState<number | null>(null);
-    const [recurringModalIdx, setRecurringModalIdx] = useState<number | null>(null);
+    const [expandedId, setExpandedId] = useState<string | null>(null);
+    const [recurringModalItem, setRecurringModalItem] = useState<DraftItem | null>(null);
 
     const DURATION_CHOICES = [15, 30, 45, 60];
 
@@ -680,7 +706,13 @@ function StepTimes({
             <View style={styles.stepHeader}>
                 <View style={styles.headerTop}>
                     <Text style={styles.stepEyebrow}>Step 4 of 4 · Schedule</Text>
-                    <Pressable onPress={onSkip} style={styles.skipBtn} hitSlop={10}>
+                    <Pressable
+                        onPress={onSkip}
+                        style={styles.skipBtn}
+                        hitSlop={10}
+                        accessibilityRole="button"
+                        accessibilityLabel="Skip schedule customization"
+                    >
                         <Text style={styles.skipText}>Skip All</Text>
                     </Pressable>
                 </View>
@@ -711,11 +743,11 @@ function StepTimes({
                 {/* Timeline */}
                 <View style={styles.timeline}>
                     {routines.map((item, index) => {
-                        const isOpen = expanded === index;
+                        const isOpen = expandedId === item.id;
                         const duration = item.duration || 30;
 
                         return (
-                            <View key={`${item.task}-${index}`} style={styles.timelineRow}>
+                            <View key={item.id} style={styles.timelineRow}>
                                 <View style={styles.timelineConnector}>
                                     <View style={styles.timelineDot} />
                                     {index < routines.length - 1 && (
@@ -728,8 +760,10 @@ function StepTimes({
                                         style={styles.timelineCardTop}
                                         onPress={() => {
                                             Haptics.selectionAsync();
-                                            setExpanded(isOpen ? null : index);
+                                            setExpandedId(isOpen ? null : item.id);
                                         }}
+                                        accessibilityRole="button"
+                                        accessibilityLabel={`${item.task} at ${item.time}, ${duration} minutes. Tap to ${isOpen ? "collapse" : "expand"}`}
                                     >
                                         <View style={styles.timelineCardLeft}>
                                             <View style={styles.timelineCardIconWrap}>
@@ -766,7 +800,7 @@ function StepTimes({
                                                 <View style={{ paddingVertical: 10 }}>
                                                     <InteractiveTimeCard
                                                         time={item.time}
-                                                        onChange={(newT: string) => onUpdateTime(index, newT)}
+                                                        onChange={(newT: string) => onUpdateTime(item.id, newT)}
                                                         isSleepStep={false}
                                                     />
                                                 </View>
@@ -787,8 +821,10 @@ function StepTimes({
                                                             ]}
                                                             onPress={() => {
                                                                 Haptics.selectionAsync();
-                                                                onUpdateDuration(index, mins);
+                                                                onUpdateDuration(item.id, mins);
                                                             }}
+                                                            accessibilityRole="button"
+                                                            accessibilityLabel={`${mins} minutes`}
                                                         >
                                                             <Text
                                                                 style={[
@@ -809,17 +845,20 @@ function StepTimes({
                                             <TextInput
                                                 style={styles.notesInput}
                                                 value={item.description}
-                                                onChangeText={(v) => onUpdateDesc(index, v)}
+                                                onChangeText={(v) => onUpdateDesc(item.id, v)}
                                                 placeholder="Add intention or instructions…"
                                                 placeholderTextColor={`${theme.colors.textSecondary}80`}
                                                 multiline
+                                                accessibilityLabel={`Notes for ${item.task}`}
                                             />
 
                                             {item.task !== "Wake Up" && item.task !== "Sleep" && (
                                                 <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
                                                     <Pressable
                                                         style={[styles.actionBtnSecondary, { flex: 1 }]}
-                                                        onPress={() => setRecurringModalIdx(index)}
+                                                        onPress={() => setRecurringModalItem(item)}
+                                                        accessibilityRole="button"
+                                                        accessibilityLabel={`Repeat ${item.task}`}
                                                     >
                                                         <Ionicons name="repeat-outline" size={16} color={theme.colors.primary} />
                                                         <Text style={styles.actionBtnSecondaryText}>Repeat</Text>
@@ -828,9 +867,11 @@ function StepTimes({
                                                         style={[styles.actionBtnDestructive, { flex: 1 }]}
                                                         onPress={() => {
                                                             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                                            setExpanded(null);
-                                                            onRemove(index);
+                                                            setExpandedId(null);
+                                                            onRemove(item.id);
                                                         }}
+                                                        accessibilityRole="button"
+                                                        accessibilityLabel={`Remove ${item.task}`}
                                                     >
                                                         <Ionicons name="trash-outline" size={16} color="#EF4444" />
                                                         <Text style={styles.actionBtnDestructiveText}>Remove</Text>
@@ -847,34 +888,41 @@ function StepTimes({
             </ScrollView>
 
             {/* Recurring Modal */}
-            {recurringModalIdx !== null && (
+            {recurringModalItem !== null && (
                 <View style={[StyleSheet.absoluteFill, { zIndex: 200, elevation: 200 }]}>
-                    <Pressable style={styles.previewBackdrop} onPress={() => setRecurringModalIdx(null)}>
+                    <Pressable style={styles.previewBackdrop} onPress={() => setRecurringModalItem(null)}>
                         <BlurView intensity={25} tint="dark" style={StyleSheet.absoluteFill} />
-                        <View style={styles.previewCard}>
-                            <Text style={styles.previewTitle}>Repeat Habit</Text>
-                            <Text style={styles.previewDescription}>
-                                Automatically repeat this habit throughout your daytime hours until sleep.
-                            </Text>
+                        <KeyboardAvoidingView
+                            behavior={Platform.OS === "ios" ? "padding" : undefined}
+                            style={{ width: "100%", alignItems: "center", justifyContent: "center" }}
+                        >
+                            <Pressable style={styles.previewCard} onPress={(e) => e.stopPropagation()}>
+                                <Text style={styles.previewTitle}>Repeat {recurringModalItem.task}</Text>
+                                <Text style={styles.previewDescription}>
+                                    Automatically repeat this habit throughout your daytime hours until sleep.
+                                </Text>
 
-                            <View style={{ width: "100%", gap: 10 }}>
-                                {[1, 2, 3, 4].map((hours) => (
-                                    <Pressable
-                                        key={hours}
-                                        style={styles.recurringOptionBtn}
-                                        onPress={() => {
-                                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                            onMakeRecurring(recurringModalIdx as number, hours);
-                                            setRecurringModalIdx(null);
-                                        }}
-                                    >
-                                        <Text style={[styles.recurringOptionText, { color: theme.colors.white }]}>
-                                            Every {hours} hour{hours > 1 ? "s" : ""}
-                                        </Text>
-                                    </Pressable>
-                                ))}
-                            </View>
-                        </View>
+                                <View style={{ width: "100%", gap: 10 }}>
+                                    {[1, 2, 3, 4].map((hours) => (
+                                        <Pressable
+                                            key={hours}
+                                            style={styles.recurringOptionBtn}
+                                            onPress={() => {
+                                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                                onMakeRecurring(recurringModalItem.id, hours);
+                                                setRecurringModalItem(null);
+                                            }}
+                                            accessibilityRole="button"
+                                            accessibilityLabel={`Repeat every ${hours} hour${hours > 1 ? "s" : ""}`}
+                                        >
+                                            <Text style={[styles.recurringOptionText, { color: theme.colors.white }]}>
+                                                Every {hours} hour{hours > 1 ? "s" : ""}
+                                            </Text>
+                                        </Pressable>
+                                    ))}
+                                </View>
+                            </Pressable>
+                        </KeyboardAvoidingView>
                     </Pressable>
                 </View>
             )}
@@ -886,8 +934,10 @@ function StepTimes({
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         onBack();
                     }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Back to Habits selection"
                 >
-                    <Ionicons name="arrow-back" size={18} color="#FFFFFF" />
+                    <Ionicons name="arrow-back" size={18} color={theme.colors.text} />
                     <Text style={styles.backBtnText}>Back</Text>
                 </Pressable>
                 <Pressable
@@ -897,6 +947,8 @@ function StepTimes({
                         onSave();
                     }}
                     disabled={saving}
+                    accessibilityRole="button"
+                    accessibilityLabel={saving ? "Creating Rhythm" : "Step Into Zen"}
                 >
                     <Text style={styles.saveBtnText}>
                         {saving ? "Creating Rhythm…" : "Step Into Zen"}
@@ -1017,7 +1069,7 @@ export default function SetupScreen() {
 
     const goToStep4 = () => {
         const allTemplates = [...TEMPLATES, ...customActivities];
-        const merged: DraftItem[] = selectedTasks.map((t) => {
+        const merged: DraftItem[] = selectedTasks.map((t, idx) => {
             const tmpl = allTemplates.find((x) => x.task === t) || {
                 task: t,
                 description: "",
@@ -1030,6 +1082,7 @@ export default function SetupScreen() {
             if (t === "Sleep") time = sleepTime;
 
             return {
+                id: `draft-${t.toLowerCase().replace(/[^a-z0-9]/g, '_')}-${idx}`,
                 task: tmpl.task,
                 description: tmpl.description,
                 imageKey: tmpl.imageKey,
@@ -1045,44 +1098,53 @@ export default function SetupScreen() {
         setStep(4);
     };
 
-    const updateRoutineTime = (index: number, val: string) => {
-        const next = [...routines];
-        next[index] = { ...next[index], time: val };
-        if (next[index].task === "Wake Up") setWakeTime(val);
-        if (next[index].task === "Sleep") setSleepTime(val);
+    const updateRoutineTime = (id: string, val: string) => {
+        const next = routines.map((r) => (r.id === id ? { ...r, time: val } : r));
+        const updated = next.find((r) => r.id === id);
+        if (updated?.task === "Wake Up") setWakeTime(val);
+        if (updated?.task === "Sleep") setSleepTime(val);
         next.sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
         setRoutines(next);
     };
 
-    const updateRoutineDesc = (index: number, val: string) => {
-        const next = [...routines];
-        next[index] = { ...next[index], description: val };
-        setRoutines(next);
+    const updateRoutineDesc = (id: string, val: string) => {
+        setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, description: val } : r)));
     };
 
-    const updateRoutineDuration = (index: number, duration: number) => {
-        const next = [...routines];
-        next[index] = { ...next[index], duration };
-        setRoutines(next);
+    const updateRoutineDuration = (id: string, duration: number) => {
+        setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, duration } : r)));
     };
 
-    const removeItem = (index: number) => {
-        const task = routines[index].task;
-        setRoutines(routines.filter((_, i) => i !== index));
-        setSelectedTasks((prev) => prev.filter((t) => t !== task));
+    const removeItem = (id: string) => {
+        const item = routines.find((r) => r.id === id);
+        if (!item) return;
+        setRoutines((prev) => prev.filter((r) => r.id !== id));
+        setSelectedTasks((prev) => prev.filter((t) => t !== item.task));
     };
 
-    const handleMakeRecurring = (index: number, hoursInterval: number) => {
+    const handleMakeRecurring = (id: string, hoursInterval: number) => {
         if (hoursInterval <= 0) return;
-        const item = routines[index];
-        const sleepTimeMinutes = timeToMinutes(sleepTime);
-        let currentTimeMinutes = timeToMinutes(item.time) + hoursInterval * 60;
+        const item = routines.find((r) => r.id === id);
+        if (!item) return;
 
+        const wakeTimeMinutes = timeToMinutes(wakeTime);
+        let sleepTimeMinutes = timeToMinutes(sleepTime);
+        if (sleepTimeMinutes <= wakeTimeMinutes) {
+            sleepTimeMinutes += 24 * 60;
+        }
+
+        let itemTimeMinutes = timeToMinutes(item.time);
+        if (itemTimeMinutes < wakeTimeMinutes) {
+            itemTimeMinutes += 24 * 60;
+        }
+
+        let currentTimeMinutes = itemTimeMinutes + hoursInterval * 60;
         const newItems: DraftItem[] = [];
 
         while (currentTimeMinutes < sleepTimeMinutes) {
-            let h = Math.floor(currentTimeMinutes / 60);
-            const m = currentTimeMinutes % 60;
+            const normalizedMinutes = currentTimeMinutes % (24 * 60);
+            let h = Math.floor(normalizedMinutes / 60);
+            const m = normalizedMinutes % 60;
             const ampm = h >= 12 ? "PM" : "AM";
 
             if (h === 0) h = 12;
@@ -1092,6 +1154,7 @@ export default function SetupScreen() {
 
             newItems.push({
                 ...item,
+                id: `recurring-${item.task.toLowerCase().replace(/[^a-z0-9]/g, '_')}-${timeStr.replace(/[^a-z0-9]/g, '_')}`,
                 time: timeStr,
             });
 
@@ -1173,8 +1236,18 @@ export default function SetupScreen() {
                     onUpdateWake={setWakeTime}
                     onUpdateSleep={setSleepTime}
                     onNext={() => {
-                        if (step === 1) setStep(2);
-                        else goToStep3();
+                        if (step === 1) {
+                            setStep(2);
+                        } else {
+                            if (wakeTime.trim().toLowerCase() === sleepTime.trim().toLowerCase()) {
+                                Alert.alert(
+                                    "Identical Times",
+                                    "Your wake time and sleep time cannot be the same. Please set a restorative sleep window."
+                                );
+                                return;
+                            }
+                            goToStep3();
+                        }
                     }}
                     onBack={() => {
                         if (step === 1) setStep(0);
@@ -1953,9 +2026,9 @@ const getStyles = (theme: Theme) =>
             height: 56,
             paddingHorizontal: 24,
             borderRadius: 22,
-            backgroundColor: "#0D0F17",
+            backgroundColor: theme.colors.card,
             borderWidth: 1,
-            borderColor: "#1F2330",
+            borderColor: `${theme.colors.text}18`,
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "center",
@@ -1964,20 +2037,20 @@ const getStyles = (theme: Theme) =>
         backBtnText: {
             fontSize: 16,
             fontFamily: theme.fonts.bold,
-            color: "#FFFFFF",
+            color: theme.colors.text,
         },
         nextBtn: {
             flex: 1,
             height: 56,
             borderRadius: 22,
-            backgroundColor: "#EF4444",
+            backgroundColor: theme.colors.primary,
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "center",
             gap: 8,
-            shadowColor: "#EF4444",
+            shadowColor: theme.colors.primary,
             shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: 0.55,
+            shadowOpacity: 0.35,
             shadowRadius: 18,
             elevation: 5,
         },
@@ -1990,14 +2063,14 @@ const getStyles = (theme: Theme) =>
             flex: 1,
             height: 56,
             borderRadius: 22,
-            backgroundColor: "#EF4444",
+            backgroundColor: theme.colors.primary,
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "center",
             gap: 8,
-            shadowColor: "#EF4444",
+            shadowColor: theme.colors.primary,
             shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: 0.55,
+            shadowOpacity: 0.35,
             shadowRadius: 18,
             elevation: 5,
         },
