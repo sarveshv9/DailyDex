@@ -782,7 +782,9 @@ function HomeScreen() {
         setIsReady(false);
       }
 
-      const todoData = await AsyncStorage.getItem("@todo_tasks");
+      const todoData =
+        (await AsyncStorage.getItem("@zen_tasks")) ||
+        (await AsyncStorage.getItem("@todo_tasks"));
       if (todoData) {
         setTodoTasks(JSON.parse(todoData));
       }

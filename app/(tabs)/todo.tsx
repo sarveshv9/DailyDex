@@ -1,8 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BlurView } from "expo-blur";
-import { useRouter } from "expo-router";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActionSheetIOS,
   ActivityIndicator,
@@ -12,6 +12,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -67,27 +68,28 @@ const createNewTask = (text: string, category: TaskCategory): Task => ({
 /* ---------------------- STORAGE & SYNC ------------------------ */
 const loadTasks = async (): Promise<Task[]> => {
   try {
-    let finalTasks: Task[] | null = null;
-    let localTasks: Task[] | null = null;
-
-    // 1. Load from local AsyncStorage
     const localData = await AsyncStorage.getItem(STORAGE_KEY);
     if (localData) {
       try {
-        localTasks = JSON.parse(localData);
+        return JSON.parse(localData);
       } catch (e) {
         console.error("Failed to parse local tasks:", e);
       }
     }
 
-
-
-    // 3. Fallback to local
-    if (!finalTasks && localTasks) {
-      finalTasks = localTasks;
+    // Migrate from legacy key if it exists
+    const legacyData = await AsyncStorage.getItem("@todo_tasks");
+    if (legacyData) {
+      try {
+        const parsed = JSON.parse(legacyData);
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+        return parsed;
+      } catch (e) {
+        console.error("Failed to parse legacy @todo_tasks:", e);
+      }
     }
 
-    return finalTasks || [];
+    return [];
   } catch (error) {
     console.error("Error loading tasks:", error);
     return [];
@@ -225,12 +227,18 @@ const TaskItem = ({
       }}
       onPress={handleToggle}
       android_ripple={{ color: "rgba(0,0,0,0.04)" }}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: task.completed }}
+      accessibilityLabel={`${task.text}, ${task.category === "today" ? "Today priority" : "Later"}, ${task.completed ? "completed" : "not completed"}`}
     >
       {/* Tactile Checkbox */}
       <Pressable
         style={styles.checkboxTouchTarget}
         onPress={handleToggle}
         hitSlop={10}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: task.completed }}
+        accessibilityLabel={task.completed ? "Mark incomplete" : "Mark complete"}
       >
         <View style={styles.checkbox}>
           <Animated.View
@@ -537,6 +545,9 @@ const TaskModal = ({
                     Haptics.selectionAsync();
                     setCategory("today");
                   }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Priority Today"
+                  accessibilityState={{ selected: category === "today" }}
                 >
                   <Ionicons
                     name={category === "today" ? "star" : "star-outline"}
@@ -566,6 +577,9 @@ const TaskModal = ({
                     Haptics.selectionAsync();
                     setCategory("later");
                   }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Later"
+                  accessibilityState={{ selected: category === "later" }}
                 >
                   <Ionicons
                     name={category === "later" ? "time" : "time-outline"}
@@ -755,11 +769,13 @@ const EmptyState = ({
 /* ---------------------- MAIN TODO SCREEN ------------------------ */
 export default function TodoScreen() {
   const { theme, isDarkMode } = useTheme();
+  const timer = useTimer();
   const styles = useMemo(() => getStyles(theme, isDarkMode), [theme, isDarkMode]);
   const sharedStyles = useMemo(() => getSharedStyles(theme), [theme]);
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
   const [quickInputText, setQuickInputText] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
@@ -807,14 +823,29 @@ export default function TodoScreen() {
     }
   };
 
-  // 1. Initial Load
-  useEffect(() => {
-    (async () => {
-      const loaded = await loadTasks();
-      setTasks(loaded);
-      setIsLoading(false);
-    })();
+  // 1. Load tasks on mount and tab focus
+  const fetchTasks = useCallback(async (isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    const loaded = await loadTasks();
+    setTasks(loaded);
+    setIsLoading(false);
+    if (isRefresh) {
+      setRefreshing(false);
+    }
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchTasks();
+    }, [fetchTasks])
+  );
+
+  const onRefresh = useCallback(() => {
+    fetchTasks(true);
+  }, [fetchTasks]);
 
   // 2. Persist whenever tasks change
   useEffect(() => {
@@ -898,6 +929,9 @@ export default function TodoScreen() {
       "Are you sure you want to permanently delete this task?",
       "Delete",
       () => {
+        if (timer.taskId === id) {
+          timer.stopTimer();
+        }
         setTasks((prev) => prev.filter((t) => t.id !== id));
       }
     );
@@ -920,11 +954,11 @@ export default function TodoScreen() {
       }?`,
       "Clear All",
       () => {
-        setTasks((prev) => {
-          const next = prev.filter((t) => !t.completed);
-          saveTasks(next).catch((e) => console.error("saveTasks:", e));
-          return next;
-        });
+        const completedIds = new Set(tasks.filter((t) => t.completed).map((t) => t.id));
+        if (timer.taskId && completedIds.has(timer.taskId)) {
+          timer.stopTimer();
+        }
+        setTasks((prev) => prev.filter((t) => !t.completed));
         setConfirmState((prev) => ({ ...prev, visible: false }));
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
@@ -958,6 +992,14 @@ export default function TodoScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.colors.primary}
+            colors={[theme.colors.primary]}
+          />
+        }
       >
         {/* ── 1. Header & Controls ── */}
         <View style={styles.heroHeader}>
@@ -973,6 +1015,7 @@ export default function TodoScreen() {
                 style={styles.clearDoneBtn}
                 onPress={handleClearCompleted}
                 hitSlop={8}
+                accessibilityRole="button"
                 accessibilityLabel="Clear completed tasks"
               >
                 <Ionicons
@@ -986,7 +1029,7 @@ export default function TodoScreen() {
           </View>
 
           {/* Category Filter Tabs */}
-          <View style={styles.filterTabsRow}>
+          <View style={styles.filterTabsRow} accessibilityRole="tablist">
             {(
               [
                 { id: "all", label: "All", count: tasks.length },
@@ -1006,6 +1049,9 @@ export default function TodoScreen() {
                     Haptics.selectionAsync();
                     setActiveFilter(tab.id);
                   }}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: isActive }}
+                  accessibilityLabel={`${tab.label} tasks, ${tab.count} items`}
                 >
                   <Text
                     style={[
@@ -1056,12 +1102,15 @@ export default function TodoScreen() {
               onChangeText={setQuickInputText}
               onSubmitEditing={handleQuickAdd}
               returnKeyType="done"
+              maxLength={240}
             />
             {quickInputText.trim().length > 0 && (
               <Pressable
                 style={styles.quickAddSubmitBtn}
                 onPress={handleQuickAdd}
                 hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Add task"
               >
                 <Ionicons
                   name="arrow-up"
