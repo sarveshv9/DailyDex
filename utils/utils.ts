@@ -16,6 +16,7 @@ export interface RoutineItem {
   date?: string; // "YYYY-MM-DD"
   duration?: number;
   subtasks?: SubTask[];
+  parentId?: string; // ID of the recurring parent item for one-off modifications/skips
   isSkipped?: boolean; // Flag to indicate a deleted one-off occurrence of a recurring task
   completed?: boolean;
 }
@@ -375,7 +376,8 @@ export const getRoutineItemsForDate = (items: RoutineItem[], date: Date): Routin
 
   const map = new Map<string, RoutineItem[]>();
   filtered.forEach(i => {
-    const key = i.task.toLowerCase().trim();
+    // If parentId exists, group by that; otherwise if it has recurring days, group by id; otherwise fallback to task + time
+    const key = i.parentId || (i.daysOfWeek && i.daysOfWeek.length > 0 ? i.id : `${i.task.toLowerCase().trim()}_${i.time}`);
     if (!map.has(key)) map.set(key, []);
     map.get(key)!.push(i);
   });

@@ -10,6 +10,7 @@ import {
   Dimensions,
   Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -759,41 +760,54 @@ function HomeScreen() {
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [selectedTask, setSelectedTask] = useState<RoutineItem | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadDashboardData = useCallback(async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setRefreshing(true);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+      const setupComplete = await AsyncStorage.getItem(SETUP_KEY);
+      if (setupComplete) {
+        const routineData = await AsyncStorage.getItem("@zen_routine");
+        if (routineData) {
+          const parsedRoutines = JSON.parse(routineData);
+          setRoutines(sortRoutineItems(parsedRoutines));
+          setIsReady(true);
+        } else {
+          setIsReady(false);
+        }
+      } else {
+        setIsReady(false);
+      }
+
+      const todoData = await AsyncStorage.getItem("@todo_tasks");
+      if (todoData) {
+        setTodoTasks(JSON.parse(todoData));
+      }
+
+      const statsData = await loadStats();
+      setUserStats(statsData);
+    } catch (e) {
+      setIsReady(false);
+    } finally {
+      setIsLoading(false);
+      if (isRefresh) {
+        setRefreshing(false);
+      }
+    }
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
-      const checkSetup = async () => {
-        try {
-          const setupComplete = await AsyncStorage.getItem(SETUP_KEY);
-          if (setupComplete) {
-            const routineData = await AsyncStorage.getItem("@zen_routine");
-            if (routineData) {
-              const parsedRoutines = JSON.parse(routineData);
-              setRoutines(sortRoutineItems(parsedRoutines));
-              setIsReady(true);
-            } else {
-              setIsReady(false);
-            }
-          } else {
-            setIsReady(false);
-          }
-
-          const todoData = await AsyncStorage.getItem("@todo_tasks");
-          if (todoData) {
-            setTodoTasks(JSON.parse(todoData));
-          }
-
-          const statsData = await loadStats();
-          setUserStats(statsData);
-        } catch (e) {
-          setIsReady(false);
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      checkSetup();
-    }, [])
+      loadDashboardData();
+    }, [loadDashboardData])
   );
+
+  const onRefresh = useCallback(() => {
+    loadDashboardData(true);
+  }, [loadDashboardData]);
 
   const currentTime = useCurrentTime();
   const { theme, themeName, setThemeName, isAutoTheme, isDarkMode } =
@@ -961,6 +975,7 @@ function HomeScreen() {
             const newItem: RoutineItem = {
               ...updatedTask,
               id: Date.now().toString(),
+              parentId: originalTask.id,
               daysOfWeek: [],
               date: dateStr,
             };
@@ -980,6 +995,7 @@ function HomeScreen() {
                   const newItem: RoutineItem = {
                     ...updatedTask,
                     id: Date.now().toString(),
+                    parentId: originalTask.id,
                     daysOfWeek: [],
                     date: dateStr,
                   };
@@ -1016,6 +1032,7 @@ function HomeScreen() {
           const newItem: RoutineItem = {
             ...taskToDelete,
             id: Date.now().toString(),
+            parentId: taskToDelete.id,
             isSkipped: true,
             daysOfWeek: [],
             date: dateStr,
@@ -1037,6 +1054,7 @@ function HomeScreen() {
                 const newItem: RoutineItem = {
                   ...taskToDelete,
                   id: Date.now().toString(),
+                  parentId: taskToDelete.id,
                   isSkipped: true,
                   daysOfWeek: [],
                   date: dateStr,
@@ -1184,6 +1202,14 @@ function HomeScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         accessibilityRole="scrollbar"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.colors.primary}
+            colors={[theme.colors.primary]}
+          />
+        }
       >
         {/* ======= HEADER & DAILY PROGRESS ======= */}
         <Animated.View
@@ -1209,7 +1235,12 @@ function HomeScreen() {
             </View>
 
             {/* Daily Dashboard Completion Ring */}
-            <View style={styles.headerRight}>
+            <View
+              style={styles.headerRight}
+              accessible={true}
+              accessibilityRole="summary"
+              accessibilityLabel={`Today's progress: ${todayTasksDone} of ${totalIntentions} rituals completed`}
+            >
               <View style={styles.progressRingWrapper}>
                 <ProgressRing
                   progress={dailyProgressFraction}
@@ -1341,7 +1372,13 @@ function HomeScreen() {
                 </View>
 
                 {/* Progress Bar & Indicators */}
-                <View style={styles.progressSection}>
+                <View
+                  style={styles.progressSection}
+                  accessible={true}
+                  accessibilityRole="progressbar"
+                  accessibilityLabel={`Progress: ${Math.round(taskProgress * 100)} percent`}
+                  accessibilityValue={{ min: 0, max: 100, now: Math.round(taskProgress * 100) }}
+                >
                   <View style={styles.progressLabelRow}>
                     <Text style={styles.progressLabelText}>Progress</Text>
                     <Text style={styles.progressPercent}>
@@ -1358,34 +1395,73 @@ function HomeScreen() {
                   </View>
                 </View>
 
-                {/* Main CTA Button: Default redirect to timeline */}
-                <Pressable
-                  accessibilityRole={buttonRole}
-                  accessibilityLabel="View day timeline"
-                  hitSlop={styles.touchableHitSlop}
-                  android_ripple={{ color: "rgba(0,0,0,0.06)" }}
-                  style={({ pressed }) => [
-                    styles.primaryButton,
-                    {
-                      opacity: pressed ? 0.92 : 1,
-                      transform: [{ scale: pressed ? 0.98 : 1 }],
-                    },
-                  ]}
-                  onPress={handleOpenTimeline}
-                >
-                  <Text style={styles.primaryButtonText}>
-                    {scheduleStatus.activeTask
-                      ? "View Day Timeline"
-                      : scheduleStatus.nextTask
-                        ? "Start My Day"
-                        : "View Day Timeline"}
-                  </Text>
-                  <Ionicons
-                    name="arrow-forward"
-                    size={20}
-                    color={theme.colors.white}
-                  />
-                </Pressable>
+                {/* Main CTA Button */}
+                {scheduleStatus.activeTask ? (
+                  <>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={isTimerActive ? "Resume Focus Session" : "Start Focus Session"}
+                      hitSlop={styles.touchableHitSlop}
+                      android_ripple={{ color: "rgba(0,0,0,0.06)" }}
+                      style={({ pressed }) => [
+                        styles.primaryButton,
+                        {
+                          opacity: pressed ? 0.92 : 1,
+                          transform: [{ scale: pressed ? 0.98 : 1 }],
+                        },
+                      ]}
+                      onPress={handleOpenFocus}
+                    >
+                      <Ionicons
+                        name={isTimerActive ? "pulse-outline" : "timer-outline"}
+                        size={20}
+                        color={theme.colors.white}
+                      />
+                      <Text style={styles.primaryButtonText}>
+                        {isTimerActive ? "Resume Focus Session" : "Start Focus Session"}
+                      </Text>
+                    </Pressable>
+
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="View Day Timeline"
+                      style={styles.timelineLink}
+                      onPress={handleOpenTimeline}
+                      hitSlop={styles.touchableHitSlop}
+                    >
+                      <Text style={styles.timelineLinkText}>View Day Timeline</Text>
+                      <Ionicons
+                        name="arrow-forward"
+                        size={14}
+                        color={theme.colors.primary}
+                      />
+                    </Pressable>
+                  </>
+                ) : (
+                  <Pressable
+                    accessibilityRole={buttonRole}
+                    accessibilityLabel="View day timeline"
+                    hitSlop={styles.touchableHitSlop}
+                    android_ripple={{ color: "rgba(0,0,0,0.06)" }}
+                    style={({ pressed }) => [
+                      styles.primaryButton,
+                      {
+                        opacity: pressed ? 0.92 : 1,
+                        transform: [{ scale: pressed ? 0.98 : 1 }],
+                      },
+                    ]}
+                    onPress={handleOpenTimeline}
+                  >
+                    <Text style={styles.primaryButtonText}>
+                      {scheduleStatus.nextTask ? "Start My Day" : "View Day Timeline"}
+                    </Text>
+                    <Ionicons
+                      name="arrow-forward"
+                      size={20}
+                      color={theme.colors.white}
+                    />
+                  </Pressable>
+                )}
 
               </View>
             </BlurView>
@@ -1414,6 +1490,8 @@ function HomeScreen() {
                       pressed && { opacity: 0.82, transform: [{ scale: 0.985 }] },
                     ]}
                     onPress={() => handlePressUpcoming(task)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${task.task} at ${formatTaskTime(task.time)}${task.duration ? `, ${task.duration} minutes` : ""}`}
                   >
                     <View style={styles.upNextIconSquircle}>
                       <Ionicons
