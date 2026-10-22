@@ -8,6 +8,7 @@ import {
   Alert,
   Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   Share,
   StyleSheet,
@@ -43,7 +44,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { theme, themeName, setThemeName, isAutoTheme, setIsAutoTheme, isDarkMode, setIsDarkMode } = useTheme();
   const { selectedSong, setSelectedSong } = useAudio();
-  const { session, signOut } = useAuth();
+  const { session, signOut, updateUser } = useAuth();
   const { settings } = useSettings();
 
   const styles = useMemo(() => makeStyles(theme), [theme]);
@@ -58,6 +59,7 @@ export default function ProfileScreen() {
   // Profile setup state
   const [profileCreated, setProfileCreated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   // User state
@@ -69,32 +71,38 @@ export default function ProfileScreen() {
     bio: "",
   });
 
+  const loadProfileData = useCallback(async () => {
+    try {
+      const profileSetup = await AsyncStorage.getItem("@zen_profile_setup_complete");
+      setProfileCreated(!!profileSetup);
+
+      const storedProfile = await AsyncStorage.getItem("@zen_user_profile");
+      if (storedProfile) {
+        const localProfile = JSON.parse(storedProfile);
+        setUser(localProfile);
+      }
+    } catch (e) {
+      setProfileCreated(false);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
-      const loadInitialData = async () => {
-        try {
-          const profileSetup = await AsyncStorage.getItem("@zen_profile_setup_complete");
-          setProfileCreated(!!profileSetup);
-
-          let localProfile = null;
-          const storedProfile = await AsyncStorage.getItem("@zen_user_profile");
-          if (storedProfile) {
-            localProfile = JSON.parse(storedProfile);
-            setUser(localProfile);
-          }
-
-
-        } catch (e) {
-          setProfileCreated(false);
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      loadInitialData();
-    }, [session?.user])
+      loadProfileData();
+    }, [loadProfileData])
   );
 
-
+  const handleRefresh = useCallback(async () => {
+    if (settings.hapticsEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setRefreshing(true);
+    try {
+      await loadProfileData();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadProfileData, settings.hapticsEnabled]);
 
   const handleBackup = async () => {
     if (settings.hapticsEnabled) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -139,7 +147,9 @@ export default function ProfileScreen() {
     try {
       const storedProfile = await AsyncStorage.getItem("@zen_user_profile");
       if (storedProfile) {
-        setUser(JSON.parse(storedProfile));
+        const parsed = JSON.parse(storedProfile);
+        setUser(parsed);
+        await updateUser(parsed);
         setProfileCreated(true);
       }
     } catch (e) {
@@ -160,12 +170,13 @@ export default function ProfileScreen() {
             return taskLo === "wake up" || taskLo === "sleep";
           });
           await AsyncStorage.setItem("@zen_routine", JSON.stringify(preserved));
-          if (settings.hapticsEnabled) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          if (Platform.OS === "web") {
-            window.alert("All tasks have been reset except Wake Up and Sleep.");
-          } else {
-            Alert.alert("Success", "All tasks have been reset except Wake Up and Sleep.");
-          }
+        }
+        await AsyncStorage.multiRemove(["@zen_tasks", "@todo_tasks"]);
+        if (settings.hapticsEnabled) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        if (Platform.OS === "web") {
+          window.alert("All tasks and custom routines have been reset except Wake Up and Sleep.");
+        } else {
+          Alert.alert("Success", "All tasks and custom routines have been reset except Wake Up and Sleep.");
         }
       } catch (e) {
         console.error("Failed to reset tasks", e);
@@ -221,52 +232,99 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    if (settings.hapticsEnabled) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
 
-    const performLogout = async () => {
+    const performFullReset = async () => {
       try {
+        await AsyncStorage.multiRemove([
+          "@zen_setup_complete",
+          "@zen_profile_setup_complete",
+          "@zen_user_profile",
+          "@zen_routine",
+          "@zen_tasks",
+          "@todo_tasks",
+          "@zen_stats",
+          "@zen_active_timer",
+        ]);
         await signOut();
+        setUser({ name: "", avatar: "", role: "", email: "", bio: "" });
+        setProfileCreated(false);
+        if (settings.hapticsEnabled) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        router.replace("/setup");
       } catch (e) {
-        console.error("Supabase sign out error (continuing with local cleanup):", e);
+        console.error("Failed to perform full app reset:", e);
       }
+    };
 
+    const performResetProfile = async () => {
       try {
-        await AsyncStorage.removeItem("@zen_profile_setup_complete");
-        await AsyncStorage.removeItem("@zen_user_profile");
-        await AsyncStorage.removeItem("@zen_routine");
+        await AsyncStorage.multiRemove([
+          "@zen_profile_setup_complete",
+          "@zen_user_profile",
+        ]);
+        await signOut();
+        setUser({ name: "", avatar: "", role: "", email: "", bio: "" });
+        setProfileCreated(false);
+        if (settings.hapticsEnabled) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } catch (e) {
-        console.error("Failed to clear AsyncStorage:", e);
-      }
-
-      setProfileCreated(false);
-
-      if (Platform.OS === "web") {
-        window.location.href = window.location.origin;
+        console.error("Failed to reset profile:", e);
       }
     };
 
     if (Platform.OS === "web") {
-      if (window.confirm("Are you sure you want to log out?")) {
-        performLogout();
+      const isFull = window.confirm(
+        "Reset Options:\n\nClick 'OK' for Full App Reset (wipes all tasks, routines, and returns to setup).\nClick 'Cancel' to choose Profile Only or dismiss."
+      );
+      if (isFull) {
+        performFullReset();
+      } else {
+        if (window.confirm("Do you want to reset Profile Only? (Keeps routines and tasks intact)")) {
+          performResetProfile();
+        }
       }
     } else {
-      Alert.alert("Logout", "Are you sure you want to log out?", [
-        { text: "Cancel", style: "cancel" },
-        { text: "Logout", style: "destructive", onPress: performLogout },
-      ]);
+      Alert.alert(
+        "Reset & Log Out",
+        "Choose an option to reset your profile or entire application state:",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Reset Profile Only",
+            style: "destructive",
+            onPress: performResetProfile,
+          },
+          {
+            text: "Full App Reset",
+            style: "destructive",
+            onPress: () => {
+              Alert.alert(
+                "Confirm Full App Reset",
+                "This will permanently delete all your routines, tasks, stats, and return you to onboarding setup.",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Delete Everything",
+                    style: "destructive",
+                    onPress: performFullReset,
+                  },
+                ]
+              );
+            },
+          },
+        ]
+      );
     }
   };
 
   const handleSaveProfile = async () => {
     setIsEditingProfile(false);
     setEditProfileModalOpen(false);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (settings.hapticsEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       await AsyncStorage.setItem("@zen_profile_setup_complete", "true");
       await AsyncStorage.setItem("@zen_user_profile", JSON.stringify(user));
+      await updateUser(user);
       setProfileCreated(true);
-
-
     } catch (e) {
       console.error("Failed to save profile flag", e);
     }
@@ -317,8 +375,6 @@ export default function ProfileScreen() {
               <Ionicons name="person-add-outline" size={20} color={theme.colors.white} />
               <Text style={styles.primaryCtaText}>Create Profile</Text>
             </Pressable>
-
-
           </View>
         </View>
 
@@ -341,6 +397,14 @@ export default function ProfileScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={theme.colors.primary}
+            colors={[theme.colors.primary]}
+          />
+        }
       >
         {/* Header Row */}
         <View style={styles.headerRow}>
@@ -374,7 +438,12 @@ export default function ProfileScreen() {
         />
 
         {/* Offline Privacy & Local Storage Badge */}
-        <View style={[styles.syncConnectedCard, { borderColor: theme.glass.borderColor }]}>
+        <View
+          style={[styles.syncConnectedCard, { borderColor: theme.glass.borderColor }]}
+          accessible={true}
+          accessibilityRole="summary"
+          accessibilityLabel="Offline and Private. All your habits, routines, and focus data stay on this device."
+        >
           <Ionicons name="shield-checkmark-outline" size={20} color="#34C759" />
           <View style={{ flex: 1 }}>
             <Text style={styles.syncConnectedTitle}>Offline & Private</Text>
@@ -394,21 +463,20 @@ export default function ProfileScreen() {
           handleResetTasks={handleResetTasks}
         />
 
-        {/* Logout (when signed in) */}
-        {session && (
-          <Pressable
-            style={({ pressed }) => [
-              styles.logoutButton,
-              pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
-            ]}
-            onPress={handleLogout}
-            accessibilityRole="button"
-            accessibilityLabel="Log out"
-          >
-            <Ionicons name="log-out-outline" size={20} color="#FF453A" />
-            <Text style={styles.logoutButtonText}>Log Out</Text>
-          </Pressable>
-        )}
+        {/* Reset / Log Out */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.logoutButton,
+            pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
+          ]}
+          onPress={handleLogout}
+          accessibilityRole="button"
+          accessibilityLabel="Reset profile or full app data"
+          accessibilityHint="Presents options to reset profile or perform a full app wipe"
+        >
+          <Ionicons name="log-out-outline" size={20} color="#FF453A" />
+          <Text style={styles.logoutButtonText}>Log Out & Reset</Text>
+        </Pressable>
 
         <View style={{ height: 40 }} />
       </ScrollView>
