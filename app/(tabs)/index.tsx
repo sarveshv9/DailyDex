@@ -24,7 +24,6 @@ import Svg, { Circle } from "react-native-svg";
 import TaskModal from "../../components/dashboard/TaskModal";
 import { useTheme } from "../../context/ThemeContext";
 import { useTimer } from "../../context/TimerContext";
-import { supabase } from "../../lib/supabase";
 import { Theme, themes } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
 import { scheduleRoutineNotifications } from "../../utils/notifications";
@@ -927,33 +926,7 @@ function HomeScreen() {
       await AsyncStorage.setItem("@zen_routine", JSON.stringify(sorted));
       await scheduleRoutineNotifications(sorted);
 
-      const { data: userAuth } = await supabase.auth.getUser();
-      if (!userAuth?.user) return;
 
-      const { data: remoteData } = await supabase.from("routines").select("id");
-      const remoteRecordIds = remoteData ? remoteData.map((t: any) => t.id) : [];
-      const incomingIds = sorted.map((t) => t.id);
-      const toDeleteIds = remoteRecordIds.filter((id) => !incomingIds.includes(id));
-
-      if (toDeleteIds.length > 0) {
-        await supabase.from("routines").delete().in("id", toDeleteIds);
-      }
-
-      const dbRoutines = sorted.map((item) => ({
-        id: item.id,
-        user_id: userAuth.user.id,
-        time: item.time,
-        task: item.task,
-        description: item.description,
-        image_key: item.imageKey,
-        insertion_order: item.insertionOrder,
-        duration: item.duration,
-        days_of_week: item.daysOfWeek,
-        date: item.date,
-      }));
-      if (dbRoutines.length > 0) {
-        await supabase.from("routines").upsert(dbRoutines);
-      }
     } catch (err) {
       console.error("Failed to persist routines from home dashboard:", err);
     }

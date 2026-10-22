@@ -2,7 +2,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 import { LayoutAnimation, Platform, UIManager } from 'react-native';
 import { darkThemes, lightThemes, Theme, ThemeName } from '../styles/shared';
-import { supabase } from '../lib/supabase';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -111,34 +110,6 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
              }
         }
 
-        // 2. Fetch Remote State
-        const { data: userAuth } = await supabase.auth.getUser();
-        if (userAuth?.user) {
-           const { data: remote, error } = await supabase.from('user_themes').select('*').eq('id', userAuth.user.id).single();
-           if (!error && remote) {
-               // Use remote state as truth
-               localThemeName = remote.active_theme;
-               localIsDarkMode = remote.is_dark_mode;
-               localIsAutoTheme = remote.auto_theme;
-               localCustomThemes = remote.custom_themes || {};
-
-               // Sync down to local storage
-               await AsyncStorage.setItem('@zen_theme', localThemeName);
-               await AsyncStorage.setItem('@zen_auto_theme', String(localIsAutoTheme));
-               await AsyncStorage.setItem('@zen_dark_mode', String(localIsDarkMode));
-               await AsyncStorage.setItem('@zen_custom_themes', JSON.stringify(localCustomThemes));
-           } else {
-               // Push local state up to Supabase to initialize
-               await supabase.from('user_themes').upsert({
-                    id: userAuth.user.id,
-                    active_theme: localThemeName,
-                    is_dark_mode: localIsDarkMode,
-                    auto_theme: localIsAutoTheme,
-                    custom_themes: localCustomThemes
-                });
-           }
-        }
-
         setThemeNameState(localThemeName);
         setIsAutoThemeState(localIsAutoTheme);
         setIsDarkModeState(localIsDarkMode);
@@ -152,24 +123,6 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     };
     loadTheme();
   }, []);
-
-  // 3. Sync to cloud on local changes
-  useEffect(() => {
-    if (!isLoaded) return;
-    const syncToCloud = async () => {
-      const { data: userAuth } = await supabase.auth.getUser();
-      if (userAuth?.user) {
-        await supabase.from('user_themes').upsert({
-          id: userAuth.user.id,
-          active_theme: themeName,
-          is_dark_mode: isDarkMode,
-          auto_theme: isAutoTheme,
-          custom_themes: customThemes
-        });
-      }
-    };
-    syncToCloud();
-  }, [themeName, isAutoTheme, isDarkMode, customThemes, isLoaded]);
 
   const setThemeName = async (name: string) => {
     if (Platform.OS !== 'web') LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);

@@ -1,6 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { supabase } from "../lib/supabase";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -570,52 +569,10 @@ export default function RoutineScreen() {
         }
 
         // 2. Fetch from Supabase (if authenticated)
-        const { data: userAuth } = await supabase.auth.getUser();
-        
-        if (userAuth?.user) {
-          const { data: stored, error } = await supabase.from('routines').select('*').order('insertion_order', { ascending: true });
-          
-          if (!error && stored && stored.length > 0) {
-            // Remote data exists, use it as source of truth and sync down to local
-            finalRoutines = stored.map((d: any) => ({
-              id: d.id,
-              time: d.time,
-              task: d.task,
-              description: d.description,
-              imageKey: d.image_key,
-              insertionOrder: d.insertion_order,
-              duration: d.duration,
-              daysOfWeek: d.days_of_week,
-              date: d.date
-            }));
-            await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(finalRoutines));
-
-          } else if (localRoutines && localRoutines.length > 0) {
-            // No remote data, but we have local data. Push our local data up to Supabase.
-            finalRoutines = localRoutines;
-            const dbRoutines = localRoutines.map(item => ({
-              id: item.id,
-              user_id: userAuth.user.id,
-              time: item.time,
-              task: item.task,
-              description: item.description,
-              image_key: item.imageKey,
-              insertion_order: item.insertionOrder,
-              duration: item.duration,
-              days_of_week: item.daysOfWeek,
-              date: item.date
-            }));
-            await supabase.from('routines').insert(dbRoutines);
-          }
-        }
-
-        // 3. Unauthenticated local usage OR no data found anywhere
-        if (!finalRoutines && localRoutines && localRoutines.length > 0) {
-          // If we weren't logged in, or Supabase fetch failed but we have local, use local
+        if (localRoutines && localRoutines.length > 0) {
           finalRoutines = localRoutines;
         }
 
-        // 4. Fallback to ultimate defaults if completely empty
         if (!finalRoutines || finalRoutines.length === 0) {
           finalRoutines = INITIAL_ROUTINE.map(item => {
             const isDaily = item.task.toLowerCase() === "sleep" || item.task.toLowerCase() === "wake up";
@@ -625,21 +582,6 @@ export default function RoutineScreen() {
           await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(finalRoutines));
           
           // And back it up to cloud if currently signed in
-          if (userAuth?.user) {
-             const dbRoutines = finalRoutines.map(item => ({
-              id: item.id,
-              user_id: userAuth.user.id,
-              time: item.time,
-              task: item.task,
-              description: item.description,
-              image_key: item.imageKey,
-              insertion_order: item.insertionOrder,
-              duration: item.duration,
-              days_of_week: item.daysOfWeek,
-              date: item.date
-            }));
-            await supabase.from('routines').insert(dbRoutines);
-          }
         }
 
         setAllRoutines(finalRoutines);
@@ -661,34 +603,6 @@ export default function RoutineScreen() {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newItems));
       await scheduleRoutineNotifications(newItems);
       
-      const { data: userAuth } = await supabase.auth.getUser();
-      if (!userAuth?.user) return; // Exit cloud sync silently if unauthenticated
-      
-      const { data: remoteData } = await supabase.from('routines').select('id');
-      const remoteRecordIds = remoteData ? remoteData.map((t: any) => t.id) : [];
-      
-      const incomingIds = newItems.map(t => t.id);
-      const toDeleteIds = remoteRecordIds.filter(id => !incomingIds.includes(id));
-      
-      if (toDeleteIds.length > 0) {
-        await supabase.from('routines').delete().in('id', toDeleteIds);
-      }
-      
-      const dbRoutines = newItems.map(item => ({
-        id: item.id,
-        user_id: userAuth.user.id,
-        time: item.time,
-        task: item.task,
-        description: item.description,
-        image_key: item.imageKey,
-        insertion_order: item.insertionOrder,
-        duration: item.duration,
-        days_of_week: item.daysOfWeek,
-        date: item.date
-      }));
-      if (dbRoutines.length > 0) {
-        await supabase.from('routines').upsert(dbRoutines);
-      }
     } catch (e) {
       console.error("Failed to save routines.", e);
     }

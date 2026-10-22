@@ -27,7 +27,6 @@ import { useAudio } from "../../context/AudioContext";
 import { useAuth } from "../../context/AuthContext";
 import { useSettings } from "../../context/SettingsContext";
 import { useTheme } from "../../context/ThemeContext";
-import { supabase } from "../../lib/supabase";
 import { getSharedStyles, Theme } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
 import { RoutineItem } from "../../utils/utils";
@@ -84,27 +83,7 @@ export default function ProfileScreen() {
             setUser(localProfile);
           }
 
-          // Fetch from Supabase
-          if (session?.user) {
-            const { data: remoteProfile } = await supabase
-              .from("profiles")
-              .select("*")
-              .eq("id", session.user.id)
-              .single();
 
-            if (remoteProfile) {
-              const updatedProfile = {
-                ...localProfile,
-                name: remoteProfile.full_name || localProfile?.name || "User",
-                avatar: remoteProfile.avatar_url || localProfile?.avatar || "U",
-                role: remoteProfile.role || localProfile?.role || "Zen Practitioner",
-                bio: remoteProfile.bio || localProfile?.bio || "",
-                email: session.user.email || localProfile?.email || "",
-              };
-              setUser(updatedProfile);
-              await AsyncStorage.setItem("@zen_user_profile", JSON.stringify(updatedProfile));
-            }
-          }
         } catch (e) {
           setProfileCreated(false);
         } finally {
@@ -115,54 +94,7 @@ export default function ProfileScreen() {
     }, [session?.user])
   );
 
-  // Auto-create profile when user signs in with Google
-  React.useEffect(() => {
-    if (!session || profileCreated || isLoading) return;
 
-    const autoCreateProfile = async () => {
-      const meta = session.user?.user_metadata;
-      const fullName = meta?.full_name || meta?.name || session.user?.email?.split("@")[0] || "User";
-      const email = session.user?.email || "";
-      const avatarInitial = fullName.charAt(0).toUpperCase();
-
-      const newProfile = {
-        name: fullName,
-        avatar: avatarInitial,
-        role: "Zen Practitioner",
-        email: email,
-        bio: "",
-      };
-
-      try {
-        await AsyncStorage.setItem("@zen_profile_setup_complete", "true");
-        await AsyncStorage.setItem("@zen_user_profile", JSON.stringify(newProfile));
-        setUser(newProfile);
-        setProfileCreated(true);
-      } catch (e) {
-        console.error("Failed to auto-create profile:", e);
-      }
-    };
-
-    autoCreateProfile();
-  }, [session, profileCreated, isLoading]);
-
-  /* -------------------- Handlers -------------------- */
-  const handleGoogleSignIn = async () => {
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: Platform.OS === "web" ? window.location.origin : undefined,
-        },
-      });
-      if (error) {
-        console.error("Google sign in error", error.message);
-        Alert.alert("Sign In Error", error.message);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
   const handleBackup = async () => {
     if (settings.hapticsEnabled) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -334,17 +266,7 @@ export default function ProfileScreen() {
       await AsyncStorage.setItem("@zen_user_profile", JSON.stringify(user));
       setProfileCreated(true);
 
-      // Sync to cloud
-      if (session?.user) {
-        await supabase.from("profiles").upsert({
-          id: session.user.id,
-          full_name: user.name,
-          avatar_url: user.avatar,
-          role: user.role,
-          bio: user.bio,
-          updated_at: new Date().toISOString(),
-        });
-      }
+
     } catch (e) {
       console.error("Failed to save profile flag", e);
     }
@@ -396,36 +318,7 @@ export default function ProfileScreen() {
               <Text style={styles.primaryCtaText}>Create Profile</Text>
             </Pressable>
 
-            {/* Google Sign-In for syncing */}
-            {!session && (
-              <View style={{ marginTop: 24, width: "100%", alignItems: "center" }}>
-                <View style={styles.orDividerRow}>
-                  <View style={styles.dividerLine} />
-                  <Text style={styles.orDividerText}>or connect with</Text>
-                  <View style={styles.dividerLine} />
-                </View>
 
-                <TouchableOpacity
-                  style={styles.googleSyncButton}
-                  onPress={handleGoogleSignIn}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons name="logo-google" size={20} color={theme.colors.text} />
-                  <Text style={[styles.googleSyncText, { color: theme.colors.text }]}>
-                    Continue with Google
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {session && (
-              <View style={styles.signedInBadge}>
-                <Ionicons name="checkmark-circle" size={18} color="#34C759" />
-                <Text style={styles.signedInText}>
-                  Connected as {session.user?.email}
-                </Text>
-              </View>
-            )}
           </View>
         </View>
 
@@ -480,38 +373,16 @@ export default function ProfileScreen() {
           onOpenEditModal={() => setEditProfileModalOpen(true)}
         />
 
-        {/* Supabase Cloud Sync Card */}
-        {!session ? (
-          <TouchableOpacity
-            style={[styles.syncCard, { borderColor: theme.glass.borderColor }]}
-            onPress={handleGoogleSignIn}
-            activeOpacity={0.8}
-          >
-            <View style={styles.syncCardLeft}>
-              <View style={styles.googleIconBox}>
-                <Ionicons name="logo-google" size={18} color={theme.colors.text} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.syncCardTitle, { color: theme.colors.text }]}>
-                  Connect with Google
-                </Text>
-                <Text style={[styles.syncCardSubtitle, { color: theme.colors.textSecondary }]}>
-                  Sync your tasks & routines across your devices
-                </Text>
-              </View>
-            </View>
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.syncConnectedCard}>
-            <Ionicons name="cloud-done-outline" size={20} color="#34C759" />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.syncConnectedTitle}>Cloud Sync Active</Text>
-              <Text style={styles.syncConnectedSubtitle} numberOfLines={1}>
-                {session.user?.email}
-              </Text>
-            </View>
+        {/* Offline Privacy & Local Storage Badge */}
+        <View style={[styles.syncConnectedCard, { borderColor: theme.glass.borderColor }]}>
+          <Ionicons name="shield-checkmark-outline" size={20} color="#34C759" />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.syncConnectedTitle}>Offline & Private</Text>
+            <Text style={styles.syncConnectedSubtitle} numberOfLines={1}>
+              All your habits, routines, and focus data stay on this device
+            </Text>
           </View>
-        )}
+        </View>
 
         {/* App Configuration & Settings Section */}
         <SettingsSection

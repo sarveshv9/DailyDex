@@ -18,7 +18,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Theme } from "../styles/shared";
 import { useTheme } from "../context/ThemeContext";
-import { supabase } from "../lib/supabase";
 import * as Haptics from "../utils/haptics";
 import { scheduleRoutineNotifications } from "../utils/notifications";
 import { getRoutineIcon, RoutineItem, timeToMinutes } from "../utils/utils";
@@ -1001,22 +1000,6 @@ export default function SetupScreen() {
             await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(minimalItems));
             await AsyncStorage.setItem(SETUP_KEY, "true");
 
-            const { data: userAuth } = await supabase.auth.getUser();
-            if (userAuth?.user) {
-                const dbItems = minimalItems.map((item) => ({
-                    id: item.id,
-                    user_id: userAuth.user.id,
-                    time: item.time,
-                    task: item.task,
-                    description: item.description || null,
-                    image_key: item.imageKey || null,
-                    insertion_order: item.insertionOrder,
-                    duration: item.duration || 30,
-                    days_of_week: item.daysOfWeek || [0, 1, 2, 3, 4, 5, 6],
-                    date: item.date || null,
-                }));
-                await supabase.from("routines").upsert(dbItems);
-            }
 
             await scheduleRoutineNotifications(minimalItems);
             router.replace("/(tabs)");
@@ -1138,22 +1121,6 @@ export default function SetupScreen() {
             await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(items));
             await AsyncStorage.setItem(SETUP_KEY, "true");
 
-            const { data: userAuth } = await supabase.auth.getUser();
-            if (userAuth?.user) {
-                const dbItems = items.map((item) => ({
-                    id: item.id,
-                    user_id: userAuth.user.id,
-                    time: item.time,
-                    task: item.task,
-                    description: item.description || null,
-                    image_key: item.imageKey || null,
-                    insertion_order: item.insertionOrder,
-                    duration: item.duration || 30,
-                    days_of_week: item.daysOfWeek || [0, 1, 2, 3, 4, 5, 6],
-                    date: item.date || null,
-                }));
-                await supabase.from("routines").upsert(dbItems);
-            }
 
             await scheduleRoutineNotifications(items);
             router.replace("/(tabs)");

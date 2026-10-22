@@ -33,7 +33,6 @@ import Animated, {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../context/ThemeContext";
 import { useTimer } from "../../context/TimerContext";
-import { supabase } from "../../lib/supabase";
 import { getSharedStyles, Theme } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
 import { addTaskCompleted, removeTaskCompleted } from "../../utils/stats";
@@ -81,37 +80,7 @@ const loadTasks = async (): Promise<Task[]> => {
       }
     }
 
-    // 2. Fetch from Supabase if authenticated
-    const { data: userAuth } = await supabase.auth.getUser();
 
-    if (userAuth?.user) {
-      const { data: stored, error } = await supabase
-        .from("tasks")
-        .select("*")
-        .order("created_at", { ascending: true });
-
-      if (!error && stored && stored.length > 0) {
-        finalTasks = stored.map((d: any) => ({
-          id: d.id,
-          text: d.text,
-          completed: d.completed,
-          category: d.category,
-          createdAt: d.created_at,
-        }));
-        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(finalTasks));
-      } else if (localTasks && localTasks.length > 0) {
-        finalTasks = localTasks;
-        const dbTasks = localTasks.map((t) => ({
-          id: t.id,
-          user_id: userAuth.user.id,
-          text: t.text,
-          completed: t.completed,
-          category: t.category,
-          created_at: t.createdAt,
-        }));
-        await supabase.from("tasks").insert(dbTasks);
-      }
-    }
 
     // 3. Fallback to local
     if (!finalTasks && localTasks) {
@@ -130,36 +99,7 @@ const saveTasks = async (tasks: Task[]) => {
     // Save locally immediately
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
 
-    // Sync to Supabase if authenticated
-    const { data: user } = await supabase.auth.getUser();
-    if (!user?.user) return;
 
-    // Remote deletes
-    const { data: remoteData } = await supabase.from("tasks").select("id");
-    const remoteRecordIds = remoteData ? remoteData.map((t: any) => t.id) : [];
-
-    const incomingIds = tasks.map((t) => t.id);
-    const toDeleteIds = remoteRecordIds.filter(
-      (id: string) => !incomingIds.includes(id)
-    );
-
-    if (toDeleteIds.length > 0) {
-      await supabase.from("tasks").delete().in("id", toDeleteIds);
-    }
-
-    // Remote upserts
-    const dbTasks = tasks.map((t) => ({
-      id: t.id,
-      user_id: user.user.id,
-      text: t.text,
-      completed: t.completed,
-      category: t.category,
-      created_at: t.createdAt,
-    }));
-
-    if (dbTasks.length > 0) {
-      await supabase.from("tasks").upsert(dbTasks);
-    }
   } catch (error) {
     console.error("Error saving tasks:", error);
   }

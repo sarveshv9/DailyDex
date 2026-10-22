@@ -1,87 +1,65 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
-import { supabase } from '../../lib/supabase';
 import { useRouter } from 'expo-router';
-import * as Linking from 'expo-linking';
-import * as WebBrowser from 'expo-web-browser';
-
-// Optional: Complete the auth session if the app is returning from an OAuth flow
-if (Platform.OS !== 'web') {
-  WebBrowser.maybeCompleteAuthSession();
-}
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Haptics from '../../utils/haptics';
 
 export default function SignInScreen() {
   const { theme, isDarkMode } = useTheme();
   const router = useRouter();
 
-  const handleGoogleSignIn = async () => {
+  const handleGetStarted = async () => {
+    await Haptics.impactAsync();
     try {
-      const redirectUrl = Linking.createURL('/(auth)/sign-in');
-      
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: Platform.OS === 'web' ? window.location.origin : redirectUrl,
-          skipBrowserRedirect: Platform.OS !== 'web',
-        },
-      });
-
-      if (error) {
-        console.error("Google sign in error", error.message);
-      } else if (data?.url && Platform.OS !== 'web') {
-        const res = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
-        if (res.type === 'success' && res.url) {
-          // Parse tokens or code from the URL manually since getSessionFromUrl is not available
-          const getParam = (name: string) => {
-            const match = res.url.match(new RegExp(`[#?&]${name}=([^&]+)`));
-            return match ? decodeURIComponent(match[1]) : null;
-          };
-          
-          const access_token = getParam('access_token');
-          const refresh_token = getParam('refresh_token');
-          const code = getParam('code');
-          
-          if (access_token && refresh_token) {
-            await supabase.auth.setSession({ access_token, refresh_token });
-          } else if (code) {
-            await supabase.auth.exchangeCodeForSession(code);
-          }
-        }
+      const setup = await AsyncStorage.getItem('@zen_setup_complete');
+      if (setup === 'true') {
+        router.replace('/(tabs)');
+      } else {
+        router.replace('/setup');
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
+      router.replace('/setup');
     }
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: isDarkMode ? '#121212' : '#F5F5F7' }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <StatusBar style={isDarkMode ? 'light' : 'dark'} />
       <View style={styles.content}>
         <View style={styles.headerContainer}>
+          <View style={[styles.iconBadge, { backgroundColor: theme.colors.card }]}>
+            <Ionicons name="sparkles" size={36} color={theme.colors.primary} />
+          </View>
           <Text style={[styles.title, { color: theme.colors.text }]}>Welcome to Zen</Text>
           <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-            Sign in to sync your routines and tasks across all your devices.
+            Your personal, offline-first sanctuary for habits, focus, and daily flow.
           </Text>
         </View>
 
         <View style={styles.buttonContainer}>
           <TouchableOpacity
-            style={[styles.socialButton, { backgroundColor: theme.colors.card }]}
-            onPress={handleGoogleSignIn}
-            activeOpacity={0.8}
+            style={[styles.primaryButton, { backgroundColor: theme.colors.primary }]}
+            onPress={handleGetStarted}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Get Started with Zen"
           >
-            <Ionicons name="logo-google" size={24} color={theme.colors.text} />
-            <Text style={[styles.buttonText, { color: theme.colors.text }]}>
-              Continue with Google
-            </Text>
+            <Text style={styles.buttonText}>Get Started</Text>
+            <Ionicons name="arrow-forward" size={20} color="#FFFFFF" style={{ marginLeft: 8 }} />
           </TouchableOpacity>
-          
-          <Text style={[styles.footerText, { color: theme.colors.textSecondary }]}>
-            By continuing, you agree to our Terms of Service and Privacy Policy.
-          </Text>
+
+          <View style={styles.legalLinksRow}>
+            <TouchableOpacity onPress={() => router.push('/terms')} hitSlop={8}>
+              <Text style={[styles.legalLink, { color: theme.colors.textSecondary }]}>Terms of Service</Text>
+            </TouchableOpacity>
+            <Text style={{ color: theme.colors.textSecondary, marginHorizontal: 8 }}>•</Text>
+            <TouchableOpacity onPress={() => router.push('/privacy')} hitSlop={8}>
+              <Text style={[styles.legalLink, { color: theme.colors.textSecondary }]}>Privacy Policy</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </SafeAreaView>
@@ -96,15 +74,29 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 24,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   headerContainer: {
     alignItems: 'center',
-    marginBottom: 60,
+    marginBottom: 48,
+  },
+  iconBadge: {
+    width: 72,
+    height: 72,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
   title: {
     fontFamily: 'UbuntuBold',
-    fontSize: 42,
-    marginBottom: 16,
+    fontSize: 36,
+    marginBottom: 12,
     textAlign: 'center',
   },
   subtitle: {
@@ -112,36 +104,40 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     lineHeight: 24,
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
   },
   buttonContainer: {
     width: '100%',
     alignItems: 'center',
+    maxWidth: 360,
   },
-  socialButton: {
+  primaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
     paddingVertical: 16,
-    borderRadius: 16,
+    borderRadius: 18,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 4,
     marginBottom: 24,
   },
   buttonText: {
     fontFamily: 'UbuntuMedium',
     fontSize: 18,
-    marginLeft: 12,
+    color: '#FFFFFF',
   },
-  footerText: {
+  legalLinksRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  legalLink: {
     fontFamily: 'UbuntuRegular',
-    fontSize: 14,
-    textAlign: 'center',
-    paddingHorizontal: 20,
-    lineHeight: 20,
+    fontSize: 13,
+    textDecorationLine: 'underline',
   },
 });

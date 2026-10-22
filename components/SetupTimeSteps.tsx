@@ -458,9 +458,9 @@ export function InteractiveTimeCard({
     const styles = useMemo(() => makeStyles(theme.fonts), [theme.fonts]);
     const { hours, minutes, ampm } = useMemo(() => parseTimeString(time), [time]);
 
-    // 0–23 representation, used for all hour math so AM/PM flips correctly
+    // 0–23 representation, used for hour increments math so AM/PM flips correctly
     const militaryHour = ampm === "PM" ? (hours % 12) + 12 : hours % 12;
-    const displayHour = isSleepStep ? militaryHour : hours;
+    const displayHour = hours === 0 ? 12 : hours;
 
     const changeHour = (delta: number) => {
         Haptics.selectionAsync();
@@ -492,19 +492,33 @@ export function InteractiveTimeCard({
         value,
         onUp,
         onDown,
+        label,
     }: {
         value: number;
         onUp: () => void;
         onDown: () => void;
+        label: string;
     }) => (
         <View style={styles.digitCol}>
-            <Pressable style={styles.chevronBtn} onPress={onUp} hitSlop={12}>
+            <Pressable
+                style={styles.chevronBtn}
+                onPress={onUp}
+                hitSlop={12}
+                accessibilityRole="button"
+                accessibilityLabel={`Increase ${label}`}
+            >
                 <Ionicons name="chevron-up" size={22} color={up} />
             </Pressable>
             <View style={isSleepStep ? styles.digitBoxNight : styles.digitBoxDay}>
                 <Text style={digitStyle}>{String(value).padStart(2, "0")}</Text>
             </View>
-            <Pressable style={styles.chevronBtn} onPress={onDown} hitSlop={12}>
+            <Pressable
+                style={styles.chevronBtn}
+                onPress={onDown}
+                hitSlop={12}
+                accessibilityRole="button"
+                accessibilityLabel={`Decrease ${label}`}
+            >
                 <Ionicons name="chevron-down" size={22} color={down} />
             </Pressable>
         </View>
@@ -515,14 +529,16 @@ export function InteractiveTimeCard({
             <Text style={isSleepStep ? styles.timeLabelNight : styles.timeLabelDay}>Select Time</Text>
 
             <View style={isSleepStep ? styles.timePillNight : styles.timePillDay}>
-                <Column value={displayHour} onUp={() => changeHour(1)} onDown={() => changeHour(-1)} />
+                <Column value={displayHour} onUp={() => changeHour(1)} onDown={() => changeHour(-1)} label="hours" />
                 <Text style={colonStyle}>:</Text>
-                <Column value={minutes} onUp={() => changeMinute(5)} onDown={() => changeMinute(-5)} />
+                <Column value={minutes} onUp={() => changeMinute(5)} onDown={() => changeMinute(-5)} label="minutes" />
 
                 <Pressable
                     style={isSleepStep ? styles.ampmNight : styles.ampmDay}
                     onPress={toggleAmPm}
                     hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Toggle AM or PM, currently ${ampm}`}
                 >
                     <Text style={isSleepStep ? styles.ampmTextNight : styles.ampmTextDay}>{ampm}</Text>
                 </Pressable>

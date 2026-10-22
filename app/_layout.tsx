@@ -48,8 +48,8 @@ function RootLayoutNav() {
       const inAuthGroup = segments[0] === ("(auth)" as any);
       const inTabsGroup = segments[0] === "(tabs)";
 
-      // If user is on auth page but already signed in, redirect out
-      if (session && inAuthGroup) {
+      // Offline-first routing: If on auth screen, route directly to setup or dashboard
+      if (inAuthGroup) {
         try {
           const setup = await AsyncStorage.getItem("@zen_setup_complete");
           if (setup !== "true") {

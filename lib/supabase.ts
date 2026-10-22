@@ -1,34 +1,32 @@
-import { AppState } from 'react-native';
-import { createClient } from '@supabase/supabase-js';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
+// Supabase has been removed. All data in Zen is local-first via AsyncStorage.
+// This mock object ensures backward compatibility without any network calls or errors.
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+const createNoOpChain = () => {
+  const chain: any = {
+    select: () => chain,
+    insert: () => Promise.resolve({ data: null, error: null }),
+    upsert: () => Promise.resolve({ data: null, error: null }),
+    delete: () => chain,
+    update: () => chain,
+    eq: () => chain,
+    in: () => chain,
+    single: () => Promise.resolve({ data: null, error: null }),
+    order: () => Promise.resolve({ data: null, error: null }),
+  };
+  return chain;
+};
 
-// Create a single supabase client for interacting with your database
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase: any = {
   auth: {
-    // In React Native/Expo, we need to provide a storage implementation
-    ...(Platform.OS !== 'web' ? { storage: AsyncStorage } : {}),
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: Platform.OS === 'web',
+    getUser: async () => ({ data: { user: null }, error: null }),
+    getSession: async () => ({ data: { session: null }, error: null }),
+    signInWithOAuth: async () => ({ data: null, error: null }),
+    setSession: async () => ({ data: null, error: null }),
+    exchangeCodeForSession: async () => ({ data: null, error: null }),
+    signOut: async () => ({ error: null }),
+    onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+    startAutoRefresh: () => {},
+    stopAutoRefresh: () => {},
   },
-});
-
-// Tells Supabase Auth to continuously refresh the session automatically
-// if the app is in the foreground. When this is added, you will continue
-// to receive `onAuthStateChange` events with the `TOKEN_REFRESHED` or
-// `SIGNED_OUT` event if the user's session is terminated. This should
-// only be registered once.
-// Note: AppState doesn't work reliably on web, so we skip it there.
-if (Platform.OS !== 'web') {
-  AppState.addEventListener('change', (state) => {
-    if (state === 'active') {
-      supabase.auth.startAutoRefresh();
-    } else {
-      supabase.auth.stopAutoRefresh();
-    }
-  });
-}
+  from: () => createNoOpChain(),
+};
