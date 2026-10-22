@@ -1,4 +1,5 @@
 import * as Notifications from "expo-notifications";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 import { RoutineItem, timeToMinutes } from "./utils";
 
@@ -61,6 +62,17 @@ export const scheduleRoutineNotifications = async (
     if (Platform.OS === 'web') return;
     // Cancel all existing routine notifications
     await cancelAllRoutineNotifications();
+
+    // Respect user's notification setting
+    try {
+        const storedSettings = await AsyncStorage.getItem("@zen_user_settings_v2");
+        if (storedSettings) {
+            const parsed = JSON.parse(storedSettings);
+            if (parsed?.notifications?.taskReminders === false) {
+                return;
+            }
+        }
+    } catch {}
 
     const hasPermission = await requestNotificationPermissions();
     if (!hasPermission) return;

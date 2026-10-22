@@ -6,9 +6,6 @@ import { supabase } from '../lib/supabase';
 interface Settings {
   notifications: {
     taskReminders: boolean;
-    dailySummary: boolean;
-    achievements: boolean;
-    news: boolean;
   };
   hapticsEnabled: boolean;
   musicPreference: number;
@@ -25,9 +22,6 @@ interface SettingsContextType {
 const DEFAULT_SETTINGS: Settings = {
   notifications: {
     taskReminders: true,
-    dailySummary: true,
-    achievements: false,
-    news: false,
   },
   hapticsEnabled: true,
   musicPreference: 0,
@@ -107,13 +101,34 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [settings, isLoading]);
 
   const toggleNotification = useCallback((key: keyof Settings['notifications']) => {
-    setSettings(prev => ({
-      ...prev,
-      notifications: {
-        ...prev.notifications,
-        [key]: !prev.notifications[key],
-      },
-    }));
+    setSettings(prev => {
+      const nextVal = !prev.notifications[key];
+      if (key === 'taskReminders') {
+        if (!nextVal) {
+          import('../utils/notifications').then(({ cancelAllRoutineNotifications }) => {
+            cancelAllRoutineNotifications();
+          });
+        } else {
+          AsyncStorage.getItem('@zen_routine').then(data => {
+            if (data) {
+              try {
+                const routines = JSON.parse(data);
+                import('../utils/notifications').then(({ scheduleRoutineNotifications }) => {
+                  scheduleRoutineNotifications(routines);
+                });
+              } catch {}
+            }
+          });
+        }
+      }
+      return {
+        ...prev,
+        notifications: {
+          ...prev.notifications,
+          [key]: nextVal,
+        },
+      };
+    });
   }, []);
 
   const setHapticsEnabled = useCallback((enabled: boolean) => {

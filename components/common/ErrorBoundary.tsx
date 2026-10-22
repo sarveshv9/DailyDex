@@ -1,45 +1,71 @@
-import React, { ErrorInfo, ReactNode } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import React, { Component, ErrorInfo, ReactNode, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  ScrollView,
+  Platform,
+  useColorScheme,
+} from "react-native";
+import {
+  AlertTriangle,
+  RefreshCw,
+  Home,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  Check,
+} from "lucide-react-native";
+import { useTheme } from "../../context/ThemeContext";
+import { darkThemes, lightThemes, Theme } from "../../styles/shared";
+import * as Haptics from "../../utils/haptics";
 
 interface Props {
   children?: ReactNode;
+  fallback?: ReactNode;
+  onReset?: () => void;
 }
 
 interface State {
   hasError: boolean;
   error: Error | null;
+  errorInfo: ErrorInfo | null;
 }
 
-export class ErrorBoundary extends React.Component<Props, State> {
+export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
     error: null,
+    errorInfo: null,
   };
 
-  public static getDerivedStateFromError(error: Error): State {
+  public static getDerivedStateFromError(error: Error): Partial<State> {
     return { hasError: true, error };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Uncaught error:', error, errorInfo);
+    this.setState({ errorInfo });
+    console.error("Uncaught error caught by ErrorBoundary:", error, errorInfo);
   }
 
   private handleReset = () => {
-    this.setState({ hasError: false, error: null });
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    this.props.onReset?.();
+    this.setState({ hasError: false, error: null, errorInfo: null });
   };
 
   public render() {
     if (this.state.hasError) {
+      if (this.props.fallback) {
+        return this.props.fallback;
+      }
       return (
-        <View style={styles.container}>
-          <Text style={styles.title}>Oops, something went wrong.</Text>
-          <Text style={styles.subtitle}>
-            {this.state.error?.message || 'An unexpected error occurred.'}
-          </Text>
-          <Pressable style={styles.button} onPress={this.handleReset}>
-            <Text style={styles.buttonText}>Try Again</Text>
-          </Pressable>
-        </View>
+        <ErrorFallbackView
+          error={this.state.error}
+          errorInfo={this.state.errorInfo}
+          onReset={this.handleReset}
+        />
       );
     }
 
@@ -47,35 +73,377 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 }
 
+interface ErrorFallbackProps {
+  error: Error | null;
+  errorInfo: ErrorInfo | null;
+  onReset: () => void;
+}
+
+function ErrorFallbackView({ error, errorInfo, onReset }: ErrorFallbackProps) {
+  const [showDetails, setShowDetails] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  // Safely attempt to read context theme, fallback to system dark/light default
+  const colorScheme = useColorScheme();
+  let theme: Theme;
+  try {
+    const themeContext = useTheme();
+    theme = themeContext.theme;
+  } catch {
+    theme = colorScheme === "dark" ? darkThemes.pokeball : lightThemes.pokeball;
+  }
+
+  const { colors, fonts, spacing, glass, glows, borderRadius } = theme;
+
+  const handleCopy = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const trace = `${error?.message || "Error"}\n\n${error?.stack || ""}\n\n${
+      errorInfo?.componentStack || ""
+    }`;
+    if (Platform.OS === "web" && typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(trace);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleGoHome = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      window.location.href = "/";
+    } else {
+      try {
+        const { router } = require("expo-router");
+        router.replace("/");
+      } catch {
+        onReset();
+      }
+    }
+  };
+
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Ambient background glow ring */}
+      <View
+        pointerEvents="none"
+        style={[
+          styles.glowRing,
+          {
+            backgroundColor: colors.primary,
+            opacity: 0.12,
+          },
+        ]}
+      />
+
+      <View
+        style={[
+          styles.card,
+          {
+            backgroundColor: glass.cardBg,
+            borderColor: glass.borderColor,
+            borderRadius: borderRadius.lg * 1.5,
+            padding: spacing.xl,
+            ...glows.card,
+          },
+        ]}
+      >
+        {/* Glowing Icon Header */}
+        <View
+          style={[
+            styles.iconTile,
+            {
+              backgroundColor: `${colors.primary}${glass.iconTintAlpha}`,
+              borderRadius: borderRadius.lg,
+              borderWidth: 1,
+              borderColor: `${colors.primary}40`,
+            },
+          ]}
+        >
+          <AlertTriangle
+            size={36}
+            color={colors.primary}
+            strokeWidth={1.8}
+          />
+        </View>
+
+        {/* Title & Description */}
+        <Text
+          style={[
+            styles.title,
+            {
+              fontFamily: fonts.bold,
+              color: colors.text,
+              marginTop: spacing.lg,
+            },
+          ]}
+        >
+          Something Went Wrong
+        </Text>
+        <Text
+          style={[
+            styles.subtitle,
+            {
+              fontFamily: fonts.regular,
+              color: colors.textSecondary,
+              marginTop: spacing.xs,
+              marginBottom: spacing.lg,
+            },
+          ]}
+        >
+          Zen encountered an unexpected issue. Don't worry, your routines and data are safely stored.
+        </Text>
+
+        {/* Action Buttons */}
+        <View style={styles.actionGroup}>
+          <Pressable
+            onPress={onReset}
+            style={({ pressed }) => [
+              styles.primaryBtn,
+              {
+                backgroundColor: colors.primary,
+                borderRadius: borderRadius.lg,
+                opacity: pressed ? 0.9 : 1,
+                transform: [{ scale: pressed ? 0.98 : 1 }],
+                ...glows.primary,
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Try Again"
+          >
+            <RefreshCw size={18} color={colors.white} strokeWidth={2} />
+            <Text
+              style={[
+                styles.primaryBtnText,
+                { fontFamily: fonts.bold, color: colors.white },
+              ]}
+            >
+              Try Again
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={handleGoHome}
+            style={({ pressed }) => [
+              styles.secondaryBtn,
+              {
+                backgroundColor: glass.neutralFill,
+                borderColor: glass.borderColor,
+                borderRadius: borderRadius.lg,
+                opacity: pressed ? 0.75 : 1,
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Return Home"
+          >
+            <Home size={18} color={colors.text} strokeWidth={1.8} />
+            <Text
+              style={[
+                styles.secondaryBtnText,
+                { fontFamily: fonts.medium, color: colors.text },
+              ]}
+            >
+              Return Home
+            </Text>
+          </Pressable>
+        </View>
+
+        {/* Technical Error Accordion */}
+        {error && (
+          <View style={[styles.detailsContainer, { marginTop: spacing.lg }]}>
+            <Pressable
+              onPress={() => setShowDetails(!showDetails)}
+              style={styles.detailsToggle}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text
+                style={[
+                  styles.detailsToggleText,
+                  { fontFamily: fonts.medium, color: colors.textSecondary },
+                ]}
+              >
+                {showDetails ? "Hide Error Details" : "View Error Details"}
+              </Text>
+              {showDetails ? (
+                <ChevronUp size={16} color={colors.textSecondary} />
+              ) : (
+                <ChevronDown size={16} color={colors.textSecondary} />
+              )}
+            </Pressable>
+
+            {showDetails && (
+              <View
+                style={[
+                  styles.errorBox,
+                  {
+                    backgroundColor: colors.background,
+                    borderColor: glass.borderColor,
+                    borderRadius: borderRadius.md,
+                    padding: spacing.md,
+                  },
+                ]}
+              >
+                <View style={styles.errorBoxHeader}>
+                  <Text
+                    style={[
+                      styles.errorMessage,
+                      { fontFamily: fonts.bold, color: colors.primary },
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {error.message || "Unknown error"}
+                  </Text>
+                  {Platform.OS === "web" && (
+                    <Pressable
+                      onPress={handleCopy}
+                      style={styles.copyBtn}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      {copied ? (
+                        <Check size={14} color={colors.primary} />
+                      ) : (
+                        <Copy size={14} color={colors.textSecondary} />
+                      )}
+                    </Pressable>
+                  )}
+                </View>
+
+                {(error.stack || errorInfo?.componentStack) && (
+                  <ScrollView
+                    style={styles.stackScroll}
+                    nestedScrollEnabled
+                    showsVerticalScrollIndicator
+                  >
+                    <Text
+                      style={[
+                        styles.stackText,
+                        { color: colors.textSecondary },
+                      ]}
+                      selectable
+                    >
+                      {error.stack || errorInfo?.componentStack}
+                    </Text>
+                  </ScrollView>
+                )}
+              </View>
+            )}
+          </View>
+        )}
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    backgroundColor: '#F5F5F7',
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+    width: "100%",
+    height: "100%",
+  },
+  glowRing: {
+    position: "absolute",
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    filter: Platform.OS === "web" ? "blur(80px)" : undefined,
+  },
+  card: {
+    width: "100%",
+    maxWidth: 440,
+    alignItems: "center",
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  iconTile: {
+    width: 72,
+    height: 72,
+    alignItems: "center",
+    justifyContent: "center",
   },
   title: {
     fontSize: 22,
-    fontWeight: '700',
-    color: '#1C1C1E',
-    marginBottom: 8,
+    textAlign: "center",
+    letterSpacing: -0.3,
   },
   subtitle: {
-    fontSize: 15,
-    color: '#8E8E93',
-    textAlign: 'center',
-    marginBottom: 24,
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 20,
+    paddingHorizontal: 8,
   },
-  button: {
-    backgroundColor: '#007AFF',
+  actionGroup: {
+    width: "100%",
+    gap: 12,
+  },
+  primaryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
     paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
+    width: "100%",
+    minHeight: 48,
   },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+  primaryBtnText: {
+    fontSize: 15,
+    letterSpacing: 0.2,
+  },
+  secondaryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    width: "100%",
+    minHeight: 46,
+    borderWidth: 1,
+  },
+  secondaryBtnText: {
+    fontSize: 14,
+  },
+  detailsContainer: {
+    width: "100%",
+  },
+  detailsToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 6,
+  },
+  detailsToggleText: {
+    fontSize: 12,
+  },
+  errorBox: {
+    marginTop: 8,
+    borderWidth: 1,
+    maxHeight: 180,
+    width: "100%",
+  },
+  errorBoxHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 8,
+    marginBottom: 6,
+  },
+  errorMessage: {
+    fontSize: 12,
+    flex: 1,
+  },
+  copyBtn: {
+    padding: 2,
+  },
+  stackScroll: {
+    maxHeight: 120,
+  },
+  stackText: {
+    fontSize: 11,
+    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
+    lineHeight: 16,
   },
 });

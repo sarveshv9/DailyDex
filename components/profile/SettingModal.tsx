@@ -10,13 +10,9 @@ export type UserShape = {
   name: string;
   role: string;
   avatar: string;
-  stats: {
-    followers: number;
-    following: number;
-    projects: number;
-  };
   email: string;
   bio: string;
+  stats?: Record<string, any>;
 };
 
 export type SettingModalProps = {

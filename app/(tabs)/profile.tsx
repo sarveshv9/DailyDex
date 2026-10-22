@@ -66,11 +66,6 @@ export default function ProfileScreen() {
     name: "",
     avatar: "",
     role: "",
-    stats: {
-      followers: 0,
-      following: 0,
-      projects: 0,
-    },
     email: "",
     bio: "",
   });
@@ -105,7 +100,6 @@ export default function ProfileScreen() {
                 role: remoteProfile.role || localProfile?.role || "Zen Practitioner",
                 bio: remoteProfile.bio || localProfile?.bio || "",
                 email: session.user.email || localProfile?.email || "",
-                stats: localProfile?.stats || { followers: 0, following: 0, projects: 0 },
               };
               setUser(updatedProfile);
               await AsyncStorage.setItem("@zen_user_profile", JSON.stringify(updatedProfile));
@@ -135,7 +129,6 @@ export default function ProfileScreen() {
         name: fullName,
         avatar: avatarInitial,
         role: "Zen Practitioner",
-        stats: { followers: 0, following: 0, projects: 0 },
         email: email,
         bio: "",
       };
