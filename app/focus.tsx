@@ -43,6 +43,7 @@ export default function FocusScreen() {
 
     const paramTaskId = (params.taskId as string) || "zen-focus";
     const paramTaskName = (params.taskName as string) || "Deep Focus";
+    const paramDuration = params.duration ? parseInt(params.duration as string, 10) : null;
 
     const timer = useTimer();
 
@@ -50,9 +51,30 @@ export default function FocusScreen() {
     const isCurrentTimer = timer.taskId === paramTaskId;
     const isActive = isCurrentTimer && timer.isActive;
     const isCompleted = isCurrentTimer && timer.isCompleted;
+    const isSessionInProgress = isCurrentTimer && timer.timeLeft > 0 && !isCompleted;
+
+    // Available duration options, incorporating dynamic route duration if supplied
+    const durationOptions = useMemo(() => {
+        const base = [
+            { label: "15m", value: 15 * 60, title: "15 min" },
+            { label: "25m", value: 25 * 60, title: "25 min" },
+            { label: "45m", value: 45 * 60, title: "45 min" },
+            { label: "60m", value: 60 * 60, title: "60 min" },
+        ];
+        if (paramDuration && paramDuration > 0 && ![15, 25, 45, 60].includes(paramDuration)) {
+            const customItem = {
+                label: `${paramDuration}m`,
+                value: paramDuration * 60,
+                title: `${paramDuration} min`,
+            };
+            return [...base, customItem].sort((a, b) => a.value - b.value);
+        }
+        return base;
+    }, [paramDuration]);
 
     // Local configuration state before starting
-    const [selectedDuration, setSelectedDuration] = useState(25 * 60);
+    const initialDuration = paramDuration && paramDuration > 0 ? paramDuration * 60 : 25 * 60;
+    const [selectedDuration, setSelectedDuration] = useState(initialDuration);
     const [selectedMode, setSelectedMode] = useState<"Free" | "Pomodoro">("Free");
 
     // Custom Glassmorphic Confirmation Modal
@@ -79,17 +101,17 @@ export default function FocusScreen() {
     };
 
     /**
-     * Top navigation back/close action
+     * Top navigation back/close action - protects both running and paused in-progress sessions
      */
     const requestQuit = useCallback(() => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        if (!isActive) {
+        if (!isSessionInProgress) {
             router.back();
             return;
         }
         setConfirmModalType("minimize");
         setConfirmModalVisible(true);
-    }, [isActive, router]);
+    }, [isSessionInProgress, router]);
 
     /**
      * Dedicated End Session action that opens custom glassmorphic modal
@@ -102,7 +124,7 @@ export default function FocusScreen() {
 
     useEffect(() => {
         const onBackPress = () => {
-            if (isActive) {
+            if (isSessionInProgress) {
                 requestQuit();
                 return true;
             }
@@ -111,7 +133,7 @@ export default function FocusScreen() {
 
         const sub = BackHandler.addEventListener("hardwareBackPress", onBackPress);
         return () => sub.remove();
-    }, [isActive, requestQuit]);
+    }, [isSessionInProgress, requestQuit]);
 
     const handleComplete = () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -221,6 +243,7 @@ export default function FocusScreen() {
                 <Pressable
                     onPress={requestQuit}
                     hitSlop={12}
+                    accessibilityRole="button"
                     accessibilityLabel="Close focus session"
                     style={({ pressed }) => [
                         styles.headerIconButton,
@@ -318,7 +341,13 @@ export default function FocusScreen() {
                             </Svg>
 
                             {/* Center Dial Content */}
-                            <View style={styles.dialContent}>
+                            <View
+                                style={styles.dialContent}
+                                accessible={true}
+                                accessibilityRole="progressbar"
+                                accessibilityLabel={`Timer: ${Math.floor(displayTime / 60)} minutes and ${displayTime % 60} seconds remaining`}
+                                accessibilityValue={{ min: 0, max: totalDuration, now: displayTime }}
+                            >
                                 {/* Session Status Tag */}
                                 <View
                                     style={[
@@ -478,7 +507,7 @@ export default function FocusScreen() {
 
                                 {/* Quick Duration Pills */}
                                 <View style={styles.durationPillsRow}>
-                                    {DURATIONS.map((d) => {
+                                    {durationOptions.map((d) => {
                                         const isSelected = selectedDuration === d.value;
                                         return (
                                             <Pressable
@@ -487,6 +516,9 @@ export default function FocusScreen() {
                                                     Haptics.selectionAsync();
                                                     setSelectedDuration(d.value);
                                                 }}
+                                                accessibilityRole="button"
+                                                accessibilityLabel={`Select ${d.title} duration`}
+                                                accessibilityState={{ selected: isSelected }}
                                                 style={({ pressed }) => [
                                                     styles.durationPill,
                                                     isSelected && styles.durationPillActive,
@@ -509,6 +541,8 @@ export default function FocusScreen() {
                                 {/* Standardized 56px Primary Action Button */}
                                 <Pressable
                                     onPress={startNewTimer}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={`Begin focus session for ${Math.round(selectedDuration / 60)} minutes`}
                                     style={({ pressed }) => [
                                         styles.primaryActionButton,
                                         pressed && styles.pressedScale,
@@ -556,6 +590,8 @@ export default function FocusScreen() {
                                 {/* Standardized 56px Primary Action Button */}
                                 <Pressable
                                     onPress={startNewPomodoro}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Begin Pomodoro cycle"
                                     style={({ pressed }) => [
                                         styles.primaryActionButton,
                                         pressed && styles.pressedScale,
@@ -615,6 +651,8 @@ export default function FocusScreen() {
                         {/* Standardized 56px Primary Action Button */}
                         <Pressable
                             onPress={handleComplete}
+                            accessibilityRole="button"
+                            accessibilityLabel="Complete and return to tasks"
                             style={({ pressed }) => [
                                 styles.primaryActionButton,
                                 pressed && styles.pressedScale,
@@ -636,6 +674,8 @@ export default function FocusScreen() {
                                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                 timer.stopTimer();
                             }}
+                            accessibilityRole="button"
+                            accessibilityLabel="Start another focus session"
                             style={({ pressed }) => [
                                 styles.secondaryActionButton,
                                 pressed && styles.pressedScale,
@@ -658,6 +698,8 @@ export default function FocusScreen() {
                             {/* Primary Play / Pause Pill (Concise "Pause" / "Resume" with distinct states) */}
                             <Pressable
                                 onPress={toggleTimer}
+                                accessibilityRole="button"
+                                accessibilityLabel={isActive ? "Pause focus timer" : "Resume focus timer"}
                                 style={({ pressed }) => [
                                     styles.actionPillPrimary,
                                     !isActive && styles.actionPillResume,
@@ -688,6 +730,9 @@ export default function FocusScreen() {
                                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                     timer.resetTimer();
                                 }}
+                                accessibilityRole="button"
+                                accessibilityLabel="Reset timer to beginning"
+                                accessibilityState={{ disabled: !isResetEnabled }}
                                 style={({ pressed }) => [
                                     styles.actionPillSecondary,
                                     !isResetEnabled && styles.actionPillDisabled,
@@ -716,6 +761,8 @@ export default function FocusScreen() {
                                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                         timer.advancePomodoroPhase();
                                     }}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={isLastPomoPhase ? "Finish Pomodoro session" : "Skip to next phase"}
                                     style={({ pressed }) => [
                                         styles.actionPillSecondary,
                                         isLastPomoPhase && styles.actionPillFinish,
@@ -742,6 +789,8 @@ export default function FocusScreen() {
                         {/* End Session Button: Triggers custom glassmorphic confirmation modal */}
                         <Pressable
                             onPress={handleEndSessionPress}
+                            accessibilityRole="button"
+                            accessibilityLabel="End session early"
                             style={({ pressed }) => [
                                 styles.endSessionButton,
                                 pressed && styles.pressedScale,
@@ -826,6 +875,8 @@ export default function FocusScreen() {
                             {confirmModalType === "minimize" ? (
                                 <>
                                     <Pressable
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Minimize and keep timer running"
                                         style={({ pressed }) => [
                                             styles.modalPrimaryButton,
                                             pressed && styles.pressedScale,
@@ -847,6 +898,8 @@ export default function FocusScreen() {
                                     </Pressable>
 
                                     <Pressable
+                                        accessibilityRole="button"
+                                        accessibilityLabel="End session and leave"
                                         style={({ pressed }) => [
                                             styles.modalDestructiveButton,
                                             pressed && styles.pressedScale,
@@ -869,6 +922,8 @@ export default function FocusScreen() {
                                     </Pressable>
 
                                     <Pressable
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Stay on focus screen"
                                         style={({ pressed }) => [
                                             styles.modalCancelButton,
                                             pressed && styles.pressedScale,
@@ -884,6 +939,8 @@ export default function FocusScreen() {
                             ) : (
                                 <>
                                     <Pressable
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Keep focusing"
                                         style={({ pressed }) => [
                                             styles.modalPrimaryButton,
                                             pressed && styles.pressedScale,
@@ -898,6 +955,8 @@ export default function FocusScreen() {
                                     </Pressable>
 
                                     <Pressable
+                                        accessibilityRole="button"
+                                        accessibilityLabel="End session early"
                                         style={({ pressed }) => [
                                             styles.modalDestructiveButton,
                                             pressed && styles.pressedScale,
@@ -942,7 +1001,6 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
             height: 320,
             borderRadius: 160,
             backgroundColor: isDarkMode ? `${theme.colors.primary}12` : `${theme.colors.primary}08`,
-            filter: "blur(60px)",
         },
         header: {
             flexDirection: "row",

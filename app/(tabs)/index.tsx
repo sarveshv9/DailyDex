@@ -902,6 +902,7 @@ function HomeScreen() {
         params: {
           taskId: currentTaskItem.id,
           taskName: currentTaskItem.task,
+          duration: currentTaskItem.duration ? String(currentTaskItem.duration) : undefined,
         },
       });
     } else {
