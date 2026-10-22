@@ -1395,73 +1395,34 @@ function HomeScreen() {
                   </View>
                 </View>
 
-                {/* Main CTA Button */}
-                {scheduleStatus.activeTask ? (
-                  <>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={isTimerActive ? "Resume Focus Session" : "Start Focus Session"}
-                      hitSlop={styles.touchableHitSlop}
-                      android_ripple={{ color: "rgba(0,0,0,0.06)" }}
-                      style={({ pressed }) => [
-                        styles.primaryButton,
-                        {
-                          opacity: pressed ? 0.92 : 1,
-                          transform: [{ scale: pressed ? 0.98 : 1 }],
-                        },
-                      ]}
-                      onPress={handleOpenFocus}
-                    >
-                      <Ionicons
-                        name={isTimerActive ? "pulse-outline" : "timer-outline"}
-                        size={20}
-                        color={theme.colors.white}
-                      />
-                      <Text style={styles.primaryButtonText}>
-                        {isTimerActive ? "Resume Focus Session" : "Start Focus Session"}
-                      </Text>
-                    </Pressable>
-
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel="View Day Timeline"
-                      style={styles.timelineLink}
-                      onPress={handleOpenTimeline}
-                      hitSlop={styles.touchableHitSlop}
-                    >
-                      <Text style={styles.timelineLinkText}>View Day Timeline</Text>
-                      <Ionicons
-                        name="arrow-forward"
-                        size={14}
-                        color={theme.colors.primary}
-                      />
-                    </Pressable>
-                  </>
-                ) : (
-                  <Pressable
-                    accessibilityRole={buttonRole}
-                    accessibilityLabel="View day timeline"
-                    hitSlop={styles.touchableHitSlop}
-                    android_ripple={{ color: "rgba(0,0,0,0.06)" }}
-                    style={({ pressed }) => [
-                      styles.primaryButton,
-                      {
-                        opacity: pressed ? 0.92 : 1,
-                        transform: [{ scale: pressed ? 0.98 : 1 }],
-                      },
-                    ]}
-                    onPress={handleOpenTimeline}
-                  >
-                    <Text style={styles.primaryButtonText}>
-                      {scheduleStatus.nextTask ? "Start My Day" : "View Day Timeline"}
-                    </Text>
-                    <Ionicons
-                      name="arrow-forward"
-                      size={20}
-                      color={theme.colors.white}
-                    />
-                  </Pressable>
-                )}
+                {/* Main CTA Button: Default redirect to timeline */}
+                <Pressable
+                  accessibilityRole={buttonRole}
+                  accessibilityLabel="View day timeline"
+                  hitSlop={styles.touchableHitSlop}
+                  android_ripple={{ color: "rgba(0,0,0,0.06)" }}
+                  style={({ pressed }) => [
+                    styles.primaryButton,
+                    {
+                      opacity: pressed ? 0.92 : 1,
+                      transform: [{ scale: pressed ? 0.98 : 1 }],
+                    },
+                  ]}
+                  onPress={handleOpenTimeline}
+                >
+                  <Text style={styles.primaryButtonText}>
+                    {scheduleStatus.activeTask
+                      ? "View Day Timeline"
+                      : scheduleStatus.nextTask
+                        ? "Start My Day"
+                        : "View Day Timeline"}
+                  </Text>
+                  <Ionicons
+                    name="arrow-forward"
+                    size={20}
+                    color={theme.colors.white}
+                  />
+                </Pressable>
 
               </View>
             </BlurView>
