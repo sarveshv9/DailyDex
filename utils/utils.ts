@@ -17,7 +17,28 @@ export interface RoutineItem {
   duration?: number;
   subtasks?: SubTask[];
   isSkipped?: boolean; // Flag to indicate a deleted one-off occurrence of a recurring task
+  completed?: boolean;
 }
+
+export const formatDuration = (minutes: number): string => {
+  if (minutes < 60) return `${minutes}m`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m === 0 ? `${h}h` : `${h}h ${m}m`;
+};
+
+export const isWakeupOrSleep = (item: RoutineItem): boolean => {
+  const key = item.imageKey?.toLowerCase() ?? '';
+  const taskName = item.task?.toLowerCase() ?? '';
+  return (
+    key === 'wakeup' ||
+    key === 'sleep' ||
+    key === 'prepare_sleep' ||
+    taskName.includes('wake up') ||
+    taskName.includes('wakeup') ||
+    taskName.includes('sleep')
+  );
+};
 
 import { Ionicons } from "@expo/vector-icons";
 

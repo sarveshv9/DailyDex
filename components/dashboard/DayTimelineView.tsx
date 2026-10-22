@@ -17,8 +17,7 @@ import {
 } from 'react-native';
 import { Theme } from '../../styles/shared';
 import { useTheme } from '../../context/ThemeContext';
-import { RoutineItem, timeToMinutes, getRoutineItemsForDate, ICON_MAP } from '../../utils/utils';
-import { MergedTaskChain } from './MergedTaskChain';
+import { RoutineItem, timeToMinutes, getRoutineItemsForDate, ICON_MAP, isWakeupOrSleep } from '../../utils/utils';
 import { MonthCalendarView } from './MonthCalendarView';
 
 /* ─────────────────────────────── Config ─────────────────────────────── */
@@ -30,24 +29,36 @@ const TIME_AXIS_WIDTH = 44;
 const getColWidth = (screenWidth: number, columns: 3 | 7) => 
     (screenWidth - TIME_AXIS_WIDTH - 16) / columns;
 
-/** Circle sizes — selected day is larger */
-const CIRCLE_SEL = 80;
+/** Circle sizes — selected day is prominent and well-proportioned */
+const CIRCLE_SEL = 46;
 const CIRCLE_OTHER = 30;
 /** Warm color palette for task types (sleep = dark, alarm = amber, etc.) */
-const TASK_COLORS: Record<string, string> = {
-    wakeup: '#FFB347',
-    sleep: '#9CBBE3',
-    water: '#77CCEE',
-    tea_journal: '#E6D5B8',
-    breakfast: '#FFD1BA',
-    lunch: '#FFD1BA',
-    dinner: '#FFD1BA',
-    study: '#A0C4FF',
-    walk: '#B9FBC0',
-    yoga: '#CFBAF0',
-    reflect: '#A0C4FF',
-    prepare_sleep: '#BDB2FF',
-    breathe: '#B9FBC0',
+export const TASK_COLORS: Record<string, string> = {
+  wakeup: '#FFB347',
+  sleep: '#9CBBE3',
+  water: '#77CCEE',
+  tea_journal: '#E6D5B8',
+  breakfast: '#FFD1BA',
+  lunch: '#FFD1BA',
+  dinner: '#FFD1BA',
+  study: '#A0C4FF',
+  walk: '#B9FBC0',
+  yoga: '#CFBAF0',
+  reflect: '#A0C4FF',
+  prepare_sleep: '#BDB2FF',
+  breathe: '#B9FBC0',
+  commute: '#79B4B7',
+  gym: '#FF9F80',
+  cleaning: '#80CED7',
+  pet: '#E3C75F',
+  shopping: '#F6B8B8',
+  coding: '#7EA0B7',
+  gaming: '#BD93F9',
+  finances: '#9AD0C2',
+  laundry: '#C5DFF8',
+  travel: '#7BC9FF',
+  health: '#F875AA',
+  podcast: '#C683D7',
 };
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -134,6 +145,83 @@ const TimeAxisItem = memo<{
     </View>
 ));
 
+/* ─────────────────────────── TimelineTaskPill ───────────────────────── */
+
+const TimelineTaskPill = memo<{
+    item: RoutineItem;
+    size: number;
+    pillHeight: number;
+    isSelected: boolean;
+    isDarkMode: boolean;
+    theme: Theme;
+    onPressTask?: (item: RoutineItem) => void;
+    isOverlapping?: boolean;
+    overlapIndex?: number;
+}>(({ item, size, pillHeight, isSelected, isDarkMode, theme, onPressTask, isOverlapping, overlapIndex }) => {
+    const taskColor = TASK_COLORS[item.imageKey ?? ''] ?? theme.colors.primary;
+    const iconSize = Math.round(size * 0.46);
+
+    return (
+        <View
+            style={[
+                isOverlapping && Platform.select({
+                    ios: {
+                        shadowColor: '#000000',
+                        shadowOffset: { width: 0, height: 2.5 },
+                        shadowOpacity: isDarkMode ? 0.45 : 0.22,
+                        shadowRadius: 4,
+                    },
+                    android: { elevation: 4 },
+                }),
+                !isOverlapping && isSelected && Platform.select({
+                    ios: {
+                        shadowColor: taskColor,
+                        shadowOffset: { width: 0, height: 3 },
+                        shadowOpacity: 0.35,
+                        shadowRadius: 6,
+                    },
+                    android: { elevation: 4 },
+                }),
+            ]}
+        >
+            <Pressable
+                onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    onPressTask?.(item);
+                }}
+                style={({ pressed }) => [
+                    {
+                        width: size,
+                        height: pillHeight,
+                        borderRadius: size / 2,
+                        backgroundColor: theme.colors.background,
+                        borderWidth: isOverlapping ? (isSelected ? 2 : 1.5) : (isSelected ? 1.5 : 1),
+                        borderColor: isOverlapping
+                            ? (isSelected ? `${taskColor}95` : `${taskColor}55`)
+                            : (isSelected ? `${taskColor}75` : `${taskColor}30`),
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        overflow: 'hidden',
+                    },
+                    pressed && { opacity: 0.82, transform: [{ scale: 0.94 }] },
+                ]}
+            >
+                {/* Pastel tint layer on top of solid opaque base (blocks the timeline line) */}
+                <View
+                    style={[
+                        StyleSheet.absoluteFillObject,
+                        { backgroundColor: isSelected ? `${taskColor}28` : `${taskColor}16` },
+                    ]}
+                />
+                <Ionicons
+                    name={ICON_MAP[item.imageKey ?? ''] ?? 'ellipse-outline'}
+                    size={iconSize}
+                    color={taskColor}
+                />
+            </Pressable>
+        </View>
+    );
+});
 
 /* ───────────────────────────── TimelinePage ─────────────────────────── */
 
@@ -148,6 +236,7 @@ const TimelinePage = memo<{
     COL_WIDTH: number;
     screenWidth: number;
     theme: Theme;
+    isDarkMode: boolean;
     styles: any;
     handleSelectDate: (date: Date) => void;
     startHour: number;
@@ -156,7 +245,7 @@ const TimelinePage = memo<{
     onPressTask?: (item: RoutineItem) => void;
 }>(({
     pageDates, allRoutines, selectedKey, todayKey,
-    circleSel, circleOther, is7Day, COL_WIDTH, screenWidth, theme, styles, handleSelectDate,
+    circleSel, circleOther, is7Day, COL_WIDTH, screenWidth, theme, isDarkMode, styles, handleSelectDate,
     startHour, totalMinutes, timeLabels, onPressTask
 }) => {
     const { cumY, dynamicBodyHeight, timeAxisPositions } = useMemo(() => {
@@ -222,7 +311,7 @@ const TimelinePage = memo<{
         cY[totalMinutes] = currentY;
 
         // ── Second pass: two-layer minimum-height guarantee ──
-        const selCircle = is7Day ? 28 : CIRCLE_SEL;
+        const selCircle = is7Day ? 24 : CIRCLE_SEL;
         const minPillPx = selCircle + 4; // each pill needs at least this many px
 
         // Helper to inflate a minute range [rangeStart..rangeEnd] in cY
@@ -339,13 +428,13 @@ const TimelinePage = memo<{
                                 <Text style={[
                                     styles.dayLabel,
                                     isSelected && styles.dayLabelSelected,
-                                    isToday && !isSelected && { color: theme.colors.primary, opacity: 0.5 },
+                                    isToday && !isSelected && { color: theme.colors.primary, opacity: 0.75 },
                                 ]}>
                                     {DAY_LABELS[dayIndex]}
                                 </Text>
                             </View>
                             {/* Date badge */}
-                            <View style={{ width: 52, height: 52, alignItems: 'center', justifyContent: 'center' }}>
+                            <View style={styles.dateBadgeWrapper}>
                                 <View style={[
                                     styles.dateBadge,
                                     isSelected && styles.dateBadgeSelected,
@@ -353,24 +442,27 @@ const TimelinePage = memo<{
                                 ]}>
                                     {isSelected ? (
                                         <LinearGradient
-                                            colors={[theme.colors.primary, `${theme.colors.primary}CC`]}
+                                            colors={[theme.colors.primary, `${theme.colors.primary}D9`]}
                                             style={styles.dateBadgeGradient}
-                                            start={{ x: 0.3, y: 0 }}
+                                            start={{ x: 0.2, y: 0 }}
                                             end={{ x: 0.8, y: 1 }}
                                         >
-                                            <Text style={[styles.dateNumSelected]}>
+                                            <Text style={styles.dateNumSelected}>
                                                 {date.getDate()}
                                             </Text>
                                         </LinearGradient>
                                     ) : (
                                         <Text style={[
                                             styles.dateNum,
-                                            isToday && { color: theme.colors.primary },
+                                            isToday && styles.dateNumToday,
                                         ]}>
                                             {date.getDate()}
                                         </Text>
                                     )}
                                 </View>
+                                {isToday && !isSelected && (
+                                    <View style={styles.todayIndicatorDot} />
+                                )}
                             </View>
                         </Pressable>
                     );
@@ -424,80 +516,375 @@ const TimelinePage = memo<{
                             key={key}
                             style={[styles.column, { flex: 1, opacity: isSelected ? 1 : 0.45, height: dynamicBodyHeight }]}
                         >
-                            {/* Vertical line */}
-                            <View style={{
-                                position: 'absolute',
-                                top: 0,
-                                bottom: 0,
-                                left: 0,
-                                right: 0,
-                                alignItems: 'center',
-                                pointerEvents: 'none',
-                            }}>
-                                <View style={{
-                                    flex: 1,
-                                    width: isSelected ? 2 : 1.5,
-                                    backgroundColor: lineColor,
-                                    borderRadius: 1,
-                                }} />
-                            </View>
-
-                            {/* Clustering overlapping items to visually merge them into chained capsules */}
+                            {/* Segmented spine line and elements (never cuts through circles or pills) */}
                             {(() => {
-                                const clusters: { items: RoutineItem[]; startMins: number; endMins: number }[] = [];
-                                colItems.forEach(item => {
-                                    const start = getTimelineMinute(item.time, startHour);
-                                    const dur = item.duration ?? DEFAULT_DURATION;
-                                    const end = start + dur;
-
-                                    if (clusters.length === 0) {
-                                        clusters.push({ items: [item], startMins: start, endMins: end });
-                                    } else {
-                                        const lastCluster = clusters[clusters.length - 1];
-                                        if (start <= lastCluster.endMins) {
-                                            lastCluster.items.push(item);
-                                            lastCluster.endMins = Math.max(lastCluster.endMins, end);
-                                        } else {
-                                            clusters.push({ items: [item], startMins: start, endMins: end });
-                                        }
-                                    }
-                                });
-
                                 const getCumY = (m: number) => {
                                     if (m <= 0) return cumY[0];
                                     if (m >= totalMinutes) return cumY[totalMinutes];
                                     return cumY[Math.floor(m)] || 0;
                                 };
 
-                                return clusters.map((cluster, idx) => {
-                                    const topY = getCumY(cluster.startMins);
-                                    const bottomY = getCumY(cluster.endMins);
-                                    const totalHeight = Math.max(circleSize, bottomY - topY);
+                                // Separate wakeup & sleep tasks from other routine tasks
+                                type ElementEntry =
+                                    | { type: 'wakeup_sleep'; item: RoutineItem; top: number; bottom: number; height: number }
+                                    | { type: 'single'; item: RoutineItem; top: number; bottom: number; height: number }
+                                    | {
+                                        type: 'chain';
+                                        items: RoutineItem[];
+                                        top: number;
+                                        bottom: number;
+                                        pillHeight: number;
+                                        stepY: number;
+                                        overlap: number;
+                                    };
 
-                                    return (
-                                        <View
-                                            key={`cluster-${idx}`}
-                                            style={{
-                                                position: 'absolute',
-                                                top: topY,
-                                                left: 0,
-                                                right: 0,
-                                                alignItems: 'center',
-                                            }}
-                                        >
-                                            <MergedTaskChain
-                                                cluster={cluster.items}
-                                                size={circleSize}
-                                                isSelected={isSelected}
-                                                theme={theme}
-                                                cumY={cumY}
-                                                TOTAL_MINUTES={totalMinutes}
-                                                startHour={startHour}
-                                                onPressTask={onPressTask}
-                                            />
-                                        </View>
-                                    );
+                                const rawElements: ElementEntry[] = [];
+
+                                // 1. Partition colItems into wakeup/sleep vs chainable items
+                                const chainableItems: RoutineItem[] = [];
+
+                                colItems.forEach(item => {
+                                    const start = getTimelineMinute(item.time, startHour);
+                                    const dur = item.duration ?? DEFAULT_DURATION;
+                                    const topY = getCumY(start);
+
+                                    if (isWakeupOrSleep(item)) {
+                                        // Standalone circle node — never merged into a chain
+                                        rawElements.push({
+                                            type: 'wakeup_sleep',
+                                            item,
+                                            top: topY,
+                                            bottom: topY + circleSize,
+                                            height: circleSize,
+                                        });
+                                    } else {
+                                        chainableItems.push(item);
+                                    }
                                 });
+
+                                // 2. Group chainable items into overlapping clusters
+                                type Cluster = { items: RoutineItem[]; startMin: number; endMin: number };
+                                const clusters: Cluster[] = [];
+
+                                chainableItems.forEach(item => {
+                                    const start = getTimelineMinute(item.time, startHour);
+                                    const dur = item.duration ?? DEFAULT_DURATION;
+                                    const end = start + dur;
+
+                                    if (clusters.length === 0) {
+                                        clusters.push({ items: [item], startMin: start, endMin: end });
+                                    } else {
+                                        const last = clusters[clusters.length - 1];
+                                        if (start < last.endMin) {
+                                            last.items.push(item);
+                                            last.endMin = Math.max(last.endMin, end);
+                                        } else {
+                                            clusters.push({ items: [item], startMin: start, endMin: end });
+                                        }
+                                    }
+                                });
+
+                                // 3. Build single or chain elements from clusters
+                                clusters.forEach(cluster => {
+                                    if (cluster.items.length === 1) {
+                                        const item = cluster.items[0];
+                                        const start = getTimelineMinute(item.time, startHour);
+                                        const dur = item.duration ?? DEFAULT_DURATION;
+                                        const topY = getCumY(start);
+                                        const rawH = getCumY(start + dur) - topY;
+                                        const pillHeight = Math.max(circleSize, Math.min(circleSize * 2.2, rawH));
+                                        rawElements.push({
+                                            type: 'single',
+                                            item,
+                                            top: topY,
+                                            bottom: topY + pillHeight,
+                                            height: pillHeight,
+                                        });
+                                    } else {
+                                        const N = cluster.items.length;
+                                        const topY0 = getCumY(cluster.startMin);
+                                        const endY0 = getCumY(cluster.endMin);
+                                        const totalSlotH = Math.max(circleSize * 1.8 * N, endY0 - topY0);
+                                        const overlap = circleSize >= 40 ? 12 : 8;
+                                        const pillHeight = Math.max(
+                                            circleSize * 1.6,
+                                            Math.min(circleSize * 2.2, (totalSlotH + (N - 1) * overlap) / N)
+                                        );
+                                        const stepY = pillHeight - overlap;
+                                        const totalChainH = (N - 1) * stepY + pillHeight;
+
+                                        rawElements.push({
+                                            type: 'chain',
+                                            items: cluster.items,
+                                            top: topY0,
+                                            bottom: topY0 + totalChainH,
+                                            pillHeight,
+                                            stepY,
+                                            overlap,
+                                        });
+                                    }
+                                });
+
+                                // Sort elements chronologically by topY
+                                rawElements.sort((a, b) => a.top - b.top);
+
+                                // Ensure minimum 6px gap between adjacent elements to avoid accidental overlap
+                                let currentBottom = -1;
+                                const elements = rawElements.map(el => {
+                                    let { top, bottom } = el;
+                                    if (top < currentBottom + 6) {
+                                        const shift = currentBottom + 6 - top;
+                                        top += shift;
+                                        bottom += shift;
+                                    }
+                                    currentBottom = bottom;
+                                    return { ...el, top, bottom };
+                                });
+
+                                // 4. Build SEGMENTED CONNECTOR LINES between elements
+                                const spineSegments: { key: string; top: number; height: number }[] = [];
+                                if (elements.length === 0) {
+                                    spineSegments.push({ key: 'spine-full', top: 0, height: dynamicBodyHeight });
+                                } else {
+                                    // Top connector (from 0 to first element top)
+                                    if (elements[0].top > 0) {
+                                        spineSegments.push({
+                                            key: 'spine-top',
+                                            top: 0,
+                                            height: elements[0].top,
+                                        });
+                                    }
+                                    // Connectors between adjacent elements
+                                    for (let k = 0; k < elements.length - 1; k++) {
+                                        const segTop = elements[k].bottom;
+                                        const segHeight = elements[k + 1].top - segTop;
+                                        if (segHeight > 0) {
+                                            spineSegments.push({
+                                                key: `spine-seg-${k}`,
+                                                top: segTop,
+                                                height: segHeight,
+                                            });
+                                        }
+                                    }
+                                    // Bottom connector (from last element bottom to dynamicBodyHeight)
+                                    const lastBottom = elements[elements.length - 1].bottom;
+                                    if (lastBottom < dynamicBodyHeight) {
+                                        spineSegments.push({
+                                            key: 'spine-bottom',
+                                            top: lastBottom,
+                                            height: dynamicBodyHeight - lastBottom,
+                                        });
+                                    }
+                                }
+
+                                const primaryColor = theme.colors.primary;
+                                const spineColor = isSelected ? primaryColor : (isDarkMode ? '#2C2C2E' : '#D0D0D0');
+
+                                return (
+                                    <>
+                                        {/* Segmented spine lines */}
+                                        {spineSegments.map(seg => (
+                                            <View
+                                                key={seg.key}
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: seg.top,
+                                                    height: seg.height,
+                                                    left: 0,
+                                                    right: 0,
+                                                    alignItems: 'center',
+                                                    pointerEvents: 'none',
+                                                }}
+                                            >
+                                                <View
+                                                    style={{
+                                                        width: isSelected ? 2 : 1.5,
+                                                        height: '100%',
+                                                        backgroundColor: spineColor,
+                                                        borderRadius: 1,
+                                                    }}
+                                                />
+                                            </View>
+                                        ))}
+
+                                        {/* Visual elements */}
+                                        {elements.map((el, elIdx) => {
+                                            if (el.type === 'wakeup_sleep') {
+                                                const { item, top } = el;
+                                                const iconSize = Math.round(circleSize * 0.46);
+
+                                                return (
+                                                    <View
+                                                        key={`ws-${item.id}`}
+                                                        style={{
+                                                            position: 'absolute',
+                                                            top,
+                                                            left: 0,
+                                                            right: 0,
+                                                            alignItems: 'center',
+                                                            zIndex: 10,
+                                                        }}
+                                                    >
+                                                        <Pressable
+                                                            onPress={() => {
+                                                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                                                onPressTask?.(item);
+                                                            }}
+                                                            style={({ pressed }) => [
+                                                                {
+                                                                    width: circleSize,
+                                                                    height: circleSize,
+                                                                    borderRadius: circleSize / 2,
+                                                                    backgroundColor: isSelected ? primaryColor : (isDarkMode ? '#242426' : '#E8E8E8'),
+                                                                    borderWidth: isSelected ? 1.5 : 1,
+                                                                    borderColor: isSelected ? `${primaryColor}CC` : 'transparent',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                },
+                                                                pressed && { opacity: 0.82, transform: [{ scale: 0.94 }] },
+                                                                isSelected && Platform.select({
+                                                                    ios: {
+                                                                        shadowColor: primaryColor,
+                                                                        shadowOffset: { width: 0, height: 3 },
+                                                                        shadowOpacity: 0.4,
+                                                                        shadowRadius: 6,
+                                                                    },
+                                                                    android: { elevation: 4 },
+                                                                }),
+                                                            ]}
+                                                        >
+                                                            <Ionicons
+                                                                name={ICON_MAP[item.imageKey ?? ''] ?? 'alarm-outline'}
+                                                                size={iconSize}
+                                                                color={isSelected ? '#FFFFFF' : primaryColor}
+                                                            />
+                                                        </Pressable>
+                                                    </View>
+                                                );
+                                            }
+
+                                            if (el.type === 'single') {
+                                                const { item, top, height } = el;
+                                                const iconSize = Math.round(circleSize * 0.46);
+
+                                                return (
+                                                    <View
+                                                        key={`single-${item.id}`}
+                                                        style={{
+                                                            position: 'absolute',
+                                                            top,
+                                                            left: 0,
+                                                            right: 0,
+                                                            alignItems: 'center',
+                                                            zIndex: 10,
+                                                        }}
+                                                    >
+                                                        <Pressable
+                                                            onPress={() => {
+                                                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                                                onPressTask?.(item);
+                                                            }}
+                                                            style={({ pressed }) => [
+                                                                {
+                                                                    width: circleSize,
+                                                                    height,
+                                                                    borderRadius: circleSize / 2,
+                                                                    backgroundColor: isSelected ? primaryColor : (isDarkMode ? '#242426' : '#E8E8E8'),
+                                                                    borderWidth: isSelected ? 1.5 : 1,
+                                                                    borderColor: isSelected ? `${primaryColor}CC` : 'transparent',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    overflow: 'hidden',
+                                                                },
+                                                                pressed && { opacity: 0.82, transform: [{ scale: 0.94 }] },
+                                                                isSelected && Platform.select({
+                                                                    ios: {
+                                                                        shadowColor: primaryColor,
+                                                                        shadowOffset: { width: 0, height: 3 },
+                                                                        shadowOpacity: 0.35,
+                                                                        shadowRadius: 6,
+                                                                    },
+                                                                    android: { elevation: 4 },
+                                                                }),
+                                                            ]}
+                                                        >
+                                                            <Ionicons
+                                                                name={ICON_MAP[item.imageKey ?? ''] ?? 'ellipse-outline'}
+                                                                size={iconSize}
+                                                                color={isSelected ? '#FFFFFF' : primaryColor}
+                                                            />
+                                                        </Pressable>
+                                                    </View>
+                                                );
+                                            }
+
+                                            // el.type === 'chain' (Directly overlapping pills, no cutouts)
+                                            const { items, top: chainTop, pillHeight, stepY } = el;
+                                            const chainBg = isSelected ? primaryColor : (isDarkMode ? '#242426' : '#E8E8E8');
+                                            const iconColor = isSelected ? '#FFFFFF' : primaryColor;
+
+                                            return (
+                                                <React.Fragment key={`chain-${elIdx}-${chainTop}`}>
+                                                    {/* Directly overlapping stadium pills */}
+                                                    {items.map((item, i) => {
+                                                        const pillTop = chainTop + i * stepY;
+                                                        const iconSize = Math.round(circleSize * 0.46);
+
+                                                        return (
+                                                            <View
+                                                                key={`chain-pill-${item.id}`}
+                                                                style={{
+                                                                    position: 'absolute',
+                                                                    top: pillTop,
+                                                                    left: 0,
+                                                                    right: 0,
+                                                                    alignItems: 'center',
+                                                                    zIndex: 10 + i,
+                                                                }}
+                                                            >
+                                                                <Pressable
+                                                                    onPress={() => {
+                                                                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                                                        onPressTask?.(item);
+                                                                    }}
+                                                                    style={({ pressed }) => [
+                                                                        {
+                                                                            width: circleSize,
+                                                                            height: pillHeight,
+                                                                            borderRadius: circleSize / 2,
+                                                                            backgroundColor: chainBg,
+                                                                            borderWidth: 2,
+                                                                            borderColor: theme.colors.background,
+                                                                            alignItems: 'center',
+                                                                            justifyContent: 'center',
+                                                                            overflow: 'hidden',
+                                                                        },
+                                                                        pressed && { opacity: 0.82, transform: [{ scale: 0.94 }] },
+                                                                        Platform.select({
+                                                                            ios: {
+                                                                                shadowColor: '#000000',
+                                                                                shadowOffset: { width: 0, height: 2 },
+                                                                                shadowOpacity: isDarkMode ? 0.35 : 0.15,
+                                                                                shadowRadius: 4,
+                                                                            },
+                                                                            android: { elevation: 3 },
+                                                                        }),
+                                                                    ]}
+                                                                >
+                                                                    <Ionicons
+                                                                        name={ICON_MAP[item.imageKey ?? ''] ?? 'ellipse-outline'}
+                                                                        size={iconSize}
+                                                                        color={iconColor}
+                                                                    />
+                                                                </Pressable>
+                                                            </View>
+                                                        );
+                                                    })}
+                                                </React.Fragment>
+                                            );
+                                        })}
+                                    </>
+                                );
                             })()}
                         </View>
                     );
@@ -527,7 +914,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
     const COL_WIDTH = getColWidth(SCREEN_WIDTH, is7Day ? 7 : 3);
 
     // Circle sizes — in 7-day view everything is smaller to fit
-    const circleSel = is7Day ? 28 : CIRCLE_SEL;
+    const circleSel = is7Day ? 24 : CIRCLE_SEL;
     const circleOther = is7Day ? 18 : CIRCLE_OTHER;
 
     /* ── Collapse animations (header shrinks when list scrolls) ── */
@@ -700,6 +1087,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
             COL_WIDTH={COL_WIDTH}
             screenWidth={SCREEN_WIDTH}
             theme={theme}
+            isDarkMode={isDarkMode}
             styles={styles}
             handleSelectDate={handleSelectDate}
             startHour={startHour}
@@ -707,7 +1095,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
             timeLabels={timeLabels}
             onPressTask={onPressTask}
         />
-    ), [routineItems, selectedKey, todayKey, circleSel, circleOther, is7Day, COL_WIDTH, SCREEN_WIDTH, theme, styles, handleSelectDate, startHour, totalMinutes, timeLabels, onPressTask]);
+    ), [routineItems, selectedKey, todayKey, circleSel, circleOther, is7Day, COL_WIDTH, SCREEN_WIDTH, theme, isDarkMode, styles, handleSelectDate, startHour, totalMinutes, timeLabels, onPressTask]);
 
     // Split header date into weekday + rest
     const dateHeader = selectedDate.toLocaleDateString('en-US', {
@@ -839,76 +1227,76 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                     </Animated.View>
 
                     {/* ── Peek card ── */}
-                    {firstItem && (
-                        <Animated.View style={[styles.peekWrapper, { opacity: collapseOpacity }]}>
-                            <View style={styles.peekDivider} />
-                            <Pressable
-                                style={({ pressed }) => [
-                                    styles.peekCard,
-                                    pressed && { opacity: 0.88, transform: [{ scale: 0.975 }] },
-                                ]}
-                                onPress={() => {
-                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                    if (onPressPeek) onPressPeek();
-                                }}
-                                testID="peek-card"
-                            >
-                                <BlurView intensity={100} tint={isDarkMode ? 'systemThickMaterialDark' : 'systemThickMaterialLight'} style={StyleSheet.absoluteFill} pointerEvents="none" />
-                                <LinearGradient
-                                    colors={[`${theme.colors.primary}18`, `${theme.colors.primary}04`]}
-                                    style={StyleSheet.absoluteFill}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 1 }}
-                                />
-                                <View style={[styles.peekAccentBar, { backgroundColor: theme.colors.primary }]} />
+                    {firstItem && (() => {
+                        const firstItemColor = TASK_COLORS[firstItem.imageKey ?? ''] ?? theme.colors.primary;
+                        return (
+                            <Animated.View style={[styles.peekWrapper, { opacity: collapseOpacity }]}>
+                                <View style={styles.peekDivider} />
+                                <Pressable
+                                    style={({ pressed }) => [
+                                        styles.peekCard,
+                                        pressed && { opacity: 0.88, transform: [{ scale: 0.98 }] },
+                                    ]}
+                                    onPress={() => {
+                                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                        if (onPressPeek) onPressPeek();
+                                    }}
+                                    testID="peek-card"
+                                >
+                                    <BlurView
+                                        intensity={Platform.OS === 'ios' ? 70 : 100}
+                                        tint={isDarkMode ? 'dark' : 'light'}
+                                        style={StyleSheet.absoluteFill}
+                                        pointerEvents="none"
+                                    />
+                                    <View style={[styles.peekAccentBar, { backgroundColor: firstItemColor }]} />
 
-                                <View style={styles.peekCircleWrapper}>
-                                    <LinearGradient
-                                        colors={[theme.colors.primary, `${theme.colors.primary}BB`]}
-                                        style={styles.peekCircle}
-                                        start={{ x: 0.1, y: 0 }}
-                                        end={{ x: 0.9, y: 1 }}
+                                    <View
+                                        style={[
+                                            styles.peekCircle,
+                                            {
+                                                backgroundColor: `${firstItemColor}24`,
+                                                borderColor: `${firstItemColor}50`,
+                                            },
+                                        ]}
                                     >
                                         <Ionicons
                                             name={ICON_MAP[firstItem.imageKey ?? ''] ?? 'ellipse-outline'}
-                                            size={22}
-                                            color={theme.colors.white}
+                                            size={20}
+                                            color={firstItemColor}
                                         />
-                                    </LinearGradient>
-                                </View>
-
-                                <View style={styles.peekText}>
-                                    <View style={styles.peekTimeRow}>
-                                        <Ionicons
-                                            name="time-outline"
-                                            size={11}
-                                            color={theme.colors.textSecondary}
-                                            style={{ marginRight: 4 }}
-                                        />
-                                        <Text style={styles.peekTime}>{firstItem.time}</Text>
-                                        <View style={[styles.peekBadge, { backgroundColor: `${theme.colors.primary}14`, flexDirection: 'row', alignItems: 'center' }]}>
-                                            {firstItem.daysOfWeek?.length ? (
-                                                <Ionicons name="repeat" size={11} color={theme.colors.primary} style={{ marginRight: 3 }} />
-                                            ) : null}
-                                            <Text style={[styles.peekBadgeText, { color: theme.colors.primary }]}>
-                                                {firstItem.daysOfWeek?.length ? "Daily" : "Once"}
-                                            </Text>
-                                        </View>
                                     </View>
-                                    <Text style={styles.peekTitle} numberOfLines={1} testID="peek-title">
-                                        {firstItem.task}
-                                    </Text>
-                                </View>
 
-                                <View style={[
-                                    styles.peekChevron,
-                                    { borderColor: `${theme.colors.primary}40`, backgroundColor: `${theme.colors.primary}10` },
-                                ]}>
-                                    <Ionicons name="chevron-forward" size={14} color={theme.colors.primary} />
-                                </View>
-                            </Pressable>
-                        </Animated.View>
-                    )}
+                                    <View style={styles.peekText}>
+                                        <View style={styles.peekTimeRow}>
+                                            <Ionicons
+                                                name="time-outline"
+                                                size={11}
+                                                color={theme.colors.textSecondary}
+                                                style={{ marginRight: 3 }}
+                                            />
+                                            <Text style={styles.peekTime}>{firstItem.time}</Text>
+                                            <View style={[styles.peekBadge, { backgroundColor: `${firstItemColor}15` }]}>
+                                                {firstItem.daysOfWeek?.length ? (
+                                                    <Ionicons name="repeat" size={10} color={firstItemColor} style={{ marginRight: 3 }} />
+                                                ) : null}
+                                                <Text style={[styles.peekBadgeText, { color: firstItemColor }]}>
+                                                    {firstItem.daysOfWeek?.length ? "Daily" : "Once"}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                        <Text style={styles.peekTitle} numberOfLines={1} testID="peek-title">
+                                            {firstItem.task}
+                                        </Text>
+                                    </View>
+
+                                    <View style={styles.peekChevronCircle}>
+                                        <Ionicons name="chevron-up" size={16} color={theme.colors.textSecondary} />
+                                    </View>
+                                </Pressable>
+                            </Animated.View>
+                        );
+                    })()}
                 </>
             )}
         </View>
@@ -928,8 +1316,8 @@ const getStyles = (theme: Theme) =>
         header: {
             flexDirection: 'row',
             alignItems: 'center',
-            paddingHorizontal: 25,
-            height: 70, // Fixed height for iOS
+            paddingHorizontal: 20,
+            height: 68,
             backgroundColor: theme.colors.background,
             zIndex: 100,
         },
@@ -937,13 +1325,13 @@ const getStyles = (theme: Theme) =>
             marginRight: 10,
         },
         backIconCircle: {
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            backgroundColor: `${theme.colors.text}08`, // Verifying color change
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            backgroundColor: `${theme.colors.text}08`,
             alignItems: 'center',
             justifyContent: 'center',
-            borderWidth: 1.5,
+            borderWidth: 1,
             borderColor: `${theme.colors.text}10`,
         },
         headerDateBlock: {
@@ -960,14 +1348,14 @@ const getStyles = (theme: Theme) =>
         headerWeekday: {
             fontFamily: theme.fonts.bold,
             color: theme.colors.text,
-            lineHeight: 36, // Slightly taller
-            letterSpacing: -0.5,
+            lineHeight: 34,
+            letterSpacing: -0.4,
         },
         headerRest: {
             fontFamily: theme.fonts.medium,
             color: theme.colors.textSecondary,
             letterSpacing: 0.1,
-            marginTop: 0,
+            marginTop: 1,
         },
         headerArrowContainer: {
             width: 22,
@@ -982,10 +1370,12 @@ const getStyles = (theme: Theme) =>
             width: 40,
             height: 40,
             borderRadius: 20,
-            backgroundColor: `${theme.colors.primary}15`,
+            backgroundColor: `${theme.colors.text}08`,
             alignItems: 'center',
             justifyContent: 'center',
             marginLeft: 4,
+            borderWidth: 1,
+            borderColor: `${theme.colors.text}10`,
         },
 
         /* ── Timeline layout ── */
@@ -998,81 +1388,94 @@ const getStyles = (theme: Theme) =>
             flexDirection: 'row',
             alignItems: 'center',
             paddingRight: 0,
-            paddingBottom: 12,
+            paddingBottom: 10,
             paddingTop: 4,
-            borderBottomWidth: 0,
-            borderBottomColor: 'transparent',
         },
         dayHeaderCell: {
             alignItems: 'center',
-            gap: 2,
+            gap: 3,
         },
         dayLabel: {
-            fontSize: 10,
-            fontFamily: theme.fonts.medium,
+            fontSize: 10.5,
+            fontFamily: theme.fonts.bold,
             color: theme.colors.textSecondary,
             textTransform: 'uppercase',
-            letterSpacing: 1.2,
-            opacity: 0.35,
+            letterSpacing: 0.8,
+            opacity: 0.45,
         },
         dayLabelSelected: {
             color: theme.colors.primary,
             opacity: 1,
-            fontSize: 12,
-            letterSpacing: 2,
-            fontFamily: theme.fonts.bold,
+            letterSpacing: 1.2,
         },
-        dateBadge: {
-            width: 32,
-            height: 32,
-            borderRadius: 16,
+        dateBadgeWrapper: {
             alignItems: 'center',
             justifyContent: 'center',
-            overflow: 'hidden',
+            minHeight: 50,
+        },
+        dateBadge: {
+            width: 38,
+            height: 38,
+            borderRadius: 19,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'transparent',
         },
         dateBadgeSelected: {
-            width: 52,
-            height: 52,
-            borderRadius: 26,
+            width: 46,
+            height: 46,
+            borderRadius: 23,
             ...Platform.select({
                 ios: {
-                    shadowColor: theme.glows.primary.shadowColor,
-                    shadowOffset: theme.glows.primary.shadowOffset,
-                    shadowOpacity: theme.glows.primary.shadowOpacity,
-                    shadowRadius: theme.glows.primary.shadowRadius,
+                    shadowColor: theme.colors.primary,
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowOpacity: 0.35,
+                    shadowRadius: 6,
                 },
-                android: { elevation: theme.glows.primary.elevation },
+                android: { elevation: 4 },
             }),
         },
         dateBadgeGradient: {
-            width: 52,
-            height: 52,
-            borderRadius: 26,
+            width: 46,
+            height: 46,
+            borderRadius: 23,
             alignItems: 'center',
             justifyContent: 'center',
         },
         dateBadgeToday: {
             borderWidth: 1.5,
-            borderColor: `${theme.colors.primary}50`,
+            borderColor: `${theme.colors.primary}60`,
+            backgroundColor: `${theme.colors.primary}10`,
         },
         dateNum: {
-            fontSize: 13,
+            fontSize: 14,
             fontFamily: theme.fonts.bold,
-            color: theme.colors.textSecondary,
-            opacity: 0.6,
+            color: theme.colors.text,
+            opacity: 0.7,
+        },
+        dateNumToday: {
+            color: theme.colors.primary,
+            opacity: 1,
         },
         dateNumSelected: {
-            fontSize: 20,
+            fontSize: 18,
             fontFamily: theme.fonts.bold,
-            color: theme.colors.white,
-            letterSpacing: -0.5,
+            color: '#FFFFFF',
+            letterSpacing: -0.3,
+        },
+        todayIndicatorDot: {
+            width: 4,
+            height: 4,
+            borderRadius: 2,
+            backgroundColor: theme.colors.primary,
+            marginTop: 3,
         },
 
         /* Body row = time axis + columns */
         bodyRow: {
             flexDirection: 'row',
-            paddingRight: 0, // Remove right padding so columns perfectly align with header cells
-            paddingBottom: CIRCLE_SEL / 2, // space for pill caps at top/bottom
+            paddingRight: 0,
+            paddingBottom: CIRCLE_SEL / 2,
         },
 
         /* Left time axis */
@@ -1086,34 +1489,35 @@ const getStyles = (theme: Theme) =>
             position: 'relative',
         },
 
-
         /* ── Peek card ── */
         peekWrapper: {
-            paddingBottom: 22,
+            paddingBottom: 20,
+            paddingHorizontal: 16,
         },
         peekDivider: {
             height: StyleSheet.hairlineWidth,
             backgroundColor: `${theme.colors.text}10`,
-            marginBottom: 14,
-            marginHorizontal: 20,
+            marginBottom: 12,
+            marginHorizontal: 4,
         },
         peekCard: {
             flexDirection: 'row',
             alignItems: 'center',
-            paddingHorizontal: 18,
-            paddingVertical: 14,
+            paddingHorizontal: 16,
+            paddingVertical: 12,
             backgroundColor: theme.colors.card,
-            marginHorizontal: 16,
-            borderRadius: 28,
+            borderRadius: 20,
+            borderWidth: 1,
+            borderColor: `${theme.colors.text}0E`,
             overflow: 'hidden',
             ...Platform.select({
                 ios: {
-                    shadowColor: theme.glows.card.shadowColor,
-                    shadowOffset: theme.glows.card.shadowOffset,
-                    shadowOpacity: theme.glows.card.shadowOpacity,
-                    shadowRadius: theme.glows.card.shadowRadius,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.08,
+                    shadowRadius: 6,
                 },
-                android: { elevation: theme.glows.card.elevation },
+                android: { elevation: 3 },
             }),
         },
         peekAccentBar: {
@@ -1121,46 +1525,39 @@ const getStyles = (theme: Theme) =>
             left: 0,
             top: 0,
             bottom: 0,
-            width: 3,
+            width: 3.5,
             borderTopLeftRadius: 20,
             borderBottomLeftRadius: 20,
         },
-        peekCircleWrapper: {
-            marginRight: 14,
-            ...Platform.select({
-                ios: {
-                    shadowColor: theme.glows.primary.shadowColor,
-                    shadowOffset: theme.glows.primary.shadowOffset,
-                    shadowOpacity: theme.glows.primary.shadowOpacity,
-                    shadowRadius: theme.glows.primary.shadowRadius,
-                },
-                android: { elevation: theme.glows.primary.elevation },
-            }),
-        },
         peekCircle: {
-            width: 46,
-            height: 46,
-            borderRadius: 23,
+            width: 42,
+            height: 42,
+            borderRadius: 21,
             alignItems: 'center',
             justifyContent: 'center',
+            borderWidth: 1.5,
+            marginRight: 13,
         },
         peekText: { flex: 1 },
         peekTimeRow: {
             flexDirection: 'row',
             alignItems: 'center',
-            marginBottom: 4,
+            marginBottom: 3,
             gap: 4,
         },
         peekTime: {
-            fontSize: 11,
+            fontSize: 11.5,
             fontFamily: theme.fonts.medium,
             color: theme.colors.textSecondary,
-            letterSpacing: 0.3,
+            letterSpacing: 0.2,
         },
         peekBadge: {
-            paddingHorizontal: 7,
-            paddingVertical: 2,
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: 6,
+            paddingVertical: 1.5,
             borderRadius: 6,
+            marginLeft: 4,
         },
         peekBadgeText: {
             fontSize: 10,
@@ -1168,15 +1565,16 @@ const getStyles = (theme: Theme) =>
             letterSpacing: 0.2,
         },
         peekTitle: {
-            fontSize: 19,
+            fontSize: 16,
             fontFamily: theme.fonts.bold,
             color: theme.colors.text,
-            letterSpacing: -0.3,
+            letterSpacing: -0.2,
         },
-        peekChevron: {
+        peekChevronCircle: {
             width: 28,
             height: 28,
             borderRadius: 14,
+            backgroundColor: `${theme.colors.text}08`,
             alignItems: 'center',
             justifyContent: 'center',
             marginLeft: 8,

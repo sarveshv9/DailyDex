@@ -1,345 +1,427 @@
 /**
  * TimelineEventCard
  *
- * Matches the Structured app day-view layout exactly:
+ * Minimalist, Decluttered Zen Day-View Timeline Card:
  *
- *  [time label]  [dashed line + icon circle]  [subtitle / title]      [○ ring]
+ *  07:00    ( ⏰ )   Wake Up
+ *   AM        │      30m • Start your day with a clear mind.
+ *             │
  *
- * Layout columns:
- *   - Col A (56px): time label, right-aligned
- *   - Col B (56px): vertical dashed line with a filled icon circle centered on it
- *   - Col C (flex): subtitle + bold title text
- *   - Col D (36px): hollow completion ring
+ * Architecture:
+ *   - Col A (50px): Crisp time label (07:00 bold on top, AM/PM below)
+ *   - Col B (54px): Segmented vertical spine (stops at icon edges, dashed during breaks) + 44px icon node
+ *   - Col C (flex): Breathable title + subtitle (duration • subtasks • description)
+ *   - Tick box completely removed
  */
 
 import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View, Animated } from 'react-native';
+import { Pressable, StyleSheet, Text, View, Animated, Platform } from 'react-native';
 import { Theme } from '../../styles/shared';
 import { useTheme } from '../../context/ThemeContext';
 import * as Haptics from '../../utils/haptics';
-import { RoutineItem, ICON_MAP } from '../../utils/utils';
+import { RoutineItem, ICON_MAP, formatDuration, isWakeupOrSleep } from '../../utils/utils';
 
-const TASK_COLORS: Record<string, string> = {
-    wakeup: '#FFB347',
-    sleep: '#9CBBE3',
-    water: '#77CCEE',
-    tea_journal: '#E6D5B8',
-    breakfast: '#FFD1BA',
-    lunch: '#FFD1BA',
-    dinner: '#FFD1BA',
-    study: '#A0C4FF',
-    walk: '#B9FBC0',
-    yoga: '#CFBAF0',
-    reflect: '#A0C4FF',
-    prepare_sleep: '#BDB2FF',
-    breathe: '#B9FBC0',
+export const TASK_COLORS: Record<string, string> = {
+  wakeup: '#FFB347',
+  sleep: '#9CBBE3',
+  water: '#77CCEE',
+  tea_journal: '#E6D5B8',
+  breakfast: '#FFD1BA',
+  lunch: '#FFD1BA',
+  dinner: '#FFD1BA',
+  study: '#A0C4FF',
+  walk: '#B9FBC0',
+  yoga: '#CFBAF0',
+  reflect: '#A0C4FF',
+  prepare_sleep: '#BDB2FF',
+  breathe: '#B9FBC0',
+  commute: '#79B4B7',
+  gym: '#FF9F80',
+  cleaning: '#80CED7',
+  pet: '#E3C75F',
+  shopping: '#F6B8B8',
+  coding: '#7EA0B7',
+  gaming: '#BD93F9',
+  finances: '#9AD0C2',
+  laundry: '#C5DFF8',
+  travel: '#7BC9FF',
+  health: '#F875AA',
+  podcast: '#C683D7',
 };
 
 export interface TimelineEventCardProps {
-    item: RoutineItem;
-    onPress?: () => void;
-    isFirst?: boolean;
-    isLast?: boolean;
-    /** Whether to show a "break" gap indicator BEFORE this event */
-    showBreakBefore?: boolean;
+  item: RoutineItem;
+  onPress?: () => void;
+  onToggleComplete?: (item: RoutineItem) => void;
+  isFirst?: boolean;
+  isLast?: boolean;
+  /** Whether to show a "break" gap indicator BEFORE this event */
+  showBreakBefore?: boolean;
+  breakDurationMinutes?: number;
+  /** Overlap chain state */
+  chainPosition?: 'none' | 'start' | 'middle' | 'end';
 }
 
-
-const ICON_SIZE = 44; // diameter of the icon circle
-const TIME_COL_W = 52;
-const NODE_COL_W = 60;
+const NODE_SIZE = 44;
+const TIME_COL_W = 50;
+const NODE_COL_W = 54;
+const SPINE_WIDTH = 2;
 
 export const TimelineEventCard: React.FC<TimelineEventCardProps> = ({
-    item,
-    onPress,
-    isFirst,
-    isLast,
-    showBreakBefore,
+  item,
+  onPress,
+  isFirst,
+  isLast,
+  showBreakBefore,
+  breakDurationMinutes,
+  chainPosition = 'none',
 }) => {
-    const { theme } = useTheme();
-    const styles = useMemo(() => getStyles(theme), [theme]);
+  const { theme, isDarkMode } = useTheme();
+  const styles = useMemo(() => getStyles(theme, isDarkMode), [theme, isDarkMode]);
 
-    const routineData = item;
+  const routineData = item;
+  const isWakeupSleep = isWakeupOrSleep(routineData);
+  // Wakeup and sleep NEVER overlap into a chain
+  const effectiveChain = isWakeupSleep ? 'none' : chainPosition;
 
-    const timeLabel = routineData.time.replace(' ', '\n');
+  // Time parsing (e.g. "07:00 AM" -> "07:00" & "AM")
+  const [timeVal, ampm] = routineData.time.split(' ');
+  const duration = routineData.duration || 30;
+  const durationText = formatDuration(duration);
 
-    const subtitle = `${routineData.time}`;
-    const title = routineData.task;
-    const description = routineData.description;
+  const title = routineData.task;
+  const description = routineData.description?.trim();
 
-    const icon: keyof typeof Ionicons.glyphMap = ICON_MAP[routineData.imageKey ?? ''] ?? 'checkmark-circle-outline';
+  // Icon lookup
+  const icon: keyof typeof Ionicons.glyphMap =
+    ICON_MAP[routineData.imageKey ?? ''] ?? 'checkmark-circle-outline';
+  const primaryColor = theme.colors.primary;
+  const taskColor = TASK_COLORS[routineData.imageKey ?? ''] ?? primaryColor;
+  const spineColor = isDarkMode ? `${primaryColor}40` : `${primaryColor}30`;
 
-    const taskColor = TASK_COLORS[routineData.imageKey ?? ''] ?? theme.colors.primary;
-    const nodeColor = taskColor;
-    const lineColor = `${taskColor}45`; // Increased opacity for better visibility on white background
+  // Subtasks progress summary
+  const subtasks = routineData.subtasks || [];
+  const totalSubtasks = subtasks.length;
+  const completedSubtasks = subtasks.filter((s) => s.completed).length;
 
-    return (
-        <View>
-            {/* Optional break gap indicator before this event */}
-            {showBreakBefore && (
-                <View style={styles.breakRow}>
-                    {/* Left and center dashed line segment */}
-                    <View style={[styles.timeCol, { alignItems: 'flex-end', paddingRight: 0 }]} />
-                    <View style={styles.nodeCol}>
-                        <View style={[styles.dashedSegment, { backgroundColor: lineColor, height: 36 }]} />
-                    </View>
-                    <View style={styles.breakTextCol}>
-                        <View style={styles.breakBadge}>
-                            <Ionicons name="pause-outline" size={12} color={theme.colors.textSecondary} style={{ opacity: 0.7, marginRight: 4 }} />
-                            <Text style={styles.breakText}>Rest Break</Text>
-                        </View>
-                    </View>
-                </View>
-            )}
+  // Combined subtitle: "30m • 2/3 tasks • description"
+  const subtitleParts = [durationText];
+  if (totalSubtasks > 0) {
+    subtitleParts.push(`${completedSubtasks}/${totalSubtasks} tasks`);
+  }
+  if (description) {
+    subtitleParts.push(description);
+  }
+  const subtitleText = subtitleParts.join(' • ');
 
-            {/* Main Event Row */}
-            <Pressable
-                style={({ pressed }) => [
-                    styles.eventRow,
-                    pressed && onPress && { opacity: 0.8, transform: [{ scale: 0.98 }] }
-                ]}
-                onPress={() => {
-                    if (onPress) {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        onPress();
-                    }
-                }}
-                disabled={!onPress}
-                testID="timeline-event-card"
-            >
-                {/* Column A: Time label */}
-                <View style={styles.timeCol}>
-                    <Text style={styles.timeText}>{timeLabel}</Text>
-                </View>
-
-                {/* Column B: Vertical dashed line + icon circle */}
-                <View style={styles.nodeCol}>
-                    {/* Top segment of the line (above the icon) */}
-                    {!isFirst && (
-                        <View style={[styles.dashedSegment, { backgroundColor: lineColor }]} />
-                    )}
-
-                    {/* The icon circle, sits on the line */}
-                    <View style={[styles.iconCircle, { backgroundColor: nodeColor, shadowColor: nodeColor, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.6, shadowRadius: 8, elevation: 8 }]}>
-                        <Ionicons name={icon} size={20} color={theme.colors.white} />
-                    </View>
-
-                    {/* Bottom segment of the line (below the icon), fills remaining space */}
-                    {!isLast && (
-                        <View style={[styles.dashedSegment, styles.dashedSegmentBottom, { backgroundColor: lineColor }]} />
-                    )}
-                </View>
-
-                {/* Column C: Subtitle + title + description */}
-                <View style={styles.textCol}>
-                    <Text style={styles.subtitleText} numberOfLines={1}>
-                        {subtitle}
-                    </Text>
-                    <Text style={styles.titleText} testID="event-title">{title}</Text>
-                    {description ? (
-                        <Text style={styles.descText} numberOfLines={2}>
-                            {description}
-                        </Text>
-                    ) : null}
-                </View>
-
-                {/* Column D: Completion ring */}
-                <View style={styles.ringCol}>
-                    <View style={[styles.completionRing, { borderColor: nodeColor }]} />
-                </View>
-            </Pressable>
+  return (
+    <View style={styles.container}>
+      {/* Optional rest break gap with dashed spine */}
+      {showBreakBefore && (
+        <View style={styles.breakRow}>
+          <View style={styles.timeCol} />
+          <View style={styles.nodeCol}>
+            <View style={styles.breakDashedSpine}>
+              <View style={[styles.breakDash, { backgroundColor: spineColor }]} />
+              <View style={[styles.breakDash, { backgroundColor: spineColor }]} />
+              <View style={[styles.breakDash, { backgroundColor: spineColor }]} />
+            </View>
+          </View>
+          <View style={styles.breakTextCol}>
+            <Text style={styles.breakText}>
+              Rest break{breakDurationMinutes ? ` • ${formatDuration(breakDurationMinutes)}` : ''}
+            </Text>
+          </View>
         </View>
-    );
+      )}
+
+      {/* Main Timeline Row */}
+      <View style={styles.eventRow}>
+        {/* Column A: Time label */}
+        <View style={styles.timeCol}>
+          <Text style={styles.timeValText}>{timeVal}</Text>
+          {ampm ? <Text style={styles.ampmText}>{ampm}</Text> : null}
+        </View>
+
+        {/* Column B: Node & Vertical Spine */}
+        <View style={styles.nodeCol}>
+          {/* Top spine segment */}
+          <View
+            style={[
+              styles.spineSegment,
+              {
+                backgroundColor: isFirst
+                  ? 'transparent'
+                  : effectiveChain === 'middle' || effectiveChain === 'end'
+                  ? primaryColor
+                  : spineColor,
+                width: effectiveChain === 'middle' || effectiveChain === 'end' ? 3 : SPINE_WIDTH,
+              },
+            ]}
+          />
+
+          {/* Node Circle */}
+          <View
+            style={[
+              styles.nodeCircle,
+              isWakeupSleep || effectiveChain !== 'none'
+                ? {
+                    backgroundColor: primaryColor,
+                    borderColor: theme.colors.background,
+                    borderWidth: 2,
+                  }
+                : {
+                    backgroundColor: isDarkMode ? `${primaryColor}22` : `${primaryColor}14`,
+                    borderColor: `${primaryColor}40`,
+                    borderWidth: 1.5,
+                  },
+              (isWakeupSleep || effectiveChain !== 'none') && Platform.select({
+                ios: {
+                  shadowColor: primaryColor,
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.35,
+                  shadowRadius: 4,
+                },
+                android: { elevation: 3 },
+              }),
+            ]}
+          >
+            <Ionicons
+              name={icon}
+              size={21}
+              color={isWakeupSleep || effectiveChain !== 'none' ? '#FFFFFF' : primaryColor}
+            />
+          </View>
+
+          {/* Bottom spine segment */}
+          <View
+            style={[
+              styles.spineSegment,
+              styles.spineSegmentBottom,
+              {
+                backgroundColor: isLast
+                  ? 'transparent'
+                  : effectiveChain === 'start' || effectiveChain === 'middle'
+                  ? primaryColor
+                  : spineColor,
+                width: effectiveChain === 'start' || effectiveChain === 'middle' ? 3 : SPINE_WIDTH,
+              },
+            ]}
+          />
+        </View>
+
+        {/* Column C: Breathable content (title + subtitle, no tick box) */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.contentPressable,
+            pressed && onPress && { opacity: 0.75 },
+          ]}
+          onPress={() => {
+            if (onPress) {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              onPress();
+            }
+          }}
+          disabled={!onPress}
+          testID="timeline-event-card"
+        >
+          <Text style={styles.titleText} numberOfLines={1} testID="event-title">
+            {title}
+          </Text>
+          <Text style={styles.metaText} numberOfLines={1}>
+            {subtitleText}
+          </Text>
+        </Pressable>
+      </View>
+    </View>
+  );
 };
 
 /* ---------- Styles ---------- */
-const getStyles = (theme: Theme) =>
-    StyleSheet.create({
-        /* Break gap row */
-        breakRow: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            minHeight: 36,
-        },
-        breakTextCol: {
-            flex: 1,
-            paddingLeft: 12,
-        },
-        breakBadge: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            alignSelf: 'flex-start',
-            paddingHorizontal: 8,
-            paddingVertical: 3,
-            borderRadius: 8,
-            backgroundColor: `${theme.colors.textSecondary}14`,
-        },
-        breakText: {
-            fontSize: 11,
-            fontFamily: theme.fonts.medium,
-            color: theme.colors.textSecondary,
-            letterSpacing: 0.3,
-            opacity: 0.8,
-        },
+const getStyles = (theme: Theme, isDarkMode: boolean) => {
+  return StyleSheet.create({
+    container: {
+      width: '100%',
+    },
 
-        /* Main event row */
-        eventRow: {
-            flexDirection: 'row',
-            alignItems: 'stretch',
-            minHeight: 90,
-        },
+    /* Break gap row with dashed spine */
+    breakRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      minHeight: 36,
+      paddingVertical: 2,
+    },
+    breakDashedSpine: {
+      height: 30,
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 2,
+    },
+    breakDash: {
+      width: SPINE_WIDTH,
+      height: 6,
+      borderRadius: 1,
+    },
+    breakTextCol: {
+      flex: 1,
+      paddingLeft: 14,
+      paddingRight: 20,
+      justifyContent: 'center',
+    },
+    breakText: {
+      fontSize: 12,
+      fontFamily: theme.fonts.medium,
+      color: theme.colors.textSecondary,
+      opacity: 0.7,
+      letterSpacing: 0.2,
+    },
 
-        /* Column A – time */
-        timeCol: {
-            width: TIME_COL_W,
-            alignItems: 'flex-end',
-            paddingRight: 10,
-            paddingTop: 6,
-        },
-        timeText: {
-            fontSize: 12,
-            fontFamily: theme.fonts.medium,
-            color: theme.colors.textSecondary,
-            textAlign: 'right',
-            lineHeight: 16,
-        },
+    /* Main timeline row */
+    eventRow: {
+      flexDirection: 'row',
+      alignItems: 'stretch',
+      minHeight: 72,
+    },
 
-        /* Column B – node / dashed line */
-        nodeCol: {
-            width: NODE_COL_W,
-            alignItems: 'center',
-        },
-        dashedSegment: {
-            width: 3,
-            // height set per-instance (top = 12, bottom = flex)
-            height: 12,
-            borderRadius: 2,
-        },
-        dashedSegmentBottom: {
-            flex: 1, // takes remaining space below the circle
-        },
-        iconCircle: {
-            width: ICON_SIZE,
-            height: ICON_SIZE,
-            borderRadius: ICON_SIZE / 2,
-            alignItems: 'center',
-            justifyContent: 'center',
-        },
+    /* Column A – Time */
+    timeCol: {
+      width: TIME_COL_W,
+      alignItems: 'flex-end',
+      paddingRight: 8,
+      paddingTop: 14,
+    },
+    timeValText: {
+      fontSize: 13,
+      fontFamily: theme.fonts.bold,
+      color: theme.colors.text,
+      letterSpacing: -0.2,
+      lineHeight: 16,
+    },
+    ampmText: {
+      fontSize: 10,
+      fontFamily: theme.fonts.bold,
+      color: theme.colors.textSecondary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.3,
+      marginTop: 2,
+    },
 
-        /* Column C – text */
-        textCol: {
-            flex: 1,
-            paddingTop: 8,
-            paddingBottom: 8,
-            paddingLeft: 14,
-            justifyContent: 'center',
-        },
-        subtitleText: {
-            fontSize: 11,
-            fontFamily: theme.fonts.medium,
-            color: theme.colors.textSecondary,
-            marginBottom: 3,
-        },
-        titleText: {
-            fontSize: 18,
-            fontFamily: theme.fonts.bold,
-            color: theme.colors.text,
-            lineHeight: 22,
-        },
-        descText: {
-            fontSize: 13,
-            fontFamily: theme.fonts.regular,
-            color: theme.colors.textSecondary,
-            marginTop: 4,
-            lineHeight: 18,
-        },
+    /* Column B – Spine & Node */
+    nodeCol: {
+      width: NODE_COL_W,
+      alignItems: 'center',
+    },
+    spineSegment: {
+      width: SPINE_WIDTH,
+      height: 14,
+    },
+    spineSegmentBottom: {
+      flex: 1,
+      height: undefined,
+    },
+    nodeCircle: {
+      width: NODE_SIZE,
+      height: NODE_SIZE,
+      borderRadius: NODE_SIZE / 2,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1.5,
+    },
 
-        /* Column D – ring */
-        ringCol: {
-            width: 44,
-            alignItems: 'center',
-            justifyContent: 'center',
-        },
-        completionRing: {
-            width: 26,
-            height: 26,
-            borderRadius: 13,
-            borderWidth: 2,
-            backgroundColor: 'transparent',
-        },
-        /* Skeleton specific styles */
-        skeletonBox: {
-            backgroundColor: `${theme.colors.textSecondary}25`,
-            borderRadius: 4,
-        },
-        skeletonCircle: {
-            width: ICON_SIZE,
-            height: ICON_SIZE,
-            borderRadius: ICON_SIZE / 2,
-            backgroundColor: `${theme.colors.textSecondary}25`,
-        },
-        skeletonRing: {
-            width: 26,
-            height: 26,
-            borderRadius: 13,
-            borderWidth: 2,
-            borderColor: `${theme.colors.textSecondary}25`,
-            backgroundColor: 'transparent',
-        },
-    });
+    /* Column C – Content row (Takes full remaining width) */
+    contentPressable: {
+      flex: 1,
+      justifyContent: 'center',
+      paddingLeft: 14,
+      paddingRight: 20,
+      paddingVertical: 12,
+    },
+    titleText: {
+      fontSize: 17,
+      fontFamily: theme.fonts.bold,
+      color: theme.colors.text,
+      letterSpacing: -0.2,
+      lineHeight: 22,
+    },
+    metaText: {
+      fontSize: 13,
+      fontFamily: theme.fonts.regular,
+      color: theme.colors.textSecondary,
+      marginTop: 3,
+      letterSpacing: -0.1,
+    },
+
+    /* Minimalist Skeleton Styles */
+    skeletonBox: {
+      backgroundColor: `${theme.colors.textSecondary}18`,
+      borderRadius: 4,
+    },
+    skeletonCircle: {
+      width: NODE_SIZE,
+      height: NODE_SIZE,
+      borderRadius: NODE_SIZE / 2,
+      backgroundColor: `${theme.colors.textSecondary}18`,
+    },
+  });
+};
 
 export const SkeletonTimelineEventCard: React.FC<{ isFirst?: boolean; isLast?: boolean }> = ({ isFirst, isLast }) => {
-    const { theme } = useTheme();
-    const styles = useMemo(() => getStyles(theme), [theme]);
+  const { theme, isDarkMode } = useTheme();
+  const styles = useMemo(() => getStyles(theme, isDarkMode), [theme, isDarkMode]);
 
-    const pulseAnim = React.useRef(new Animated.Value(0.5)).current;
+  const pulseAnim = React.useRef(new Animated.Value(0.35)).current;
 
-    React.useEffect(() => {
-        Animated.loop(
-            Animated.sequence([
-                Animated.timing(pulseAnim, {
-                    toValue: 1,
-                    duration: 1000,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(pulseAnim, {
-                    toValue: 0.5,
-                    duration: 1000,
-                    useNativeDriver: true,
-                }),
-            ])
-        ).start();
-    }, [pulseAnim]);
+  React.useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 0.8,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 0.35,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, [pulseAnim]);
 
-    const lineColor = `${theme.colors.textSecondary}25`;
+  const spineColor = isDarkMode ? 'rgba(255, 255, 255, 0.20)' : 'rgba(0, 0, 0, 0.15)';
 
-    return (
-        <Animated.View style={[styles.eventRow, { opacity: pulseAnim }]}>
-            {/* Column A */}
-            <View style={styles.timeCol}>
-                <View style={[styles.skeletonBox, { width: 36, height: 12, borderRadius: 6, marginBottom: 4 }]} />
-                <View style={[styles.skeletonBox, { width: 24, height: 12, borderRadius: 6 }]} />
-            </View>
+  return (
+    <Animated.View style={[styles.eventRow, { opacity: pulseAnim }]}>
+      {/* Column A */}
+      <View style={styles.timeCol}>
+        <View style={[styles.skeletonBox, { width: 34, height: 12, marginBottom: 4 }]} />
+        <View style={[styles.skeletonBox, { width: 20, height: 10 }]} />
+      </View>
 
-            {/* Column B */}
-            <View style={styles.nodeCol}>
-                {!isFirst && <View style={[styles.dashedSegment, { backgroundColor: lineColor }]} />}
-                <View style={[styles.skeletonCircle]} />
-                {!isLast && <View style={[styles.dashedSegment, styles.dashedSegmentBottom, { backgroundColor: lineColor }]} />}
-            </View>
+      {/* Column B */}
+      <View style={styles.nodeCol}>
+        <View
+          style={[
+            styles.spineSegment,
+            { backgroundColor: isFirst ? 'transparent' : spineColor },
+          ]}
+        />
+        <View style={styles.skeletonCircle} />
+        <View
+          style={[
+            styles.spineSegment,
+            styles.spineSegmentBottom,
+            { backgroundColor: isLast ? 'transparent' : spineColor },
+          ]}
+        />
+      </View>
 
-            {/* Column C */}
-            <View style={styles.textCol}>
-                <View style={[styles.skeletonBox, { width: 60, height: 14, borderRadius: 7, marginBottom: 6 }]} />
-                <View style={[styles.skeletonBox, { width: 120, height: 20, borderRadius: 10, marginBottom: 8 }]} />
-                <View style={[styles.skeletonBox, { width: 180, height: 14, borderRadius: 7 }]} />
-            </View>
-
-            {/* Column D */}
-            <View style={styles.ringCol}>
-                <View style={[styles.skeletonRing]} />
-            </View>
-        </Animated.View>
-    );
+      {/* Column C */}
+      <View style={styles.contentPressable}>
+        <View style={[styles.skeletonBox, { width: 140, height: 16, marginBottom: 6 }]} />
+        <View style={[styles.skeletonBox, { width: 190, height: 12 }]} />
+      </View>
+    </Animated.View>
+  );
 };

@@ -31,7 +31,7 @@ import { TimelineEventCard, SkeletonTimelineEventCard } from "../components/dash
 import { Theme } from "../styles/shared";
 import { useTheme } from "../context/ThemeContext";
 import { scheduleRoutineNotifications } from "../utils/notifications";
-import { FormData, RoutineItem, getDateString, sortRoutineItems, timeToMinutes, getRoutineItemsForDate, addMinutesToTime, guessRoutineIconKey } from "../utils/utils";
+import { FormData, RoutineItem, getDateString, sortRoutineItems, timeToMinutes, getRoutineItemsForDate, addMinutesToTime, guessRoutineIconKey, isWakeupOrSleep } from "../utils/utils";
 
 /* -------------------- Assets & Constants -------------------- */
 
@@ -973,6 +973,16 @@ export default function RoutineScreen() {
     doFinalSave();
   }, [allRoutines, saveRoutines, selectedDate]);
 
+  const handleToggleComplete = useCallback((targetItem: RoutineItem) => {
+    setAllRoutines((prev) => {
+      const updated = prev.map((item) =>
+        item.id === targetItem.id ? { ...item, completed: !item.completed } : item
+      );
+      saveRoutines(updated);
+      return updated;
+    });
+  }, [saveRoutines]);
+
   const updateFormField = useCallback((field: keyof FormData, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   }, []);
@@ -1074,22 +1084,63 @@ export default function RoutineScreen() {
                         <Text style={styles.emptyStateSub}>Tap the + below to add a ritual to your day.</Text>
                       </View>
                     ) : (
-                      pageItems.map((entry, itemIdx) => {
-                        const prevMins = itemIdx > 0 ? pageItems[itemIdx - 1].minutes : null;
-                        const showBreakBefore = prevMins !== null && (entry.minutes - prevMins) > 45;
-                        return (
-                          <TimelineEventCard
-                            key={`${idx}-${(entry.data as any).id}`}
-                            item={entry.data}
-                            isFirst={itemIdx === 0}
-                            isLast={itemIdx === pageItems.length - 1}
-                            showBreakBefore={showBreakBefore}
-                            onPress={idx === 1
-                              ? () => openModal(entry.data as RoutineItem, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
-                              : undefined}
-                          />
-                        );
-                      })
+                      (() => {
+                        const chainPositions: ('none' | 'start' | 'middle' | 'end')[] = new Array(pageItems.length).fill('none');
+                        for (let i = 0; i < pageItems.length; i++) {
+                          const item = pageItems[i].data as RoutineItem;
+                          if (isWakeupOrSleep(item)) {
+                            chainPositions[i] = 'none';
+                            continue;
+                          }
+                          if (chainPositions[i] !== 'none') continue;
+
+                          const startMins = pageItems[i].minutes;
+                          const dur = item.duration ?? 30;
+                          let runEnd = startMins + dur;
+                          let j = i + 1;
+                          while (j < pageItems.length) {
+                            const nextItem = pageItems[j].data as RoutineItem;
+                            if (isWakeupOrSleep(nextItem)) break;
+                            const nextStart = pageItems[j].minutes;
+                            if (nextStart < runEnd) {
+                              runEnd = Math.max(runEnd, nextStart + (nextItem.duration ?? 30));
+                              j++;
+                            } else {
+                              break;
+                            }
+                          }
+
+                          if (j - i >= 2) {
+                            chainPositions[i] = 'start';
+                            for (let k = i + 1; k < j - 1; k++) {
+                              chainPositions[k] = 'middle';
+                            }
+                            chainPositions[j - 1] = 'end';
+                            i = j - 1;
+                          }
+                        }
+
+                        return pageItems.map((entry, itemIdx) => {
+                          const prevMins = itemIdx > 0 ? pageItems[itemIdx - 1].minutes : null;
+                          const breakMinutes = prevMins !== null ? (entry.minutes - prevMins) : 0;
+                          const showBreakBefore = prevMins !== null && breakMinutes > 45;
+                          return (
+                            <TimelineEventCard
+                              key={`${idx}-${(entry.data as any).id}`}
+                              item={entry.data}
+                              chainPosition={chainPositions[itemIdx]}
+                              isFirst={itemIdx === 0}
+                              isLast={itemIdx === pageItems.length - 1}
+                              showBreakBefore={showBreakBefore}
+                              breakDurationMinutes={showBreakBefore ? breakMinutes : undefined}
+                              onToggleComplete={idx === 1 ? handleToggleComplete : undefined}
+                              onPress={idx === 1
+                                ? () => openModal(entry.data as RoutineItem, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
+                                : undefined}
+                            />
+                          );
+                        });
+                      })()
                     )}
                   </View>
                   <View style={{ height: 100 }} />

@@ -15,20 +15,32 @@ export const getTimelineMinute = (timeStr: string, startHour: number) => {
 
 const DURATION_DEFAULT = 30;
 
-const TASK_COLORS: Record<string, string> = {
-    wakeup: '#FFB347',
-    sleep: '#9CBBE3',
-    water: '#77CCEE',
-    tea_journal: '#E6D5B8',
-    breakfast: '#FFD1BA',
-    lunch: '#FFD1BA',
-    dinner: '#FFD1BA',
-    study: '#A0C4FF',
-    walk: '#B9FBC0',
-    yoga: '#CFBAF0',
-    reflect: '#A0C4FF',
-    prepare_sleep: '#BDB2FF',
-    breathe: '#B9FBC0',
+export const TASK_COLORS: Record<string, string> = {
+  wakeup: '#FFB347',
+  sleep: '#9CBBE3',
+  water: '#77CCEE',
+  tea_journal: '#E6D5B8',
+  breakfast: '#FFD1BA',
+  lunch: '#FFD1BA',
+  dinner: '#FFD1BA',
+  study: '#A0C4FF',
+  walk: '#B9FBC0',
+  yoga: '#CFBAF0',
+  reflect: '#A0C4FF',
+  prepare_sleep: '#BDB2FF',
+  breathe: '#B9FBC0',
+  commute: '#79B4B7',
+  gym: '#FF9F80',
+  cleaning: '#80CED7',
+  pet: '#E3C75F',
+  shopping: '#F6B8B8',
+  coding: '#7EA0B7',
+  gaming: '#BD93F9',
+  finances: '#9AD0C2',
+  laundry: '#C5DFF8',
+  travel: '#7BC9FF',
+  health: '#F875AA',
+  podcast: '#C683D7',
 };
 
 
@@ -44,9 +56,8 @@ export const TaskPill = memo<{
     onPressTask?: (item: RoutineItem) => void;
 }>(({ item, size, pillHeight, isSelected, theme, onPressTask }) => {
     const borderRadius = size / 2;
-    const iconSize = Math.round(size * 0.42);
+    const iconSize = Math.round(size * 0.45);
     const taskColor = TASK_COLORS[item.imageKey ?? ''] ?? theme.colors.primary;
-    const accentBarHeight = Math.min(pillHeight * 0.28, size * 0.6);
 
     return (
         <Pressable
@@ -59,56 +70,29 @@ export const TaskPill = memo<{
                     width: size,
                     height: pillHeight,
                     borderRadius,
-                    overflow: 'hidden',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: isSelected ? `${taskColor}26` : `${taskColor}14`,
                     borderWidth: isSelected ? 1.5 : 1,
-                    borderColor: isSelected ? `${taskColor}CC` : `${theme.colors.text}22`,
+                    borderColor: isSelected ? `${taskColor}65` : `${taskColor}28`,
                 },
-                pressed && { opacity: 0.85, transform: [{ scale: 0.96 }] },
-                isSelected
-                    ? Platform.select({
-                        ios: { shadowColor: taskColor, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.6, shadowRadius: 10 },
-                        android: { elevation: 8 },
-                    })
-                    : Platform.select({
-                        ios: {
-                            shadowColor: theme.glows.card.shadowColor,
-                            shadowOffset: theme.glows.card.shadowOffset,
-                            shadowOpacity: theme.glows.card.shadowOpacity,
-                            shadowRadius: theme.glows.card.shadowRadius,
-                        },
-                        android: { elevation: theme.glows.card.elevation },
-                    }),
+                pressed && { opacity: 0.82, transform: [{ scale: 0.95 }] },
+                isSelected && Platform.select({
+                    ios: {
+                        shadowColor: taskColor,
+                        shadowOffset: { width: 0, height: 3 },
+                        shadowOpacity: 0.35,
+                        shadowRadius: 6,
+                    },
+                    android: { elevation: 4 },
+                }),
             ]}
         >
-            <View style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: isSelected ? taskColor : theme.colors.background
-            }} />
-            {!isSelected && (
-                <LinearGradient
-                    colors={[`${theme.colors.text}18`, `${theme.colors.text}08`]}
-                    start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
-                    style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-                />
-            )}
-            {isSelected && (
-              <LinearGradient
-                  colors={['rgba(255,255,255,0.4)', 'rgba(255,255,255,0)']}
-                  start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
-                  style={{ position: 'absolute', top: 0, left: 0, right: 0, height: accentBarHeight }}
-              />
-            )}
-            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                <Ionicons
-                    name={ICON_MAP[item.imageKey ?? ''] ?? 'ellipse-outline'}
-                    size={iconSize}
-                    color={isSelected ? theme.colors.white : `${theme.colors.textSecondary}88`}
-                />
-            </View>
+            <Ionicons
+                name={ICON_MAP[item.imageKey ?? ''] ?? 'ellipse-outline'}
+                size={iconSize}
+                color={taskColor}
+            />
         </Pressable>
     );
 });
