@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
+import { useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import * as Haptics from "../utils/haptics";
 import {
@@ -15,6 +16,7 @@ import {
   PanResponder,
   Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -553,48 +555,61 @@ export default function RoutineScreen() {
   const sortedRoutineItems = useMemo(() => sortRoutineItems(routineItems), [routineItems]);
 
 
+  const [refreshing, setRefreshing] = useState(false);
+
   /* -------------------- Data Fetching -------------------- */
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        let finalRoutines: RoutineItem[] | null = null;
-        let localRoutines: RoutineItem[] | null = null;
-        
-        // 1. Try to load local data (saved from setup or previous sessions)
-        const localDataStr = await AsyncStorage.getItem(STORAGE_KEY);
-        if (localDataStr) {
-          try {
-            localRoutines = JSON.parse(localDataStr);
-          } catch (e) {}
-        }
-
-        // 2. Fetch from Supabase (if authenticated)
-        if (localRoutines && localRoutines.length > 0) {
-          finalRoutines = localRoutines;
-        }
-
-        if (!finalRoutines || finalRoutines.length === 0) {
-          finalRoutines = INITIAL_ROUTINE.map(item => {
-            const isDaily = item.task.toLowerCase() === "sleep" || item.task.toLowerCase() === "wake up";
-            return { ...item, daysOfWeek: isDaily ? [0, 1, 2, 3, 4, 5, 6] : [new Date().getDay()] };
-          });
-          
-          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(finalRoutines));
-          
-          // And back it up to cloud if currently signed in
-        }
-
-        setAllRoutines(finalRoutines);
-        setNextInsertionOrder(finalRoutines.length > 0 ? Math.max(...finalRoutines.map((i: RoutineItem) => i.insertionOrder || 0)) + 1 : 1);
-
-      } catch (e) {
-        console.error("Failed to load routines.", e);
-      } finally {
-        setIsLoading(false);
+  const loadData = useCallback(async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setRefreshing(true);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
-    };
-    loadData();
+      let finalRoutines: RoutineItem[] | null = null;
+      let localRoutines: RoutineItem[] | null = null;
+      
+      // 1. Try to load local data (saved from setup or previous sessions)
+      const localDataStr = await AsyncStorage.getItem(STORAGE_KEY);
+      if (localDataStr) {
+        try {
+          localRoutines = JSON.parse(localDataStr);
+        } catch (e) {}
+      }
+
+      if (localRoutines && localRoutines.length > 0) {
+        finalRoutines = localRoutines;
+      }
+
+      if (!finalRoutines || finalRoutines.length === 0) {
+        finalRoutines = INITIAL_ROUTINE.map(item => {
+          const isDaily = item.task.toLowerCase() === "sleep" || item.task.toLowerCase() === "wake up";
+          return { ...item, daysOfWeek: isDaily ? [0, 1, 2, 3, 4, 5, 6] : [new Date().getDay()] };
+        });
+        
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(finalRoutines));
+      }
+
+      setAllRoutines(finalRoutines);
+      setNextInsertionOrder(finalRoutines.length > 0 ? Math.max(...finalRoutines.map((i: RoutineItem) => i.insertionOrder || 0)) + 1 : 1);
+
+    } catch (e) {
+      console.error("Failed to load routines.", e);
+    } finally {
+      setIsLoading(false);
+      if (isRefresh) {
+        setRefreshing(false);
+      }
+    }
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
+
+  const onRefresh = useCallback(() => {
+    loadData(true);
+  }, [loadData]);
 
   const saveRoutines = useCallback(async (newItems: RoutineItem[]) => {
     try {
@@ -751,6 +766,7 @@ export default function RoutineScreen() {
       insertionOrder: nextInsertionOrder,
       daysOfWeek: [], // Single exact date
       date: dateStr,
+      parentId: originalTask.id,
       duration: duration || originalTask.duration || 30,
       subtasks: formData.subtasks || [],
     };
@@ -840,6 +856,7 @@ export default function RoutineScreen() {
           const newItem: RoutineItem = {
              ...taskToDelete,
              id: Date.now().toString(),
+             parentId: taskToDelete.id,
              isSkipped: true,
              daysOfWeek: [],
              date: dateStr,
@@ -861,6 +878,7 @@ export default function RoutineScreen() {
                 const newItem: RoutineItem = {
                     ...taskToDelete,
                     id: Date.now().toString(),
+                    parentId: taskToDelete.id,
                     isSkipped: true,
                     daysOfWeek: [],
                     date: dateStr,
@@ -917,6 +935,7 @@ export default function RoutineScreen() {
           const newItem: RoutineItem = {
             ...updatedTask,
             id: Date.now().toString(),
+            parentId: originalTask.id,
             daysOfWeek: [],
             date: dateStr,
           };
@@ -937,6 +956,7 @@ export default function RoutineScreen() {
                 const newItem: RoutineItem = {
                   ...updatedTask,
                   id: Date.now().toString(),
+                  parentId: originalTask.id,
                   daysOfWeek: [],
                   date: dateStr,
                 };
@@ -1010,6 +1030,8 @@ export default function RoutineScreen() {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             openList();
           }}
+          accessibilityRole="button"
+          accessibilityLabel="Open daily routine detail panel"
           {...collapsedPanResponder.panHandlers}
         >
           {/* Blur background - fallback to solid bg on web */}
@@ -1125,6 +1147,8 @@ export default function RoutineScreen() {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               closeList();
             }}
+            accessibilityRole="button"
+            accessibilityLabel="Collapse routine panel"
           />
           <Text style={styles.listTitle}>Daily Routine</Text>
         </View>
@@ -1157,6 +1181,16 @@ export default function RoutineScreen() {
                   onScroll={idx === 1 ? handleScroll : undefined}
                   scrollEventThrottle={16}
                   bounces={false}
+                  refreshControl={
+                    idx === 1 ? (
+                      <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        tintColor={theme.colors.primary}
+                        colors={[theme.colors.primary]}
+                      />
+                    ) : undefined
+                  }
                 >
                   <View style={styles.cardList}>
                     {isLoading ? (
@@ -1262,6 +1296,8 @@ export default function RoutineScreen() {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 openForm();
               }}
+              accessibilityRole="button"
+              accessibilityLabel="Add new ritual"
               testID="routine-fab"
             >
               <Ionicons name="add" size={32} color={theme.colors.white} />
