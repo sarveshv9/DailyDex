@@ -7,6 +7,7 @@ import React, { memo, useCallback, useMemo, useRef } from 'react';
 import {
     Animated,
     FlatList,
+    InteractionManager,
     Platform,
     Pressable,
     ScrollView,
@@ -1114,6 +1115,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
 
     const flatListRef = useRef<FlatList>(null);
     const scrollSnapTimer = useRef<any>(null);
+    const hasInitialScrolled = useRef(false);
 
     // Web: JS-based scroll snapping (CSS scroll-snap blocks virtualized scrolling)
     const handleWebScrollSnap = useCallback((e: any) => {
@@ -1129,7 +1131,28 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
         }, 150);
     }, [SCREEN_WIDTH]);
 
-    // Sync scroll when viewMode changes
+    // Handle horizontal page swiping to keep week dates aligned
+    const handleMomentumScrollEnd = useCallback((e: any) => {
+        const offsetX = e.nativeEvent.contentOffset.x;
+        const pageIndex = Math.round(offsetX / SCREEN_WIDTH);
+        const page = pages[pageIndex];
+        if (page && page.length > 0) {
+            const selectedStr = formatDateKey(selectedDate);
+            const isInWeek = page.some(d => formatDateKey(d) === selectedStr);
+            if (!isInWeek) {
+                const todayStr = formatDateKey(today);
+                const todayInPage = page.find(d => formatDateKey(d) === todayStr);
+                if (todayInPage) {
+                    onSelectDate(todayInPage);
+                } else {
+                    const currentDayIdx = selectedDate.getDay();
+                    onSelectDate(page[currentDayIdx] || page[0]);
+                }
+            }
+        }
+    }, [SCREEN_WIDTH, pages, selectedDate, today, onSelectDate]);
+
+    // Sync scroll when viewMode changes and guarantee positioning on mount / navigation transition
     React.useEffect(() => {
         if (viewMode === 'month') return;
 
@@ -1137,10 +1160,48 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
         const targetIndex = pages.findIndex(page => page.some(d => formatDateKey(d) === dateStr));
         const indexToScroll = targetIndex !== -1 ? targetIndex : initialPageIndex;
 
-        setTimeout(() => {
-            flatListRef.current?.scrollToOffset({ offset: indexToScroll * SCREEN_WIDTH, animated: true });
-        }, 50);
-    }, [viewMode, selectedDate, SCREEN_WIDTH]);
+        const scrollToTarget = (animated = false) => {
+            if (flatListRef.current && SCREEN_WIDTH > 0) {
+                flatListRef.current.scrollToOffset({
+                    offset: indexToScroll * SCREEN_WIDTH,
+                    animated,
+                });
+            }
+        };
+
+        // 1. Immediate positioning
+        scrollToTarget(false);
+
+        // 2. Next animation frame
+        const raf = requestAnimationFrame(() => {
+            scrollToTarget(false);
+        });
+
+        // 3. Short layout timeout
+        const t1 = setTimeout(() => {
+            scrollToTarget(false);
+        }, 60);
+
+        // 4. Post-navigation transition timeout (Expo Router stack push finishes at ~300ms)
+        const t2 = setTimeout(() => {
+            scrollToTarget(false);
+        }, 320);
+
+        // 5. InteractionManager guarantee
+        let interaction: any;
+        if (InteractionManager?.runAfterInteractions) {
+            interaction = InteractionManager.runAfterInteractions(() => {
+                scrollToTarget(false);
+            });
+        }
+
+        return () => {
+            cancelAnimationFrame(raf);
+            clearTimeout(t1);
+            clearTimeout(t2);
+            interaction?.cancel?.();
+        };
+    }, [viewMode, selectedDate, SCREEN_WIDTH, pages, initialPageIndex]);
 
     const renderPage = useCallback(({ item: pageDates }: { item: Date[] }) => (
         <TimelinePage
@@ -1272,6 +1333,16 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                             pagingEnabled={Platform.OS !== 'web'}
                             showsHorizontalScrollIndicator={false}
                             initialScrollIndex={initialTargetIndex}
+                            onLayout={(e) => {
+                                const layoutW = e.nativeEvent.layout.width || SCREEN_WIDTH;
+                                if (layoutW > 0 && !hasInitialScrolled.current) {
+                                    hasInitialScrolled.current = true;
+                                    flatListRef.current?.scrollToOffset({
+                                        offset: initialTargetIndex * layoutW,
+                                        animated: false,
+                                    });
+                                }
+                            }}
                             getItemLayout={(_, idx) => ({
                                 length: SCREEN_WIDTH,
                                 offset: SCREEN_WIDTH * idx,
@@ -1283,11 +1354,15 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                             updateCellsBatchingPeriod={50}
                             removeClippedSubviews={Platform.OS === 'android'}
                             onScrollToIndexFailed={info => {
-                                flatListRef.current?.scrollToOffset({
-                                    offset: info.averageItemLength * info.index,
-                                    animated: false,
-                                });
+                                const targetOffset = info.index * SCREEN_WIDTH;
+                                setTimeout(() => {
+                                    flatListRef.current?.scrollToOffset({
+                                        offset: targetOffset,
+                                        animated: false,
+                                    });
+                                }, 60);
                             }}
+                            onMomentumScrollEnd={handleMomentumScrollEnd}
                             {...(Platform.OS === 'web' ? {
                                 onScroll: handleWebScrollSnap,
                                 scrollEventThrottle: 16,
