@@ -2,7 +2,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -13,8 +13,7 @@ import {
   Share,
   StyleSheet,
   Text,
-  TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -28,7 +27,7 @@ import { useAudio } from "../../context/AudioContext";
 import { useAuth } from "../../context/AuthContext";
 import { useSettings } from "../../context/SettingsContext";
 import { useTheme } from "../../context/ThemeContext";
-import { getSharedStyles, Theme } from "../../styles/shared";
+import { Theme } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
 import { RoutineItem } from "../../utils/utils";
 
@@ -48,7 +47,6 @@ export default function ProfileScreen() {
   const { settings } = useSettings();
 
   const styles = useMemo(() => makeStyles(theme), [theme]);
-  const sharedStyles = useMemo(() => getSharedStyles(theme), [theme]);
 
   // Modal visibility states
   const [editProfileModalOpen, setEditProfileModalOpen] = useState(false);
@@ -57,7 +55,6 @@ export default function ProfileScreen() {
   const [musicModalOpen, setMusicModalOpen] = useState(false);
 
   // Profile setup state
-  const [profileCreated, setProfileCreated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -73,16 +70,13 @@ export default function ProfileScreen() {
 
   const loadProfileData = useCallback(async () => {
     try {
-      const profileSetup = await AsyncStorage.getItem("@zen_profile_setup_complete");
-      setProfileCreated(!!profileSetup);
-
       const storedProfile = await AsyncStorage.getItem("@zen_user_profile");
       if (storedProfile) {
         const localProfile = JSON.parse(storedProfile);
         setUser(localProfile);
       }
     } catch (e) {
-      setProfileCreated(false);
+      console.error("Failed to load profile", e);
     } finally {
       setIsLoading(false);
     }
@@ -150,7 +144,6 @@ export default function ProfileScreen() {
         const parsed = JSON.parse(storedProfile);
         setUser(parsed);
         await updateUser(parsed);
-        setProfileCreated(true);
       }
     } catch (e) {
       console.error("Error refreshing state after restore:", e);
@@ -248,7 +241,6 @@ export default function ProfileScreen() {
         ]);
         await signOut();
         setUser({ name: "", avatar: "", role: "", email: "", bio: "" });
-        setProfileCreated(false);
         if (settings.hapticsEnabled) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         router.replace("/setup");
       } catch (e) {
@@ -264,7 +256,6 @@ export default function ProfileScreen() {
         ]);
         await signOut();
         setUser({ name: "", avatar: "", role: "", email: "", bio: "" });
-        setProfileCreated(false);
         if (settings.hapticsEnabled) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } catch (e) {
         console.error("Failed to reset profile:", e);
@@ -324,7 +315,6 @@ export default function ProfileScreen() {
       await AsyncStorage.setItem("@zen_profile_setup_complete", "true");
       await AsyncStorage.setItem("@zen_user_profile", JSON.stringify(user));
       await updateUser(user);
-      setProfileCreated(true);
     } catch (e) {
       console.error("Failed to save profile flag", e);
     }
@@ -346,54 +336,9 @@ export default function ProfileScreen() {
     );
   }
 
-  /* -------------------- First Install / Unset Profile State -------------------- */
-  if (!profileCreated) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.emptyContainer}>
-          <View style={styles.welcomeCard}>
-            {/* Luminous Logo Squircle */}
-            <View style={styles.welcomeLogoCircle}>
-              <Ionicons name="sparkles" size={32} color={theme.colors.primary} />
-            </View>
-
-            <Text style={styles.welcomeTitle}>Welcome to Zen</Text>
-            <Text style={styles.welcomeSubtitle}>
-              Create your profile to personalize your experience and sync your preferences.
-            </Text>
-
-            {/* Standard Primary CTA Button (height: 56, borderRadius: 22, glowing drop shadow) */}
-            <Pressable
-              style={({ pressed }) => [
-                styles.primaryCtaButton,
-                pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
-              ]}
-              onPress={() => setEditProfileModalOpen(true)}
-              accessibilityRole="button"
-              accessibilityLabel="Create Profile"
-            >
-              <Ionicons name="person-add-outline" size={20} color={theme.colors.white} />
-              <Text style={styles.primaryCtaText}>Create Profile</Text>
-            </Pressable>
-          </View>
-        </View>
-
-        {/* Edit Profile Modal */}
-        <SettingModal
-          visible={editProfileModalOpen}
-          onClose={() => setEditProfileModalOpen(false)}
-          theme={theme}
-          user={user}
-          setUser={setUser}
-          handleSaveProfile={handleSaveProfile}
-        />
-      </SafeAreaView>
-    );
-  }
-
   /* -------------------- Active Profile Dashboard -------------------- */
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -408,23 +353,10 @@ export default function ProfileScreen() {
       >
         {/* Header Row */}
         <View style={styles.headerRow}>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.screenTitle}>Profile</Text>
             <Text style={styles.screenSubtitle}>Personalization, sync & app preferences</Text>
           </View>
-
-          <Pressable
-            style={({ pressed }) => [
-              styles.headerIconButton,
-              pressed && { opacity: 0.7, transform: [{ scale: 0.94 }] },
-            ]}
-            onPress={() => router.push("/settings")}
-            accessibilityRole="button"
-            accessibilityLabel="Open settings"
-            hitSlop={8}
-          >
-            <Ionicons name="settings-outline" size={20} color={theme.colors.text} />
-          </Pressable>
         </View>
 
         {/* Profile Hero Card */}
@@ -436,22 +368,6 @@ export default function ProfileScreen() {
           handleSaveProfile={handleSaveProfile}
           onOpenEditModal={() => setEditProfileModalOpen(true)}
         />
-
-        {/* Offline Privacy & Local Storage Badge */}
-        <View
-          style={[styles.syncConnectedCard, { borderColor: theme.glass.borderColor }]}
-          accessible={true}
-          accessibilityRole="summary"
-          accessibilityLabel="Offline and Private. All your habits, routines, and focus data stay on this device."
-        >
-          <Ionicons name="shield-checkmark-outline" size={20} color="#34C759" />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.syncConnectedTitle}>Offline & Private</Text>
-            <Text style={styles.syncConnectedSubtitle} numberOfLines={1}>
-              All your habits, routines, and focus data stay on this device
-            </Text>
-          </View>
-        </View>
 
         {/* App Configuration & Settings Section */}
         <SettingsSection
@@ -529,21 +445,22 @@ const makeStyles = (theme: Theme) =>
       backgroundColor: theme.colors.background,
     },
     scrollContent: {
-      paddingTop: theme.spacing.md,
-      paddingBottom: 96,
+      paddingTop: 16,
+      paddingBottom: 110,
       paddingHorizontal: 20,
       gap: 16,
     },
     headerRow: {
       flexDirection: "row",
-      alignItems: "center",
+      alignItems: "flex-start",
       justifyContent: "space-between",
-      paddingHorizontal: 4,
-      marginBottom: 4,
+      paddingHorizontal: 0,
+      marginBottom: 0,
     },
     screenTitle: {
       fontFamily: theme.fonts.bold,
       fontSize: 28,
+      lineHeight: 34,
       letterSpacing: -0.6,
       color: theme.colors.text,
     },
@@ -552,16 +469,6 @@ const makeStyles = (theme: Theme) =>
       fontSize: 13,
       color: theme.colors.textSecondary,
       marginTop: 2,
-    },
-    headerIconButton: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: `${theme.colors.secondary}12`,
-      alignItems: "center",
-      justifyContent: "center",
-      borderWidth: 1,
-      borderColor: `${theme.colors.secondary}15`,
     },
     syncCard: {
       flexDirection: "row",
@@ -643,122 +550,4 @@ const makeStyles = (theme: Theme) =>
       color: "#FF453A",
     },
 
-    /* Unset Profile State */
-    emptyContainer: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      paddingHorizontal: 20,
-    },
-    welcomeCard: {
-      backgroundColor: theme.colors.card,
-      borderRadius: 32,
-      borderWidth: 1,
-      borderColor: theme.glass.borderColor,
-      alignItems: "center",
-      paddingVertical: 40,
-      paddingHorizontal: 24,
-      width: "100%",
-      maxWidth: 420,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.08,
-      shadowRadius: 20,
-      elevation: 6,
-    },
-    welcomeLogoCircle: {
-      width: 72,
-      height: 72,
-      borderRadius: 28,
-      backgroundColor: `${theme.colors.primary}16`,
-      borderWidth: 2,
-      borderColor: `${theme.colors.primary}40`,
-      alignItems: "center",
-      justifyContent: "center",
-      marginBottom: 20,
-      ...theme.glows.primary,
-    },
-    welcomeTitle: {
-      fontFamily: theme.fonts.bold,
-      fontSize: 26,
-      letterSpacing: -0.5,
-      color: theme.colors.text,
-      marginBottom: 8,
-      textAlign: "center",
-    },
-    welcomeSubtitle: {
-      fontFamily: theme.fonts.regular,
-      fontSize: 14,
-      color: theme.colors.textSecondary,
-      textAlign: "center",
-      lineHeight: 22,
-      marginBottom: 32,
-      paddingHorizontal: 12,
-    },
-    primaryCtaButton: {
-      height: 56,
-      borderRadius: 22,
-      backgroundColor: theme.colors.primary,
-      width: "100%",
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 8,
-      ...theme.glows.primary,
-    },
-    primaryCtaText: {
-      color: theme.colors.white,
-      fontFamily: theme.fonts.bold,
-      fontSize: 16,
-    },
-    orDividerRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      marginBottom: 16,
-      gap: 12,
-      width: "100%",
-    },
-    dividerLine: {
-      flex: 1,
-      height: StyleSheet.hairlineWidth,
-      backgroundColor: `${theme.colors.secondary}25`,
-    },
-    orDividerText: {
-      fontFamily: theme.fonts.medium,
-      fontSize: 12,
-      color: theme.colors.textSecondary,
-      textTransform: "uppercase",
-      letterSpacing: 0.5,
-    },
-    googleSyncButton: {
-      height: 56,
-      borderRadius: 22,
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      width: "100%",
-      borderWidth: 1,
-      borderColor: `${theme.colors.secondary}25`,
-      backgroundColor: `${theme.colors.secondary}06`,
-      gap: 10,
-    },
-    googleSyncText: {
-      fontFamily: theme.fonts.medium,
-      fontSize: 15,
-    },
-    signedInBadge: {
-      marginTop: 20,
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 6,
-      paddingVertical: 8,
-      paddingHorizontal: 16,
-      borderRadius: 16,
-      backgroundColor: "#34C75915",
-    },
-    signedInText: {
-      fontFamily: theme.fonts.medium,
-      fontSize: 13,
-      color: "#34C759",
-    },
   });

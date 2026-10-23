@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BlurView } from "expo-blur";
 import { useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActionSheetIOS,
   ActivityIndicator,
@@ -739,8 +739,8 @@ const EmptyState = ({
     filter === "today"
       ? "No tasks set for today. Plan your key priorities."
       : filter === "later"
-      ? "Nothing pending for later. All caught up!"
-      : "A clean slate. Intention is the first step to progress.";
+        ? "Nothing pending for later. All caught up!"
+        : "A clean slate. Intention is the first step to progress.";
 
   return (
     <Animated.View
@@ -795,7 +795,7 @@ export default function TodoScreen() {
     title: "",
     message: "",
     confirmText: "Confirm",
-    action: () => {},
+    action: () => { },
   });
 
   const requestConfirm = (
@@ -949,8 +949,7 @@ export default function TodoScreen() {
 
     requestConfirm(
       "Clear Completed?",
-      `Are you sure you want to clear ${completedCount} completed task${
-        completedCount === 1 ? "" : "s"
+      `Are you sure you want to clear ${completedCount} completed task${completedCount === 1 ? "" : "s"
       }?`,
       "Clear All",
       () => {
@@ -967,7 +966,7 @@ export default function TodoScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={sharedStyles.container}>
+      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
@@ -986,7 +985,7 @@ export default function TodoScreen() {
     .toUpperCase();
 
   return (
-    <SafeAreaView style={sharedStyles.container} edges={["top", "left", "right"]}>
+    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <ScrollView
         style={styles.mainScrollView}
         contentContainerStyle={styles.scrollContent}
@@ -1006,8 +1005,8 @@ export default function TodoScreen() {
           {/* Eyebrow, Title & Action */}
           <View style={styles.headerTitleRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.headerEyebrow}>{dateFormatted}</Text>
               <Text style={styles.headerTitle}>Tasks Hub</Text>
+              <Text style={styles.headerEyebrow}>{dateFormatted}</Text>
             </View>
 
             {completedCount > 0 && (
@@ -1196,11 +1195,14 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
   const neutralFill = isDarkMode
     ? "rgba(255, 255, 255, 0.08)"
     : "rgba(0, 0, 0, 0.05)";
-  const activeTint = `${theme.colors.primary}${
-    theme.glass?.iconTintAlpha ?? (isDarkMode ? "29" : "1C")
-  }`;
+  const activeTint = `${theme.colors.primary}${theme.glass?.iconTintAlpha ?? (isDarkMode ? "29" : "1C")
+    }`;
 
   return StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
     loadingContainer: {
       flex: 1,
       justifyContent: "center",
@@ -1216,12 +1218,12 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     /* Header & Hero */
     heroHeader: {
       paddingHorizontal: 20,
-      paddingTop: 14,
-      paddingBottom: 12,
+      paddingTop: 16,
+      paddingBottom: 16,
     },
     headerTitleRow: {
       flexDirection: "row",
-      alignItems: "center",
+      alignItems: "flex-start",
       justifyContent: "space-between",
       marginBottom: 16,
     },
@@ -1230,11 +1232,12 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       fontSize: 11,
       letterSpacing: 1.5,
       color: theme.colors.textSecondary,
-      marginBottom: 2,
+      marginTop: 2,
     },
     headerTitle: {
       fontFamily: theme.fonts.bold,
       fontSize: 28,
+      lineHeight: 34,
       color: theme.colors.text,
       letterSpacing: -0.6,
     },
@@ -1248,6 +1251,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       backgroundColor: activeTint,
       borderWidth: 1,
       borderColor: `${theme.colors.primary}20`,
+      marginTop: 2,
     },
     clearDoneBtnText: {
       fontFamily: theme.fonts.medium,

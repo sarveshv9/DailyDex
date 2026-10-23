@@ -87,8 +87,10 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
                   style={styles.avatarImage}
                   resizeMode="cover"
                 />
-              ) : (
+              ) : userProfile.name?.trim() ? (
                 <Text style={styles.avatarText}>{avatarInitial}</Text>
+              ) : (
+                <Ionicons name="person-add-outline" size={28} color={theme.colors.primary} />
               )}
             </View>
           </View>
@@ -169,21 +171,42 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
           </View>
         ) : (
           <View style={styles.viewModeContainer}>
-            <Text style={styles.userName} numberOfLines={1}>
-              {userProfile.name?.trim() || "Mindful Soul"}
-            </Text>
+            {userProfile.name?.trim() ? (
+              <>
+                <Text style={styles.userName} numberOfLines={1}>
+                  {userProfile.name.trim()}
+                </Text>
 
-            {userProfile.email ? (
-              <Text style={styles.userEmail} numberOfLines={1}>
-                {userProfile.email}
-              </Text>
-            ) : null}
+                {userProfile.email ? (
+                  <Text style={styles.userEmail} numberOfLines={1}>
+                    {userProfile.email}
+                  </Text>
+                ) : null}
 
-            {userProfile.bio ? (
-              <Text style={styles.userBio} numberOfLines={3}>
-                &ldquo;{userProfile.bio.trim()}&rdquo;
-              </Text>
-            ) : null}
+                {userProfile.bio ? (
+                  <Text style={styles.userBio} numberOfLines={3}>
+                    &ldquo;{userProfile.bio.trim()}&rdquo;
+                  </Text>
+                ) : null}
+              </>
+            ) : (
+              <Pressable
+                onPress={handleToggleEdit}
+                style={styles.promptWrapper}
+                accessibilityRole="button"
+                accessibilityLabel="Set up your profile details"
+              >
+                <Text style={styles.promptTitle}>Set Up Your Profile</Text>
+                <Text style={styles.promptSubtitle}>
+                  Add your name, photo and bio to personalize your mindful journey
+                </Text>
+
+                <View style={styles.promptButton}>
+                  <Ionicons name="create-outline" size={15} color={theme.colors.primary} />
+                  <Text style={styles.promptButtonText}>Fill Profile Details</Text>
+                </View>
+              </Pressable>
+            )}
           </View>
         )}
       </BlurView>
@@ -297,6 +320,43 @@ const getStyles = (theme: Theme, isDark: boolean) =>
       lineHeight: 20,
       maxWidth: 280,
       opacity: 0.85,
+    },
+    promptWrapper: {
+      alignItems: "center",
+      width: "100%",
+    },
+    promptTitle: {
+      fontSize: 20,
+      fontFamily: theme.fonts.bold,
+      color: theme.colors.text,
+      letterSpacing: -0.4,
+      marginBottom: 4,
+      textAlign: "center",
+    },
+    promptSubtitle: {
+      fontSize: 13,
+      fontFamily: theme.fonts.regular,
+      color: theme.colors.textSecondary,
+      textAlign: "center",
+      lineHeight: 18,
+      maxWidth: 280,
+      marginBottom: 12,
+    },
+    promptButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 999,
+      backgroundColor: `${theme.colors.primary}18`,
+      borderWidth: 1,
+      borderColor: `${theme.colors.primary}35`,
+    },
+    promptButtonText: {
+      fontFamily: theme.fonts.bold,
+      fontSize: 13,
+      color: theme.colors.primary,
     },
     editModeContainer: {
       width: "100%",

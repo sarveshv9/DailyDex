@@ -1,8 +1,9 @@
 // components/profile/SettingsSection.tsx
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useCallback, useMemo } from "react";
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import React, { useMemo } from "react";
+import { Platform, Pressable, StyleSheet, Switch, Text, View } from "react-native";
+import { useSettings } from "../../context/SettingsContext";
 import { Theme } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
 
@@ -126,12 +127,13 @@ const SettingItem = React.memo<SettingItemProps>(
                 {rightBadge}
               </Text>
             </View>
-          ) : null}
-          <Ionicons
-            name="chevron-forward"
-            size={18}
-            color={`${theme.colors.textSecondary}80`}
-          />
+          ) : (
+            <Ionicons
+              name="chevron-forward"
+              size={18}
+              color={`${theme.colors.textSecondary}80`}
+            />
+          )}
         </View>
       </Pressable>
     );
@@ -139,6 +141,90 @@ const SettingItem = React.memo<SettingItemProps>(
 );
 
 SettingItem.displayName = "SettingItem";
+
+interface SettingSwitchItemProps {
+  theme: Theme;
+  iconName: keyof typeof Ionicons.glyphMap;
+  text: string;
+  subtext?: string;
+  value: boolean;
+  onValueChange: (val: boolean) => void;
+  isLast?: boolean;
+}
+
+const SettingSwitchItem: React.FC<SettingSwitchItemProps> = React.memo(
+  ({
+    theme,
+    iconName,
+    text,
+    subtext,
+    value,
+    onValueChange,
+    isLast = false,
+  }) => {
+    return (
+      <View
+        style={[
+          styles.settingItem,
+          !isLast && {
+            borderBottomWidth: StyleSheet.hairlineWidth,
+            borderBottomColor: `${theme.colors.secondary}18`,
+          },
+        ]}
+      >
+        <View style={styles.settingItemLeft}>
+          <View
+            style={[
+              styles.iconContainer,
+              { backgroundColor: `${theme.colors.primary}16` },
+            ]}
+          >
+            <Ionicons name={iconName} size={20} color={theme.colors.primary} />
+          </View>
+
+          <View style={styles.textContainer}>
+            <Text
+              style={[
+                styles.settingText,
+                { color: theme.colors.text, fontFamily: theme.fonts.medium },
+              ]}
+              numberOfLines={1}
+            >
+              {text}
+            </Text>
+            {subtext ? (
+              <Text
+                style={[
+                  styles.settingSubtext,
+                  {
+                    color: theme.colors.textSecondary,
+                    fontFamily: theme.fonts.regular,
+                  },
+                ]}
+                numberOfLines={1}
+              >
+                {subtext}
+              </Text>
+            ) : null}
+          </View>
+        </View>
+
+        <Switch
+          value={value}
+          onValueChange={onValueChange}
+          trackColor={{
+            false: `${theme.colors.secondary}40`,
+            true: theme.colors.primary,
+          }}
+          thumbColor="#FFFFFF"
+          {...({ activeThumbColor: "#FFFFFF" } as any)}
+        />
+      </View>
+    );
+  }
+);
+
+SettingSwitchItem.displayName = "SettingSwitchItem";
 
 export const SettingsSection: React.FC<SettingsSectionProps> = ({
   theme,
@@ -149,10 +235,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
   handleResetTasks,
 }) => {
   const router = useRouter();
-
-  const handleOpenGeneralSettings = useCallback(() => {
-    router.push("/settings");
-  }, [router]);
+  const { settings, toggleNotification, setHapticsEnabled } = useSettings();
 
   return (
     <View style={styles.container}>
@@ -163,7 +246,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
           { color: theme.colors.textSecondary, fontFamily: theme.fonts.bold },
         ]}
       >
-        App Experience
+        App Experience & Preferences
       </Text>
 
       <View
@@ -175,14 +258,6 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
           },
         ]}
       >
-        <SettingItem
-          theme={theme}
-          iconName="settings-outline"
-          text="General Settings"
-          subtext="Notifications, haptics & routine timing"
-          onPress={handleOpenGeneralSettings}
-          isLast={!onOpenThemeModal && !onOpenMusicModal}
-        />
         {onOpenThemeModal && (
           <SettingItem
             theme={theme}
@@ -190,7 +265,6 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
             text="Theme & Appearance"
             subtext="Pokemon styles & dynamic modes"
             onPress={onOpenThemeModal}
-            isLast={!onOpenMusicModal}
           />
         )}
         {onOpenMusicModal && (
@@ -200,9 +274,33 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
             text="Focus Soundscapes"
             subtext="Calming Lo-Fi audio backgrounds"
             onPress={onOpenMusicModal}
-            isLast
           />
         )}
+        <SettingSwitchItem
+          theme={theme}
+          iconName="notifications-outline"
+          text="Routine Reminders"
+          subtext="Alerts for scheduled rituals"
+          value={settings.notifications.taskReminders}
+          onValueChange={() => {
+            if (settings.hapticsEnabled) {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }
+            toggleNotification("taskReminders");
+          }}
+        />
+        <SettingSwitchItem
+          theme={theme}
+          iconName="finger-print-outline"
+          text="Haptic Feedback"
+          subtext="Tactile vibrations on tap"
+          value={settings.hapticsEnabled}
+          onValueChange={(val) => {
+            if (val) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setHapticsEnabled(val);
+          }}
+          isLast
+        />
       </View>
 
       {/* 2. Data Management */}
@@ -282,13 +380,22 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
           theme={theme}
           iconName="document-text-outline"
           text="Privacy Policy"
+          subtext="Your habits never leave this device"
           onPress={() => router.push("/privacy")}
         />
         <SettingItem
           theme={theme}
           iconName="shield-checkmark-outline"
           text="Terms of Service"
+          subtext="Offline, private & transparent"
           onPress={() => router.push("/terms")}
+        />
+        <SettingItem
+          theme={theme}
+          iconName="information-circle-outline"
+          text="App Version"
+          rightBadge="v1.0.0 (Offline)"
+          onPress={() => {}}
           isLast
         />
       </View>

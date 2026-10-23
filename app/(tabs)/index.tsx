@@ -287,7 +287,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     heroTopRow: {
       flexDirection: "row",
       justifyContent: "space-between",
-      alignItems: "center",
+      alignItems: "flex-start",
     },
     headerLeft: {
       flex: 1,
@@ -299,10 +299,11 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       gap: 8,
     },
     greeting: {
-      fontSize: 26,
+      fontSize: 28,
+      lineHeight: 34,
       color: theme.colors.text,
       fontFamily: theme.fonts.bold,
-      letterSpacing: -0.5,
+      letterSpacing: -0.6,
     },
     dateRow: {
       flexDirection: "row",
@@ -332,6 +333,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       flexDirection: "row",
       alignItems: "center",
       gap: 12,
+      marginTop: 2,
     },
     progressRingWrapper: {
       alignItems: "center",
@@ -1131,7 +1133,7 @@ function HomeScreen() {
   /* ---------- Setup (no routine) ---------- */
   if (!isReady) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
         <View
           style={{
             flex: 1,
@@ -1200,7 +1202,7 @@ function HomeScreen() {
 
   /* ---------- Main Home Dashboard ---------- */
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
