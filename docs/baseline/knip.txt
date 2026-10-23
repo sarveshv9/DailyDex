@@ -1,0 +1,41 @@
+Unused files (2)
+components/common/index.ts
+lib/supabase.ts           
+Unused dependencies (5)
+@react-native-segmented-control/segmented-control  package.json:18:6
+@supabase/supabase-js                              package.json:19:6
+expo-calendar                                      package.json:23:6
+react-native-pager-view                            package.json:40:6
+react-native-tab-view                              package.json:45:6
+Unused devDependencies (1)
+@babel/core  package.json:49:6
+Unlisted dependencies (1)
+expo-updates  app.json
+Unused exports (16)
+default                        function  components/common/BottomSheet.tsx:192:16                 
+CrossPlatformSegmentedControl            components/common/CrossPlatformSegmentedControl.tsx:27:14
+default                        variable  components/common/InlineTimePicker.tsx:211:16            
+WebDurationPicker                        components/common/WebTimePicker.tsx:247:14               
+getTimelineMinute                        components/dashboard/DayTimelineView.tsx:92:14           
+TASK_COLORS                              components/dashboard/TimelineEventCard.tsx:25:14         
+BottomSheetProps                         components/profile/BottomSheet.tsx:2:23                  
+default                                  components/profile/BottomSheet.tsx:3:10                  
+default                        variable  components/profile/ProfileCard.tsx:415:16                
+IconTile                       function  styles/shared.tsx:204:17                                 
+Chip                           function  styles/shared.tsx:230:17                                 
+FocusCard                      function  styles/shared.tsx:253:17                                 
+UpNextRow                      function  styles/shared.tsx:319:17                                 
+BottomNav                      function  styles/shared.tsx:388:17                                 
+HomeScreen                     function  styles/shared.tsx:433:17                                 
+minutesToTimeStr                         utils/utils.ts:331:14                                    
+Unused exported types (4)
+CrossPlatformSegmentedControlProps  interface  components/common/CrossPlatformSegmentedControl.tsx:16:18
+TaskFormProps                       interface  components/dashboard/TaskForm.tsx:35:18                  
+UserShape                           type       components/profile/SettingModal.tsx:9:13                 
+PomodoroPhase                       type       context/TimerContext.tsx:8:13                            
+Duplicate exports (5)
+BottomSheet|default                    components/common/BottomSheet.tsx                  
+CrossPlatformSegmentedControl|default  components/common/CrossPlatformSegmentedControl.tsx
+InlineTimePicker|default               components/common/InlineTimePicker.tsx             
+WebTimePicker|default                  components/common/WebTimePicker.tsx                
+ProfileCard|default                    components/profile/ProfileCard.tsx                 

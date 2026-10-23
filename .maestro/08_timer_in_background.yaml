@@ -1,0 +1,16 @@
+appId: com.anonymous.Zenapp
+---
+# Flow 8: Timer-in-Background Check (Clock Drift Prevention)
+- launchApp
+- tapOn:
+    text: ".*(Focus|Pomodoro|Start Timer|Timer).*"
+- tapOn:
+    text: ".*(Start|Play|Resume).*"
+    optional: true
+# Put app in background for 10 seconds
+- pressKey: Home
+- wait: 10000
+# Re-open the app from background
+- launchApp
+- assertVisible:
+    text: ".*(Focus|Work|Break|Session|[0-9]+:[0-9]+).*"

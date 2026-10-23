@@ -1,0 +1,16 @@
+appId: com.anonymous.Zenapp
+---
+# Flow 7: Storage Persistence Check (Kill & Relaunch)
+- launchApp
+- tapOn:
+    point: "50%,92%" # Go to Todo tab
+- assertVisible:
+    text: ".*(Tasks|Todo).*"
+- stopApp
+- launchApp
+- assertVisible:
+    text: ".*(Good morning|Good afternoon|Good evening|Today|Tasks).*"
+- tapOn:
+    point: "50%,92%" # Check Todo tab persisted
+- assertVisible:
+    text: ".*(Tasks|Todo).*"

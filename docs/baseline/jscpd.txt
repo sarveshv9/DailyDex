@@ -1,0 +1,206 @@
+[1mClone found (tsx)[22m
+ - [1m[32m(tabs)/_layout.tsx[39m[22m [136:12 - 156:94] (21 lines, 121 tokens)
+   routine.tsx [1042:48 - 1062:94]
+[1mClone found (tsx)[22m
+ - [1m[32m(tabs)/_layout.tsx[39m[22m [158:11 - 163:35] (6 lines, 56 tokens)
+   (tabs)/_layout.tsx [192:13 - 197:37]
+[1mClone found (tsx)[22m
+ - [1m[32m(tabs)/index.tsx[39m[22m [381:43 - 392:7] (12 lines, 75 tokens)
+   (tabs)/index.tsx [634:42 - 645:7]
+[1mClone found (tsx)[22m
+ - [1m[32m(tabs)/index.tsx[39m[22m [382:25 - 392:7] (11 lines, 71 tokens)
+   (tabs)/index.tsx [564:14 - 574:7]
+[1mClone found (tsx)[22m
+ - [1m[32m(tabs)/index.tsx[39m[22m [382:25 - 390:30] (9 lines, 57 tokens)
+   profile/ProfileCard.tsx [223:43 - 231:30]
+[1mClone found (tsx)[22m
+ - [1m[32m(tabs)/index.tsx[39m[22m [382:25 - 390:57] (9 lines, 64 tokens)
+   shared.tsx [172:42 - 181:48]
+[1mClone found (tsx)[22m
+ - [1m[32m(tabs)/index.tsx[39m[22m [453:25 - 470:20] (18 lines, 71 tokens)
+   (tabs)/todo.tsx [1452:21 - 1469:20]
+[1mClone found (tsx)[22m
+ - [1m[32m(tabs)/index.tsx[39m[22m [631:23 - 645:7] (15 lines, 95 tokens)
+   (tabs)/index.tsx [695:23 - 709:7]
+[1mClone found (tsx)[22m
+ - [1m[32m(tabs)/index.tsx[39m[22m [956:46 - 967:24] (12 lines, 69 tokens)
+   routine.tsx [924:45 - 931:22]
+[1mClone found (tsx)[22m
+ - [1m[32m(tabs)/index.tsx[39m[22m [978:30 - 987:53] (10 lines, 57 tokens)
+   (tabs)/index.tsx [998:32 - 1007:59]
+[1mClone found (tsx)[22m
+ - [1m[32m(tabs)/index.tsx[39m[22m [1021:26 - 1031:26] (11 lines, 72 tokens)
+   routine.tsx [848:22 - 857:26]
+[1mClone found (tsx)[22m
+ - [1m[32m(tabs)/index.tsx[39m[22m [1035:24 - 1046:30] (12 lines, 65 tokens)
+   (tabs)/index.tsx [1057:30 - 1068:36]
+[1mClone found (tsx)[22m
+ - [1m[32m(tabs)/index.tsx[39m[22m [1072:38 - 1082:11] (11 lines, 50 tokens)
+   (tabs)/index.tsx [1102:27 - 1112:9]
+[1mClone found (tsx)[22m
+ - [1m[32m(tabs)/index.tsx[39m[22m [1116:49 - 1131:4] (16 lines, 62 tokens)
+   (tabs)/profile.tsx [321:4 - 337:4]
+[1mClone found (tsx)[22m
+ - [1m[32m(tabs)/index.tsx[39m[22m [1177:19 - 1186:28] (10 lines, 60 tokens)
+   (tabs)/index.tsx [1407:19 - 1416:28]
+[1mClone found (tsx)[22m
+ - [1m[32m(tabs)/profile.tsx[39m[22m [240:30 - 245:15] (6 lines, 51 tokens)
+   (tabs)/profile.tsx [255:30 - 260:8]
+[1mClone found (tsx)[22m
+ - [1m[32m(tabs)/todo.tsx[39m[22m [461:30 - 481:11] (21 lines, 81 tokens)
+   (tabs)/todo.tsx [668:31 - 688:11]
+[1mClone found (tsx)[22m
+ - [1m[32m(tabs)/todo.tsx[39m[22m [1511:28 - 1521:44] (11 lines, 55 tokens)
+   focus.tsx [1323:23 - 1333:54]
+[1mClone found (tsx)[22m
+ - [1m[32m(tabs)/todo.tsx[39m[22m [1513:22 - 1522:38] (10 lines, 56 tokens)
+   focus.tsx [1597:28 - 1606:48]
+[1mClone found (tsx)[22m
+ - [1m[32mfocus.tsx[39m[22m [31:17 - 36:3] (6 lines, 68 tokens)
+   focus.tsx [58:20 - 63:11]
+[1mClone found (tsx)[22m
+ - [1m[32mfocus.tsx[39m[22m [903:41 - 919:89] (17 lines, 87 tokens)
+   focus.tsx [960:41 - 976:89]
+[1mClone found (tsx)[22m
+ - [1m[32mfocus.tsx[39m[22m [1321:28 - 1333:54] (13 lines, 64 tokens)
+   focus.tsx [1593:27 - 1605:54]
+[1mClone found (tsx)[22m
+ - [1m[32mfocus.tsx[39m[22m [1322:26 - 1339:11] (18 lines, 89 tokens)
+   focus.tsx [1379:22 - 1396:11]
+[1mClone found (tsx)[22m
+ - [1m[32mfocus.tsx[39m[22m [1325:28 - 1340:32] (16 lines, 79 tokens)
+   focus.tsx [1382:28 - 1397:25]
+[1mClone found (tsx)[22m
+ - [1m[32mprivacy.tsx[39m[22m [1:1 - 11:24] (11 lines, 76 tokens)
+   terms.tsx [1:1 - 11:24]
+[1mClone found (tsx)[22m
+ - [1m[32mprivacy.tsx[39m[22m [11:38 - 41:44] (31 lines, 221 tokens)
+   terms.tsx [11:36 - 41:44]
+[1mClone found (tsx)[22m
+ - [1m[32mprivacy.tsx[39m[22m [41:58 - 48:81] (8 lines, 53 tokens)
+   terms.tsx [41:60 - 48:81]
+[1mClone found (tsx)[22m
+ - [1m[32mprivacy.tsx[39m[22m [66:17 - 122:4] (57 lines, 271 tokens)
+   terms.tsx [63:17 - 119:4]
+[1mClone found (tsx)[22m
+ - [1m[32mroutine.tsx[39m[22m [405:45 - 410:38] (6 lines, 82 tokens)
+   routine.tsx [410:38 - 415:30]
+[1mClone found (tsx)[22m
+ - [1m[32mroutine.tsx[39m[22m [713:56 - 722:27] (10 lines, 50 tokens)
+   routine.tsx [835:85 - 843:29]
+[1mClone found (tsx)[22m
+ - [1m[32mroutine.tsx[39m[22m [859:24 - 870:24] (12 lines, 70 tokens)
+   routine.tsx [881:30 - 892:30]
+[1mClone found (tsx)[22m
+ - [1m[32mroutine.tsx[39m[22m [938:28 - 948:51] (11 lines, 71 tokens)
+   routine.tsx [959:30 - 969:57]
+[1mClone found (tsx)[22m
+ - [1m[32msettings.tsx[39m[22m [55:24 - 65:27] (11 lines, 51 tokens)
+   settings.tsx [110:8 - 120:25]
+[1mClone found (tsx)[22m
+ - [1m[32msetup.tsx[39m[22m [566:48 - 571:54] (6 lines, 55 tokens)
+   setup.tsx [894:48 - 899:54]
+[1mClone found (tsx)[22m
+ - [1m[32msetup.tsx[39m[22m [650:17 - 655:28] (6 lines, 50 tokens)
+   setup.tsx [939:17 - 944:28]
+[1mClone found (tsx)[22m
+ - [1m[32msetup.tsx[39m[22m [2042:16 - 2056:11] (15 lines, 72 tokens)
+   setup.tsx [2062:16 - 2076:11]
+[1mClone found (tsx)[22m
+ - [1m[32mcommon/InlineTimePicker.tsx[39m[22m [68:58 - 76:10] (9 lines, 58 tokens)
+   common/WebTimePicker.tsx [64:48 - 72:10]
+[1mClone found (tsx)[22m
+ - [1m[32mcommon/InlineTimePicker.tsx[39m[22m [187:19 - 208:7] (22 lines, 96 tokens)
+   common/WebTimePicker.tsx [507:20 - 528:7]
+[1mClone found (tsx)[22m
+ - [1m[32mcommon/WebTimePicker.tsx[39m[22m [88:4 - 98:91] (11 lines, 76 tokens)
+   common/WebTimePicker.tsx [285:20 - 295:91]
+[1mClone found (tsx)[22m
+ - [1m[32mcommon/WebTimePicker.tsx[39m[22m [101:11 - 106:23] (6 lines, 68 tokens)
+   common/WebTimePicker.tsx [131:11 - 136:23]
+[1mClone found (tsx)[22m
+ - [1m[32mcommon/WebTimePicker.tsx[39m[22m [120:9 - 128:91] (9 lines, 92 tokens)
+   common/WebTimePicker.tsx [311:9 - 319:91]
+[1mClone found (tsx)[22m
+ - [1m[32mcommon/WebTimePicker.tsx[39m[22m [294:41 - 300:45] (7 lines, 76 tokens)
+   common/WebTimePicker.tsx [318:43 - 324:45]
+[1mClone found (tsx)[22m
+ - [1m[32mcommon/WebTimePicker.tsx[39m[22m [304:42 - 309:16] (6 lines, 58 tokens)
+   common/WebTimePicker.tsx [328:44 - 333:16]
+[1mClone found (tsx)[22m
+ - [1m[32mdashboard/DayTimelineView.tsx[39m[22m [35:24 - 63:3] (29 lines, 115 tokens)
+   dashboard/TimelineEventCard.tsx [23:91 - 51:3]
+[1mClone found (tsx)[22m
+ - [1m[32mdashboard/DayTimelineView.tsx[39m[22m [37:8 - 50:22] (14 lines, 63 tokens)
+   dashboard/MonthCalendarView.tsx [23:1 - 36:24]
+[1mClone found (tsx)[22m
+ - [1m[32mdashboard/DayTimelineView.tsx[39m[22m [38:20 - 65:6] (28 lines, 99 tokens)
+   dashboard/TimelineEventCard.tsx [26:20 - 53:7]
+[1mClone found (tsx)[22m
+ - [1m[32mdashboard/DayTimelineView.tsx[39m[22m [781:68 - 799:75] (19 lines, 79 tokens)
+   dashboard/DayTimelineView.tsx [835:72 - 853:75]
+[1mClone found (tsx)[22m
+ - [1m[32mdashboard/DayTimelineView.tsx[39m[22m [1134:14 - 1149:11] (16 lines, 104 tokens)
+   dashboard/DayTimelineView.tsx [1156:38 - 1171:7]
+[1mClone found (tsx)[22m
+ - [1m[32mdashboard/TaskForm.tsx[39m[22m [58:69 - 75:49] (18 lines, 135 tokens)
+   dashboard/TaskModal.tsx [41:46 - 56:49]
+[1mClone found (tsx)[22m
+ - [1m[32mdashboard/TaskForm.tsx[39m[22m [87:1 - 99:6] (13 lines, 62 tokens)
+   dashboard/TaskModal.tsx [86:90 - 96:6]
+[1mClone found (tsx)[22m
+ - [1m[32mdashboard/TaskForm.tsx[39m[22m [349:5 - 366:33] (18 lines, 72 tokens)
+   dashboard/TaskModal.tsx [335:5 - 352:33]
+[1mClone found (tsx)[22m
+ - [1m[32mdashboard/TaskForm.tsx[39m[22m [377:68 - 382:77] (6 lines, 50 tokens)
+   dashboard/TaskModal.tsx [363:73 - 368:77]
+[1mClone found (tsx)[22m
+ - [1m[32mdashboard/TaskForm.tsx[39m[22m [623:45 - 633:42] (11 lines, 63 tokens)
+   dashboard/TaskForm.tsx [909:51 - 919:52]
+[1mClone found (tsx)[22m
+ - [1m[32mdashboard/TaskForm.tsx[39m[22m [1013:54 - 1022:55] (10 lines, 69 tokens)
+   dashboard/TaskModal.tsx [917:53 - 926:55]
+[1mClone found (tsx)[22m
+ - [1m[32mdashboard/TaskForm.tsx[39m[22m [1025:60 - 1054:60] (30 lines, 144 tokens)
+   dashboard/TaskModal.tsx [929:59 - 958:60]
+[1mClone found (tsx)[22m
+ - [1m[32mdashboard/TaskForm.tsx[39m[22m [1054:80 - 1076:37] (23 lines, 120 tokens)
+   dashboard/TaskModal.tsx [958:71 - 980:37]
+[1mClone found (tsx)[22m
+ - [1m[32mdashboard/TaskForm.tsx[39m[22m [1082:54 - 1098:3] (17 lines, 84 tokens)
+   dashboard/TaskModal.tsx [990:43 - 1006:3]
+[1mClone found (tsx)[22m
+ - [1m[32mdashboard/TaskForm.tsx[39m[22m [1315:25 - 1329:7] (15 lines, 63 tokens)
+   dashboard/TaskModal.tsx [1216:31 - 1230:7]
+[1mClone found (tsx)[22m
+ - [1m[32mdashboard/TaskForm.tsx[39m[22m [1414:34 - 1497:24] (84 lines, 333 tokens)
+   dashboard/TaskModal.tsx [1397:35 - 1480:24]
+[1mClone found (tsx)[22m
+ - [1m[32mprofile/SettingsSection.tsx[39m[22m [90:17 - 113:10] (24 lines, 86 tokens)
+   profile/SettingsSection.tsx [189:76 - 212:10]
+[1mClone found (tsx)[22m
+ - [1m[32mprofile/SettingsSection.tsx[39m[22m [303:9 - 316:8] (14 lines, 51 tokens)
+   profile/SettingsSection.tsx [353:9 - 366:8]
+[1mClone found (tsx)[22m
+ - [1m[32mprofile/ThemeSelectionModal.tsx[39m[22m [190:49 - 196:28] (7 lines, 51 tokens)
+   profile/ThemeSelectionModal.tsx [209:50 - 215:28]
+[1mClone found (tsx)[22m
+ - [1m[32mTimerContext.tsx[39m[22m [180:52 - 189:14] (10 lines, 56 tokens)
+   TimerContext.tsx [338:84 - 347:10]
+[1mClone found (typescript)[22m
+ - [1m[32mstats.ts[39m[22m [45:77 - 58:13] (14 lines, 54 tokens)
+   stats.ts [64:48 - 77:13]
+[1mClone found (typescript)[22m
+ - [1m[32mstats.ts[39m[22m [132:54 - 145:26] (14 lines, 85 tokens)
+   stats.ts [153:40 - 165:26]
+[90m┌────────────┬────────────────┬─────────────┬──────────────┬──────────────┬──────────────────┬───────────────────┐[39m
+[90m│[39m[31m Format     [39m[90m│[39m[31m Files analyzed [39m[90m│[39m[31m Total lines [39m[90m│[39m[31m Total tokens [39m[90m│[39m[31m Clones found [39m[90m│[39m[31m Duplicated lines [39m[90m│[39m[31m Duplicated tokens [39m[90m│[39m
+[90m├────────────┼────────────────┼─────────────┼──────────────┼──────────────┼──────────────────┼───────────────────┤[39m
+[90m│[39m tsx        [90m│[39m 37             [90m│[39m 22638       [90m│[39m 127015       [90m│[39m 63           [90m│[39m 961 (4.25%)      [90m│[39m 5220 (4.11%)      [90m│[39m
+[90m├────────────┼────────────────┼─────────────┼──────────────┼──────────────┼──────────────────┼───────────────────┤[39m
+[90m│[39m typescript [90m│[39m 5              [90m│[39m 862         [90m│[39m 5580         [90m│[39m 2            [90m│[39m 28 (3.25%)       [90m│[39m 139 (2.49%)       [90m│[39m
+[90m├────────────┼────────────────┼─────────────┼──────────────┼──────────────┼──────────────────┼───────────────────┤[39m
+[90m│[39m [1mTotal:[22m     [90m│[39m 42             [90m│[39m 23500       [90m│[39m 132595       [90m│[39m 65           [90m│[39m 989 (4.21%)      [90m│[39m 5359 (4.04%)      [90m│[39m
+[90m└────────────┴────────────────┴─────────────┴──────────────┴──────────────┴──────────────────┴───────────────────┘[39m
+[90mFound 65 clones.[39m
+[90mtime: 31.626ms[39m

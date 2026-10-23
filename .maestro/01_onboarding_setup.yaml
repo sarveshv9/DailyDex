@@ -1,0 +1,13 @@
+appId: com.anonymous.Zenapp
+---
+# Flow 1: Onboarding Setup
+- launchApp:
+    clearState: true
+- assertVisible:
+    text: ".*(Welcome|Setup|Habits|Step).*"
+- tapOn:
+    text: ".*(Skip All|Get Started|Next).*"
+    optional: true
+- tapOn:
+    text: ".*(Complete|Continue|Finish).*"
+    optional: true

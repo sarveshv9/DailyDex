@@ -1,0 +1,14 @@
+appId: com.anonymous.Zenapp
+---
+# Flow 6: Profile & Theme Selection
+- launchApp
+- tapOn:
+    point: "80%,92%" # Right tab (Profile)
+- assertVisible:
+    text: ".*(Profile|Themes|Settings|Stats).*"
+- tapOn:
+    text: ".*(Theme|Pokeball|Pikachu|Themes).*"
+    optional: true
+- assertVisible:
+    text: ".*(Select Theme|Custom Theme|Pikachu|Pokeball).*"
+    optional: true

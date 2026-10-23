@@ -1,0 +1,12 @@
+appId: com.anonymous.Zenapp
+---
+# Flow 5: Routine Builder
+- launchApp
+- tapOn:
+    text: ".*(Routine|Routines|Morning Routine|Evening Routine).*"
+- assertVisible:
+    text: ".*(Routine|Steps|Duration|Habits).*"
+- tapOn:
+    id: "routine-fab"
+    optional: true
+- back

@@ -1,0 +1,24 @@
+Running 21 checks on your project...
+18/21 checks passed. 3 checks failed. Possible issues detected:
+Use the --verbose flag to see more details about passed checks.
+
+✖ Check Expo config (app.json/ app.config.js) schema
+Error validating fields in /Users/sarveshvarvatkar/projects/Zen-app/app.json:
+ Field: android.edgeToEdgeEnabled - Additional property "edgeToEdgeEnabled" is not allowed.
+Advice:
+Resolve schema errors in your app config. Learn more: https://docs.expo.dev/workflow/configuration/
+
+✖ Check that required peer dependencies are installed
+Missing peer dependency: expo-asset
+Required by: expo-audio
+Missing peer dependency: react-native-worklets
+Required by: react-native-reanimated
+Advice:
+Install missing required peer dependencies with "npx expo install expo-asset react-native-worklets"
+Your app may crash outside of Expo Go without these dependencies. Native module peer dependencies must be installed directly.
+
+✖ Check for app config fields that may not be synced in a non-CNG project
+This project contains native project folders but also has native configuration properties in app.json, indicating it is configured to use Prebuild. When the android/ios folders are present, EAS Build will not sync the following properties: orientation, icon, scheme, userInterfaceStyle, ios, android, plugins. 
+
+
+3 checks failed, indicating possible issues with the project.

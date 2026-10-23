@@ -1,0 +1,14 @@
+appId: com.anonymous.Zenapp
+---
+# Flow 4: Focus & Pomodoro Session
+- launchApp
+- tapOn:
+    text: ".*(Focus|Pomodoro|Start Timer|Timer).*"
+- assertVisible:
+    text: ".*(Work|Break|Session|Focus|25:00).*"
+- tapOn:
+    text: ".*(Start|Play|Resume).*"
+    optional: true
+- tapOn:
+    text: ".*(Pause|Stop|Reset).*"
+    optional: true
