@@ -5,7 +5,7 @@ import { darkThemes, lightThemes, Theme, ThemeName } from '../styles/shared';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  const isNewArchitecture = Boolean((global as any).nativeFabricUIManager) || Boolean((global as any).__turboModuleProxy);
+  const isNewArchitecture = Boolean((globalThis as any).nativeFabricUIManager) || Boolean((globalThis as any).__turboModuleProxy);
   if (!isNewArchitecture) {
     UIManager.setLayoutAnimationEnabledExperimental(true);
   }

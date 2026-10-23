@@ -210,7 +210,7 @@ const getStyles = (theme: Theme) =>
       padding: theme.spacing.lg,
     },
     backdrop: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
     },
     card: {
       width: "100%",

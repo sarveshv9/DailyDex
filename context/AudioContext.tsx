@@ -38,7 +38,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     return () => {
       if (soundRef.current) {
-        soundRef.current.release();
+        soundRef.current.remove();
       }
     };
   }, []);
@@ -46,7 +46,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({
   const stopSound = useCallback(async () => {
     if (soundRef.current) {
       soundRef.current.pause();
-      soundRef.current.release();
+      soundRef.current.remove();
       soundRef.current = null;
     }
     setIsPlaying(false);
@@ -60,7 +60,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({
     if (soundRef.current) {
       try {
         soundRef.current.pause();
-        soundRef.current.release();
+        soundRef.current.remove();
       } catch (error) {
         // Ignore unload error
       }

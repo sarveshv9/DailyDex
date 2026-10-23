@@ -389,7 +389,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       }),
     },
     cardTint: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: theme.glass.cardBg,
     },
     focusCardInner: {

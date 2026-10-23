@@ -200,7 +200,7 @@ export default function RoutineScreen() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>({ time: "", task: "", description: "", daysOfWeek: [] });
   const [nextInsertionOrder, setNextInsertionOrder] = useState(13);
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
 
   const [confirmState, setConfirmState] = useState({
     visible: false,
@@ -240,9 +240,11 @@ export default function RoutineScreen() {
     return [p, c, n];
   });
 
+  const activeDate = selectedDate || new Date();
+
   const routineItems = useMemo(() => {
-    return getRoutineItemsForDate(allRoutines, selectedDate);
-  }, [allRoutines, selectedDate]);
+    return getRoutineItemsForDate(allRoutines, activeDate);
+  }, [allRoutines, activeDate]);
 
   const sortedDayTasks = useMemo(() => {
     return [...routineItems].sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
@@ -252,7 +254,7 @@ export default function RoutineScreen() {
     if (sortedDayTasks.length === 0) return null;
     const now = new Date();
     const currentMins = now.getHours() * 60 + now.getMinutes();
-    const isToday = getDateString(selectedDate) === getDateString(now);
+    const isToday = selectedDate ? getDateString(selectedDate) === getDateString(now) : true;
     if (isToday) {
       const upcoming = sortedDayTasks.find(t => timeToMinutes(t.time) >= currentMins && !t.completed);
       if (upcoming) return upcoming;
@@ -378,7 +380,7 @@ export default function RoutineScreen() {
       }
     });
     setSelectedDate(prev => {
-      const d = new Date(prev);
+      const d = new Date(prev || new Date());
       d.setDate(d.getDate() + delta);
       return d;
     });
@@ -480,9 +482,11 @@ export default function RoutineScreen() {
         })
   ).current;
 
+  const overlayTop = insets.top + 148;
+
   const listTranslateY = listAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [SCREEN_HEIGHT - 142, 0],
+    outputRange: [SCREEN_HEIGHT, 0],
   });
 
   const collapsedPillOpacity = listAnim.interpolate({
@@ -652,9 +656,10 @@ export default function RoutineScreen() {
       });
     } else {
       setEditingId(null);
+      const targetDate = selectedDate || new Date();
       let defaultTime = customSuggestedTime;
       if (!defaultTime) {
-        const dayTasks = getRoutineItemsForDate(allRoutines, selectedDate);
+        const dayTasks = getRoutineItemsForDate(allRoutines, targetDate);
         if (dayTasks.length > 0) {
           const sorted = sortRoutineItems(dayTasks);
           const last = sorted[sorted.length - 1];
@@ -676,7 +681,7 @@ export default function RoutineScreen() {
         task: "",
         description: "",
         daysOfWeek: [],
-        date: getDateString(selectedDate),
+        date: getDateString(targetDate),
         duration: 30,
         subtasks: []
       });
@@ -754,7 +759,7 @@ export default function RoutineScreen() {
     const originalTask = allRoutines.find((item) => item.id === editingId);
     if (!originalTask) return;
 
-    const dateStr = getDateString(selectedDate);
+    const dateStr = getDateString(selectedDate || new Date());
     
     // Create new task mapped specifically to this date, without modifying the repeating original
     const newItem: RoutineItem = {
@@ -852,7 +857,7 @@ export default function RoutineScreen() {
       if (Platform.OS === 'web') {
         const wantsSkip = window.confirm("Do you want to SKIP this task for THIS DATE ONLY? (Cancel to delete for ALL days)");
         if (wantsSkip) {
-          const dateStr = getDateString(selectedDate);
+          const dateStr = getDateString(selectedDate || new Date());
           const newItem: RoutineItem = {
              ...taskToDelete,
              id: Date.now().toString(),
@@ -874,7 +879,7 @@ export default function RoutineScreen() {
             { 
               text: "Skip this date", 
               onPress: () => {
-                const dateStr = getDateString(selectedDate);
+                const dateStr = getDateString(selectedDate || new Date());
                 const newItem: RoutineItem = {
                     ...taskToDelete,
                     id: Date.now().toString(),
@@ -931,7 +936,7 @@ export default function RoutineScreen() {
       if (Platform.OS === 'web') {
         const wantsInstance = window.confirm("Do you want to save this change for THIS DATE ONLY? (Cancel saves for ALL days)");
         if (wantsInstance) {
-          const dateStr = getDateString(selectedDate);
+          const dateStr = getDateString(selectedDate || new Date());
           const newItem: RoutineItem = {
             ...updatedTask,
             id: Date.now().toString(),
@@ -952,7 +957,7 @@ export default function RoutineScreen() {
             { 
               text: "This date only", 
               onPress: () => {
-                const dateStr = getDateString(selectedDate);
+                const dateStr = getDateString(selectedDate || new Date());
                 const newItem: RoutineItem = {
                   ...updatedTask,
                   id: Date.now().toString(),
@@ -995,9 +1000,11 @@ export default function RoutineScreen() {
           selectedDate={selectedDate}
           onSelectDate={(date) => {
             setSelectedDate(date);
-            const p = new Date(date); p.setDate(p.getDate() - 1);
-            const n = new Date(date); n.setDate(n.getDate() + 1);
-            setPageDates([p, date, n]);
+            if (date) {
+              const p = new Date(date); p.setDate(p.getDate() - 1);
+              const n = new Date(date); n.setDate(n.getDate() + 1);
+              setPageDates([p, date, n]);
+            }
           }}
           routineItems={allRoutines}
           onPressPeek={toggleList}
@@ -1126,6 +1133,7 @@ export default function RoutineScreen() {
         style={[
           styles.listOverlay,
           {
+            top: overlayTop,
             transform: [{ translateY: listTranslateY }],
             opacity: listOpacity,
           },
@@ -1329,7 +1337,7 @@ export default function RoutineScreen() {
         onSaveInstance={handleSaveInstance}
         onClose={closeForm}
         existingRoutines={allRoutines}
-        selectedDate={selectedDate}
+        selectedDate={selectedDate || undefined}
       />
 
       <ConfirmModal
@@ -1362,8 +1370,10 @@ const getStyles = (theme: Theme) =>
     },
 
     listOverlay: {
-      ...StyleSheet.absoluteFillObject,
-      top: 142, // Aligned directly beneath pinned week calendar header
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
       backgroundColor: theme.colors.card,
       borderTopLeftRadius: 50,
       borderTopRightRadius: 50,

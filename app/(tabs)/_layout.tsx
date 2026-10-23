@@ -4,11 +4,11 @@ import {
   MaterialTopTabNavigationEventMap,
   MaterialTopTabNavigationOptions,
   createMaterialTopTabNavigator,
-} from '@react-navigation/material-top-tabs';
+} from 'expo-router/js-top-tabs';
 import {
   ParamListBase,
   TabNavigationState,
-} from '@react-navigation/native';
+} from 'expo-router/react-navigation';
 import * as Haptics from '../../utils/haptics';
 import { withLayoutContext } from 'expo-router';
 import { BlurView } from 'expo-blur';
@@ -71,8 +71,8 @@ function CustomTabBar({
 
   // Use interpolation to move the indicator
   const translateX = position.interpolate({
-    inputRange: state.routes.map((_, i) => i),
-    outputRange: state.routes.map((_, i) => i * tabWidth),
+    inputRange: state.routes.map((_: any, i: number) => i),
+    outputRange: state.routes.map((_: any, i: number) => i * tabWidth),
   });
 
   // Reference to track gesture translation
@@ -155,7 +155,7 @@ function CustomTabBar({
           {/* Glass tint overlay */}
           <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.glass.cardBg }]} />
           {/* Background icons (outlined) - each in their own position */}
-          {state.routes.map((route, index) => {
+          {state.routes.map((route: any, index: number) => {
             const { options } = descriptors[route.key];
             const icon = options.tabBarIcon as (props: {
               focused: boolean;
@@ -189,7 +189,7 @@ function CustomTabBar({
             ]}
           >
             {/* Foreground icons (filled) - these are revealed as the indicator moves */}
-            {state.routes.map((route, index) => {
+            {state.routes.map((route: any, index: number) => {
               const { options } = descriptors[route.key];
               const icon = options.tabBarIcon as (props: {
                 focused: boolean;
@@ -198,8 +198,8 @@ function CustomTabBar({
 
               // Calculate the position of each icon relative to the indicator
               const iconTranslateX = position.interpolate({
-                inputRange: state.routes.map((_, i) => i),
-                outputRange: state.routes.map((_, i) => (i - index) * tabWidth),
+                inputRange: state.routes.map((_: any, i: number) => i),
+                outputRange: state.routes.map((_: any, i: number) => (i - index) * tabWidth),
               });
 
               return (
@@ -224,7 +224,7 @@ function CustomTabBar({
           </Animated.View>
 
           {/* The pressable areas, layered on top */}
-          {state.routes.map((route, index) => {
+          {state.routes.map((route: any, index: number) => {
             const isFocused = state.index === index;
 
             const onPress = () => {
@@ -268,7 +268,7 @@ export default function TabLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <MaterialTopTabs
-        tabBar={(props) => <CustomTabBar {...props} />}
+        tabBar={(props: any) => <CustomTabBar {...props} />}
         tabBarPosition="bottom"
         initialRouteName="index"
         screenOptions={{

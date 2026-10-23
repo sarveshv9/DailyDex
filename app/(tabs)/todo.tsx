@@ -1379,7 +1379,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       overflow: "hidden",
     },
     checkboxFill: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: theme.colors.primary,
     },
 

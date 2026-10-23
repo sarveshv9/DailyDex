@@ -102,8 +102,8 @@ export const getTimelineMinute = (timeStr: string, startHour: number) => {
 /* ─────────────────────────────── Props ──────────────────────────────── */
 
 interface DayTimelineViewProps {
-    selectedDate: Date;
-    onSelectDate: (date: Date) => void;
+    selectedDate: Date | null;
+    onSelectDate: (date: Date | null) => void;
     routineItems: RoutineItem[];
     onPressPeek?: () => void;
     scrollY?: Animated.Value;
@@ -205,7 +205,7 @@ const TimelineTaskPill = memo<{
                 {/* Pastel tint layer on top of solid opaque base (blocks the timeline line) */}
                 <View
                     style={[
-                        StyleSheet.absoluteFillObject,
+                        StyleSheet.absoluteFill,
                         { backgroundColor: isSelected ? `${taskColor}28` : `${taskColor}16` },
                     ]}
                 />
@@ -436,7 +436,7 @@ const TimelinePage = memo<{
                 {pageDates.map(date => {
                     const key = formatDateKey(date);
                     const dayIndex = date.getDay();
-                    const isSelected = key === selectedKey;
+                    const isSelected = Boolean(selectedKey && key === selectedKey);
                     const isToday = key === todayKey;
                     const dayTasks = getRoutineItemsForDate(allRoutines, date)
                         .sort((a, b) => getTimelineMinute(a.time, startHour) - getTimelineMinute(b.time, startHour));
@@ -583,7 +583,7 @@ const TimelinePage = memo<{
                 {/* ── 7 day columns (Week timeline) ── */}
                 {pageDates.map(date => {
                     const key = formatDateKey(date);
-                    const isSelected = key === selectedKey;
+                    const isSelected = Boolean(selectedKey && key === selectedKey);
                     const colItems = getRoutineItemsForDate(allRoutines, date)
                         .sort((a, b) => getTimelineMinute(a.time, startHour) - getTimelineMinute(b.time, startHour));
                     const circleSize = isSelected ? circleSel : circleOther;
@@ -1075,6 +1075,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
 
 
     const currentDayItems = useMemo(() => {
+        if (!selectedDate) return [];
         return getRoutineItemsForDate(routineItems, selectedDate)
             .sort((a, b) => getTimelineMinute(a.time, startHour) - getTimelineMinute(b.time, startHour));
     }, [routineItems, selectedDate, startHour]);
@@ -1087,7 +1088,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
         return t;
     }, []);
 
-    const selectedKey = formatDateKey(selectedDate);
+    const selectedKey = selectedDate ? formatDateKey(selectedDate) : '';
     const todayKey = formatDateKey(today);
 
     // Number of pages around today (e.g. 260 weeks = 5 years)
@@ -1108,10 +1109,12 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
     }, [today]);
 
     const initialTargetIndex = useMemo(() => {
-        const dateStr = formatDateKey(selectedDate);
-        const idx = pages.findIndex(page => page.some(d => formatDateKey(d) === dateStr));
+        const dateStr = selectedDate ? formatDateKey(selectedDate) : '';
+        const idx = dateStr ? pages.findIndex(page => page.some(d => formatDateKey(d) === dateStr)) : -1;
         return idx !== -1 ? idx : initialPageIndex;
     }, [pages, selectedDate, initialPageIndex]);
+
+    const [visiblePageIndex, setVisiblePageIndex] = React.useState<number>(initialTargetIndex);
 
     const flatListRef = useRef<FlatList>(null);
     const scrollSnapTimer = useRef<any>(null);
@@ -1124,20 +1127,36 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
         if (scrollSnapTimer.current) clearTimeout(scrollSnapTimer.current);
         scrollSnapTimer.current = setTimeout(() => {
             const pageIndex = Math.round(offsetX / SCREEN_WIDTH);
+            setVisiblePageIndex(pageIndex);
             flatListRef.current?.scrollToOffset({
                 offset: pageIndex * SCREEN_WIDTH,
                 animated: true,
             });
+            const page = pages[pageIndex];
+            if (page && page.length > 0) {
+                const selectedStr = selectedDate ? formatDateKey(selectedDate) : '';
+                const isInWeek = page.some(d => formatDateKey(d) === selectedStr);
+                if (!isInWeek) {
+                    const todayStr = formatDateKey(today);
+                    const todayInPage = page.find(d => formatDateKey(d) === todayStr);
+                    if (todayInPage) {
+                        onSelectDate(todayInPage);
+                    } else {
+                        onSelectDate(null);
+                    }
+                }
+            }
         }, 150);
-    }, [SCREEN_WIDTH]);
+    }, [SCREEN_WIDTH, pages, selectedDate, today, onSelectDate]);
 
     // Handle horizontal page swiping to keep week dates aligned
     const handleMomentumScrollEnd = useCallback((e: any) => {
         const offsetX = e.nativeEvent.contentOffset.x;
         const pageIndex = Math.round(offsetX / SCREEN_WIDTH);
+        setVisiblePageIndex(pageIndex);
         const page = pages[pageIndex];
         if (page && page.length > 0) {
-            const selectedStr = formatDateKey(selectedDate);
+            const selectedStr = selectedDate ? formatDateKey(selectedDate) : '';
             const isInWeek = page.some(d => formatDateKey(d) === selectedStr);
             if (!isInWeek) {
                 const todayStr = formatDateKey(today);
@@ -1145,8 +1164,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                 if (todayInPage) {
                     onSelectDate(todayInPage);
                 } else {
-                    const currentDayIdx = selectedDate.getDay();
-                    onSelectDate(page[currentDayIdx] || page[0]);
+                    onSelectDate(null);
                 }
             }
         }
@@ -1155,10 +1173,14 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
     // Sync scroll when viewMode changes and guarantee positioning on mount / navigation transition
     React.useEffect(() => {
         if (viewMode === 'month') return;
+        if (!selectedDate) return;
 
         const dateStr = formatDateKey(selectedDate);
         const targetIndex = pages.findIndex(page => page.some(d => formatDateKey(d) === dateStr));
         const indexToScroll = targetIndex !== -1 ? targetIndex : initialPageIndex;
+
+        if (indexToScroll === visiblePageIndex) return;
+        setVisiblePageIndex(indexToScroll);
 
         const scrollToTarget = (animated = false) => {
             if (flatListRef.current && SCREEN_WIDTH > 0) {
@@ -1225,13 +1247,6 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
         />
     ), [routineItems, selectedKey, todayKey, circleSel, circleOther, COL_WIDTH, SCREEN_WIDTH, theme, isDarkMode, styles, handleSelectDate, startHour, totalMinutes, timeLabels, onPressTask, listAnim]);
 
-    // Split header date into weekday + rest
-    const dateHeader = selectedDate.toLocaleDateString('en-US', {
-        weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
-    });
-    const [weekdayStr, ...restParts] = dateHeader.split(', ');
-    const restStr = restParts.join(', ');
-
     const router = useRouter();
 
     return (
@@ -1264,6 +1279,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                             const dateStr = formatDateKey(today);
                             const targetIndex = pages.findIndex(page => page.some(d => formatDateKey(d) === dateStr));
                             const indexToScroll = targetIndex !== -1 ? targetIndex : initialPageIndex;
+                            setVisiblePageIndex(indexToScroll);
                             flatListRef.current.scrollToOffset({
                                 offset: indexToScroll * SCREEN_WIDTH,
                                 animated: true,
@@ -1271,17 +1287,35 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                         }
                     }}
                 >
-                    {({ pressed }) => (
-                        <View style={[styles.headerDateRow, pressed && { opacity: 0.6 }]}>
-                            <Text style={styles.headerDayMonthText}>
-                                {selectedDate.getDate()} {selectedDate.toLocaleDateString('en-US', { month: 'long' })}{' '}
-                            </Text>
-                            <Text style={styles.headerYearText}>
-                                {selectedDate.getFullYear()}
-                            </Text>
-                            <Ionicons name="chevron-forward" size={18} color={theme.colors.primary} style={{ marginLeft: 2 }} />
-                        </View>
-                    )}
+                    {({ pressed }) => {
+                        const currentVisiblePage = pages[visiblePageIndex] || pages[initialPageIndex];
+                        const currentMonthDate = currentVisiblePage?.[3] || today;
+                        const isSelectedInVisibleWeek = Boolean(selectedDate && currentVisiblePage?.some(d => formatDateKey(d) === selectedKey));
+                        return (
+                            <View style={[styles.headerDateRow, pressed && { opacity: 0.6 }]}>
+                                {selectedDate && isSelectedInVisibleWeek ? (
+                                    <>
+                                        <Text style={styles.headerDayMonthText}>
+                                            {selectedDate.getDate()} {selectedDate.toLocaleDateString('en-US', { month: 'long' })}{' '}
+                                        </Text>
+                                        <Text style={styles.headerYearText}>
+                                            {selectedDate.getFullYear()}
+                                        </Text>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Text style={styles.headerDayMonthText}>
+                                            {currentMonthDate.toLocaleDateString('en-US', { month: 'long' })}{' '}
+                                        </Text>
+                                        <Text style={styles.headerYearText}>
+                                            {currentMonthDate.getFullYear()}
+                                        </Text>
+                                    </>
+                                )}
+                                <Ionicons name="chevron-forward" size={18} color={theme.colors.primary} style={{ marginLeft: 2 }} />
+                            </View>
+                        );
+                    }}
                 </Pressable>
 
                 {/* ── View-mode toggle (calendar-outline = week, calendar = month) ── */}

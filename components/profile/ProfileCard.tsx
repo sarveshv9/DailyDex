@@ -216,7 +216,7 @@ const getStyles = (theme: Theme, isDark: boolean) =>
       position: "relative",
     },
     glassOverlay: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: theme.glass.cardBg,
     },
     editButton: {
