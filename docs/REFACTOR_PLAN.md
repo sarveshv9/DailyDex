@@ -78,6 +78,16 @@ graph TD
 
 ---
 
+### Stage 0.5: Dedicated PR for CNG Transition (gitignoring `android/` and `ios/`)
+- **Branch**: `refactor/stage-0-cng-transition`
+- **Objective**: Move project to pure Continuous Native Generation (CNG) as an isolated change with zero app logic modifications.
+- **Verification & Safeguards**:
+  - Confirmed identity invariant: `android.package` (`com.anonymous.Zenapp`), `bundleIdentifier` (`com.anonymous.Zen-app`), versioning (`appVersionSource: "remote"` with `autoIncrement: true`), and signing are strictly driven by `app.json` and EAS.
+  - Native permissions check: `SCHEDULE_EXACT_ALARM` and `RECEIVE_BOOT_COMPLETED` are preserved in `app.json`.
+  - Regeneration verification test: run `npx expo prebuild --clean`, build a release APK, and run all 8 Maestro flows to verify zero regression.
+
+---
+
 ### Stage 1: Health, Config, Dependency Pruning & React Compiler
 - **Branch**: `refactor/stage-1-health-config`
 - **Objective**: Fix `expo-doctor` schema errors, install missing peers, prune verified dead dependencies, and enable React Compiler.
@@ -109,13 +119,19 @@ graph TD
     - On `startTimer` or `resumeTimer`, call `scheduleFocusTimerAlarm(title, body, remainingSeconds)`.
     - On `pauseTimer`, `stopTimer`, or completion, call `cancelFocusTimerAlarm()`.
     - On app resume (`AppState`), reconcile `Date.now() >= targetEndTime` and trigger completion if elapsed.
-  - **Closed-App Completion Edge Cases**:
-    - *2-Hour Recency Window*: If the timer elapsed within 2 hours (`Date.now() - targetEndTime <= 2 * 60 * 60 * 1000`), transition store to `isCompleted: true, isActive: false, targetEndTime: null` and show the "Session Accomplished" card on next launch. If more than 2 hours have elapsed, silently reset to idle state to avoid stale interruptions.
-    - *Pomodoro Mode on Relaunch*: Phases require explicit human initiation. If a work or break session expired while closed, complete *only that specific phase* and await user action ("Start Next Phase" or "Finish"). Never auto-cascade multiple unobserved cycles.
-  - **Testing Scope**:
+  - **Proposed Product Behavior Changes (Awaiting User Sign-off)**:
+    - *2-Hour Recency Window*: Current code displays completed session card indefinitely on cold start even if expired days ago. Proposed refinement: If the timer elapsed within 2 hours (`Date.now() - targetEndTime <= 2 * 60 * 60 * 1000`), transition store to `isCompleted: true, isActive: false, targetEndTime: null` and show the "Session Accomplished" card on next launch. If more than 2 hours have elapsed, silently reset to idle state to avoid stale interruptions. *(Requires explicit user approval before Stage 1B implementation)*.
+    - *Pomodoro Mode on Relaunch*: Current code auto-cascades to next phase only via in-memory timer completion. Proposed refinement: Phases require explicit human initiation on cold start/relaunch. If a work or break session expired while closed, complete *only that specific phase* and await user action ("Start Next Phase" or "Finish"). Never auto-cascade multiple unobserved cycles. *(Requires explicit user approval before Stage 1B implementation)*.
+  - **Testing Scope & Manual Verification**:
     - Pure calculation (`calculateRemainingSeconds`, `formatSecondsToMMSS`) is 100% covered by Jest fake timers in `__tests__/timerMath.test.ts`.
-    - AppState resume reconciliation and notification delivery are verified end-to-end via Maestro Flow 8.
-- **Definition of Done**: React Profiler proves **0 re-renders on `index.tsx` and `todo.tsx` while timer counts down**; Maestro Flow 8 passes; Jest fake timers verify math.
+    - Maestro Flow 8 verifies in-app countdown accuracy after returning from the background. Note: Maestro cannot assert on native system notifications or verify behavior when the app is swiped away.
+    - **Stage 1B Manual Device Test Checklist** (must be verified on physical hardware):
+      1. [ ] Timer ends while the app is backgrounded: notification fires on time.
+      2. [ ] Timer ends with the screen locked (Doze): notification fires.
+      3. [ ] Timer ends after the app was swiped away: notification fires, and the completion card shows on next launch.
+      4. [ ] Exact-alarm permission revoked: notification still fires (late), with no crash.
+      5. [ ] Pause, resume, and stop each cancel or reschedule the alarm correctly.
+- **Definition of Done**: React Profiler proves **0 re-renders on `index.tsx` and `todo.tsx` while timer counts down**; Maestro Flow 8 passes; Jest fake timers verify math; All 5 manual device checklist items pass.
 
 ---
 

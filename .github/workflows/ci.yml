@@ -35,3 +35,12 @@ jobs:
 
       - name: ESLint Ratchet Check
         run: node scripts/lint-ratchet.js
+
+      - name: Verify No E2E Test Leak in Production Bundle
+        run: |
+          npx expo export -p android --no-bytecode
+          if grep -rn "focus-start-debug-20s-btn" dist/; then
+            echo "❌ Leak detected: focus-start-debug-20s-btn found in production bundle!"
+            exit 1
+          fi
+          echo "✅ Production bundle clean: E2E debug button tree-shaken."

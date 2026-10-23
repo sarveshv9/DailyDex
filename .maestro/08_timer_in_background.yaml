@@ -17,15 +17,18 @@ appId: com.anonymous.Zenapp
     optional: true
 
 # Background app without killing process
-- pressKey: Home
+- pressKey: "home"
 
-# Wait 10 seconds while backgrounded
-- sleep: 10000
+# Wait 10 seconds while backgrounded using documented extendedWaitUntil workaround
+- extendedWaitUntil:
+    visible: "wait_10s_delay_anchor_nonexistent"
+    timeout: 10000
+    optional: true
 
 # Resume existing backgrounded process (do NOT kill or restart)
 - launchApp:
     stopApp: false
 
-# Verify timer computed accurately against real clock (expected ~10s remaining with tolerance: 7-13s)
+# Verify timer computed accurately against real clock (expected ~00:07-00:09 with tight tolerance: 00:05-00:09)
 - assertVisible:
-    text: ".*00:(0[7-9]|1[0-3]).*"
+    text: ".*00:0[5-9].*"

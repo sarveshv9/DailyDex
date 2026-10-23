@@ -13,7 +13,6 @@ appId: com.anonymous.Zenapp
     id: "task-form-content"
     optional: true
 - inputText: "Test Smoke Task"
-    optional: true
 - tapOn:
     id: "task-form-save-btn"
     optional: true
