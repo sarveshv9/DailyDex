@@ -69,10 +69,15 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
     // Target end timestamp in ms (avoids timer drift & handles Android background sleep)
     const targetEndTimeRef = useRef<number | null>(null);
     const pomodoroRef = useRef({ mode: false, phase: "work" as PomodoroPhase, session: 1 });
-    pomodoroRef.current = { mode: pomodoroMode, phase: pomodoroPhase, session: pomodoroSession };
-
     const timerInfoRef = useRef({ taskId, taskName, duration });
-    timerInfoRef.current = { taskId, taskName, duration };
+
+    useEffect(() => {
+        pomodoroRef.current = { mode: pomodoroMode, phase: pomodoroPhase, session: pomodoroSession };
+    }, [pomodoroMode, pomodoroPhase, pomodoroSession]);
+
+    useEffect(() => {
+        timerInfoRef.current = { taskId, taskName, duration };
+    }, [taskId, taskName, duration]);
 
     // Helper to persist timer state
     const persistState = useCallback(async (state: Partial<StoredTimer>) => {

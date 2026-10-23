@@ -105,9 +105,16 @@ graph TD
     - Single `setTimeout` to `targetEndTime` for completion logic.
     - Local interval in leaf component (e.g. `ActiveTimerBadge`) computes remaining seconds from `targetEndTime` without triggering any global store changes.
   - **Background Completion & Notification Scheduling**:
-    - Preserve exact existing behavior: on `startTimer` or `resumeTimer`, call `scheduleFocusTimerAlarm(title, body, remainingSeconds)`.
+    - Native alarms rely on `SCHEDULE_EXACT_ALARM` and `RECEIVE_BOOT_COMPLETED` (strictly preserved in `app.json` and `AndroidManifest.xml`).
+    - On `startTimer` or `resumeTimer`, call `scheduleFocusTimerAlarm(title, body, remainingSeconds)`.
     - On `pauseTimer`, `stopTimer`, or completion, call `cancelFocusTimerAlarm()`.
     - On app resume (`AppState`), reconcile `Date.now() >= targetEndTime` and trigger completion if elapsed.
+  - **Closed-App Completion Edge Cases**:
+    - *2-Hour Recency Window*: If the timer elapsed within 2 hours (`Date.now() - targetEndTime <= 2 * 60 * 60 * 1000`), transition store to `isCompleted: true, isActive: false, targetEndTime: null` and show the "Session Accomplished" card on next launch. If more than 2 hours have elapsed, silently reset to idle state to avoid stale interruptions.
+    - *Pomodoro Mode on Relaunch*: Phases require explicit human initiation. If a work or break session expired while closed, complete *only that specific phase* and await user action ("Start Next Phase" or "Finish"). Never auto-cascade multiple unobserved cycles.
+  - **Testing Scope**:
+    - Pure calculation (`calculateRemainingSeconds`, `formatSecondsToMMSS`) is 100% covered by Jest fake timers in `__tests__/timerMath.test.ts`.
+    - AppState resume reconciliation and notification delivery are verified end-to-end via Maestro Flow 8.
 - **Definition of Done**: React Profiler proves **0 re-renders on `index.tsx` and `todo.tsx` while timer counts down**; Maestro Flow 8 passes; Jest fake timers verify math.
 
 ---

@@ -559,14 +559,14 @@ export default function FocusScreen() {
                                     </Text>
                                 </Pressable>
 
-                                {__DEV__ && (
+                                {(process.env.EXPO_PUBLIC_E2E === '1' || process.env.EXPO_PUBLIC_E2E === 'true') && (
                                     <Pressable
                                         testID="focus-start-debug-20s-btn"
                                         onPress={() => timer.startTimer(paramTaskId, paramTaskName, 20)}
                                         style={{ marginTop: 8, padding: 8, alignItems: "center" }}
                                     >
                                         <Text style={{ fontSize: 12, color: theme.colors.textSecondary }}>
-                                            [DEV] Start 20s Test Timer
+                                            [E2E] Start 20s Test Timer
                                         </Text>
                                     </Pressable>
                                 )}
