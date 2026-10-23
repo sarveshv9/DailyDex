@@ -4,6 +4,7 @@ import * as Haptics from "../utils/haptics";
 import * as Notifications from "expo-notifications";
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { cancelFocusTimerAlarm, scheduleFocusTimerAlarm } from "../utils/notifications";
+import { calculateRemainingSeconds } from "../utils/timeMath";
 
 export type PomodoroPhase = "work" | "shortBreak" | "longBreak";
 
@@ -113,7 +114,7 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
                 setPomodoroSession(saved.pomodoroSession);
 
                 if (saved.isActive && saved.targetEndTime) {
-                    const remaining = Math.max(0, Math.round((saved.targetEndTime - now) / 1000));
+                    const remaining = calculateRemainingSeconds(saved.targetEndTime, now);
                     if (remaining > 0) {
                         targetEndTimeRef.current = saved.targetEndTime;
                         setTimeLeft(remaining);
@@ -223,8 +224,7 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
 
         const interval = setInterval(() => {
             if (!targetEndTimeRef.current) return;
-            const now = Date.now();
-            const remaining = Math.max(0, Math.round((targetEndTimeRef.current - now) / 1000));
+            const remaining = calculateRemainingSeconds(targetEndTimeRef.current);
             setTimeLeft(remaining);
 
             if (remaining <= 0) {
@@ -240,8 +240,7 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({
     useEffect(() => {
         const handleAppStateChange = (nextAppState: AppStateStatus) => {
             if (nextAppState === "active" && isActive && targetEndTimeRef.current) {
-                const now = Date.now();
-                const remaining = Math.max(0, Math.round((targetEndTimeRef.current - now) / 1000));
+                const remaining = calculateRemainingSeconds(targetEndTimeRef.current);
                 setTimeLeft(remaining);
                 if (remaining <= 0) {
                     handleTimerCompletion();

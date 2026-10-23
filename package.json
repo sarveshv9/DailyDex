@@ -9,6 +9,7 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
+    "lint:ratchet": "node scripts/lint-ratchet.js",
     "test": "jest",
     "build": "expo export"
   },
@@ -27,7 +28,6 @@
     "expo-haptics": "~57.0.3",
     "expo-linear-gradient": "~57.0.2",
     "expo-linking": "~57.0.13",
-    "expo-modules-core": "~57.0.24",
     "expo-notifications": "~57.0.24",
     "expo-router": "~57.0.29",
     "expo-splash-screen": "~57.0.10",

@@ -1,83 +1,83 @@
-# Baseline Performance Metrics Template
+# Baseline & Refactoring Performance Metrics Template
 
-Use this document to record the baseline performance before any refactoring begins.
-All measurements must be conducted on a **RELEASE** build (`npx expo run:android --variant release` or EAS release build) on a physical **low-end Android device** (e.g., 2GB-3GB RAM, budget SoC).
-
----
-
-## 1. Test Environment
-
-| Property | Value |
-| :--- | :--- |
-| **Device Model** | *(e.g., Samsung Galaxy A13 / Moto G / Poco C31)* |
-| **Android OS Version** | *(e.g., Android 12 / 13)* |
-| **RAM / CPU** | *(e.g., 3GB RAM, Octa-core 2.0 GHz)* |
-| **Expo SDK / RN Version** | Expo SDK 57.0.31 / React Native 0.86.3 (Hermes, New Arch Enabled) |
-| **Build Configuration** | Release APK / AAB |
+**Device**: Physical low-end Android device (e.g. 2GB–3GB RAM, budget SoC)  
+**Package**: `com.anonymous.Zenapp`  
+**MainActivity**: `com.anonymous.Zenapp/.MainActivity`  
 
 ---
 
-## 2. Cold Start (Time to Interactive - TTI)
-*Measurement method: Measure via `adb shell am start-activity -W -n com.anonymous.Zenapp/.MainActivity` after `adb shell am force-stop com.anonymous.Zenapp` (average of 3 runs).*
+## 1. Test Methodology & Execution Guidelines
 
-| Run | Launch Time (TotalTime ms) | WaitTime (ms) | Notes |
-| :--- | :--- | :--- | :--- |
-| Run 1 | | | |
-| Run 2 | | | |
-| Run 3 | | | |
-| **Average TTI** | **ms** | | |
+### A. Cold Start Time-to-Interactive (TTI)
+> [!IMPORTANT]
+> `am start-activity -W` measures until the first window is displayed, not until React Native has mounted and interactive content is painted.
 
----
-
-## 3. List Scroll Smoothness (Heaviest Lists)
-*Measurement method: Android GPU Rendering Profiling (`adb shell dumpsys gfxinfo com.anonymous.Zenapp framestats`) or React Native Performance Monitor overlay while scrolling vigorously.*
-
-| List Screen / Component | JS FPS | UI FPS | Dropped / Janky Frames (%) | Perceived Stutter (None / Mild / Severe) |
-| :--- | :--- | :--- | :--- | :--- |
-| 1. Today Dashboard (`app/(tabs)/index.tsx`) | | | | |
-| 2. Tasks / Todo List (`app/(tabs)/todo.tsx`) | | | | |
-| 3. Day Timeline (`components/dashboard/DayTimelineView.tsx`) | | | | |
-| 4. Setup Wizard Steps (`components/SetupTimeSteps.tsx`) | | | | |
+**Procedure**:
+1. Kill app: `adb shell am force-stop com.anonymous.Zenapp`
+2. Start app: `adb shell am start-activity -W -n com.anonymous.Zenapp/.MainActivity`
+3. Record `TotalTime` from logcat/am output.
+4. TTI Marker: In dev/test, inspect the `performance.now()` timestamp emitted when `HomeScreen` finishes its initial render effect.
+5. Perform **5 consecutive runs** and record the **median**.
 
 ---
 
-## 4. Screen Transition Latency
-*Measurement method: Milliseconds between pressing the navigation trigger and the screen completing render (using React Profiler or Perfetto/logcat markers).*
-
-| Screen Transition | Measured Transition Time (ms) | Visual Lag / Blank Screen Observed? |
-| :--- | :--- | :--- |
-| Tab Switch: Today -> Todo | | |
-| Tab Switch: Today -> Profile | | |
-| Open Focus Timer (`app/focus.tsx`) | | |
-| Open Routine Builder (`app/routine.tsx`) | | |
-| Open Setup Flow (`app/setup.tsx`) | | |
-
----
-
-## 5. Memory Footprint
-*Measurement method: Android Studio Profiler or `adb shell dumpsys meminfo com.anonymous.Zenapp`.*
-
-| State | Native Heap (MB) | Dalvik/Art Heap (MB) | Total PSS (MB) |
-| :--- | :--- | :--- | :--- |
-| Immediate Cold Start | | | |
-| After 5 Minutes of Normal Navigation & List Scrolling | | | |
-| After Playing Audio & Focus Session | | | |
+### B. List Scroll Smoothness (GPU Profiling)
+**Procedure**:
+1. Open the target list screen.
+2. Reset frame statistics:
+   ```bash
+   adb shell dumpsys gfxinfo com.anonymous.Zenapp reset
+   ```
+3. Execute standard scroll script: perform exactly **5 consistent full-height flings** from top to bottom, then 5 flings back to top.
+4. Dump frame stats:
+   ```bash
+   adb shell dumpsys gfxinfo com.anonymous.Zenapp framestats
+   ```
+5. Record: Total Frames, Janky Frames (>16.6ms), Dropped Frame %, 90th percentile frame time.
 
 ---
 
-## 6. Bundle & Binary Sizes (Tool-Measured)
+### C. Render Counts During Running Timer (React Profiler)
+> [!NOTE]
+> React DevTools cannot profile a release build. Profiling MUST be performed on a **DEV build**. Treat render counts as **relative before/after numbers**.
 
-| Artifact | Measured Size | Notes |
-| :--- | :--- | :--- |
-| **Hermes Bytecode Bundle** (`entry.hbc`) | **7.2 MB** | 3,920 modules bundled |
-| **Bundled Audio Assets** (`assets/audio/*.mp3`) | **~25.5 MB** | 10 high-bitrate MP3 files |
-| **Bundled Fonts** (`assets/fonts/*`, `@expo/vector-icons`) | **~5.5 MB** | 18 vector icon font sets bundled |
-| **Release APK / AAB Size** | *(Record final release binary size in MB)* | |
+**Procedure**:
+1. Connect device to React DevTools (`npx react-devtools` or Chrome DevTools).
+2. Start the React Profiler.
+3. Start a focus timer.
+4. Record render commits over exactly **10 seconds** while viewing:
+   - Scenario A: **Today Dashboard** with timer running.
+   - Scenario B: **Todo & Tasks Screen** with timer running (high-contention screen).
+5. Record total commit count and component re-render count for `HomeScreen` and `TodoScreen`.
 
 ---
 
-## 7. Qualitative Pain Points Survey
+### D. Memory Consumption
+**Procedure**:
+1. Launch app and navigate normally for 5 minutes (open tabs, create a task, start a timer).
+2. Run:
+   ```bash
+   adb shell dumpsys meminfo com.anonymous.Zenapp
+   ```
+3. Record Total PSS and Native Heap.
 
-- **Most visited screens**:
-- **Most complained about screens / interactions**:
-- **Worst perceived interactions (laggy gestures, slow modals, audio glitching)**:
+---
+
+## 2. Metrics Recording Matrix
+
+| Metric Category | Specific Measurement | Before (Baseline) | After (Refactored) | Delta / Gain | Measurement Method |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Cold Start** | Median Launch Time (`am start -W TotalTime`) | *(Fill ms)* | *(Stage 6)* | | Median of 5 release cold starts |
+| **Cold Start** | Time to Interactive (TTI Marker) | *(Fill ms)* | *(Stage 6)* | | `performance.now()` to Home mount |
+| **Scroll: Todo List** | Total / Janky Frames (5 flings) | *(Fill)* | *(Stage 5B)* | | `dumpsys gfxinfo reset` + dump |
+| **Scroll: Todo List** | Dropped Frame Percentage (%) | *(Fill %)* | *(Stage 5B)* | | % frames exceeding 16.6ms |
+| **Scroll: Routine List**| Dropped Frame Percentage (%) | *(Fill %)* | *(Stage 5D)* | | `dumpsys gfxinfo reset` + dump |
+| **Profiler: Home** | Re-render count during 10s active timer | *(Fill)* | *(Stage 1B: 0 target)* | | React Profiler (Dev build) |
+| **Profiler: Todo** | Re-render count during 10s active timer | *(Fill)* | *(Stage 1B: 0 target)* | | React Profiler (Dev build) |
+| **Memory** | Total PSS after 5m normal use | *(Fill MB)* | *(Stage 6)* | | `dumpsys meminfo` |
+| **Memory** | Native Heap | *(Fill MB)* | *(Stage 6)* | | `dumpsys meminfo` |
+| **Binary: JS Bundle** | Hermes Bytecode (`entry.hbc`) | **7.2 MB** | *(Stage 6)* | | `npx expo export` output |
+| **Binary: Audio Assets**| `assets/audio/*.mp3` total size | **25.5 MB** | *(Stage 6: ~10MB target)*| | File system inspection |
+| **Binary: Icon Fonts** | `@expo/vector-icons` bundled fonts | **5.5 MB** | *(Stage 6)* | | Dist asset manifest |
+| **Code Quality** | Total ESLint Problems | **128 errors, 62 warnings**| *(0 target)* | | `node scripts/lint-ratchet.js` |
+| **Code Duplication** | Duplicate Code Clones (`jscpd`) | **65 clones (989 lines)** | *(<30 target)* | | `npx jscpd` |

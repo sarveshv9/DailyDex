@@ -540,6 +540,7 @@ export default function FocusScreen() {
 
                                 {/* Standardized 56px Primary Action Button */}
                                 <Pressable
+                                    testID="focus-start-timer-btn"
                                     onPress={startNewTimer}
                                     accessibilityRole="button"
                                     accessibilityLabel={`Begin focus session for ${Math.round(selectedDuration / 60)} minutes`}
@@ -557,6 +558,18 @@ export default function FocusScreen() {
                                         Begin Focus Session ({Math.round(selectedDuration / 60)}m)
                                     </Text>
                                 </Pressable>
+
+                                {__DEV__ && (
+                                    <Pressable
+                                        testID="focus-start-debug-20s-btn"
+                                        onPress={() => timer.startTimer(paramTaskId, paramTaskName, 20)}
+                                        style={{ marginTop: 8, padding: 8, alignItems: "center" }}
+                                    >
+                                        <Text style={{ fontSize: 12, color: theme.colors.textSecondary }}>
+                                            [DEV] Start 20s Test Timer
+                                        </Text>
+                                    </Pressable>
+                                )}
                             </>
                         ) : (
                             <>
@@ -697,6 +710,7 @@ export default function FocusScreen() {
                         <View style={styles.controlsRow}>
                             {/* Primary Play / Pause Pill (Concise "Pause" / "Resume" with distinct states) */}
                             <Pressable
+                                testID="focus-play-pause-btn"
                                 onPress={toggleTimer}
                                 accessibilityRole="button"
                                 accessibilityLabel={isActive ? "Pause focus timer" : "Resume focus timer"}
@@ -724,6 +738,7 @@ export default function FocusScreen() {
 
                             {/* Reset Pill: Enabled ONLY when timer is paused */}
                             <Pressable
+                                testID="focus-reset-btn"
                                 disabled={!isResetEnabled}
                                 onPress={() => {
                                     if (!isResetEnabled) return;

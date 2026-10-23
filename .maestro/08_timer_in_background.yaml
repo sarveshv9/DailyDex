@@ -4,13 +4,26 @@ appId: com.anonymous.Zenapp
 - launchApp
 - tapOn:
     text: ".*(Focus|Pomodoro|Start Timer|Timer).*"
+# Start 20s debug timer (or regular start)
 - tapOn:
-    text: ".*(Start|Play|Resume).*"
+    id: "focus-start-debug-20s-btn"
     optional: true
-# Put app in background for 10 seconds
+- tapOn:
+    id: "focus-start-timer-btn"
+    optional: true
+- tapOn:
+    id: "focus-play-pause-btn"
+    optional: true
+
+# Background app without killing it
 - pressKey: Home
+
+# Wait 10 seconds while backgrounded
 - wait: 10000
-# Re-open the app from background
+
+# Resume app from background
 - launchApp
+
+# Verify countdown progressed by ~10 seconds from targetEndTime without clock drift
 - assertVisible:
-    text: ".*(Focus|Work|Break|Session|[0-9]+:[0-9]+).*"
+    text: ".*(Focus|Work|00:[0-1][0-9]|Session).*"

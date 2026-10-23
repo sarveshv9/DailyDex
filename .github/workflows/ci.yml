@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   validate:
-    name: Typecheck, Lint & Test
+    name: Typecheck, Test & Lint Ratchet
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -33,5 +33,5 @@ jobs:
       - name: Run Jest Unit Tests
         run: npm test
 
-      - name: Lint Check
-        run: npm run lint -- --max-warnings 60
+      - name: ESLint Ratchet Check
+        run: node scripts/lint-ratchet.js

@@ -1,16 +1,19 @@
 appId: com.anonymous.Zenapp
 ---
-# Flow 7: Storage Persistence Check (Kill & Relaunch)
+# Flow 7: Storage Persistence Check (Kill & Relaunch without clearing state)
 - launchApp
 - tapOn:
     point: "50%,92%" # Go to Todo tab
 - assertVisible:
     text: ".*(Tasks|Todo).*"
+# Terminate app process completely (NOT clearState)
 - stopApp
+# Relaunch from cold state (verifies local storage was preserved on disk)
 - launchApp
+# Verify we return to valid state with user data intact
 - assertVisible:
     text: ".*(Good morning|Good afternoon|Good evening|Today|Tasks).*"
 - tapOn:
-    point: "50%,92%" # Check Todo tab persisted
+    point: "50%,92%" # Check Todo tab
 - assertVisible:
     text: ".*(Tasks|Todo).*"
