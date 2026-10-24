@@ -274,3 +274,17 @@ The following items represent potential functional refinements or local hygiene 
 2. **Pomodoro Manual Advance on Background Resume**: Currently, when the app resumes from background after timer completion, it auto-advances to the next phase after 1.5s. Optional UX polish: require explicit user action ("Start Next Phase") on background resume, matching the cold-start behavior.
 3. **Exact Alarm Permission Hygiene**: Can optionally test `USE_EXACT_ALARM` instead of `SCHEDULE_EXACT_ALARM` if desired on personal Android 13+ device to avoid having to check system app settings for exact alarms.
 4. **Permissions Cleanup Hygiene**: Can prune unused permissions (`RECORD_AUDIO`, `SYSTEM_ALERT_WINDOW`, `WRITE_EXTERNAL_STORAGE`) as pure manifest hygiene (e.g., passing `{ "recordAudioAndroid": false }` to `expo-audio`).
+
+---
+
+## 7. Intentional Behavior Changes (For User Decision)
+
+1. **`useAppHaptics` Respects `hapticsEnabled` Preference**:
+   - **Old Behavior**: Previous code directly invoked `expo-haptics` / `utils/haptics.ts` in individual button and checkbox event handlers, triggering device vibrations even if the user toggled "Haptic Feedback" OFF in Settings.
+   - **New Behavior**: `useAppHaptics` reads the fine-grained `hapticsEnabled` setting selector. When toggled OFF in Settings, all haptic invocations (`impactAsync`, `selectionAsync`, `notificationAsync`) are safely no-ops.
+   - **User Decision**: Retained as designed so the Settings toggle actually controls all app-wide haptics. Can revert to unconditional haptics if user prefers device vibration regardless of the setting.
+
+2. **Task Row Press Feedback (Pressable Transform vs Reanimated Spring)**:
+   - **Old Behavior**: Used a Reanimated shared value with `withSpring(0.985)` in `onPressIn` and `withSpring(1)` in `onPressOut` (~150-200ms spring settle time).
+   - **New Behavior**: Uses React Native native `Pressable` style callback `style={({ pressed }) => [styles.taskCard, pressed && { transform: [{ scale: 0.985 }] }]}`.
+   - **Visual / Timing Difference**: Scale depth is identical (`0.985`). The press feedback is instantaneous upon finger down/up without spring settle delay, and eliminates React Compiler shared value immutability lint violations.

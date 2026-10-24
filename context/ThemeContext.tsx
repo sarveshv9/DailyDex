@@ -119,3 +119,12 @@ export const useTheme = (): ThemeContextType => {
     removeCustomTheme: useThemeStore.getState().removeCustomTheme,
   };
 };
+
+export {
+  useAppTheme,
+  useCustomThemes,
+  useThemeName,
+  useIsDarkMode,
+  useIsAutoTheme,
+  useThemeLoaded,
+} from '../stores/themeStore';

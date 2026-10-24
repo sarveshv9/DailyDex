@@ -180,3 +180,52 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
 
 // Hydrate store immediately
 useThemeStore.getState().loadTheme();
+
+/* ---------------------- FINE-GRAINED SELECTORS ------------------------ */
+/** Selects only the active Theme object and dark mode flag, memoized to prevent re-renders when customThemes change without affecting the active palette */
+export const useAppTheme = (): { theme: Theme; isDarkMode: boolean } => {
+  const themeName = useThemeStore((s) => s.themeName);
+  const isDarkMode = useThemeStore((s) => s.isDarkMode);
+  // Only subscribe to customThemes if the active theme actually depends on it
+  const isCustom = themeName.startsWith("custom_");
+  const customConfig = useThemeStore((s) =>
+    isCustom ? s.customThemes[themeName.replace("custom_", "")] : null
+  );
+
+  const activePalette = isDarkMode ? darkThemes : lightThemes;
+  if (isCustom && customConfig) {
+    const baseObj = activePalette.pokeball || activePalette.default;
+    return {
+      theme: {
+        ...baseObj,
+        colors: {
+          ...baseObj.colors,
+          primary: customConfig.primaryColor,
+        },
+      },
+      isDarkMode,
+    };
+  }
+
+  const theme =
+    activePalette[themeName as ThemeName] ||
+    activePalette.pokeball ||
+    activePalette.default;
+
+  return { theme, isDarkMode };
+};
+
+/** Selects only custom themes dictionary (used exclusively by ThemeSelectionModal) */
+export const useCustomThemes = () => useThemeStore((s) => s.customThemes);
+
+/** Selects themeName */
+export const useThemeName = () => useThemeStore((s) => s.themeName);
+
+/** Selects isDarkMode */
+export const useIsDarkMode = () => useThemeStore((s) => s.isDarkMode);
+
+/** Selects isAutoTheme */
+export const useIsAutoTheme = () => useThemeStore((s) => s.isAutoTheme);
+
+/** Selects theme loading state */
+export const useThemeLoaded = () => useThemeStore((s) => s.isLoaded);

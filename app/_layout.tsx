@@ -16,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SETUP_STORAGE_KEY } from "../constants/storageKeys";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "../utils/queryClient";
+import { useThemeLoaded } from "../stores/themeStore";
 
 function RootLayoutNav() {
   const [fontsLoaded] = useFonts({
@@ -25,6 +26,7 @@ function RootLayoutNav() {
     UbuntuMedium: require("../assets/fonts/Ubuntu-Medium.ttf"),
   });
 
+  const isThemeLoaded = useThemeLoaded();
   const [isSetupComplete, setIsSetupComplete] = useState<boolean | null>(null);
   const router = useRouter();
   const segments = useSegments();
@@ -44,7 +46,7 @@ function RootLayoutNav() {
   }, []);
 
   useEffect(() => {
-    if (!fontsLoaded || isSetupComplete === null || !initialized) return;
+    if (!fontsLoaded || isSetupComplete === null || !initialized || !isThemeLoaded) return;
     
     // Setup routing check — auth is optional, no sign-in gate
     const verifyRouting = async () => {
@@ -86,7 +88,7 @@ function RootLayoutNav() {
     verifyRouting();
   }, [fontsLoaded, isSetupComplete, segments, session, initialized]);
 
-  if (!fontsLoaded || isSetupComplete === null || !initialized) {
+  if (!fontsLoaded || isSetupComplete === null || !initialized || !isThemeLoaded) {
     return <View style={{ flex: 1, backgroundColor: "#F5F5F7" }} />;
   }
 

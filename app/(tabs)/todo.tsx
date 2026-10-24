@@ -709,6 +709,134 @@ const EmptyState = ({
   );
 };
 
+/* ---------------------- HEADER COMPONENT (MEMOIZED) ------------------------ */
+interface TodoHeaderProps {
+  dateFormatted: string;
+  completedCount: number;
+  tasksCount: number;
+  todayTasksCount: number;
+  laterTasksCount: number;
+  activeFilter: FilterTab;
+  onClearCompleted: () => void;
+  onSelectFilter: (tab: FilterTab) => void;
+  onQuickAdd: (text: string) => void;
+  theme: Theme;
+  isDarkMode: boolean;
+}
+
+const TodoHeaderComponent = ({
+  dateFormatted,
+  completedCount,
+  tasksCount,
+  todayTasksCount,
+  laterTasksCount,
+  activeFilter,
+  onClearCompleted,
+  onSelectFilter,
+  onQuickAdd,
+  theme,
+  isDarkMode,
+}: TodoHeaderProps) => {
+  const styles = useMemo(() => getStyles(theme, isDarkMode), [theme, isDarkMode]);
+  const [quickInputText, setQuickInputText] = useState("");
+  const quickInputRef = useRef<TextInput>(null);
+
+  const handleSubmit = useCallback(() => {
+    const trimmed = quickInputText.trim();
+    if (!trimmed) return;
+    onQuickAdd(trimmed);
+    setQuickInputText("");
+    Keyboard.dismiss();
+  }, [quickInputText, onQuickAdd]);
+
+  return (
+    <View style={styles.heroHeader}>
+      {/* Eyebrow, Title & Action */}
+      <View style={styles.headerTitleRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle}>Tasks Hub</Text>
+          <Text style={styles.headerEyebrow}>{dateFormatted}</Text>
+        </View>
+
+        {completedCount > 0 && (
+          <Pressable
+            style={styles.clearDoneBtn}
+            onPress={onClearCompleted}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Clear completed tasks"
+          >
+            <Ionicons
+              name="trash-outline"
+              size={14}
+              color={theme.colors.primary}
+            />
+            <Text style={styles.clearDoneBtnText}>Clear done</Text>
+          </Pressable>
+        )}
+      </View>
+
+      {/* Category Filter Tabs */}
+      <View style={styles.filterTabsRow} accessibilityRole="tablist">
+        {(
+          [
+            { id: "all", label: "All", count: tasksCount },
+            { id: "today", label: "Today", count: todayTasksCount },
+            { id: "later", label: "Later", count: laterTasksCount },
+          ] as const
+        ).map((tab) => (
+          <Chip
+            key={tab.id}
+            label={tab.label}
+            selected={activeFilter === tab.id}
+            onPress={() => onSelectFilter(tab.id)}
+            badgeCount={tab.count}
+            style={{ flex: 1 }}
+          />
+        ))}
+      </View>
+
+      {/* Quick-Add Inline Input */}
+      <View style={styles.quickAddBar}>
+        <Ionicons
+          name="add-circle-outline"
+          size={22}
+          color={theme.colors.primary}
+          style={{ marginLeft: 2 }}
+        />
+        <TextInput
+          ref={quickInputRef}
+          style={styles.quickAddInput}
+          placeholder={
+            activeFilter === "later"
+              ? "Quick-add task for Later..."
+              : "Quick-add task for Today..."
+          }
+          placeholderTextColor={theme.colors.textSecondary}
+          value={quickInputText}
+          onChangeText={setQuickInputText}
+          onSubmitEditing={handleSubmit}
+          returnKeyType="done"
+          maxLength={240}
+        />
+        {quickInputText.trim().length > 0 && (
+          <Pressable
+            style={styles.quickAddSubmitBtn}
+            onPress={handleSubmit}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Add task"
+          >
+            <Ionicons name="arrow-up" size={18} color={theme.colors.white} />
+          </Pressable>
+        )}
+      </View>
+    </View>
+  );
+};
+
+const TodoHeader = React.memo(TodoHeaderComponent);
+
 /* ---------------------- MAIN TODO SCREEN ------------------------ */
 export default function TodoScreen() {
   const { theme, isDarkMode } = useTheme();
@@ -718,11 +846,8 @@ export default function TodoScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
-  const [quickInputText, setQuickInputText] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-
-  const quickInputRef = useRef<TextInput>(null);
 
   // Confirm dialog state
   const [confirmState, setConfirmState] = useState<{
@@ -838,19 +963,21 @@ export default function TodoScreen() {
     [editingTask]
   );
 
-  const handleQuickAdd = useCallback(() => {
-    const trimmed = quickInputText.trim();
-    if (!trimmed) return;
+  const handleQuickAdd = useCallback(
+    (text: string) => {
+      const defaultCategory: TaskCategory =
+        activeFilter === "later" ? "later" : "today";
+      const newTask = createNewTask(text, defaultCategory);
 
-    const defaultCategory: TaskCategory =
-      activeFilter === "later" ? "later" : "today";
-    const newTask = createNewTask(trimmed, defaultCategory);
+      setTasks((prev) => [newTask, ...prev]);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+    [activeFilter]
+  );
 
-    setTasks((prev) => [newTask, ...prev]);
-    setQuickInputText("");
-    Keyboard.dismiss();
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-  }, [quickInputText, activeFilter]);
+  const handleSelectFilter = useCallback((tab: FilterTab) => {
+    setActiveFilter(tab);
+  }, []);
 
   const handleToggleTask = useCallback((id: string) => {
     setTasks((prev) =>
@@ -981,16 +1108,6 @@ export default function TodoScreen() {
     [activeFilter, handleOpenAddModal, styles.emptyContainer]
   );
 
-  if (isLoading) {
-    return (
-      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   // Greeting & Date formatting
   const now = new Date();
   const dateFormatted = now
@@ -1001,90 +1118,46 @@ export default function TodoScreen() {
     })
     .toUpperCase();
 
-  const listHeader = (
-    <View style={styles.heroHeader}>
-      {/* Eyebrow, Title & Action */}
-      <View style={styles.headerTitleRow}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Tasks Hub</Text>
-          <Text style={styles.headerEyebrow}>{dateFormatted}</Text>
-        </View>
-
-        {completedCount > 0 && (
-          <Pressable
-            style={styles.clearDoneBtn}
-            onPress={handleClearCompleted}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Clear completed tasks"
-          >
-            <Ionicons
-              name="trash-outline"
-              size={14}
-              color={theme.colors.primary}
-            />
-            <Text style={styles.clearDoneBtnText}>Clear done</Text>
-          </Pressable>
-        )}
-      </View>
-
-      {/* Category Filter Tabs */}
-      <View style={styles.filterTabsRow} accessibilityRole="tablist">
-        {(
-          [
-            { id: "all", label: "All", count: tasks.length },
-            { id: "today", label: "Today", count: todayTasks.length },
-            { id: "later", label: "Later", count: laterTasks.length },
-          ] as const
-        ).map((tab) => (
-          <Chip
-            key={tab.id}
-            label={tab.label}
-            selected={activeFilter === tab.id}
-            onPress={() => setActiveFilter(tab.id)}
-            badgeCount={tab.count}
-            style={{ flex: 1 }}
-          />
-        ))}
-      </View>
-
-      {/* Quick-Add Inline Input */}
-      <View style={styles.quickAddBar}>
-        <Ionicons
-          name="add-circle-outline"
-          size={22}
-          color={theme.colors.primary}
-          style={{ marginLeft: 2 }}
-        />
-        <TextInput
-          ref={quickInputRef}
-          style={styles.quickAddInput}
-          placeholder={
-            activeFilter === "later"
-              ? "Quick-add task for Later..."
-              : "Quick-add task for Today..."
-          }
-          placeholderTextColor={theme.colors.textSecondary}
-          value={quickInputText}
-          onChangeText={setQuickInputText}
-          onSubmitEditing={handleQuickAdd}
-          returnKeyType="done"
-          maxLength={240}
-        />
-        {quickInputText.trim().length > 0 && (
-          <Pressable
-            style={styles.quickAddSubmitBtn}
-            onPress={handleQuickAdd}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Add task"
-          >
-            <Ionicons name="arrow-up" size={18} color={theme.colors.white} />
-          </Pressable>
-        )}
-      </View>
-    </View>
+  const renderHeader = useCallback(
+    () => (
+      <TodoHeader
+        dateFormatted={dateFormatted}
+        completedCount={completedCount}
+        tasksCount={tasks.length}
+        todayTasksCount={todayTasks.length}
+        laterTasksCount={laterTasks.length}
+        activeFilter={activeFilter}
+        onClearCompleted={handleClearCompleted}
+        onSelectFilter={handleSelectFilter}
+        onQuickAdd={handleQuickAdd}
+        theme={theme}
+        isDarkMode={isDarkMode}
+      />
+    ),
+    [
+      dateFormatted,
+      completedCount,
+      tasks.length,
+      todayTasks.length,
+      laterTasks.length,
+      activeFilter,
+      handleClearCompleted,
+      handleSelectFilter,
+      handleQuickAdd,
+      theme,
+      isDarkMode,
+    ]
   );
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
@@ -1093,7 +1166,7 @@ export default function TodoScreen() {
         renderItem={renderTaskItem}
         keyExtractor={keyExtractor}
         ItemSeparatorComponent={renderItemSeparator}
-        ListHeaderComponent={listHeader}
+        ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmptyState}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"

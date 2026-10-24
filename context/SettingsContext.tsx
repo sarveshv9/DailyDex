@@ -54,3 +54,11 @@ export const useSettings = () => {
     isLoading,
   };
 };
+
+export {
+  useHapticsEnabled,
+  useMusicPreference,
+  useTaskReminders,
+  useSettingsLoading,
+  useSettingsActions,
+} from '../stores/settingsStore';

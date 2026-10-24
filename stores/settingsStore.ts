@@ -98,3 +98,23 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
 // Auto-hydrate settings store immediately on module load
 useSettingsStore.getState().loadSettings();
+
+/* ---------------------- FINE-GRAINED SELECTORS ------------------------ */
+export const useHapticsEnabled = () =>
+  useSettingsStore((s) => s.settings.hapticsEnabled);
+
+export const useMusicPreference = () =>
+  useSettingsStore((s) => s.settings.musicPreference);
+
+export const useTaskReminders = () =>
+  useSettingsStore((s) => s.settings.notifications.taskReminders);
+
+export const useSettingsLoading = () =>
+  useSettingsStore((s) => s.isLoading);
+
+export const useSettingsActions = () => {
+  const toggleNotification = useSettingsStore((s) => s.toggleNotification);
+  const setHapticsEnabled = useSettingsStore((s) => s.setHapticsEnabled);
+  const setMusicPreference = useSettingsStore((s) => s.setMusicPreference);
+  return { toggleNotification, setHapticsEnabled, setMusicPreference };
+};
