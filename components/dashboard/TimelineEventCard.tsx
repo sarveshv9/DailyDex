@@ -15,12 +15,13 @@
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View, Animated, Platform } from 'react-native';
 import { Theme } from '../../styles/shared';
 import { useTheme } from '../../context/ThemeContext';
 import * as Haptics from '../../utils/haptics';
 import { RoutineItem, ICON_MAP, formatDuration, isWakeupOrSleep } from '../../utils/utils';
+import { themeTokens } from '../../constants/themeTokens';
 
 export const TASK_COLORS: Record<string, string> = {
   wakeup: '#FFB347',
@@ -68,7 +69,7 @@ const TIME_COL_W = 50;
 const NODE_COL_W = 54;
 const SPINE_WIDTH = 2;
 
-export const TimelineEventCard: React.FC<TimelineEventCardProps> = ({
+const TimelineEventCardComponent: React.FC<TimelineEventCardProps> = ({
   item,
   onPress,
   isFirst,
@@ -97,7 +98,6 @@ export const TimelineEventCard: React.FC<TimelineEventCardProps> = ({
   const icon: keyof typeof Ionicons.glyphMap =
     ICON_MAP[routineData.imageKey ?? ''] ?? 'checkmark-circle-outline';
   const primaryColor = theme.colors.primary;
-  const taskColor = TASK_COLORS[routineData.imageKey ?? ''] ?? primaryColor;
   const spineColor = isDarkMode ? `${primaryColor}40` : `${primaryColor}30`;
 
   // Subtasks progress summary
@@ -238,6 +238,8 @@ export const TimelineEventCard: React.FC<TimelineEventCardProps> = ({
   );
 };
 
+export const TimelineEventCard = React.memo(TimelineEventCardComponent);
+
 /* ---------- Styles ---------- */
 const getStyles = (theme: Theme, isDarkMode: boolean) => {
   return StyleSheet.create({
@@ -270,7 +272,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       justifyContent: 'center',
     },
     breakText: {
-      fontSize: 12,
+      fontSize: themeTokens.fonts.size.xs,
       fontFamily: theme.fonts.medium,
       color: theme.colors.textSecondary,
       opacity: 0.7,
@@ -292,14 +294,14 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       paddingTop: 14,
     },
     timeValText: {
-      fontSize: 13,
+      fontSize: themeTokens.fonts.size.sm,
       fontFamily: theme.fonts.bold,
       color: theme.colors.text,
       letterSpacing: -0.2,
       lineHeight: 16,
     },
     ampmText: {
-      fontSize: 10,
+      fontSize: themeTokens.fonts.size.xs,
       fontFamily: theme.fonts.bold,
       color: theme.colors.textSecondary,
       textTransform: 'uppercase',
@@ -338,14 +340,14 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       paddingVertical: 12,
     },
     titleText: {
-      fontSize: 17,
+      fontSize: themeTokens.fonts.size.lg,
       fontFamily: theme.fonts.bold,
       color: theme.colors.text,
       letterSpacing: -0.2,
       lineHeight: 22,
     },
     metaText: {
-      fontSize: 13,
+      fontSize: themeTokens.fonts.size.sm,
       fontFamily: theme.fonts.regular,
       color: theme.colors.textSecondary,
       marginTop: 3,
@@ -366,13 +368,13 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
   });
 };
 
-export const SkeletonTimelineEventCard: React.FC<{ isFirst?: boolean; isLast?: boolean }> = ({ isFirst, isLast }) => {
+const SkeletonTimelineEventCardComponent: React.FC<{ isFirst?: boolean; isLast?: boolean }> = ({ isFirst, isLast }) => {
   const { theme, isDarkMode } = useTheme();
   const styles = useMemo(() => getStyles(theme, isDarkMode), [theme, isDarkMode]);
 
-  const pulseAnim = React.useRef(new Animated.Value(0.35)).current;
+  const [pulseAnim] = useState(() => new Animated.Value(0.35));
 
-  React.useEffect(() => {
+  useEffect(() => {
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
@@ -425,3 +427,5 @@ export const SkeletonTimelineEventCard: React.FC<{ isFirst?: boolean; isLast?: b
     </Animated.View>
   );
 };
+
+export const SkeletonTimelineEventCard = React.memo(SkeletonTimelineEventCardComponent);
