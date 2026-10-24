@@ -63,17 +63,11 @@ interface StackedTask {
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-const DAYS_OF_WEEK = [
-  { label: "S", full: "Sun", value: 0 },
-  { label: "M", full: "Mon", value: 1 },
-  { label: "T", full: "Tue", value: 2 },
-  { label: "W", full: "Wed", value: 3 },
-  { label: "T", full: "Thu", value: 4 },
-  { label: "F", full: "Fri", value: 5 },
-  { label: "S", full: "Sat", value: 6 },
-];
-
-const DURATION_PRESETS = [10, 15, 20, 30, 45, 60];
+import {
+  DAYS_OF_WEEK,
+  DURATION_PRESETS,
+  formatDuration,
+} from "../../hooks/useRoutineTaskForm";
 
 const QUICK_INSPIRATIONS = [
   { task: "Meditate", duration: 15, icon: "meditate" },
@@ -86,14 +80,6 @@ const QUICK_INSPIRATIONS = [
   { task: "Journal", duration: 15, icon: "journal" },
   { task: "Wind Down", duration: 20, icon: "prepare_sleep" },
 ];
-
-/** Format minutes into clean text (e.g. "30m", "1h 15m") */
-const formatDuration = (minutes: number): string => {
-  if (minutes < 60) return `${minutes}m`;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return m === 0 ? `${h}h` : `${h}h ${m}m`;
-};
 
 /* ─────────────────────────────── Component ──────────────────────────── */
 

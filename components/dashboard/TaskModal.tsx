@@ -46,55 +46,13 @@ interface TaskModalProps {
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-const DAYS_OF_WEEK = [
-  { label: "S", full: "Sun", value: 0 },
-  { label: "M", full: "Mon", value: 1 },
-  { label: "T", full: "Tue", value: 2 },
-  { label: "W", full: "Wed", value: 3 },
-  { label: "T", full: "Thu", value: 4 },
-  { label: "F", full: "Fri", value: 5 },
-  { label: "S", full: "Sat", value: 6 },
-];
-
-const DURATION_PRESETS = [10, 15, 20, 30, 45, 60, 90, 120];
-
-const TASK_COLORS: Record<string, string> = {
-  wakeup: "#FFB347",
-  sleep: "#9CBBE3",
-  water: "#77CCEE",
-  tea_journal: "#E6D5B8",
-  breakfast: "#FFD1BA",
-  lunch: "#FFD1BA",
-  dinner: "#FFD1BA",
-  study: "#A0C4FF",
-  walk: "#B9FBC0",
-  yoga: "#CFBAF0",
-  reflect: "#A0C4FF",
-  prepare_sleep: "#BDB2FF",
-  breathe: "#B9FBC0",
-  commute: "#79B4B7",
-  gym: "#FF9F80",
-  cleaning: "#80CED7",
-  pet: "#E3C75F",
-  shopping: "#F6B8B8",
-  coding: "#7EA0B7",
-  gaming: "#BD93F9",
-  finances: "#9AD0C2",
-  laundry: "#C5DFF8",
-  travel: "#7BC9FF",
-  health: "#F875AA",
-  podcast: "#C683D7",
-};
-
-const FALLBACK_COLORS = ["#7B8CDE", "#C084FC", "#4DA8DA", "#6BCB77", "#E8975E", "#B89B72"];
-
-/** Format minutes into clean text (e.g. "30m", "1h 15m") */
-const formatDuration = (minutes: number): string => {
-  if (minutes < 60) return `${minutes}m`;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return m === 0 ? `${h}h` : `${h}h ${m}m`;
-};
+import {
+  DAYS_OF_WEEK,
+  DURATION_PRESETS,
+  TASK_COLORS,
+  FALLBACK_COLORS,
+  formatDuration,
+} from "../../hooks/useRoutineTaskForm";
 
 const TaskModal: React.FC<TaskModalProps> = ({
   visible,
