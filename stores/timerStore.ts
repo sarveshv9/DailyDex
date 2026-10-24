@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { AppState, AppStateStatus } from "react-native";
+import { AppState, AppStateStatus, Platform } from "react-native";
 import { create } from "zustand";
 import * as Haptics from "../utils/haptics";
 import * as Notifications from "expo-notifications";
@@ -160,6 +160,10 @@ export const useTimerStore = create<TimerState>((set, get) => ({
       });
     }
 
+    if (Platform.OS === "web" && typeof window === "undefined") {
+      set({ isInitialized: true });
+      return;
+    }
     try {
       const savedStr = await AsyncStorage.getItem(TIMER_STORAGE_KEY);
       if (!savedStr) {
@@ -530,5 +534,7 @@ export const useTimerStore = create<TimerState>((set, get) => ({
   },
 }));
 
-// Auto-initialize store on import
-useTimerStore.getState().initialize();
+// Auto-initialize store on client import (skip during Node SSR)
+if (Platform.OS !== "web" || typeof window !== "undefined") {
+  useTimerStore.getState().initialize();
+}

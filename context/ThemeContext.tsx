@@ -87,7 +87,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     ]
   );
 
-  if (!isLoaded) return null;
+  if (!isLoaded && !(Platform.OS === 'web' && typeof window === 'undefined')) return null;
 
   return (
     <ThemeContext.Provider value={value}>
@@ -101,13 +101,14 @@ export const useTheme = (): ThemeContextType => {
   if (context) return context;
 
   // Fallback direct store access if used outside ThemeProvider
+  const theme = useThemeStore.getState().theme;
   const themeName = useThemeStore.getState().themeName;
   const isAutoTheme = useThemeStore.getState().isAutoTheme;
   const isDarkMode = useThemeStore.getState().isDarkMode;
   const customThemes = useThemeStore.getState().customThemes;
 
   return {
-    theme: computeTheme(themeName, isDarkMode, customThemes),
+    theme,
     themeName,
     setThemeName: useThemeStore.getState().setThemeName,
     isAutoTheme,

@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from "react-native";
 import { create } from "zustand";
 import { ROUTINE_STORAGE_KEY, SETTINGS_STORAGE_KEY } from "../constants/storageKeys";
 import type { UserSettings } from "../types/user";
@@ -27,6 +28,10 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   isLoading: true,
 
   loadSettings: async () => {
+    if (Platform.OS === "web" && typeof window === "undefined") {
+      set({ isLoading: false });
+      return;
+    }
     try {
       const stored = await AsyncStorage.getItem(SETTINGS_STORAGE_KEY);
       if (stored) {
@@ -96,8 +101,10 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   },
 }));
 
-// Auto-hydrate settings store immediately on module load
-useSettingsStore.getState().loadSettings();
+// Auto-hydrate settings store immediately on client load (skip during Node SSR)
+if (Platform.OS !== "web" || typeof window !== "undefined") {
+  useSettingsStore.getState().loadSettings();
+}
 
 /* ---------------------- FINE-GRAINED SELECTORS ------------------------ */
 export const useHapticsEnabled = () =>
