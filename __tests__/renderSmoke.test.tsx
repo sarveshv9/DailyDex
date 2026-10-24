@@ -1,3 +1,18 @@
+import React from "react";
+import { render } from "@testing-library/react-native";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ThemeProvider } from "../context/ThemeContext";
+import { SettingsProvider } from "../context/SettingsContext";
+import { AudioProvider } from "../context/AudioContext";
+import { TimerProvider } from "../context/TimerContext";
+
+import HomeScreen from "../app/(tabs)/index";
+import TodoScreen from "../app/(tabs)/todo";
+import FocusScreen from "../app/focus";
+import RoutineScreen from "../app/routine";
+import SetupScreen from "../app/setup";
+import ProfileScreen from "../app/(tabs)/profile";
+
 jest.mock("lucide-react-native", () => ({}));
 
 jest.mock("@react-native-async-storage/async-storage", () =>
@@ -151,21 +166,6 @@ jest.mock("react-native-safe-area-context", () => {
     useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
   };
 });
-
-import React from "react";
-import { render } from "@testing-library/react-native";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ThemeProvider } from "../context/ThemeContext";
-import { SettingsProvider } from "../context/SettingsContext";
-import { AudioProvider } from "../context/AudioContext";
-import { TimerProvider } from "../context/TimerContext";
-
-import HomeScreen from "../app/(tabs)/index";
-import TodoScreen from "../app/(tabs)/todo";
-import FocusScreen from "../app/focus";
-import RoutineScreen from "../app/routine";
-import SetupScreen from "../app/setup";
-import ProfileScreen from "../app/(tabs)/profile";
 
 describe("Screen Render Smoke Tests (Fails on Error, SSR window crash, or Maximum update depth)", () => {
   let consoleErrors: string[] = [];

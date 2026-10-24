@@ -17,7 +17,7 @@ import { SETUP_STORAGE_KEY } from "../constants/storageKeys";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "../utils/queryClient";
 import { useSettingsStore } from "../stores/settingsStore";
-import { useThemeStore, useThemeLoaded } from "../stores/themeStore";
+import { useThemeStore } from "../stores/themeStore";
 
 // Prevent splash screen from auto-hiding until initial stores and fonts are ready
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -30,7 +30,6 @@ function RootLayoutNav() {
     UbuntuMedium: require("../assets/fonts/Ubuntu-Medium.ttf"),
   });
 
-  const isThemeLoaded = useThemeLoaded();
   const [themeReady, setThemeReady] = useState(false);
   const [isSetupComplete, setIsSetupComplete] = useState<boolean | null>(null);
   const [fallbackTimedOut, setFallbackTimedOut] = useState(false);

@@ -32,6 +32,13 @@ import { TimePicker } from "../ui/TimePicker";
 import { DaysOfWeekPicker, DurationPicker, IconPickerModal, SubtaskList } from "../forms";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
+import {
+  DAYS_OF_WEEK,
+  DURATION_PRESETS,
+  TASK_COLORS,
+  FALLBACK_COLORS,
+  formatDuration,
+} from "../../hooks/useRoutineTaskForm";
 
 interface TaskModalProps {
   visible: boolean;
@@ -45,14 +52,6 @@ interface TaskModalProps {
 }
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
-
-import {
-  DAYS_OF_WEEK,
-  DURATION_PRESETS,
-  TASK_COLORS,
-  FALLBACK_COLORS,
-  formatDuration,
-} from "../../hooks/useRoutineTaskForm";
 
 const TaskModal: React.FC<TaskModalProps> = ({
   visible,

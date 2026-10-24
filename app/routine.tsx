@@ -249,7 +249,7 @@ export default function RoutineScreen() {
     pagerX.setValue(0);
   }, [pageDates, pagerX]);
 
-  // PanResponder for native gesture handling
+  // PanResponder for native gesture handling - created once with referentially stable dependencies
   const pagerPanResponder = useMemo(
     () =>
       Platform.OS === 'web'
@@ -271,7 +271,8 @@ export default function RoutineScreen() {
               const LEFT = g.dx < -60 || g.vx < -0.8;
               const RIGHT = g.dx > 60 || g.vx > 0.8;
               if (LEFT || RIGHT) {
-                const target = LEFT ? -SCREEN_WIDTH : SCREEN_WIDTH;
+                const screenWidth = Dimensions.get('window').width;
+                const target = LEFT ? -screenWidth : screenWidth;
                 Animated.timing(pagerX, {
                   toValue: target,
                   duration: 220,
@@ -289,7 +290,8 @@ export default function RoutineScreen() {
               }
             },
           }),
-    [SCREEN_WIDTH, shiftDate, pagerX]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
   );
 
   const listHeaderPanResponder = useMemo(

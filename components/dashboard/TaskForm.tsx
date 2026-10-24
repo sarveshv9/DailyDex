@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Animated,
@@ -26,10 +26,14 @@ import {
   RoutineItem,
   SubTask,
   guessRoutineIconKey,
-  ICON_GROUPS,
 } from "../../utils/utils";
 import { TimePicker } from "../ui/TimePicker";
 import { DaysOfWeekPicker, DurationPicker, IconPickerModal } from "../forms";
+import {
+  DAYS_OF_WEEK,
+  DURATION_PRESETS,
+  formatDuration,
+} from "../../hooks/useRoutineTaskForm";
 
 /* ─────────────────────────────── Types ──────────────────────────────── */
 
@@ -62,12 +66,6 @@ interface StackedTask {
 /* ─────────────────────────────── Constants ──────────────────────────── */
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
-
-import {
-  DAYS_OF_WEEK,
-  DURATION_PRESETS,
-  formatDuration,
-} from "../../hooks/useRoutineTaskForm";
 
 const QUICK_INSPIRATIONS = [
   { task: "Meditate", duration: 15, icon: "meditate" },

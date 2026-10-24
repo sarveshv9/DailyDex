@@ -1,9 +1,3 @@
-jest.mock("lucide-react-native", () => ({}));
-
-jest.mock("@react-native-async-storage/async-storage", () =>
-  require("@react-native-async-storage/async-storage/jest/async-storage-mock")
-);
-
 import React from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { render } from "@testing-library/react-native";
@@ -20,9 +14,14 @@ import {
   THEME_STORAGE_KEY,
   DARK_MODE_STORAGE_KEY,
   AUTO_THEME_STORAGE_KEY,
-  CUSTOM_THEMES_STORAGE_KEY,
   STORAGE_KEYS,
 } from "../constants/storageKeys";
+
+jest.mock("lucide-react-native", () => ({}));
+
+jest.mock("@react-native-async-storage/async-storage", () =>
+  require("@react-native-async-storage/async-storage/jest/async-storage-mock")
+);
 
 describe("Store Hydration from Legacy Storage Shapes", () => {
   beforeEach(async () => {
@@ -117,12 +116,12 @@ describe("Store Hydration from Legacy Storage Shapes", () => {
       warnSpy.mockRestore();
     });
 
-    it("guarantees that a delayed hydration cannot overwrite in-flight user changes", async () => {
-      // Seed disk with stale settings
-      const staleDiskPayload = {
-        notifications: { taskReminders: true },
+    it("guarantees that a delayed hydration cannot overwrite in-flight user changes and preserves untouched saved keys", async () => {
+      // Seed disk with saved settings: non-default musicPreference and disabled reminders
+      const savedDiskPayload = {
+        notifications: { taskReminders: false },
         hapticsEnabled: false,
-        musicPreference: 1,
+        musicPreference: 3,
       };
 
       let resolveDiskRead!: (val: string | null) => void;
@@ -135,18 +134,20 @@ describe("Store Hydration from Legacy Storage Shapes", () => {
       // Start hydration (in-flight)
       const loadPromise = useSettingsStore.getState().loadSettings();
 
-      // User makes an intentional setting change before disk read resolves
+      // User makes an intentional setting change ONLY to haptics before disk read resolves
       await useSettingsStore.getState().setHapticsEnabled(true);
-      await useSettingsStore.getState().setMusicPreference(9);
 
-      // Disk read finishes later with stale data
-      resolveDiskRead(JSON.stringify(staleDiskPayload));
+      // Disk read finishes later with saved disk data
+      resolveDiskRead(JSON.stringify(savedDiskPayload));
       await loadPromise;
 
-      // Assert user changes were preserved and NOT overwritten by stale disk payload
       const state = useSettingsStore.getState();
+      // 1. User modification must survive
       expect(state.settings.hapticsEnabled).toBe(true);
-      expect(state.settings.musicPreference).toBe(9);
+      // 2. Untouched saved key from disk must survive (not replaced by DEFAULT_SETTINGS 0)
+      expect(state.settings.musicPreference).toBe(3);
+      // 3. Untouched saved nested key from disk must survive (not replaced by DEFAULT_SETTINGS true)
+      expect(state.settings.notifications.taskReminders).toBe(false);
     });
   });
 

@@ -5,6 +5,7 @@ import * as Haptics from "../utils/haptics";
 import * as Notifications from "expo-notifications";
 import { cancelFocusTimerAlarm, scheduleFocusTimerAlarm } from "../utils/notifications";
 import { calculateRemainingSeconds } from "../utils/timeMath";
+import { TIMER_STORAGE_KEY } from "../constants/storageKeys";
 
 export type PomodoroPhase = "work" | "shortBreak" | "longBreak";
 
@@ -13,8 +14,6 @@ export const POMODORO_DURATIONS: Record<PomodoroPhase, number> = {
   shortBreak: 5 * 60,
   longBreak: 15 * 60,
 };
-
-import { STORAGE_KEYS, TIMER_STORAGE_KEY } from "../constants/storageKeys";
 
 export { TIMER_STORAGE_KEY };
 export const SESSIONS_BEFORE_LONG_BREAK = 4;

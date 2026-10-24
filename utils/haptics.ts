@@ -5,13 +5,13 @@
  */
 import { Platform } from "react-native";
 
-// Re-export the types so consumers can still reference them
-export { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
-
 import {
   ImpactFeedbackStyle,
   NotificationFeedbackType,
 } from "expo-haptics";
+
+// Re-export the types so consumers can still reference them
+export { ImpactFeedbackStyle, NotificationFeedbackType };
 
 export const selectionAsync = async (): Promise<void> => {
   if (Platform.OS === "web") return;

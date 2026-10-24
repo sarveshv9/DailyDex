@@ -1,10 +1,9 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { STATS_STORAGE_KEY } from "../constants/storageKeys";
 
-export { STATS_STORAGE_KEY };
-
 import type { DailyStats, UserStats } from "../types/stats";
 
+export { STATS_STORAGE_KEY };
 export type { DailyStats, UserStats };
 
 const DEFAULT_STATS: UserStats = {

@@ -1,6 +1,5 @@
 import React, { useMemo } from "react";
 import {
-  Pressable,
   StyleProp,
   StyleSheet,
   Text,
@@ -9,7 +8,6 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../context/ThemeContext";
-import { useAppHaptics } from "../../hooks/useAppHaptics";
 import { themeTokens } from "../../constants/themeTokens";
 import { Theme } from "../../styles/shared";
 import { Button } from "./Button";
@@ -34,14 +32,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   style,
 }) => {
   const { theme } = useTheme();
-  const { light } = useAppHaptics();
   const styles = useMemo(() => getStyles(theme), [theme]);
-
-  const handleAction = () => {
-    if (!onAction) return;
-    light();
-    onAction();
-  };
 
   return (
     <View style={[styles.container, style]}>

@@ -1,4 +1,5 @@
 // src/utils/utils.ts
+import { Ionicons } from "@expo/vector-icons";
 import type { RoutineFormData, RoutineItem, SubTask } from "../types";
 import {
   addMinutesToTime,
@@ -29,8 +30,6 @@ export const isWakeupOrSleep = (item: RoutineItem): boolean => {
     taskName.includes('sleep')
   );
 };
-
-import { Ionicons } from "@expo/vector-icons";
 
 export const ICON_MAP: Record<string, keyof typeof Ionicons.glyphMap> = {
   // Morning

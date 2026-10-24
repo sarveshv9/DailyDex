@@ -2,7 +2,6 @@ import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useTheme } from "../../context/ThemeContext";
 import { useAppHaptics } from "../../hooks/useAppHaptics";
-import { Theme } from "../../styles/shared";
 
 export const DAYS_OF_WEEK = [
   { label: "S", full: "Sun", value: 0 },

@@ -23,7 +23,7 @@ export interface SettingsState {
   setMusicPreference: (id: number) => Promise<void>;
 }
 
-let settingsRevision = 0;
+let userChangedSettings: Partial<Settings> = {};
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
   settings: DEFAULT_SETTINGS,
@@ -34,20 +34,35 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       set({ isLoading: false });
       return;
     }
-    const startRevision = settingsRevision;
     try {
       const stored = await AsyncStorage.getItem(SETTINGS_STORAGE_KEY);
       if (stored) {
-        set((state) => ({
+        const diskSettings = JSON.parse(stored);
+        set(() => ({
           settings: {
             ...DEFAULT_SETTINGS,
-            ...JSON.parse(stored),
-            ...(settingsRevision > startRevision ? state.settings : {}),
+            ...diskSettings,
+            ...userChangedSettings,
+            notifications: {
+              ...DEFAULT_SETTINGS.notifications,
+              ...(diskSettings.notifications || {}),
+              ...(userChangedSettings.notifications || {}),
+            },
           },
           isLoading: false,
         }));
       } else {
-        set({ settings: DEFAULT_SETTINGS, isLoading: false });
+        set(() => ({
+          settings: {
+            ...DEFAULT_SETTINGS,
+            ...userChangedSettings,
+            notifications: {
+              ...DEFAULT_SETTINGS.notifications,
+              ...(userChangedSettings.notifications || {}),
+            },
+          },
+          isLoading: false,
+        }));
       }
     } catch (e) {
       console.error("Failed to load settings in settingsStore", e);
@@ -56,15 +71,22 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   },
 
   toggleNotification: async (key: keyof Settings["notifications"]) => {
-    settingsRevision++;
     const prev = get().settings;
     const nextVal = !prev.notifications[key];
-    const newSettings: Settings = {
-      ...prev,
+    const newNotifications = {
+      ...prev.notifications,
+      [key]: nextVal,
+    };
+    userChangedSettings = {
+      ...userChangedSettings,
       notifications: {
-        ...prev.notifications,
+        ...(userChangedSettings.notifications || {}),
         [key]: nextVal,
       },
+    };
+    const newSettings: Settings = {
+      ...prev,
+      notifications: newNotifications,
     };
 
     set({ settings: newSettings });
@@ -93,7 +115,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   },
 
   setHapticsEnabled: async (enabled: boolean) => {
-    settingsRevision++;
+    userChangedSettings = { ...userChangedSettings, hapticsEnabled: enabled };
     const newSettings: Settings = { ...get().settings, hapticsEnabled: enabled };
     set({ settings: newSettings });
     AsyncStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(newSettings)).catch((e) =>
@@ -102,7 +124,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   },
 
   setMusicPreference: async (id: number) => {
-    settingsRevision++;
+    userChangedSettings = { ...userChangedSettings, musicPreference: id };
     const newSettings: Settings = { ...get().settings, musicPreference: id };
     set({ settings: newSettings });
     AsyncStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(newSettings)).catch((e) =>

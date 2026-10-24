@@ -1,13 +1,12 @@
 import React from "react";
 import renderer, { act } from "react-test-renderer";
+import { useAppHaptics } from "../hooks/useAppHaptics";
+import { useSettingsStore, DEFAULT_SETTINGS } from "../stores/settingsStore";
+import * as Haptics from "../utils/haptics";
 
 jest.mock("@react-native-async-storage/async-storage", () =>
   require("@react-native-async-storage/async-storage/jest/async-storage-mock")
 );
-
-import { useAppHaptics } from "../hooks/useAppHaptics";
-import { useSettingsStore, DEFAULT_SETTINGS } from "../stores/settingsStore";
-import * as Haptics from "../utils/haptics";
 
 jest.mock("../utils/haptics", () => ({
   selectionAsync: jest.fn(),
