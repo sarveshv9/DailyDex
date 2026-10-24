@@ -14,6 +14,8 @@ import { requestNotificationPermissions } from "../utils/notifications";
 import { ErrorBoundary } from "../components/common/ErrorBoundary";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SETUP_STORAGE_KEY } from "../constants/storageKeys";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "../utils/queryClient";
 
 function RootLayoutNav() {
   const [fontsLoaded] = useFonts({
@@ -89,28 +91,30 @@ function RootLayoutNav() {
   }
 
   return (
-    <ErrorBoundary>
-      <ThemeProvider>
-        <SettingsProvider>
-          <AudioProvider>
-            <TimerProvider>
-              <StatusBar style="dark" />
-              <Stack>
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="(auth)/sign-in" options={{ headerShown: false }} />
-                <Stack.Screen name="routine" options={{ headerShown: false }} />
-                <Stack.Screen name="setup" options={{ headerShown: false }} />
-                <Stack.Screen name="privacy" options={{ headerShown: false, presentation: "card" }} />
-                <Stack.Screen name="terms" options={{ headerShown: false, presentation: "card" }} />
-                <Stack.Screen name="focus" options={{ headerShown: false, presentation: "modal" }} />
-                <Stack.Screen name="settings" options={{ presentation: "modal", headerShown: false }} />
-                <Stack.Screen name="+not-found" options={{ title: "Oops!" }} />
-              </Stack>
-            </TimerProvider>
-          </AudioProvider>
-        </SettingsProvider>
-      </ThemeProvider>
-    </ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <ErrorBoundary>
+        <ThemeProvider>
+          <SettingsProvider>
+            <AudioProvider>
+              <TimerProvider>
+                <StatusBar style="dark" />
+                <Stack>
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen name="(auth)/sign-in" options={{ headerShown: false }} />
+                  <Stack.Screen name="routine" options={{ headerShown: false }} />
+                  <Stack.Screen name="setup" options={{ headerShown: false }} />
+                  <Stack.Screen name="privacy" options={{ headerShown: false, presentation: "card" }} />
+                  <Stack.Screen name="terms" options={{ headerShown: false, presentation: "card" }} />
+                  <Stack.Screen name="focus" options={{ headerShown: false, presentation: "modal" }} />
+                  <Stack.Screen name="settings" options={{ presentation: "modal", headerShown: false }} />
+                  <Stack.Screen name="+not-found" options={{ title: "Oops!" }} />
+                </Stack>
+              </TimerProvider>
+            </AudioProvider>
+          </SettingsProvider>
+        </ThemeProvider>
+      </ErrorBoundary>
+    </QueryClientProvider>
   );
 }
 

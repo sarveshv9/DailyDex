@@ -1,5 +1,5 @@
-import { useCallback, useContext } from "react";
-import { SettingsContext } from "../context/SettingsContext";
+import { useCallback } from "react";
+import { useSettingsStore } from "../stores/settingsStore";
 import * as Haptics from "../utils/haptics";
 import { ImpactFeedbackStyle, NotificationFeedbackType } from "../utils/haptics";
 
@@ -11,8 +11,7 @@ export { ImpactFeedbackStyle, NotificationFeedbackType };
  * haptics in Settings, or when running on the Web.
  */
 export function useAppHaptics() {
-  const context = useContext(SettingsContext);
-  const isEnabled = context?.settings?.hapticsEnabled ?? true;
+  const isEnabled = useSettingsStore((s) => s.settings.hapticsEnabled);
 
   const impact = useCallback(
     async (style: ImpactFeedbackStyle = ImpactFeedbackStyle.Medium) => {

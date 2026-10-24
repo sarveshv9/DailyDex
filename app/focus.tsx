@@ -18,7 +18,8 @@ import Svg, { Circle } from "react-native-svg";
 
 import CrossPlatformSegmentedControl from "../components/common/CrossPlatformSegmentedControl";
 import { useTheme } from "../context/ThemeContext";
-import { useTimer } from "../context/TimerContext";
+import { useTimerStore } from "../stores/timerStore";
+import { CircularTimerDial } from "../components/focus/CircularTimerDial";
 import { Theme } from "../styles/shared";
 import * as Haptics from "../utils/haptics";
 
@@ -45,13 +46,27 @@ export default function FocusScreen() {
     const paramTaskName = (params.taskName as string) || "Deep Focus";
     const paramDuration = params.duration ? parseInt(params.duration as string, 10) : null;
 
-    const timer = useTimer();
+    const storeTaskId = useTimerStore((s) => s.taskId);
+    const storeTaskName = useTimerStore((s) => s.taskName);
+    const isActive = useTimerStore((s) => s.isActive);
+    const isCompleted = useTimerStore((s) => s.isCompleted);
+    const targetEndTime = useTimerStore((s) => s.targetEndTime);
+    const duration = useTimerStore((s) => s.duration);
+    const pomodoroMode = useTimerStore((s) => s.pomodoroMode);
+    const pomodoroPhase = useTimerStore((s) => s.pomodoroPhase);
+    const pomodoroSession = useTimerStore((s) => s.pomodoroSession);
+
+    const startTimer = useTimerStore((s) => s.startTimer);
+    const startPomodoro = useTimerStore((s) => s.startPomodoro);
+    const pauseTimer = useTimerStore((s) => s.pauseTimer);
+    const resumeTimer = useTimerStore((s) => s.resumeTimer);
+    const stopTimer = useTimerStore((s) => s.stopTimer);
+    const resetTimer = useTimerStore((s) => s.resetTimer);
+    const advancePomodoroPhase = useTimerStore((s) => s.advancePomodoroPhase);
 
     // Context timer match
-    const isCurrentTimer = timer.taskId === paramTaskId;
-    const isActive = isCurrentTimer && timer.isActive;
-    const isCompleted = isCurrentTimer && timer.isCompleted;
-    const isSessionInProgress = isCurrentTimer && timer.timeLeft > 0 && !isCompleted;
+    const isCurrentTimer = storeTaskId === paramTaskId;
+    const isSessionInProgress = isCurrentTimer && (isActive || targetEndTime !== null) && !isCompleted;
 
     // Available duration options, incorporating dynamic route duration if supplied
     const durationOptions = useMemo(() => {
@@ -83,20 +98,20 @@ export default function FocusScreen() {
 
     const startNewTimer = () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        timer.startTimer(paramTaskId, paramTaskName, selectedDuration);
+        startTimer(paramTaskId, paramTaskName, selectedDuration);
     };
 
     const startNewPomodoro = () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        timer.startPomodoro(paramTaskId, paramTaskName);
+        startPomodoro(paramTaskId, paramTaskName);
     };
 
     const toggleTimer = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        if (timer.isActive) {
-            timer.pauseTimer();
+        if (isActive) {
+            pauseTimer();
         } else {
-            timer.resumeTimer();
+            resumeTimer();
         }
     };
 
@@ -137,101 +152,21 @@ export default function FocusScreen() {
 
     const handleComplete = () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        timer.stopTimer();
+        stopTimer();
         router.back();
     };
 
     // Determine state
-    const showDurationPicker = !isCurrentTimer || (timer.timeLeft === 0 && !timer.isCompleted);
-
-    const displayTime = showDurationPicker
-        ? selectedMode === "Pomodoro"
-            ? 25 * 60
-            : selectedDuration
-        : timer.timeLeft;
-
-    const totalDuration = showDurationPicker
-        ? selectedMode === "Pomodoro"
-            ? 25 * 60
-            : selectedDuration
-        : timer.duration || displayTime || 1;
-
-    // Progress computation: drains from 1.0 down to 0 as time elapses
-    const progress = isCompleted
-        ? 0
-        : showDurationPicker
-        ? 1
-        : Math.max(0, Math.min(1, displayTime / totalDuration));
-
-    const strokeDashoffset = CIRCUMFERENCE * (1 - progress);
-
-    const formatTime = (seconds: number) => {
-        const m = Math.floor(seconds / 60);
-        const s = seconds % 60;
-        return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-    };
-
-    // Dynamic session status
-    const getStatusInfo = () => {
-        if (isCompleted) {
-            return {
-                label: "COMPLETED",
-                icon: "checkmark-circle" as const,
-                color: theme.colors.primary,
-            };
-        }
-        if (timer.pomodoroMode && !showDurationPicker) {
-            if (timer.pomodoroPhase === "work") {
-                return {
-                    label: "WORK SESSION",
-                    icon: "flame" as const,
-                    color: theme.colors.primary,
-                };
-            }
-            if (timer.pomodoroPhase === "shortBreak") {
-                return {
-                    label: "SHORT REST",
-                    icon: "cafe-outline" as const,
-                    color: theme.colors.secondary,
-                };
-            }
-            return {
-                label: "LONG REST",
-                icon: "bed-outline" as const,
-                color: theme.colors.secondary,
-            };
-        }
-        if (isActive) {
-            return {
-                label: "FOCUSING",
-                icon: "radio-button-on" as const,
-                color: theme.colors.primary,
-            };
-        }
-        if (timer.timeLeft < timer.duration && timer.timeLeft > 0 && !showDurationPicker) {
-            return {
-                label: "PAUSED",
-                icon: "pause-circle-outline" as const,
-                color: theme.colors.secondary,
-            };
-        }
-        return {
-            label: "READY",
-            icon: "hourglass-outline" as const,
-            color: theme.colors.secondary,
-        };
-    };
-
-    const statusInfo = getStatusInfo();
+    const showDurationPicker = !isCurrentTimer || (!targetEndTime && !isCompleted);
 
     // Reset is only enabled when the timer is paused
     const isResetEnabled = !isActive && !showDurationPicker && !isCompleted;
 
     // Check if on final phase of Pomodoro
     const isLastPomoPhase =
-        timer.pomodoroMode &&
-        timer.pomodoroSession >= 4 &&
-        timer.pomodoroPhase !== "work";
+        pomodoroMode &&
+        pomodoroSession >= 4 &&
+        pomodoroPhase !== "work";
 
     return (
         <SafeAreaView style={styles.container}>
@@ -280,121 +215,19 @@ export default function FocusScreen() {
                         <Text style={styles.taskLabel}>CURRENTLY FOCUSING ON</Text>
                     </View>
                     <Text style={styles.taskName} numberOfLines={2}>
-                        {isCurrentTimer && timer.taskName ? timer.taskName : paramTaskName}
+                        {isCurrentTimer && storeTaskName ? storeTaskName : paramTaskName}
                     </Text>
                 </View>
 
-                {/* Luminous Circular Timer Dial */}
-                <View style={styles.timerDialSection}>
-                    <View style={[styles.dialGlowRing, isActive && styles.dialGlowRingActive]}>
-                        <View style={styles.dialInnerContainer}>
-                            <BlurView
-                                intensity={isDarkMode ? 40 : 60}
-                                tint={
-                                    isDarkMode
-                                        ? "systemThickMaterialDark"
-                                        : "systemThickMaterialLight"
-                                }
-                                style={StyleSheet.absoluteFill}
-                                pointerEvents="none"
-                            />
-                            <View
-                                style={[
-                                    StyleSheet.absoluteFill,
-                                    { backgroundColor: theme.glass.cardBg },
-                                ]}
-                            />
-
-                            {/* SVG Progress Circle */}
-                            <Svg
-                                width={DIAL_SIZE}
-                                height={DIAL_SIZE}
-                                style={StyleSheet.absoluteFill}
-                            >
-                                {/* Track Ring */}
-                                <Circle
-                                    cx={DIAL_SIZE / 2}
-                                    cy={DIAL_SIZE / 2}
-                                    r={RADIUS}
-                                    stroke={
-                                        isDarkMode
-                                            ? "rgba(255, 255, 255, 0.08)"
-                                            : "rgba(0, 0, 0, 0.06)"
-                                    }
-                                    strokeWidth={STROKE_WIDTH}
-                                    fill="none"
-                                />
-                                {/* Active Radiant Progress Stroke */}
-                                <Circle
-                                    cx={DIAL_SIZE / 2}
-                                    cy={DIAL_SIZE / 2}
-                                    r={RADIUS}
-                                    stroke={theme.colors.primary}
-                                    strokeWidth={STROKE_WIDTH}
-                                    fill="none"
-                                    strokeDasharray={`${CIRCUMFERENCE} ${CIRCUMFERENCE}`}
-                                    strokeDashoffset={strokeDashoffset}
-                                    strokeLinecap="round"
-                                    rotation="-90"
-                                    origin={`${DIAL_SIZE / 2}, ${DIAL_SIZE / 2}`}
-                                />
-                            </Svg>
-
-                            {/* Center Dial Content */}
-                            <View
-                                style={styles.dialContent}
-                                accessible={true}
-                                accessibilityRole="progressbar"
-                                accessibilityLabel={`Timer: ${Math.floor(displayTime / 60)} minutes and ${displayTime % 60} seconds remaining`}
-                                accessibilityValue={{ min: 0, max: totalDuration, now: displayTime }}
-                            >
-                                {/* Session Status Tag */}
-                                <View
-                                    style={[
-                                        styles.statusTag,
-                                        {
-                                            backgroundColor: isDarkMode
-                                                ? "rgba(255,255,255,0.08)"
-                                                : "rgba(0,0,0,0.05)",
-                                            borderColor: `${statusInfo.color}35`,
-                                        },
-                                    ]}
-                                >
-                                    <Ionicons
-                                        name={statusInfo.icon}
-                                        size={12}
-                                        color={statusInfo.color}
-                                    />
-                                    <Text
-                                        style={[
-                                            styles.statusTagText,
-                                            { color: statusInfo.color },
-                                        ]}
-                                    >
-                                        {statusInfo.label}
-                                    </Text>
-                                </View>
-
-                                {/* Tabular Timer Text */}
-                                <Text style={styles.timerDigits}>
-                                    {formatTime(displayTime)}
-                                </Text>
-
-                                {/* Micro Subtitle / Remaining Indicator */}
-                                <Text style={styles.timerSubtext}>
-                                    {isCompleted
-                                        ? "Mindful Session Complete"
-                                        : showDurationPicker
-                                        ? `Ready • ${Math.round(displayTime / 60)} minutes`
-                                        : `${Math.round(progress * 100)}% remaining`}
-                                </Text>
-                            </View>
-                        </View>
-                    </View>
-                </View>
+                {/* Luminous Circular Timer Dial (Leaf component - ticks at 1Hz without re-rendering FocusScreen) */}
+                <CircularTimerDial
+                    isCurrentTimer={isCurrentTimer}
+                    selectedDuration={selectedDuration}
+                    selectedMode={selectedMode}
+                />
 
                 {/* Pomodoro Zen Cycle Indicator */}
-                {timer.pomodoroMode && !showDurationPicker && (
+                {pomodoroMode && !showDurationPicker && (
                     <View style={styles.pomoCycleCard}>
                         <BlurView
                             intensity={isDarkMode ? 20 : 40}
@@ -406,7 +239,7 @@ export default function FocusScreen() {
                             <View style={styles.pomoCycleTitleRow}>
                                 <Ionicons
                                     name={
-                                        timer.pomodoroPhase === "work"
+                                        pomodoroPhase === "work"
                                             ? "flame"
                                             : "cafe-outline"
                                     }
@@ -414,26 +247,26 @@ export default function FocusScreen() {
                                     color={theme.colors.primary}
                                 />
                                 <Text style={styles.pomoCycleTitle}>
-                                    Cycle {timer.pomodoroSession} of 4 •{" "}
-                                    {timer.pomodoroPhase === "work"
+                                    Cycle {pomodoroSession} of 4 •{" "}
+                                    {pomodoroPhase === "work"
                                         ? "Deep Focus"
-                                        : timer.pomodoroPhase === "shortBreak"
+                                        : pomodoroPhase === "shortBreak"
                                         ? "Short Rest"
                                         : "Long Rest"}
                                 </Text>
                             </View>
                             <Text style={styles.pomoCyclePhaseTag}>
-                                {timer.pomodoroPhase === "work" ? "25m" : timer.pomodoroPhase === "shortBreak" ? "5m" : "15m"}
+                                {pomodoroPhase === "work" ? "25m" : pomodoroPhase === "shortBreak" ? "5m" : "15m"}
                             </Text>
                         </View>
 
                         <View style={styles.pomoDotsRow}>
                             {[1, 2, 3, 4].map((s) => {
                                 const isSessionDone =
-                                    s < timer.pomodoroSession ||
-                                    (s === timer.pomodoroSession && timer.pomodoroPhase !== "work");
+                                    s < pomodoroSession ||
+                                    (s === pomodoroSession && pomodoroPhase !== "work");
                                 const isSessionActive =
-                                    s === timer.pomodoroSession && timer.pomodoroPhase === "work";
+                                    s === pomodoroSession && pomodoroPhase === "work";
 
                                 return (
                                     <View
@@ -562,7 +395,7 @@ export default function FocusScreen() {
                                 {(process.env.EXPO_PUBLIC_E2E === '1' || process.env.EXPO_PUBLIC_E2E === 'true') && (
                                     <Pressable
                                         testID="focus-start-debug-20s-btn"
-                                        onPress={() => timer.startTimer(paramTaskId, paramTaskName, 20)}
+                                        onPress={() => startTimer(paramTaskId, paramTaskName, 20)}
                                         style={{ marginTop: 8, padding: 8, alignItems: "center" }}
                                     >
                                         <Text style={{ fontSize: 12, color: theme.colors.textSecondary }}>
@@ -656,7 +489,7 @@ export default function FocusScreen() {
                                     color={theme.colors.primary}
                                 />
                                 <Text style={styles.completionPillText}>
-                                    {Math.round(totalDuration / 60)} minutes logged to your journey
+                                    {Math.round((duration || selectedDuration) / 60)} minutes logged to your journey
                                 </Text>
                             </View>
                         </View>
@@ -685,7 +518,7 @@ export default function FocusScreen() {
                         <Pressable
                             onPress={() => {
                                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                timer.stopTimer();
+                                stopTimer();
                             }}
                             accessibilityRole="button"
                             accessibilityLabel="Start another focus session"
@@ -719,7 +552,7 @@ export default function FocusScreen() {
                                     !isActive && styles.actionPillResume,
                                     isActive && styles.actionPillPause,
                                     pressed && styles.pressedScale,
-                                ]}
+                                    ]}
                             >
                                 <Ionicons
                                     name={isActive ? "pause" : "play"}
@@ -743,7 +576,7 @@ export default function FocusScreen() {
                                 onPress={() => {
                                     if (!isResetEnabled) return;
                                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                    timer.resetTimer();
+                                    resetTimer();
                                 }}
                                 accessibilityRole="button"
                                 accessibilityLabel="Reset timer to beginning"
@@ -770,11 +603,11 @@ export default function FocusScreen() {
                             </Pressable>
 
                             {/* Pomodoro Advance Phase Pill */}
-                            {timer.pomodoroMode && (
+                            {pomodoroMode && (
                                 <Pressable
                                     onPress={() => {
                                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                        timer.advancePomodoroPhase();
+                                        advancePomodoroPhase();
                                     }}
                                     accessibilityRole="button"
                                     accessibilityLabel={isLastPomoPhase ? "Finish Pomodoro session" : "Skip to next phase"}
@@ -922,7 +755,7 @@ export default function FocusScreen() {
                                         onPress={() => {
                                             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
                                             setConfirmModalVisible(false);
-                                            timer.stopTimer();
+                                            stopTimer();
                                             router.back();
                                         }}
                                     >
@@ -979,7 +812,7 @@ export default function FocusScreen() {
                                         onPress={() => {
                                             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
                                             setConfirmModalVisible(false);
-                                            timer.stopTimer();
+                                            stopTimer();
                                             router.back();
                                         }}
                                     >

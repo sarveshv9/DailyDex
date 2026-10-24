@@ -16,6 +16,7 @@ import {
 import { darkThemes, lightThemes, Theme } from "../../styles/shared";
 import { BottomSheet } from "./BottomSheet";
 import { useTheme } from "../../context/ThemeContext";
+import { usePokemonQuery } from "../../api/pokemon";
 
 type ThemeSelectionModalProps = {
     visible: boolean;
@@ -91,57 +92,58 @@ export function ThemeSelectionModal({
     const [previewName, setPreviewName] = React.useState<string | null>(null);
     const [previewId, setPreviewId] = React.useState<string | null>(null);
     const [previewError, setPreviewError] = React.useState(false);
-    const searchTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+    const [debouncedQuery, setDebouncedQuery] = React.useState("");
 
     // Reset form
     React.useEffect(() => {
         if (!showCustomForm) {
             setCPokemonName(""); setCColor(SPECIES_COLORS.red); setCCustomHex("");
+            setDebouncedQuery("");
             setPreviewSprite(null); setPreviewName(null); setPreviewId(null); setPreviewError(false);
         }
     }, [showCustomForm]);
 
-    // Debounced Pokemon search for live preview
+    // Debounce the input by 400ms
     React.useEffect(() => {
-        if (searchTimer.current) clearTimeout(searchTimer.current);
-        setPreviewError(false);
+        const timer = setTimeout(() => {
+            setDebouncedQuery(cPokemonName.trim());
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [cPokemonName]);
 
-        if (!cPokemonName.trim()) {
-            setPreviewSprite(null); setPreviewName(null); setPreviewId(null);
+    // TanStack Query with automatic caching and deduplication
+    const { data: pokemonData, isError: queryError, isLoading: queryLoading } = usePokemonQuery(
+        debouncedQuery,
+        showCustomForm && debouncedQuery.length > 0
+    );
+
+    React.useEffect(() => {
+        if (!debouncedQuery) {
+            setPreviewSprite(null); setPreviewName(null); setPreviewId(null); setPreviewError(false);
             return;
         }
 
-        searchTimer.current = setTimeout(async () => {
-            try {
-                const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${cPokemonName.toLowerCase().trim()}`);
-                if (!res.ok) throw new Error();
-                const data = await res.json();
-                setPreviewSprite(data.sprites.front_default);
-                setPreviewName(data.name.charAt(0).toUpperCase() + data.name.slice(1));
-                setPreviewId(data.id.toString());
-                setPreviewError(false);
+        if (queryError) {
+            setPreviewSprite(null); setPreviewName(null); setPreviewId(null);
+            setPreviewError(true);
+            return;
+        }
 
-                // Auto-pick accent color from the Pokémon's physical species color
-                if (data.species && data.species.url) {
-                    const speciesRes = await fetch(data.species.url);
-                    if (speciesRes.ok) {
-                        const speciesData = await speciesRes.json();
-                        const colorName = speciesData.color?.name;
-                        const autoColor = SPECIES_COLORS[colorName];
-                        if (autoColor) {
-                            setCColor(autoColor);
-                            setCCustomHex('');
-                        }
-                    }
+        if (pokemonData) {
+            setPreviewSprite(pokemonData.spriteUrl);
+            setPreviewName(pokemonData.name);
+            setPreviewId(pokemonData.id);
+            setPreviewError(false);
+
+            if (pokemonData.speciesColorName) {
+                const autoColor = SPECIES_COLORS[pokemonData.speciesColorName];
+                if (autoColor) {
+                    setCColor(autoColor);
+                    setCCustomHex("");
                 }
-            } catch {
-                setPreviewSprite(null); setPreviewName(null); setPreviewId(null);
-                setPreviewError(true);
             }
-        }, 600);
-
-        return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
-    }, [cPokemonName]);
+        }
+    }, [debouncedQuery, pokemonData, queryError]);
 
     const resolvedColor = cCustomHex.match(/^#[0-9A-Fa-f]{6}$/) ? cCustomHex : cColor;
 

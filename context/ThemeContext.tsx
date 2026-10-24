@@ -1,14 +1,9 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
-import { LayoutAnimation, Platform, UIManager } from 'react-native';
-import {
-  AUTO_THEME_STORAGE_KEY,
-  CUSTOM_THEMES_STORAGE_KEY,
-  DARK_MODE_STORAGE_KEY,
-  STORAGE_KEYS,
-  THEME_STORAGE_KEY,
-} from '../constants/storageKeys';
-import { darkThemes, lightThemes, Theme, ThemeName } from '../styles/shared';
+import React, { createContext, ReactNode, useContext, useEffect, useMemo } from 'react';
+import { Platform, UIManager } from 'react-native';
+import { useThemeStore, computeTheme, CustomThemeConfig } from '../stores/themeStore';
+import { Theme, ThemeName } from '../styles/shared';
+
+export type { CustomThemeConfig };
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -18,15 +13,9 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   }
 }
 
-export interface CustomThemeConfig {
-  pokemonId: string;
-  primaryColor: string;
-  name: string;
-}
-
 export interface ThemeContextType {
   theme: Theme;
-  themeName: ThemeName | string; // Allow custom strings like "custom_pikachu"
+  themeName: ThemeName | string;
   setThemeName: (name: string) => void;
   isAutoTheme: boolean;
   setIsAutoTheme: (val: boolean) => void;
@@ -37,25 +26,20 @@ export interface ThemeContextType {
   removeCustomTheme: (id: string) => void;
 }
 
-const ThemeContext = createContext<ThemeContextType>({
-  theme: lightThemes.pokeball,
-  themeName: 'pokeball',
-  setThemeName: () => { },
-  isAutoTheme: false,
-  setIsAutoTheme: () => { },
-  isDarkMode: false,
-  setIsDarkMode: () => { },
-  customThemes: {},
-  addCustomTheme: () => { },
-  removeCustomTheme: () => { },
-});
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
-  const [themeName, setThemeNameState] = useState<string>('pokeball');
-  const [isAutoTheme, setIsAutoThemeState] = useState<boolean>(false);
-  const [isDarkMode, setIsDarkModeState] = useState<boolean>(false);
-  const [customThemes, setCustomThemesState] = useState<Record<string, CustomThemeConfig>>({});
-  const [isLoaded, setIsLoaded] = useState<boolean>(false);
+  const themeName = useThemeStore((s) => s.themeName);
+  const isAutoTheme = useThemeStore((s) => s.isAutoTheme);
+  const isDarkMode = useThemeStore((s) => s.isDarkMode);
+  const customThemes = useThemeStore((s) => s.customThemes);
+  const isLoaded = useThemeStore((s) => s.isLoaded);
+
+  const setThemeName = useThemeStore((s) => s.setThemeName);
+  const setIsAutoTheme = useThemeStore((s) => s.setIsAutoTheme);
+  const setIsDarkMode = useThemeStore((s) => s.setIsDarkMode);
+  const addCustomTheme = useThemeStore((s) => s.addCustomTheme);
+  const removeCustomTheme = useThemeStore((s) => s.removeCustomTheme);
 
   useEffect(() => {
     // Inject gentle color transition for Web platform globally
@@ -70,150 +54,68 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
       `;
       document.head.appendChild(style);
     }
-
-    const loadTheme = async () => {
-      try {
-        let localThemeName = 'pokeball';
-        let localIsDarkMode = false;
-        let localIsAutoTheme = false;
-        let localCustomThemes: Record<string, CustomThemeConfig> = {};
-
-        // 1. Load Local State
-        const savedTheme = await AsyncStorage.getItem(THEME_STORAGE_KEY);
-        if (savedTheme) {
-          if (savedTheme.startsWith('light-')) {
-            const stripped = savedTheme.replace('light-', '');
-            localThemeName = (stripped === 'default' ? 'pokeball' : stripped);
-            localIsDarkMode = false;
-          } else {
-            localThemeName = savedTheme === 'default' ? 'pokeball' : savedTheme;
-          }
-        }
-
-        const autoTheme = await AsyncStorage.getItem(AUTO_THEME_STORAGE_KEY);
-        if (autoTheme !== null) {
-          localIsAutoTheme = autoTheme === 'true';
-        }
-
-        const darkMode = await AsyncStorage.getItem(DARK_MODE_STORAGE_KEY);
-        if (darkMode !== null) {
-          localIsDarkMode = darkMode === 'true';
-        }
-
-        const customCfg = await AsyncStorage.getItem(CUSTOM_THEMES_STORAGE_KEY);
-        if (customCfg) {
-          try {
-            localCustomThemes = JSON.parse(customCfg);
-          } catch (e) {}
-        } else {
-             const oldCustomCfg = await AsyncStorage.getItem(STORAGE_KEYS.LEGACY_CUSTOM_THEME);
-             if (oldCustomCfg) {
-                 try {
-                     const parsed = JSON.parse(oldCustomCfg);
-                     if (parsed && parsed.pokemonId) {
-                         localCustomThemes = { [parsed.pokemonId]: parsed };
-                     }
-                 } catch(e) {}
-             }
-        }
-
-        setThemeNameState(localThemeName);
-        setIsAutoThemeState(localIsAutoTheme);
-        setIsDarkModeState(localIsDarkMode);
-        setCustomThemesState(localCustomThemes);
-
-      } catch (e) {
-        console.error('Failed to load theme', e);
-      } finally {
-        setIsLoaded(true);
-      }
-    };
-    loadTheme();
   }, []);
 
-  const setThemeName = async (name: string) => {
-    if (Platform.OS !== 'web') LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setThemeNameState(name);
-    try {
-      await AsyncStorage.setItem(THEME_STORAGE_KEY, name);
-    } catch (e) {
-      console.error('Failed to save theme', e);
-    }
-  };
-
-  const setIsAutoTheme = async (val: boolean) => {
-    setIsAutoThemeState(val);
-    try {
-      await AsyncStorage.setItem(AUTO_THEME_STORAGE_KEY, String(val));
-    } catch (e) {
-      console.error('Failed to save auto theme', e);
-    }
-  };
-
-  const setIsDarkMode = async (val: boolean) => {
-    if (Platform.OS !== 'web') LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setIsDarkModeState(val);
-    try {
-      await AsyncStorage.setItem(DARK_MODE_STORAGE_KEY, String(val));
-    } catch (e) {
-      console.error('Failed to save dark mode toggle', e);
-    }
-  }
-
-  const addCustomTheme = async (id: string, config: CustomThemeConfig) => {
-    const updated = { ...customThemes, [id]: config };
-    setCustomThemesState(updated);
-    if (Platform.OS !== 'web') LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setThemeNameState(`custom_${id}`);
-    try {
-      await AsyncStorage.setItem(CUSTOM_THEMES_STORAGE_KEY, JSON.stringify(updated));
-      await AsyncStorage.setItem(THEME_STORAGE_KEY, `custom_${id}`);
-    } catch (e) {
-      console.error('Failed to save custom themes', e);
-    }
-  };
-
-  const removeCustomTheme = async (id: string) => {
-    const updated = { ...customThemes };
-    delete updated[id];
-    setCustomThemesState(updated);
-    try {
-      await AsyncStorage.setItem(CUSTOM_THEMES_STORAGE_KEY, JSON.stringify(updated));
-    } catch (e) {
-      console.error('Failed to remove custom theme from storage', e);
-    }
-  };
-
   const theme = useMemo<Theme>(() => {
-    // Determine the active theme palette mapping based on dark mode setting.
-    const activePalette = isDarkMode ? darkThemes : lightThemes;
-    
-    if (themeName.startsWith('custom_')) {
-      const customId = themeName.replace('custom_', '');
-      const config = customThemes[customId];
-      if (config) {
-        const baseObj = activePalette.pokeball || activePalette.default;
-        return {
-          ...baseObj,
-          colors: {
-            ...baseObj.colors,
-            primary: config.primaryColor,
-          }
-        };
-      }
-    }
-    
-    // Fallback if custom ID is missing, or return valid theme
-    return activePalette[themeName as ThemeName] || activePalette.pokeball || activePalette.default;
+    return computeTheme(themeName, isDarkMode, customThemes);
   }, [themeName, isDarkMode, customThemes]);
+
+  const value = useMemo<ThemeContextType>(
+    () => ({
+      theme,
+      themeName,
+      setThemeName,
+      isAutoTheme,
+      setIsAutoTheme,
+      isDarkMode,
+      setIsDarkMode,
+      customThemes,
+      addCustomTheme,
+      removeCustomTheme,
+    }),
+    [
+      theme,
+      themeName,
+      setThemeName,
+      isAutoTheme,
+      setIsAutoTheme,
+      isDarkMode,
+      setIsDarkMode,
+      customThemes,
+      addCustomTheme,
+      removeCustomTheme,
+    ]
+  );
 
   if (!isLoaded) return null;
 
   return (
-    <ThemeContext.Provider value={{ theme, themeName, setThemeName, isAutoTheme, setIsAutoTheme, isDarkMode, setIsDarkMode, customThemes, addCustomTheme, removeCustomTheme }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   );
 };
 
-export const useTheme = () => useContext(ThemeContext);
+export const useTheme = (): ThemeContextType => {
+  const context = useContext(ThemeContext);
+  if (context) return context;
+
+  // Fallback direct store access if used outside ThemeProvider
+  const themeName = useThemeStore.getState().themeName;
+  const isAutoTheme = useThemeStore.getState().isAutoTheme;
+  const isDarkMode = useThemeStore.getState().isDarkMode;
+  const customThemes = useThemeStore.getState().customThemes;
+
+  return {
+    theme: computeTheme(themeName, isDarkMode, customThemes),
+    themeName,
+    setThemeName: useThemeStore.getState().setThemeName,
+    isAutoTheme,
+    setIsAutoTheme: useThemeStore.getState().setIsAutoTheme,
+    isDarkMode,
+    setIsDarkMode: useThemeStore.getState().setIsDarkMode,
+    customThemes,
+    addCustomTheme: useThemeStore.getState().addCustomTheme,
+    removeCustomTheme: useThemeStore.getState().removeCustomTheme,
+  };
+};

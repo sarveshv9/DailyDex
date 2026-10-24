@@ -6,7 +6,7 @@ jest.mock("@react-native-async-storage/async-storage", () =>
 );
 
 import { useAppHaptics } from "../hooks/useAppHaptics";
-import { SettingsContext } from "../context/SettingsContext";
+import { useSettingsStore, DEFAULT_SETTINGS } from "../stores/settingsStore";
 import * as Haptics from "../utils/haptics";
 
 jest.mock("../utils/haptics", () => ({
@@ -31,6 +31,10 @@ describe("useAppHaptics", () => {
   });
 
   it("triggers haptic calls when haptics are enabled in settings", async () => {
+    useSettingsStore.setState({
+      settings: { ...DEFAULT_SETTINGS, hapticsEnabled: true },
+    });
+
     let hookResult: ReturnType<typeof useAppHaptics> | null = null;
 
     const TestComponent = () => {
@@ -38,24 +42,8 @@ describe("useAppHaptics", () => {
       return <></>;
     };
 
-    const mockContext = {
-      settings: {
-        hapticsEnabled: true,
-        notifications: { taskReminders: true },
-        musicPreference: 0,
-      },
-      toggleNotification: jest.fn(),
-      setHapticsEnabled: jest.fn(),
-      setMusicPreference: jest.fn(),
-      isLoading: false,
-    };
-
     await act(async () => {
-      renderer.create(
-        <SettingsContext.Provider value={mockContext}>
-          <TestComponent />
-        </SettingsContext.Provider>
-      );
+      renderer.create(<TestComponent />);
     });
 
     expect(hookResult!.isEnabled).toBe(true);
@@ -77,6 +65,12 @@ describe("useAppHaptics", () => {
   });
 
   it("suppresses haptic calls when haptics are disabled in settings", async () => {
+    act(() => {
+      useSettingsStore.setState({
+        settings: { ...DEFAULT_SETTINGS, hapticsEnabled: false },
+      });
+    });
+
     let hookResult: ReturnType<typeof useAppHaptics> | null = null;
 
     const TestComponent = () => {
@@ -84,24 +78,8 @@ describe("useAppHaptics", () => {
       return <></>;
     };
 
-    const mockContext = {
-      settings: {
-        hapticsEnabled: false,
-        notifications: { taskReminders: true },
-        musicPreference: 0,
-      },
-      toggleNotification: jest.fn(),
-      setHapticsEnabled: jest.fn(),
-      setMusicPreference: jest.fn(),
-      isLoading: false,
-    };
-
     await act(async () => {
-      renderer.create(
-        <SettingsContext.Provider value={mockContext}>
-          <TestComponent />
-        </SettingsContext.Provider>
-      );
+      renderer.create(<TestComponent />);
     });
 
     expect(hookResult!.isEnabled).toBe(false);
