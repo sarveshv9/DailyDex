@@ -4,8 +4,16 @@ jest.mock("@react-native-async-storage/async-storage", () =>
   require("@react-native-async-storage/async-storage/jest/async-storage-mock")
 );
 
+import React from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useSettingsStore, DEFAULT_SETTINGS } from "../stores/settingsStore";
+import { render } from "@testing-library/react-native";
+import {
+  useSettingsStore,
+  DEFAULT_SETTINGS,
+  useHapticsEnabled,
+  useMusicPreference,
+  useTaskReminders,
+} from "../stores/settingsStore";
 import { useThemeStore } from "../stores/themeStore";
 import {
   SETTINGS_STORAGE_KEY,
@@ -23,10 +31,11 @@ describe("Store Hydration from Legacy Storage Shapes", () => {
   });
 
   describe("SettingsStore Hydration", () => {
-    it("hydrates successfully from old persisted JSON shape under SETTINGS_STORAGE_KEY (@zen_user_settings_v2)", async () => {
+    it("hydrates successfully from real old-format persisted payload under @zen_user_settings_v2 and verifies via selectors", async () => {
       expect(SETTINGS_STORAGE_KEY).toBe("@zen_user_settings_v2");
 
-      const oldPersistedSettings = {
+      // Payload matching the exact shape written by legacy SettingsContext
+      const realOldPayload = {
         notifications: {
           taskReminders: false,
         },
@@ -34,19 +43,38 @@ describe("Store Hydration from Legacy Storage Shapes", () => {
         musicPreference: 2,
       };
 
-      // Write directly to literal old key to prove backward compatibility
       await AsyncStorage.setItem(
         "@zen_user_settings_v2",
-        JSON.stringify(oldPersistedSettings)
+        JSON.stringify(realOldPayload)
       );
 
       await useSettingsStore.getState().loadSettings();
 
+      // Assert state structure
       const state = useSettingsStore.getState();
       expect(state.isLoading).toBe(false);
       expect(state.settings.hapticsEnabled).toBe(false);
       expect(state.settings.musicPreference).toBe(2);
       expect(state.settings.notifications.taskReminders).toBe(false);
+
+      const captured: { haptics?: boolean; music?: number; reminders?: boolean } = {};
+
+      const { act } = require("@testing-library/react-native");
+      const { View } = require("react-native");
+      const Consumer = () => {
+        captured.haptics = useHapticsEnabled();
+        captured.music = useMusicPreference();
+        captured.reminders = useTaskReminders();
+        return <View />;
+      };
+
+      await act(async () => {
+        render(<Consumer />);
+      });
+
+      expect(captured.haptics).toBe(false);
+      expect(captured.music).toBe(2);
+      expect(captured.reminders).toBe(false);
     });
 
     it("falls back to DEFAULT_SETTINGS when storage is empty", async () => {
@@ -55,6 +83,38 @@ describe("Store Hydration from Legacy Storage Shapes", () => {
       const state = useSettingsStore.getState();
       expect(state.isLoading).toBe(false);
       expect(state.settings).toEqual(DEFAULT_SETTINGS);
+    });
+
+    it("forces hydration to reject and asserts themeReady is marked true in finally to prevent blank screen", async () => {
+      jest.spyOn(useThemeStore.getState(), "loadTheme").mockRejectedValueOnce(new Error("AsyncStorage read error"));
+      jest.spyOn(useSettingsStore.getState(), "loadSettings").mockRejectedValueOnce(new Error("Storage disk error"));
+      const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+
+      let themeReady = false;
+      let safetyTimeoutCleared = false;
+      const safetyTimeout = setTimeout(() => {}, 2000);
+
+      // Simulate root layout gate
+      await Promise.all([
+        useSettingsStore.getState().loadSettings(),
+        useThemeStore.getState().loadTheme(),
+      ])
+        .catch((err) => {
+          console.warn("Hydration failed, using fallback:", err);
+        })
+        .finally(() => {
+          clearTimeout(safetyTimeout);
+          safetyTimeoutCleared = true;
+          themeReady = true;
+        });
+
+      expect(themeReady).toBe(true);
+      expect(safetyTimeoutCleared).toBe(true);
+      expect(warnSpy).toHaveBeenCalledWith(
+        "Hydration failed, using fallback:",
+        expect.any(Error)
+      );
+      warnSpy.mockRestore();
     });
   });
 

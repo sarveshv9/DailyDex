@@ -16,7 +16,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SETUP_STORAGE_KEY } from "../constants/storageKeys";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "../utils/queryClient";
-import { useThemeLoaded } from "../stores/themeStore";
+import { useSettingsStore } from "../stores/settingsStore";
+import { useThemeStore, useThemeLoaded } from "../stores/themeStore";
 
 // Prevent splash screen from auto-hiding until initial stores and fonts are ready
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -30,11 +31,35 @@ function RootLayoutNav() {
   });
 
   const isThemeLoaded = useThemeLoaded();
+  const [themeReady, setThemeReady] = useState(false);
   const [isSetupComplete, setIsSetupComplete] = useState<boolean | null>(null);
   const [fallbackTimedOut, setFallbackTimedOut] = useState(false);
   const router = useRouter();
   const segments = useSegments();
   const { session, initialized } = useAuth();
+
+  // Theme & settings hydration gate: always sets themeReady(true) in .finally so app never hangs
+  useEffect(() => {
+    const safetyTimeout = setTimeout(() => {
+      setThemeReady(true);
+      SplashScreen.hideAsync().catch(() => {});
+    }, 2000);
+
+    Promise.all([
+      useSettingsStore.getState().loadSettings(),
+      useThemeStore.getState().loadTheme(),
+    ])
+      .catch((err) => {
+        console.warn("Hydration failed, using fallback theme/settings:", err);
+      })
+      .finally(() => {
+        clearTimeout(safetyTimeout);
+        setThemeReady(true);
+        SplashScreen.hideAsync().catch(() => {});
+      });
+
+    return () => clearTimeout(safetyTimeout);
+  }, []);
 
   // Safety fallback timeout: ensure app can never hang on splash screen
   useEffect(() => {
@@ -58,7 +83,7 @@ function RootLayoutNav() {
   }, []);
 
   const isAppReady =
-    (fontsLoaded && isSetupComplete !== null && initialized && isThemeLoaded) ||
+    (fontsLoaded && isSetupComplete !== null && initialized && themeReady) ||
     fallbackTimedOut;
 
   useEffect(() => {

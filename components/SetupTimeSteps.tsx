@@ -16,6 +16,7 @@ import Animated, {
     SharedValue,
     useAnimatedStyle,
     useSharedValue,
+    withDelay,
     withTiming,
 } from "react-native-reanimated";
 import Svg, {
@@ -638,7 +639,7 @@ export function StepTime({
             if (!finished) return;
             shownRef.current = mode;
             runOnJS(setShown)(mode);
-            fade.value = withTiming(1, { duration: 700 });
+            fade.value = withDelay(1250, withTiming(1, { duration: 700 }));
             busy.current = false;
         });
     }, [mode, fade]);
