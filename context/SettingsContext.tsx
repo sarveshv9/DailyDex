@@ -1,6 +1,7 @@
 // context/SettingsContext.tsx
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
+import { ROUTINE_STORAGE_KEY, SETTINGS_STORAGE_KEY } from '../constants/storageKeys';
 
 import type { UserSettings } from "../types/user";
 
@@ -32,7 +33,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const stored = await AsyncStorage.getItem('@zen_user_settings_v2');
+        const stored = await AsyncStorage.getItem(SETTINGS_STORAGE_KEY);
         if (stored) {
           setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(stored) });
         } else {
@@ -50,7 +51,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Save settings on change
   useEffect(() => {
     if (!isLoading) {
-      AsyncStorage.setItem('@zen_user_settings_v2', JSON.stringify(settings))
+      AsyncStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings))
         .catch(e => console.error('Failed to save settings local', e));
     }
   }, [settings, isLoading]);
@@ -64,7 +65,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             cancelAllRoutineNotifications();
           });
         } else {
-          AsyncStorage.getItem('@zen_routine').then(data => {
+          AsyncStorage.getItem(ROUTINE_STORAGE_KEY).then(data => {
             if (data) {
               try {
                 const routines = JSON.parse(data);

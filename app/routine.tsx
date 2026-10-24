@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect } from "expo-router";
+import { ROUTINE_STORAGE_KEY } from "../constants/storageKeys";
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import * as Haptics from "../utils/haptics";
 import {
@@ -60,7 +61,7 @@ const INITIAL_ROUTINE: RoutineItem[] = [
   { id: "12", time: "10:00 PM", task: "Sleep", description: "Rest deeply and recharge.", imageKey: "sleep", insertionOrder: 12, duration: 480 },
 ];
 
-const STORAGE_KEY = "@zen_routine";
+const STORAGE_KEY = ROUTINE_STORAGE_KEY;
 
 /* -------------------- Modal Hook -------------------- */
 const useModalAnimation = (screenWidth: number, screenHeight: number) => {

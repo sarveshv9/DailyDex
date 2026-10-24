@@ -13,6 +13,7 @@ import { AuthProvider, useAuth } from "../context/AuthContext";
 import { requestNotificationPermissions } from "../utils/notifications";
 import { ErrorBoundary } from "../components/common/ErrorBoundary";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SETUP_STORAGE_KEY } from "../constants/storageKeys";
 
 function RootLayoutNav() {
   const [fontsLoaded] = useFonts({
@@ -31,7 +32,7 @@ function RootLayoutNav() {
     requestNotificationPermissions();
     const checkSetup = async () => {
       try {
-        const setup = await AsyncStorage.getItem("@zen_setup_complete");
+        const setup = await AsyncStorage.getItem(SETUP_STORAGE_KEY);
         setIsSetupComplete(setup === "true");
       } catch (e) {
         setIsSetupComplete(false);
@@ -51,7 +52,7 @@ function RootLayoutNav() {
       // Offline-first routing: If on auth screen, route directly to setup or dashboard
       if (inAuthGroup) {
         try {
-          const setup = await AsyncStorage.getItem("@zen_setup_complete");
+          const setup = await AsyncStorage.getItem(SETUP_STORAGE_KEY);
           if (setup !== "true") {
             router.replace("/setup" as any);
           } else {
@@ -66,7 +67,7 @@ function RootLayoutNav() {
       // For first-time users, check if setup is complete
       if (!inAuthGroup) {
         try {
-          const setup = await AsyncStorage.getItem("@zen_setup_complete");
+          const setup = await AsyncStorage.getItem(SETUP_STORAGE_KEY);
           if (setup !== "true" && inTabsGroup) {
             router.replace("/setup" as any);
           } else if (setup === "true" && isSetupComplete === false) {

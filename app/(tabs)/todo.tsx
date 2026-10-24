@@ -33,9 +33,12 @@ import Animated, {
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../context/ThemeContext";
+import { TASKS_STORAGE_KEY, STORAGE_KEYS } from "../../constants/storageKeys";
 import { useTimerStore } from "../../stores/timerStore";
 import { ActiveTimerBadge } from "../../components/common/ActiveTimerBadge";
 import { EmptyState as SharedEmptyState } from "../../components/ui/EmptyState";
+import { Chip } from "../../components/ui/Chip";
+import { Card } from "../../components/ui/Card";
 import { getSharedStyles, Theme } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
 import { addTaskCompleted, removeTaskCompleted } from "../../utils/stats";
@@ -54,7 +57,7 @@ export interface Task {
 export type TaskCategory = Task["category"];
 export type FilterTab = "all" | "today" | "later";
 
-const STORAGE_KEY = "@zen_tasks";
+const STORAGE_KEY = TASKS_STORAGE_KEY;
 
 const generateTaskId = (): string =>
   `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
@@ -80,7 +83,7 @@ const loadTasks = async (): Promise<Task[]> => {
     }
 
     // Migrate from legacy key if it exists
-    const legacyData = await AsyncStorage.getItem("@todo_tasks");
+    const legacyData = await AsyncStorage.getItem(STORAGE_KEYS.LEGACY_TASKS);
     if (legacyData) {
       try {
         const parsed = JSON.parse(legacyData);
@@ -982,49 +985,16 @@ export default function TodoScreen() {
                 { id: "today", label: "Today", count: todayTasks.length },
                 { id: "later", label: "Later", count: laterTasks.length },
               ] as const
-            ).map((tab) => {
-              const isActive = activeFilter === tab.id;
-              return (
-                <Pressable
-                  key={tab.id}
-                  style={[
-                    styles.filterTabButton,
-                    isActive && styles.filterTabButtonActive,
-                  ]}
-                  onPress={() => {
-                    Haptics.selectionAsync();
-                    setActiveFilter(tab.id);
-                  }}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: isActive }}
-                  accessibilityLabel={`${tab.label} tasks, ${tab.count} items`}
-                >
-                  <Text
-                    style={[
-                      styles.filterTabLabel,
-                      isActive && styles.filterTabLabelActive,
-                    ]}
-                  >
-                    {tab.label}
-                  </Text>
-                  <View
-                    style={[
-                      styles.filterTabBadge,
-                      isActive && styles.filterTabBadgeActive,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.filterTabBadgeText,
-                        isActive && styles.filterTabBadgeTextActive,
-                      ]}
-                    >
-                      {tab.count}
-                    </Text>
-                  </View>
-                </Pressable>
-              );
-            })}
+            ).map((tab) => (
+              <Chip
+                key={tab.id}
+                label={tab.label}
+                selected={activeFilter === tab.id}
+                onPress={() => setActiveFilter(tab.id)}
+                badgeCount={tab.count}
+                style={{ flex: 1 }}
+              />
+            ))}
           </View>
 
           {/* Quick-Add Inline Input */}

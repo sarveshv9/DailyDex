@@ -28,6 +28,16 @@ import { useAuth } from "../../context/AuthContext";
 import { useSettings } from "../../context/SettingsContext";
 import { useTheme } from "../../context/ThemeContext";
 import { Theme } from "../../styles/shared";
+import {
+  STORAGE_KEYS,
+  USER_PROFILE_STORAGE_KEY,
+  ROUTINE_STORAGE_KEY,
+  TASKS_STORAGE_KEY,
+  SETUP_STORAGE_KEY,
+  PROFILE_SETUP_STORAGE_KEY,
+  STATS_STORAGE_KEY,
+  TIMER_STORAGE_KEY,
+} from "../../constants/storageKeys";
 import * as Haptics from "../../utils/haptics";
 import { RoutineItem } from "../../utils/utils";
 
@@ -70,7 +80,7 @@ export default function ProfileScreen() {
 
   const loadProfileData = useCallback(async () => {
     try {
-      const storedProfile = await AsyncStorage.getItem("@zen_user_profile");
+      const storedProfile = await AsyncStorage.getItem(USER_PROFILE_STORAGE_KEY);
       if (storedProfile) {
         const localProfile = JSON.parse(storedProfile);
         setUser(localProfile);
@@ -139,7 +149,7 @@ export default function ProfileScreen() {
 
   const handleRestoreSuccess = async () => {
     try {
-      const storedProfile = await AsyncStorage.getItem("@zen_user_profile");
+      const storedProfile = await AsyncStorage.getItem(USER_PROFILE_STORAGE_KEY);
       if (storedProfile) {
         const parsed = JSON.parse(storedProfile);
         setUser(parsed);
@@ -155,16 +165,16 @@ export default function ProfileScreen() {
 
     const performReset = async () => {
       try {
-        const data = await AsyncStorage.getItem("@zen_routine");
+        const data = await AsyncStorage.getItem(ROUTINE_STORAGE_KEY);
         if (data) {
           const routines: RoutineItem[] = JSON.parse(data);
           const preserved = routines.filter((r) => {
             const taskLo = r.task?.toLowerCase().trim();
             return taskLo === "wake up" || taskLo === "sleep";
           });
-          await AsyncStorage.setItem("@zen_routine", JSON.stringify(preserved));
+          await AsyncStorage.setItem(ROUTINE_STORAGE_KEY, JSON.stringify(preserved));
         }
-        await AsyncStorage.multiRemove(["@zen_tasks", "@todo_tasks"]);
+        await AsyncStorage.multiRemove([TASKS_STORAGE_KEY, STORAGE_KEYS.LEGACY_TASKS]);
         if (settings.hapticsEnabled) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         if (Platform.OS === "web") {
           window.alert("All tasks and custom routines have been reset except Wake Up and Sleep.");
@@ -230,14 +240,14 @@ export default function ProfileScreen() {
     const performFullReset = async () => {
       try {
         await AsyncStorage.multiRemove([
-          "@zen_setup_complete",
-          "@zen_profile_setup_complete",
-          "@zen_user_profile",
-          "@zen_routine",
-          "@zen_tasks",
-          "@todo_tasks",
-          "@zen_stats",
-          "@zen_active_timer",
+          SETUP_STORAGE_KEY,
+          PROFILE_SETUP_STORAGE_KEY,
+          USER_PROFILE_STORAGE_KEY,
+          ROUTINE_STORAGE_KEY,
+          TASKS_STORAGE_KEY,
+          STORAGE_KEYS.LEGACY_TASKS,
+          STATS_STORAGE_KEY,
+          TIMER_STORAGE_KEY,
         ]);
         await signOut();
         setUser({ name: "", avatar: "", role: "", email: "", bio: "" });
@@ -251,8 +261,8 @@ export default function ProfileScreen() {
     const performResetProfile = async () => {
       try {
         await AsyncStorage.multiRemove([
-          "@zen_profile_setup_complete",
-          "@zen_user_profile",
+          PROFILE_SETUP_STORAGE_KEY,
+          USER_PROFILE_STORAGE_KEY,
         ]);
         await signOut();
         setUser({ name: "", avatar: "", role: "", email: "", bio: "" });
@@ -312,8 +322,8 @@ export default function ProfileScreen() {
     setEditProfileModalOpen(false);
     if (settings.hapticsEnabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
-      await AsyncStorage.setItem("@zen_profile_setup_complete", "true");
-      await AsyncStorage.setItem("@zen_user_profile", JSON.stringify(user));
+      await AsyncStorage.setItem(PROFILE_SETUP_STORAGE_KEY, "true");
+      await AsyncStorage.setItem(USER_PROFILE_STORAGE_KEY, JSON.stringify(user));
       await updateUser(user);
     } catch (e) {
       console.error("Failed to save profile flag", e);

@@ -26,6 +26,7 @@ import TaskModal from "../../components/dashboard/TaskModal";
 import { useTheme } from "../../context/ThemeContext";
 import { ActiveTimerBadge } from "../../components/common/ActiveTimerBadge";
 import { Theme, themes } from "../../styles/shared";
+import { STORAGE_KEYS, SETUP_STORAGE_KEY, ROUTINE_STORAGE_KEY, TASKS_STORAGE_KEY } from "../../constants/storageKeys";
 import * as Haptics from "../../utils/haptics";
 import { scheduleRoutineNotifications } from "../../utils/notifications";
 import { loadStats, UserStats } from "../../utils/stats";
@@ -750,7 +751,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
 };
 
 /* ---------- Component ---------- */
-const SETUP_KEY = "@zen_setup_complete";
+const SETUP_KEY = SETUP_STORAGE_KEY;
 
 function HomeScreen() {
   const router = useRouter();
@@ -771,7 +772,7 @@ function HomeScreen() {
       }
       const setupComplete = await AsyncStorage.getItem(SETUP_KEY);
       if (setupComplete) {
-        const routineData = await AsyncStorage.getItem("@zen_routine");
+        const routineData = await AsyncStorage.getItem(ROUTINE_STORAGE_KEY);
         if (routineData) {
           const parsedRoutines = JSON.parse(routineData);
           setRoutines(sortRoutineItems(parsedRoutines));
@@ -784,8 +785,8 @@ function HomeScreen() {
       }
 
       const todoData =
-        (await AsyncStorage.getItem("@zen_tasks")) ||
-        (await AsyncStorage.getItem("@todo_tasks"));
+        (await AsyncStorage.getItem(TASKS_STORAGE_KEY)) ||
+        (await AsyncStorage.getItem(STORAGE_KEYS.LEGACY_TASKS));
       if (todoData) {
         setTodoTasks(JSON.parse(todoData));
       }
@@ -923,7 +924,7 @@ function HomeScreen() {
     try {
       const sorted = sortRoutineItems(updatedList);
       setRoutines(sorted);
-      await AsyncStorage.setItem("@zen_routine", JSON.stringify(sorted));
+      await AsyncStorage.setItem(ROUTINE_STORAGE_KEY, JSON.stringify(sorted));
       await scheduleRoutineNotifications(sorted);
 
 

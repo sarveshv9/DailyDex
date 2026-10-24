@@ -12,6 +12,7 @@ import { useTheme } from "../../context/ThemeContext";
 import { useAppHaptics } from "../../hooks/useAppHaptics";
 import { themeTokens } from "../../constants/themeTokens";
 import { Theme } from "../../styles/shared";
+import { Button } from "./Button";
 
 export interface EmptyStateProps {
   title: string;
@@ -57,23 +58,14 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       <Text style={styles.description}>{description}</Text>
 
       {actionLabel && onAction && (
-        <Pressable
-          style={({ pressed }) => [
-            styles.actionButton,
-            pressed && styles.actionButtonPressed,
-          ]}
-          onPress={handleAction}
-        >
-          {actionIcon ?? (
-            <Ionicons
-              name="add"
-              size={20}
-              color={theme.colors.white}
-              style={styles.actionIcon}
-            />
-          )}
-          <Text style={styles.actionText}>{actionLabel}</Text>
-        </Pressable>
+        <Button
+          title={actionLabel}
+          icon={actionIcon ?? <Ionicons name="add" size={18} color="#FFFFFF" />}
+          onPress={onAction}
+          variant="primary"
+          size="md"
+          style={{ marginTop: themeTokens.spacing.lg }}
+        />
       )}
     </View>
   );

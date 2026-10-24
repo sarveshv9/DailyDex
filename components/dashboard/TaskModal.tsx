@@ -29,7 +29,9 @@ import {
   ICON_GROUPS,
 } from "../../utils/utils";
 import { InlineTimePicker } from "../common/InlineTimePicker";
-import { DaysOfWeekPicker, DurationPicker, IconPickerModal } from "../forms";
+import { DaysOfWeekPicker, DurationPicker, IconPickerModal, SubtaskList } from "../forms";
+import { Button } from "../ui/Button";
+import { Card } from "../ui/Card";
 
 interface TaskModalProps {
   visible: boolean;
@@ -407,17 +409,13 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 <Text style={styles.timeRangeText}>{getDisplayTime()}</Text>
               </View>
 
-              <TouchableOpacity
-                style={[styles.saveActionBtn, { backgroundColor: theme.colors.primary }]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  closeAndSave();
-                }}
-                hitSlop={10}
-              >
-                <Ionicons name="checkmark" size={18} color="#FFFFFF" style={{ marginRight: 4 }} />
-                <Text style={styles.saveActionText}>Save</Text>
-              </TouchableOpacity>
+              <Button
+                title="Save"
+                variant="primary"
+                size="sm"
+                icon={<Ionicons name="checkmark" size={16} color="#FFFFFF" />}
+                onPress={closeAndSave}
+              />
             </View>
 
             {/* ── Hero Ritual Card: Icon Ring + Editable Title ── */}
@@ -712,76 +710,17 @@ const TaskModal: React.FC<TaskModalProps> = ({
                   )}
                 </View>
 
-                {subtasksList.map((st) => (
-                  <View key={st.id} style={styles.subtaskRow}>
-                    <TouchableOpacity
-                      onPress={() => toggleSubtask(st.id)}
-                      style={styles.subtaskCheck}
-                      hitSlop={8}
-                    >
-                      <Ionicons
-                        name={st.completed ? "checkmark-circle" : "ellipse-outline"}
-                        size={22}
-                        color={st.completed ? taskColor : `${theme.colors.textSecondary}70`}
-                      />
-                    </TouchableOpacity>
-                    <TextInput
-                      style={[
-                        styles.subtaskInput,
-                        { color: theme.colors.text },
-                        st.completed && {
-                          textDecorationLine: "line-through",
-                          opacity: 0.45,
-                        },
-                      ]}
-                      value={st.title}
-                      onChangeText={(t) => editSubtask(st.id, t)}
-                    />
-                    <TouchableOpacity
-                      onPress={() => deleteSubtask(st.id)}
-                      style={styles.subtaskDelete}
-                      hitSlop={8}
-                    >
-                      <Ionicons
-                        name="close"
-                        size={18}
-                        color={`${theme.colors.textSecondary}70`}
-                      />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-
-                {/* Add Subtask Input */}
-                <View style={styles.addSubtaskRow}>
-                  <Ionicons
-                    name="add"
-                    size={20}
-                    color={`${theme.colors.textSecondary}70`}
-                    style={{ marginRight: 10 }}
-                  />
-                  <TextInput
-                    style={[styles.subtaskInput, { color: theme.colors.text }]}
-                    placeholder="Add step or milestone..."
-                    placeholderTextColor={`${theme.colors.textSecondary}50`}
-                    value={newSubtaskText}
-                    onChangeText={setNewSubtaskText}
-                    onSubmitEditing={addSubtask}
-                    returnKeyType="done"
-                  />
-                  {newSubtaskText.trim().length > 0 && (
-                    <TouchableOpacity
-                      onPress={addSubtask}
-                      style={[styles.subtaskAddBtn, { backgroundColor: taskColor }]}
-                      hitSlop={6}
-                    >
-                      <Ionicons name="arrow-up" size={16} color="#FFFFFF" />
-                    </TouchableOpacity>
-                  )}
-                </View>
+                <SubtaskList
+                  subtasks={subtasksList}
+                  onChange={(updated) =>
+                    setEditedTask((prev) => (prev ? { ...prev, subtasks: updated } : null))
+                  }
+                  activeColor={taskColor}
+                />
               </View>
 
               {/* ── Notes / Intention Card ── */}
-              <View style={styles.card}>
+              <Card style={styles.card}>
                 <View style={styles.cardHeaderRow}>
                   <View style={styles.cardTitleWithIcon}>
                     <Ionicons name="document-text-outline" size={17} color={taskColor} />
@@ -799,7 +738,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                   }
                   textAlignVertical="top"
                 />
-              </View>
+              </Card>
 
               <View style={{ height: 20 }} />
             </ScrollView>
@@ -840,23 +779,16 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 const isProtected = taskName === "wake up" || taskName === "sleep";
                 if (isProtected) return null;
                 return (
-                  <TouchableOpacity
-                    style={styles.deletePillBtn}
+                  <Button
+                    title="Delete"
+                    variant="destructive"
+                    size="sm"
+                    icon={<Ionicons name="trash-outline" size={16} color="#FF453A" />}
                     onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                       onDelete();
                       closeWithoutSave();
                     }}
-                    activeOpacity={0.75}
-                  >
-                    <Ionicons
-                      name="trash-outline"
-                      size={17}
-                      color="#FF453A"
-                      style={{ marginRight: 6 }}
-                    />
-                    <Text style={styles.deleteText}>Delete</Text>
-                  </TouchableOpacity>
+                  />
                 );
               })()}
             </View>

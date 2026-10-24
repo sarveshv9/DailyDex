@@ -20,7 +20,8 @@ export type ButtonSize = "sm" | "md" | "lg";
 export type ButtonHaptic = "light" | "medium" | "heavy" | "selection" | "none";
 
 export interface ButtonProps {
-  children: React.ReactNode;
+  title?: string;
+  children?: React.ReactNode;
   onPress: () => void | Promise<void>;
   variant?: ButtonVariant;
   size?: ButtonSize;
@@ -35,6 +36,7 @@ export interface ButtonProps {
 }
 
 export const Button: React.FC<ButtonProps> = ({
+  title,
   children,
   onPress,
   variant = "primary",
@@ -63,7 +65,8 @@ export const Button: React.FC<ButtonProps> = ({
     await onPress();
   };
 
-  const isTextChild = typeof children === "string";
+  const displayContent = title ?? children;
+  const isTextContent = typeof displayContent === "string";
 
   return (
     <Pressable
@@ -87,12 +90,12 @@ export const Button: React.FC<ButtonProps> = ({
           {icon && iconPosition === "left" && (
             <View style={styles.leftIcon}>{icon}</View>
           )}
-          {isTextChild ? (
+          {isTextContent ? (
             <Text style={[styles.text, disabled && styles.disabledText, textStyle]}>
-              {children}
+              {displayContent}
             </Text>
           ) : (
-            children
+            displayContent
           )}
           {icon && iconPosition === "right" && (
             <View style={styles.rightIcon}>{icon}</View>

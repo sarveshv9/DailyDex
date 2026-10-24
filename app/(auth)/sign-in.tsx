@@ -6,6 +6,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from '../../utils/haptics';
+import { SETUP_STORAGE_KEY } from '../../constants/storageKeys';
 
 export default function SignInScreen() {
   const { theme, isDarkMode } = useTheme();
@@ -14,7 +15,7 @@ export default function SignInScreen() {
   const handleGetStarted = async () => {
     await Haptics.impactAsync();
     try {
-      const setup = await AsyncStorage.getItem('@zen_setup_complete');
+      const setup = await AsyncStorage.getItem(SETUP_STORAGE_KEY);
       if (setup === 'true') {
         router.replace('/(tabs)');
       } else {

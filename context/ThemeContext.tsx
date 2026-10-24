@@ -1,6 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 import { LayoutAnimation, Platform, UIManager } from 'react-native';
+import {
+  AUTO_THEME_STORAGE_KEY,
+  CUSTOM_THEMES_STORAGE_KEY,
+  DARK_MODE_STORAGE_KEY,
+  STORAGE_KEYS,
+  THEME_STORAGE_KEY,
+} from '../constants/storageKeys';
 import { darkThemes, lightThemes, Theme, ThemeName } from '../styles/shared';
 
 // Enable LayoutAnimation on Android
@@ -72,7 +79,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
         let localCustomThemes: Record<string, CustomThemeConfig> = {};
 
         // 1. Load Local State
-        const savedTheme = await AsyncStorage.getItem('@zen_theme');
+        const savedTheme = await AsyncStorage.getItem(THEME_STORAGE_KEY);
         if (savedTheme) {
           if (savedTheme.startsWith('light-')) {
             const stripped = savedTheme.replace('light-', '');
@@ -83,23 +90,23 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
           }
         }
 
-        const autoTheme = await AsyncStorage.getItem('@zen_auto_theme');
+        const autoTheme = await AsyncStorage.getItem(AUTO_THEME_STORAGE_KEY);
         if (autoTheme !== null) {
           localIsAutoTheme = autoTheme === 'true';
         }
 
-        const darkMode = await AsyncStorage.getItem('@zen_dark_mode');
+        const darkMode = await AsyncStorage.getItem(DARK_MODE_STORAGE_KEY);
         if (darkMode !== null) {
           localIsDarkMode = darkMode === 'true';
         }
 
-        const customCfg = await AsyncStorage.getItem('@zen_custom_themes');
+        const customCfg = await AsyncStorage.getItem(CUSTOM_THEMES_STORAGE_KEY);
         if (customCfg) {
           try {
             localCustomThemes = JSON.parse(customCfg);
           } catch (e) {}
         } else {
-             const oldCustomCfg = await AsyncStorage.getItem('@zen_custom_theme');
+             const oldCustomCfg = await AsyncStorage.getItem(STORAGE_KEYS.LEGACY_CUSTOM_THEME);
              if (oldCustomCfg) {
                  try {
                      const parsed = JSON.parse(oldCustomCfg);
@@ -128,7 +135,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     if (Platform.OS !== 'web') LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setThemeNameState(name);
     try {
-      await AsyncStorage.setItem('@zen_theme', name);
+      await AsyncStorage.setItem(THEME_STORAGE_KEY, name);
     } catch (e) {
       console.error('Failed to save theme', e);
     }
@@ -137,7 +144,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const setIsAutoTheme = async (val: boolean) => {
     setIsAutoThemeState(val);
     try {
-      await AsyncStorage.setItem('@zen_auto_theme', String(val));
+      await AsyncStorage.setItem(AUTO_THEME_STORAGE_KEY, String(val));
     } catch (e) {
       console.error('Failed to save auto theme', e);
     }
@@ -147,7 +154,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     if (Platform.OS !== 'web') LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setIsDarkModeState(val);
     try {
-      await AsyncStorage.setItem('@zen_dark_mode', String(val));
+      await AsyncStorage.setItem(DARK_MODE_STORAGE_KEY, String(val));
     } catch (e) {
       console.error('Failed to save dark mode toggle', e);
     }
@@ -159,8 +166,8 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     if (Platform.OS !== 'web') LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setThemeNameState(`custom_${id}`);
     try {
-      await AsyncStorage.setItem('@zen_custom_themes', JSON.stringify(updated));
-      await AsyncStorage.setItem('@zen_theme', `custom_${id}`);
+      await AsyncStorage.setItem(CUSTOM_THEMES_STORAGE_KEY, JSON.stringify(updated));
+      await AsyncStorage.setItem(THEME_STORAGE_KEY, `custom_${id}`);
     } catch (e) {
       console.error('Failed to save custom themes', e);
     }
@@ -171,7 +178,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     delete updated[id];
     setCustomThemesState(updated);
     try {
-      await AsyncStorage.setItem('@zen_custom_themes', JSON.stringify(updated));
+      await AsyncStorage.setItem(CUSTOM_THEMES_STORAGE_KEY, JSON.stringify(updated));
     } catch (e) {
       console.error('Failed to remove custom theme from storage', e);
     }

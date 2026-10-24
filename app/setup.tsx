@@ -24,10 +24,11 @@ import * as Haptics from "../utils/haptics";
 import { scheduleRoutineNotifications } from "../utils/notifications";
 import { getRoutineIcon, RoutineItem, timeToMinutes } from "../utils/utils";
 import { StepTime, InteractiveTimeCard, SkyBackground, skyTrackColor } from "../components/SetupTimeSteps";
+import { ROUTINE_STORAGE_KEY, SETUP_STORAGE_KEY } from "../constants/storageKeys";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const STORAGE_KEY = "@zen_routine";
-const SETUP_KEY = "@zen_setup_complete";
+const STORAGE_KEY = ROUTINE_STORAGE_KEY;
+const SETUP_KEY = SETUP_STORAGE_KEY;
 
 interface CategoryDef {
     key: string;

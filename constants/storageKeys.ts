@@ -43,6 +43,9 @@ export const STORAGE_KEYS = {
 
   /** Legacy single custom theme configuration */
   LEGACY_CUSTOM_THEME: "@zen_custom_theme",
+
+  /** Profile setup modal completed flag */
+  PROFILE_SETUP_COMPLETE: "@zen_profile_setup_complete",
 } as const;
 
 export type StorageKey = typeof STORAGE_KEYS[keyof typeof STORAGE_KEYS];
@@ -55,3 +58,8 @@ export const SETUP_STORAGE_KEY = STORAGE_KEYS.SETUP_COMPLETE;
 export const USER_PROFILE_STORAGE_KEY = STORAGE_KEYS.USER_PROFILE;
 export const SETTINGS_STORAGE_KEY = STORAGE_KEYS.USER_SETTINGS;
 export const STATS_STORAGE_KEY = STORAGE_KEYS.STATS;
+export const THEME_STORAGE_KEY = STORAGE_KEYS.THEME;
+export const AUTO_THEME_STORAGE_KEY = STORAGE_KEYS.AUTO_THEME;
+export const DARK_MODE_STORAGE_KEY = STORAGE_KEYS.DARK_MODE;
+export const CUSTOM_THEMES_STORAGE_KEY = STORAGE_KEYS.CUSTOM_THEMES;
+export const PROFILE_SETUP_STORAGE_KEY = STORAGE_KEYS.PROFILE_SETUP_COMPLETE;

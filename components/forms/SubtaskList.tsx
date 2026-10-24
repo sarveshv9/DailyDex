@@ -54,6 +54,13 @@ export const SubtaskList: React.FC<SubtaskListProps> = ({
     setNewSubtaskTitle("");
   };
 
+  const handleEditTitle = (id: string, text: string) => {
+    const updated = subtasks.map((st) =>
+      st.id === id ? { ...st, title: text } : st
+    );
+    onChange(updated);
+  };
+
   return (
     <View style={styles.container}>
       {subtasks.map((st) => (
@@ -75,7 +82,7 @@ export const SubtaskList: React.FC<SubtaskListProps> = ({
             )}
           </TouchableOpacity>
 
-          <Text
+          <TextInput
             style={[
               styles.subtaskTitle,
               {
@@ -84,11 +91,12 @@ export const SubtaskList: React.FC<SubtaskListProps> = ({
                   : theme.colors.text,
                 textDecorationLine: st.completed ? "line-through" : "none",
                 fontFamily: theme.fonts.regular,
+                opacity: st.completed ? 0.45 : 1,
               },
             ]}
-          >
-            {st.title}
-          </Text>
+            value={st.title}
+            onChangeText={(t) => handleEditTitle(st.id, t)}
+          />
 
           <TouchableOpacity
             onPress={() => handleRemove(st.id)}
