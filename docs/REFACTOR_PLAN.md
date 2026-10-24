@@ -81,10 +81,10 @@ graph TD
 ### Stage 0.5: Dedicated PR for CNG Transition (gitignoring `android/` and `ios/`)
 - **Branch**: `refactor/stage-0-cng-transition`
 - **Objective**: Move project to pure Continuous Native Generation (CNG) as an isolated change with zero app logic modifications.
-- **Verification & Safeguards**:
-  - Confirmed identity invariant: `android.package` (`com.anonymous.Zenapp`), `bundleIdentifier` (`com.anonymous.Zen-app`), versioning (`appVersionSource: "remote"` with `autoIncrement: true`), and signing are strictly driven by `app.json` and EAS.
-  - Native permissions check: `SCHEDULE_EXACT_ALARM` and `RECEIVE_BOOT_COMPLETED` are preserved in `app.json`.
-  - Regeneration verification test: run `npx expo prebuild --clean`, build a release APK, and run all 8 Maestro flows to verify zero regression.
+- **Verification & Personal Device Safeguards**:
+  - **Package Identity Preservation**: `android.package` is kept as `com.anonymous.Zenapp`. Note: Changing the package name would cause Android OS to treat it as a different app on the device, preventing in-place updates and stranding existing local user data. It remains untouched.
+  - **Background Audio Verification**: If the current installed build was built from the stale committed `android/`, a clean prebuild ADDS the `mediaPlayback` foreground service. Pre/post test: Verify on the physical device that ambient audio continues playing smoothly when the app is backgrounded and the screen is locked, before and after the CNG transition.
+  - **Regeneration Verification**: Run `npx expo prebuild --clean`, build my installed build APK, and run all 8 Maestro flows to verify zero regressions.
 
 ---
 
@@ -142,9 +142,10 @@ graph TD
 - **Scope**:
   - `constants/themeTokens.ts`, `constants/storageKeys.ts`, `types/` domain models.
   - `storage/mmkvMigration.ts`:
+    - **Pre-Upgrade Backup Step**: Before installing the refactored build over the existing installed build, perform a local backup of personal data (export all `@zen_*` AsyncStorage keys to a local JSON file or take screenshots of existing routines, active habits, and custom settings) to guarantee zero risk of data loss.
     - **One-time idempotent migration**: Runs before any provider reads storage, holding splash screen. Reads all `@zen_*` keys from `AsyncStorage`, batch-writes to MMKV with per-key fallback, sets `@zen_mmkv_migrated_v1 = true`.
-    - **Do NOT delete old AsyncStorage data in this release** (ensures rollback safety).
-    - **Upgrade-path test procedure**: Install current production release, populate data, install refactored build, verify 100% data retention.
+    - **Do NOT delete old AsyncStorage data in this release** (ensures immediate fallback safety).
+    - **Upgrade-path test procedure**: Verify in-place update over my existing installed build; confirm 100% data retention (routines, tasks, history, settings) across app restarts.
     - Note: MMKV requires dev build (`expo run:android`), does not run in Expo Go.
     - Take advantage of synchronous MMKV to convert hydrate-in-`useEffect` to lazy initial state (`useState(() => mmkv.getString(...))`), eliminating `set-state-in-effect` errors.
   - `hooks/useStorage.ts`, `hooks/useHaptics.ts`, `utils/timeMath.ts`.
@@ -224,10 +225,9 @@ graph TD
 
 ---
 
-## Post-Refactor Candidates (Out of Scope for This Refactor)
-The following items represent potential functional improvements, policy changes, or cleanup tasks. They are deliberately excluded from this refactoring effort to ensure zero unintended regressions:
-1. **Timer Recency Window (Known Issue)**: Currently, cold start displays a completed session card indefinitely even if the timer ended days ago. Candidate for future UX update: cap at 2 hours and reset to idle if expired longer.
-2. **Pomodoro Manual Advance on Background Resume**: Currently, when the app resumes from background after timer completion, it auto-advances to the next phase after 1.5s. Candidate for future UX update: require explicit user action ("Start Next Phase") on background resume, matching the cold-start behavior.
-3. **USE_EXACT_ALARM Permission Migration**: Consider requesting `USE_EXACT_ALARM` instead of `SCHEDULE_EXACT_ALARM` on Android 13+ to avoid the permission being denied by default on new installs. Note: Google Play strictly restricts `USE_EXACT_ALARM` to core alarm/timer apps, so policy compliance must be vetted before adoption.
-4. **Application Package Identity**: The app is configured with placeholder package `com.anonymous.Zenapp`. If not yet published to production app stores, migrating to a branded package name (e.g. `com.zenapp.productivity`) should be executed as a separate, dedicated identity decision outside this performance refactor.
-5. **RECORD_AUDIO Permission Pruning**: `expo-audio` includes `RECORD_AUDIO` by default. Since the app only plays ambient audio and does not record microphone input, configure `["expo-audio", { "recordAudioAndroid": false }]` to drop the microphone permission.
+## Post-Refactor Candidates (Optional Personal Hygiene - Out of Scope for This Refactor)
+The following items represent potential functional refinements or local hygiene tasks. Because this app is exclusively for personal device installation and will never be published to app stores, there are zero store review or policy risks. These items are strictly optional follow-ups for after the refactoring is complete:
+1. **Timer Recency Window (Known Issue)**: Currently, cold start displays a completed session card indefinitely even if the timer ended days ago. Optional UX polish: cap at 2 hours and reset to idle if expired longer.
+2. **Pomodoro Manual Advance on Background Resume**: Currently, when the app resumes from background after timer completion, it auto-advances to the next phase after 1.5s. Optional UX polish: require explicit user action ("Start Next Phase") on background resume, matching the cold-start behavior.
+3. **Exact Alarm Permission Hygiene**: Can optionally test `USE_EXACT_ALARM` instead of `SCHEDULE_EXACT_ALARM` if desired on personal Android 13+ device to avoid having to check system app settings for exact alarms.
+4. **Permissions Cleanup Hygiene**: Can prune unused permissions (`RECORD_AUDIO`, `SYSTEM_ALERT_WINDOW`, `WRITE_EXTERNAL_STORAGE`) as pure manifest hygiene (e.g., passing `{ "recordAudioAndroid": false }` to `expo-audio`).

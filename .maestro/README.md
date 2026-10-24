@@ -17,14 +17,34 @@ This suite contains 8 automated E2E flows covering the critical paths of Zen-app
 
 ---
 
-## Build Instructions (E2E Test Build)
+## Build & Installation Instructions (Personal Device & E2E Testing)
 
-To enable the debug 20s timer for Flow 8 while testing a release-like preview binary:
+Choose any of the following 3 methods to install or update the app on your connected device:
+
+### Option A: Direct Local Install via USB (Fastest)
 ```bash
-# Set the E2E flag and run preview / release build:
-EXPO_PUBLIC_E2E=1 npx expo run:android --variant release
+# Debug dev build:
+npx expo run:android --device
+
+# Release build with E2E flag enabled (for Flow 8 smoke testing):
+EXPO_PUBLIC_E2E=1 npx expo run:android --variant release --device
 ```
-*(In production builds, `EXPO_PUBLIC_E2E` is unset, so the debug button is completely excluded from the UI).*
+
+### Option B: Local APK Build & Sideload (In-place Upgrade Testing)
+```bash
+# 1. Build release APK directly using Gradle:
+cd android && ./gradlew assembleRelease && cd ..
+
+# 2. Sideload over your existing installed build (keeps local data intact):
+adb install -r android/app/build/outputs/apk/release/app-release.apk
+```
+
+### Option C: EAS Cloud Build (Standalone Internal Distribution)
+```bash
+# Builds standalone APK via EAS cloud service:
+eas build -p android --profile preview
+```
+*(In regular builds, `EXPO_PUBLIC_E2E` is unset, so the debug button is completely excluded from the UI).*
 
 ---
 
