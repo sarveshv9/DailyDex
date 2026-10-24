@@ -14,6 +14,10 @@ import {
   type LucideIcon,
 } from "lucide-react-native";
 
+import { themeTokens } from "../constants/themeTokens";
+
+export { themeTokens };
+
 export interface Theme {
   colors: {
     primary: string;
@@ -74,29 +78,44 @@ export interface Theme {
 
 const baseTheme = {
   fonts: {
-    regular: "UbuntuRegular",
-    medium: "UbuntuMedium",
-    bold: "UbuntuBold",
+    regular: themeTokens.fonts.family.regular,
+    medium: themeTokens.fonts.family.medium,
+    bold: themeTokens.fonts.family.bold,
   },
-  spacing: { xs: 4, sm: 8, md: 12, lg: 16, xl: 24 },
-  borderRadius: { sm: 8, md: 12, lg: 16 },
-  icons: { stroke: 1.75, sm: 16, md: 20, lg: 22 },
+  spacing: {
+    xs: themeTokens.spacing.xs,
+    sm: themeTokens.spacing.sm,
+    md: themeTokens.spacing.md,
+    lg: themeTokens.spacing.lg,
+    xl: themeTokens.spacing.xl,
+  },
+  borderRadius: {
+    sm: themeTokens.borderRadius.sm,
+    md: themeTokens.borderRadius.md,
+    lg: themeTokens.borderRadius.lg,
+  },
+  icons: {
+    stroke: themeTokens.icons.stroke,
+    sm: themeTokens.icons.sm,
+    md: themeTokens.icons.md,
+    lg: themeTokens.icons.lg,
+  },
 };
 
 const lightGlass = {
-  cardBg: "rgba(239, 239, 239, 0.76)",
-  borderColor: "rgba(255, 255, 255, 0.45)",
-  shadowOpacity: 0.06,
-  iconTintAlpha: "1C",                    // ~11% of primary
-  neutralFill: "rgba(0, 0, 0, 0.06)",
+  cardBg: themeTokens.glass.light.cardBg,
+  borderColor: themeTokens.glass.light.borderColor,
+  shadowOpacity: themeTokens.glass.light.shadowOpacity,
+  iconTintAlpha: themeTokens.glass.light.iconTintAlpha,
+  neutralFill: themeTokens.glass.light.neutralFill,
 };
 
 const darkGlass = {
-  cardBg: "rgba(30, 30, 30, 0.55)",
-  borderColor: "rgba(255, 255, 255, 0.10)",
-  shadowOpacity: 0.15,
-  iconTintAlpha: "29",                    // ~16% of primary
-  neutralFill: "rgba(255, 255, 255, 0.08)",
+  cardBg: themeTokens.glass.dark.cardBg,
+  borderColor: themeTokens.glass.dark.borderColor,
+  shadowOpacity: themeTokens.glass.dark.shadowOpacity,
+  iconTintAlpha: themeTokens.glass.dark.iconTintAlpha,
+  neutralFill: themeTokens.glass.dark.neutralFill,
 };
 
 // --- GLOW UTILS ---
