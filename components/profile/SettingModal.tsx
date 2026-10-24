@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { Theme } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
-import { BottomSheet } from "./BottomSheet";
+import { ModalSheet } from "../ui/ModalSheet";
 
 export type UserShape = {
   name: string;
@@ -120,7 +120,7 @@ export const SettingModal = ({
   const previewInitial = name ? name.trim().charAt(0).toUpperCase() : "U";
 
   return (
-    <BottomSheet visible={visible} onClose={onClose} theme={theme} title="Edit Profile">
+    <ModalSheet visible={visible} onClose={onClose} theme={theme} title="Edit Profile">
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32, paddingTop: 8 }}
@@ -217,6 +217,6 @@ export const SettingModal = ({
           </Text>
         </Pressable>
       </ScrollView>
-    </BottomSheet>
+    </ModalSheet>
   );
 };

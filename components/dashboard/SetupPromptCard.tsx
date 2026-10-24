@@ -4,6 +4,7 @@ import React, { useMemo } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { Theme } from "../../styles/shared";
+import { themeTokens } from "../../constants/themeTokens";
 
 export interface SetupPromptCardProps {
   onStartSetup: () => void;
@@ -130,14 +131,14 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
       marginBottom: 8,
     },
     setupTitle: {
-      fontSize: 26,
+      fontSize: themeTokens.fonts.size.xxl,
       fontFamily: theme.fonts.bold,
       color: theme.colors.text,
       textAlign: "center",
       letterSpacing: -0.4,
     },
     setupSubtitle: {
-      fontSize: 15,
+      fontSize: themeTokens.fonts.size.md,
       fontFamily: theme.fonts.regular,
       color: theme.colors.textSecondary,
       textAlign: "center",
@@ -157,7 +158,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
       width: "100%",
     },
     primaryButtonText: {
-      fontSize: 16,
+      fontSize: themeTokens.fonts.size.md,
       fontFamily: theme.fonts.bold,
       color: theme.colors.white,
     },

@@ -28,7 +28,7 @@ import {
   guessRoutineIconKey,
   ICON_GROUPS,
 } from "../../utils/utils";
-import { InlineTimePicker } from "../common/InlineTimePicker";
+import { TimePicker } from "../ui/TimePicker";
 import { DaysOfWeekPicker, DurationPicker, IconPickerModal, SubtaskList } from "../forms";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
@@ -549,7 +549,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
             {/* ── Accordion: Inline Time Picker ── */}
             {activeAccordion === "time" && (
               <View style={styles.accordionContainer}>
-                <InlineTimePicker
+                <TimePicker
                   value={editedTask.time || "8:00 AM"}
                   onChange={(t) => setEditedTask((prev) => (prev ? { ...prev, time: t } : null))}
                 />

@@ -5,6 +5,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { ActiveTimerBadge } from "../common/ActiveTimerBadge";
 import { Theme } from "../../styles/shared";
+import { themeTokens } from "../../constants/themeTokens";
 import { RoutineItem } from "../../utils/utils";
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
@@ -196,7 +197,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       marginBottom: 10,
     },
     sectionLabel: {
-      fontSize: 13,
+      fontSize: themeTokens.fonts.size.xs,
       fontFamily: theme.fonts.bold,
       color: theme.colors.textSecondary,
       textTransform: "uppercase",
@@ -247,13 +248,13 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       gap: 2,
     },
     focusTaskName: {
-      fontSize: 18,
+      fontSize: themeTokens.fonts.size.lg,
       fontFamily: theme.fonts.bold,
       color: theme.colors.text,
       letterSpacing: -0.3,
     },
     focusDescription: {
-      fontSize: 13,
+      fontSize: themeTokens.fonts.size.xs,
       fontFamily: theme.fonts.regular,
       color: theme.colors.textSecondary,
     },
@@ -274,7 +275,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
         : "rgba(0,0,0,0.05)",
     },
     durationBadgeText: {
-      fontSize: 11,
+      fontSize: themeTokens.fonts.size.xs,
       fontFamily: theme.fonts.medium,
       color: theme.colors.textSecondary,
       fontVariant: ["tabular-nums"],
@@ -291,7 +292,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       borderColor: `${theme.colors.primary}30`,
     },
     activeTimerText: {
-      fontSize: 12,
+      fontSize: themeTokens.fonts.size.xs,
       fontFamily: theme.fonts.bold,
       color: theme.colors.primary,
       fontVariant: ["tabular-nums"],
@@ -313,12 +314,12 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       alignItems: "center",
     },
     progressLabelText: {
-      fontSize: 12,
+      fontSize: themeTokens.fonts.size.xs,
       fontFamily: theme.fonts.medium,
       color: theme.colors.textSecondary,
     },
     progressPercent: {
-      fontSize: 12,
+      fontSize: themeTokens.fonts.size.xs,
       fontFamily: theme.fonts.bold,
       color: theme.colors.primary,
       fontVariant: ["tabular-nums"],
@@ -355,7 +356,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       }),
     },
     primaryButtonText: {
-      fontSize: 15,
+      fontSize: themeTokens.fonts.size.md,
       fontFamily: theme.fonts.bold,
       color: theme.colors.white,
     },

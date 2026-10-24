@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LayoutAnimation, Platform } from "react-native";
 import { create } from "zustand";
+import { useShallow } from "zustand/react/shallow";
 import {
   AUTO_THEME_STORAGE_KEY,
   CUSTOM_THEMES_STORAGE_KEY,
@@ -182,38 +183,15 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
 useThemeStore.getState().loadTheme();
 
 /* ---------------------- FINE-GRAINED SELECTORS ------------------------ */
-/** Selects only the active Theme object and dark mode flag, memoized to prevent re-renders when customThemes change without affecting the active palette */
-export const useAppTheme = (): { theme: Theme; isDarkMode: boolean } => {
-  const themeName = useThemeStore((s) => s.themeName);
-  const isDarkMode = useThemeStore((s) => s.isDarkMode);
-  // Only subscribe to customThemes if the active theme actually depends on it
-  const isCustom = themeName.startsWith("custom_");
-  const customConfig = useThemeStore((s) =>
-    isCustom ? s.customThemes[themeName.replace("custom_", "")] : null
-  );
+/** Pure selector for theme and dark mode */
+export const selectAppTheme = (s: ThemeState): { theme: Theme; isDarkMode: boolean } => ({
+  theme: computeTheme(s.themeName, s.isDarkMode, s.customThemes),
+  isDarkMode: s.isDarkMode,
+});
 
-  const activePalette = isDarkMode ? darkThemes : lightThemes;
-  if (isCustom && customConfig) {
-    const baseObj = activePalette.pokeball || activePalette.default;
-    return {
-      theme: {
-        ...baseObj,
-        colors: {
-          ...baseObj.colors,
-          primary: customConfig.primaryColor,
-        },
-      },
-      isDarkMode,
-    };
-  }
-
-  const theme =
-    activePalette[themeName as ThemeName] ||
-    activePalette.pokeball ||
-    activePalette.default;
-
-  return { theme, isDarkMode };
-};
+/** Selects only the active Theme object and dark mode flag using a single shallow-compared selector */
+export const useAppTheme = (): { theme: Theme; isDarkMode: boolean } =>
+  useThemeStore(useShallow(selectAppTheme));
 
 /** Selects only custom themes dictionary (used exclusively by ThemeSelectionModal) */
 export const useCustomThemes = () => useThemeStore((s) => s.customThemes);

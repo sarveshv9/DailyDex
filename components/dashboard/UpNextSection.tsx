@@ -4,6 +4,7 @@ import React, { useCallback, useMemo } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { Theme } from "../../styles/shared";
+import { themeTokens } from "../../constants/themeTokens";
 import { getRoutineIcon, RoutineItem } from "../../utils/utils";
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
@@ -196,7 +197,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       marginBottom: 10,
     },
     sectionLabel: {
-      fontSize: 13,
+      fontSize: themeTokens.fonts.size.xs,
       fontFamily: theme.fonts.bold,
       color: theme.colors.textSecondary,
       textTransform: "uppercase",
@@ -238,7 +239,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       gap: 3,
     },
     upNextTaskName: {
-      fontSize: 15,
+      fontSize: themeTokens.fonts.size.md,
       fontFamily: theme.fonts.medium,
       color: theme.colors.text,
     },
@@ -259,7 +260,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
         : "rgba(0,0,0,0.05)",
     },
     upNextDurationText: {
-      fontSize: 11,
+      fontSize: themeTokens.fonts.size.xs,
       fontFamily: theme.fonts.medium,
       color: theme.colors.textSecondary,
       fontVariant: ["tabular-nums"],
@@ -274,7 +275,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       backgroundColor: `${theme.colors.primary}15`,
     },
     timeBadgeText: {
-      fontSize: 12,
+      fontSize: themeTokens.fonts.size.xs,
       fontFamily: theme.fonts.bold,
       color: theme.colors.primary,
       fontVariant: ["tabular-nums"],
@@ -315,12 +316,12 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       justifyContent: "center",
     },
     emptyTitle: {
-      fontSize: 17,
+      fontSize: themeTokens.fonts.size.lg,
       fontFamily: theme.fonts.bold,
       color: theme.colors.text,
     },
     emptySubtitle: {
-      fontSize: 13,
+      fontSize: themeTokens.fonts.size.xs,
       fontFamily: theme.fonts.regular,
       color: theme.colors.textSecondary,
       textAlign: "center",
@@ -340,7 +341,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       marginTop: 4,
     },
     emptyActionText: {
-      fontSize: 13,
+      fontSize: themeTokens.fonts.size.xs,
       fontFamily: theme.fonts.bold,
       color: theme.colors.primary,
     },

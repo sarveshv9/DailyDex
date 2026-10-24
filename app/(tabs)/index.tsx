@@ -68,9 +68,23 @@ const toOutline = (name: string): IoniconName => {
 const useCurrentMinute = () => {
   const [time, setTime] = useState(() => new Date());
   useEffect(() => {
-    // Check every 30 seconds to keep schedule and timeline aligned without 1Hz screen re-renders
-    const id = setInterval(() => setTime(new Date()), 30000);
-    return () => clearInterval(id);
+    let intervalId: ReturnType<typeof setInterval>;
+    const now = new Date();
+    // Calculate ms remaining to next :00 minute boundary
+    const msToNextMinute =
+      (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
+
+    const timeoutId = setTimeout(() => {
+      setTime(new Date());
+      intervalId = setInterval(() => {
+        setTime(new Date());
+      }, 60000);
+    }, msToNextMinute);
+
+    return () => {
+      clearTimeout(timeoutId);
+      if (intervalId) clearInterval(intervalId);
+    };
   }, []);
   return time;
 };
@@ -564,6 +578,7 @@ function HomeScreen() {
       >
         {/* ======= HEADER & DAILY PROGRESS ======= */}
         <TodayHeader
+          currentTime={currentMinuteTime}
           todayTasksDone={todayTasksDone}
           totalIntentions={totalIntentions}
           dailyProgressFraction={dailyProgressFraction}

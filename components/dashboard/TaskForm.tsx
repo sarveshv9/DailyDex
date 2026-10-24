@@ -28,7 +28,7 @@ import {
   guessRoutineIconKey,
   ICON_GROUPS,
 } from "../../utils/utils";
-import { InlineTimePicker } from "../common/InlineTimePicker";
+import { TimePicker } from "../ui/TimePicker";
 import { DaysOfWeekPicker, DurationPicker, IconPickerModal } from "../forms";
 
 /* ─────────────────────────────── Types ──────────────────────────────── */
@@ -564,7 +564,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                 {/* Time Picker Accordion */}
                 {editActivePicker === "time" && (
                   <View style={styles.accordionBox}>
-                    <InlineTimePicker
+                    <TimePicker
                       value={formData.time || "8:00 AM"}
                       onChange={(t) => onUpdateField("time", t)}
                     />
@@ -802,7 +802,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                       {/* Expandable Time Picker */}
                       {item.activePicker === "time" && (
                         <View style={styles.accordionBox}>
-                          <InlineTimePicker
+                          <TimePicker
                             value={item.time}
                             onChange={(newTime) => updateStackedItem(item.id, { time: newTime })}
                           />

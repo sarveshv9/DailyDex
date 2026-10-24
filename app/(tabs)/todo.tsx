@@ -35,6 +35,7 @@ import { useTimerStore } from "../../stores/timerStore";
 import { ActiveTimerBadge } from "../../components/common/ActiveTimerBadge";
 import { EmptyState as SharedEmptyState } from "../../components/ui/EmptyState";
 import { Chip } from "../../components/ui/Chip";
+import { themeTokens } from "../../constants/themeTokens";
 import { Theme } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
 import { addTaskCompleted, removeTaskCompleted } from "../../utils/stats";
@@ -1245,14 +1246,14 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     },
     headerEyebrow: {
       fontFamily: theme.fonts.bold,
-      fontSize: 11,
+      fontSize: themeTokens.fonts.size.xs,
       letterSpacing: 1.5,
       color: theme.colors.textSecondary,
       marginTop: 2,
     },
     headerTitle: {
       fontFamily: theme.fonts.bold,
-      fontSize: 28,
+      fontSize: themeTokens.fonts.size.display,
       lineHeight: 34,
       color: theme.colors.text,
       letterSpacing: -0.6,
@@ -1271,7 +1272,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     },
     clearDoneBtnText: {
       fontFamily: theme.fonts.medium,
-      fontSize: 12,
+      fontSize: themeTokens.fonts.size.xs,
       color: theme.colors.primary,
     },
 
@@ -1300,7 +1301,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     },
     filterTabLabel: {
       fontFamily: theme.fonts.medium,
-      fontSize: 13,
+      fontSize: themeTokens.fonts.size.xs,
       color: theme.colors.textSecondary,
     },
     filterTabLabelActive: {
@@ -1320,7 +1321,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     },
     filterTabBadgeText: {
       fontFamily: theme.fonts.bold,
-      fontSize: 11,
+      fontSize: themeTokens.fonts.size.xs,
       color: theme.colors.textSecondary,
     },
     filterTabBadgeTextActive: {
@@ -1342,7 +1343,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     quickAddInput: {
       flex: 1,
       fontFamily: theme.fonts.regular,
-      fontSize: 14,
+      fontSize: themeTokens.fonts.size.sm,
       color: theme.colors.text,
       paddingVertical: 0,
     },
@@ -1424,7 +1425,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     },
     taskTitleText: {
       fontFamily: theme.fonts.medium,
-      fontSize: 15,
+      fontSize: themeTokens.fonts.size.md,
       color: theme.colors.text,
       lineHeight: 20,
     },
@@ -1461,7 +1462,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     },
     categoryTagText: {
       fontFamily: theme.fonts.bold,
-      fontSize: 10,
+      fontSize: themeTokens.fonts.size.xs,
       letterSpacing: 0.3,
     },
 
@@ -1492,7 +1493,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     },
     activeTimerText: {
       fontFamily: theme.fonts.bold,
-      fontSize: 12,
+      fontSize: themeTokens.fonts.size.xs,
       color: theme.colors.primary,
       fontVariant: ["tabular-nums"],
     },
@@ -1515,13 +1516,13 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     },
     emptyTitle: {
       fontFamily: theme.fonts.bold,
-      fontSize: 20,
+      fontSize: themeTokens.fonts.size.xl,
       color: theme.colors.text,
       marginBottom: 6,
     },
     emptySubtitle: {
       fontFamily: theme.fonts.regular,
-      fontSize: 14,
+      fontSize: themeTokens.fonts.size.sm,
       color: theme.colors.textSecondary,
       textAlign: "center",
       lineHeight: 20,
@@ -1549,7 +1550,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     },
     emptyCtaButtonText: {
       fontFamily: theme.fonts.bold,
-      fontSize: 16,
+      fontSize: themeTokens.fonts.size.md,
       color: theme.colors.white,
     },
 
@@ -1578,7 +1579,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       paddingBottom: Platform.OS === "ios" ? 36 : 24,
       ...Platform.select({
         ios: {
-          shadowColor: "#000",
+          shadowColor: themeTokens.colors.black,
           shadowOffset: { width: 0, height: -4 },
           shadowOpacity: 0.2,
           shadowRadius: 20,
@@ -1604,13 +1605,13 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     },
     modalHeaderTitle: {
       fontFamily: theme.fonts.bold,
-      fontSize: 22,
+      fontSize: themeTokens.fonts.size.xl,
       color: theme.colors.text,
       letterSpacing: -0.4,
     },
     modalHeaderSubtitle: {
       fontFamily: theme.fonts.regular,
-      fontSize: 13,
+      fontSize: themeTokens.fonts.size.xs,
       color: theme.colors.textSecondary,
       marginTop: 2,
     },
@@ -1635,7 +1636,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     },
     modalInput: {
       fontFamily: theme.fonts.regular,
-      fontSize: 16,
+      fontSize: themeTokens.fonts.size.md,
       color: theme.colors.text,
       minHeight: 80,
       textAlignVertical: "top",
@@ -1643,7 +1644,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
 
     modalSectionLabel: {
       fontFamily: theme.fonts.bold,
-      fontSize: 12,
+      fontSize: themeTokens.fonts.size.xs,
       textTransform: "uppercase",
       letterSpacing: 0.8,
       color: theme.colors.textSecondary,
@@ -1672,7 +1673,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     },
     modalCategoryChipText: {
       fontFamily: theme.fonts.medium,
-      fontSize: 13,
+      fontSize: themeTokens.fonts.size.xs,
       color: theme.colors.textSecondary,
     },
     modalCategoryChipTextActive: {
@@ -1701,7 +1702,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     },
     modalSaveButtonText: {
       fontFamily: theme.fonts.bold,
-      fontSize: 16,
+      fontSize: themeTokens.fonts.size.md,
       color: theme.colors.white,
     },
 
@@ -1723,7 +1724,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       alignItems: "center",
       ...Platform.select({
         ios: {
-          shadowColor: "#000",
+          shadowColor: themeTokens.colors.black,
           shadowOffset: { width: 0, height: 10 },
           shadowOpacity: 0.2,
           shadowRadius: 20,
@@ -1742,14 +1743,14 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     },
     confirmTitle: {
       fontFamily: theme.fonts.bold,
-      fontSize: 19,
+      fontSize: themeTokens.fonts.size.lg,
       color: theme.colors.text,
       marginBottom: 8,
       textAlign: "center",
     },
     confirmMessage: {
       fontFamily: theme.fonts.regular,
-      fontSize: 14,
+      fontSize: themeTokens.fonts.size.sm,
       color: theme.colors.textSecondary,
       textAlign: "center",
       lineHeight: 20,
@@ -1774,7 +1775,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     },
     confirmCancelText: {
       fontFamily: theme.fonts.bold,
-      fontSize: 15,
+      fontSize: themeTokens.fonts.size.md,
       color: theme.colors.text,
     },
     confirmActionBtn: {
@@ -1782,7 +1783,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     },
     confirmActionText: {
       fontFamily: theme.fonts.bold,
-      fontSize: 15,
+      fontSize: themeTokens.fonts.size.md,
       color: theme.colors.white,
     },
   });

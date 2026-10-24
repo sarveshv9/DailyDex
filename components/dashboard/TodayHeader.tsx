@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { Theme } from "../../styles/shared";
+import { themeTokens } from "../../constants/themeTokens";
 import { ProgressRing } from "./ProgressRing";
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
@@ -37,6 +38,7 @@ const formatTime = (date: Date): string =>
   });
 
 export interface TodayHeaderProps {
+  currentTime: Date;
   todayTasksDone: number;
   totalIntentions: number;
   dailyProgressFraction: number;
@@ -45,19 +47,13 @@ export interface TodayHeaderProps {
 }
 
 const TodayHeaderComponent: React.FC<TodayHeaderProps> = ({
+  currentTime,
   todayTasksDone,
   totalIntentions,
   dailyProgressFraction,
   theme,
   isDarkMode,
 }) => {
-  // Live clock state - isolated to this component so it never triggers parent screen re-renders
-  const [currentTime, setCurrentTime] = useState(() => new Date());
-
-  useEffect(() => {
-    const id = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(id);
-  }, []);
 
   const greetingInfo = useMemo(
     () => getGreetingDetails(currentTime.getHours()),
@@ -145,7 +141,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
       marginBottom: 4,
     },
     greeting: {
-      fontSize: 26,
+      fontSize: themeTokens.fonts.size.xxl,
       fontFamily: theme.fonts.bold,
       color: theme.colors.text,
       letterSpacing: -0.4,
@@ -156,7 +152,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
       gap: 6,
     },
     dateText: {
-      fontSize: 12,
+      fontSize: themeTokens.fonts.size.xs,
       fontFamily: theme.fonts.medium,
       color: theme.colors.textSecondary,
       letterSpacing: 0.8,
@@ -169,7 +165,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
       opacity: 0.5,
     },
     timeText: {
-      fontSize: 12,
+      fontSize: themeTokens.fonts.size.xs,
       fontFamily: theme.fonts.medium,
       color: theme.colors.textSecondary,
       fontVariant: ["tabular-nums"],
@@ -182,13 +178,13 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
       gap: 4,
     },
     progressCount: {
-      fontSize: 16,
+      fontSize: themeTokens.fonts.size.md,
       fontFamily: theme.fonts.bold,
       color: theme.colors.text,
       fontVariant: ["tabular-nums"],
     },
     progressLabel: {
-      fontSize: 11,
+      fontSize: themeTokens.fonts.size.xs,
       fontFamily: theme.fonts.medium,
       color: theme.colors.textSecondary,
     },

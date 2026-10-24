@@ -23,7 +23,9 @@ describe("Store Hydration from Legacy Storage Shapes", () => {
   });
 
   describe("SettingsStore Hydration", () => {
-    it("hydrates successfully from old persisted JSON shape under SETTINGS_STORAGE_KEY", async () => {
+    it("hydrates successfully from old persisted JSON shape under SETTINGS_STORAGE_KEY (@zen_user_settings_v2)", async () => {
+      expect(SETTINGS_STORAGE_KEY).toBe("@zen_user_settings_v2");
+
       const oldPersistedSettings = {
         notifications: {
           taskReminders: false,
@@ -32,8 +34,9 @@ describe("Store Hydration from Legacy Storage Shapes", () => {
         musicPreference: 2,
       };
 
+      // Write directly to literal old key to prove backward compatibility
       await AsyncStorage.setItem(
-        SETTINGS_STORAGE_KEY,
+        "@zen_user_settings_v2",
         JSON.stringify(oldPersistedSettings)
       );
 

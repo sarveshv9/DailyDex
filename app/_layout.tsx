@@ -1,8 +1,8 @@
 import "../utils/suppressWarnings";
+import * as SplashScreen from "expo-splash-screen";
 import { useFonts } from "expo-font";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { View } from "react-native";
 import { ThemeProvider } from "../context/ThemeContext";
 
 import { useEffect, useState } from "react";
@@ -18,6 +18,9 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "../utils/queryClient";
 import { useThemeLoaded } from "../stores/themeStore";
 
+// Prevent splash screen from auto-hiding until initial stores and fonts are ready
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
 function RootLayoutNav() {
   const [fontsLoaded] = useFonts({
     UbuntuLightI: require("../assets/fonts/Ubuntu-LightItalic.ttf"),
@@ -28,9 +31,18 @@ function RootLayoutNav() {
 
   const isThemeLoaded = useThemeLoaded();
   const [isSetupComplete, setIsSetupComplete] = useState<boolean | null>(null);
+  const [fallbackTimedOut, setFallbackTimedOut] = useState(false);
   const router = useRouter();
   const segments = useSegments();
   const { session, initialized } = useAuth();
+
+  // Safety fallback timeout: ensure app can never hang on splash screen
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setFallbackTimedOut(true);
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     requestNotificationPermissions();
@@ -45,9 +57,18 @@ function RootLayoutNav() {
     checkSetup();
   }, []);
 
+  const isAppReady =
+    (fontsLoaded && isSetupComplete !== null && initialized && isThemeLoaded) ||
+    fallbackTimedOut;
+
   useEffect(() => {
-    if (!fontsLoaded || isSetupComplete === null || !initialized || !isThemeLoaded) return;
-    
+    if (!isAppReady) return;
+    SplashScreen.hideAsync().catch(() => {});
+  }, [isAppReady]);
+
+  useEffect(() => {
+    if (!isAppReady) return;
+
     // Setup routing check — auth is optional, no sign-in gate
     const verifyRouting = async () => {
       const inAuthGroup = segments[0] === ("(auth)" as any);
@@ -84,12 +105,12 @@ function RootLayoutNav() {
         }
       }
     };
-    
-    verifyRouting();
-  }, [fontsLoaded, isSetupComplete, segments, session, initialized]);
 
-  if (!fontsLoaded || isSetupComplete === null || !initialized || !isThemeLoaded) {
-    return <View style={{ flex: 1, backgroundColor: "#F5F5F7" }} />;
+    verifyRouting();
+  }, [isAppReady, segments, session, initialized, isSetupComplete, router]);
+
+  if (!isAppReady) {
+    return null;
   }
 
   return (

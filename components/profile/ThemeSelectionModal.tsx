@@ -14,7 +14,7 @@ import {
     Alert,
 } from "react-native";
 import { darkThemes, lightThemes, Theme } from "../../styles/shared";
-import { BottomSheet } from "./BottomSheet";
+import { ModalSheet } from "../ui/ModalSheet";
 import { useTheme } from "../../context/ThemeContext";
 import { usePokemonQuery } from "../../api/pokemon";
 
@@ -170,7 +170,7 @@ export function ThemeSelectionModal({
     };
 
     return (
-        <BottomSheet
+        <ModalSheet
             visible={visible}
             onClose={onClose}
             theme={currentTheme}
@@ -409,7 +409,7 @@ export function ThemeSelectionModal({
                     )}
                 </View>
             </ScrollView>
-        </BottomSheet>
+        </ModalSheet>
     );
 }
 
