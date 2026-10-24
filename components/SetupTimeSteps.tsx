@@ -1,17 +1,23 @@
-// components/SetupTimeSteps.tsx
-// Wake-up (day) and Sleep (night) onboarding steps, rebuilt to match the mockups.
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-    Animated,
     Dimensions,
-    Easing,
     Pressable,
     ScrollView,
     StyleSheet,
     Text,
     View,
 } from "react-native";
+import Animated, {
+    Extrapolation,
+    interpolate,
+    interpolateColor,
+    runOnJS,
+    SharedValue,
+    useAnimatedStyle,
+    useSharedValue,
+    withTiming,
+} from "react-native-reanimated";
 import Svg, {
     Circle,
     Defs,
@@ -29,6 +35,7 @@ import type { Theme } from "../styles/shared";
 import { useTheme } from "../context/ThemeContext";
 import * as Haptics from "../utils/haptics";
 import { timeToMinutes } from "../utils/utils";
+import { themeTokens } from "../constants/themeTokens";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -307,10 +314,6 @@ function Hills({ mode }: { mode: Mode }) {
 //   0.50–1.00  moon rises from behind the hills
 const THEME_FROM = 0.25;
 const THEME_TO = 0.75;
-const CLAMP = { extrapolate: "clamp" } as const;
-
-const themeMix = (p: Animated.Value) =>
-    p.interpolate({ inputRange: [THEME_FROM, THEME_TO], outputRange: [0, 1], ...CLAMP });
 
 // Smooth paths: the sun follows a quarter-ellipse (up first, then curving right)
 // and the moon eases up with a slow finish. Sampled densely so the piecewise-linear
@@ -355,7 +358,7 @@ function SkyScene({
     box,
     slot,
 }: {
-    progress: Animated.Value;
+    progress: SharedValue<number>;
     box: { w: number; h: number };
     slot: { y: number; h: number };
 }) {
@@ -363,54 +366,67 @@ function SkyScene({
     const ty = slot.y + slot.h - 200 * s; // design y=200 sits at the bottom of the slot
     const geo: SceneGeo = { w: box.w, h: box.h, s, ty, bottomVu: (box.h - ty) / s + 20 };
 
-    // Sun: climbs, then curves to the top-right and fades out
-    const arc = sunArc(s);
-    const sunX = progress.interpolate({ inputRange: arc.input, outputRange: arc.x, ...CLAMP });
-    const sunY = progress.interpolate({ inputRange: arc.input, outputRange: arc.y, ...CLAMP });
-    const sunOpacity = progress.interpolate({
-        inputRange: [0, 0.3, 0.55, 1],
-        outputRange: [1, 1, 0, 0],
-        ...CLAMP,
+    const arc = useMemo(() => sunArc(s), [s]);
+    const rise = useMemo(() => moonRise(s), [s]);
+
+    const sunAnimatedStyle = useAnimatedStyle(() => {
+        'worklet';
+        const sunX = interpolate(progress.value, arc.input, arc.x, Extrapolation.CLAMP);
+        const sunY = interpolate(progress.value, arc.input, arc.y, Extrapolation.CLAMP);
+        const sunOpacity = interpolate(progress.value, [0, 0.3, 0.55, 1], [1, 1, 0, 0], Extrapolation.CLAMP);
+        return {
+            opacity: sunOpacity,
+            transform: [{ translateX: sunX }, { translateY: sunY }],
+        };
     });
 
-    // Moon: waits behind the hills, then rises into place
-    const rise = moonRise(s);
-    const moonY = progress.interpolate({ inputRange: rise.input, outputRange: rise.y, ...CLAMP });
-    const moonOpacity = progress.interpolate({
-        inputRange: [0, 0.5, 0.6, 1],
-        outputRange: [0, 0, 1, 1],
-        ...CLAMP,
+    const moonAnimatedStyle = useAnimatedStyle(() => {
+        'worklet';
+        const moonY = interpolate(progress.value, rise.input, rise.y, Extrapolation.CLAMP);
+        const moonOpacity = interpolate(progress.value, [0, 0.5, 0.6, 1], [0, 0, 1, 1], Extrapolation.CLAMP);
+        return {
+            opacity: moonOpacity,
+            transform: [{ translateY: moonY }],
+        };
     });
 
-    const starOpacity = progress.interpolate({
-        inputRange: [0, 0.5, 0.9, 1],
-        outputRange: [0, 0, 1, 1],
-        ...CLAMP,
+    const starAnimatedStyle = useAnimatedStyle(() => {
+        'worklet';
+        const starOpacity = interpolate(progress.value, [0, 0.5, 0.9, 1], [0, 0, 1, 1], Extrapolation.CLAMP);
+        return { opacity: starOpacity };
     });
-    const nightMix = themeMix(progress);
-    const dayMix = nightMix.interpolate({ inputRange: [0, 1], outputRange: [1, 0] });
+
+    const nightMixAnimatedStyle = useAnimatedStyle(() => {
+        'worklet';
+        const nightMix = interpolate(progress.value, [THEME_FROM, THEME_TO], [0, 1], Extrapolation.CLAMP);
+        return { opacity: nightMix };
+    });
+
+    const dayMixAnimatedStyle = useAnimatedStyle(() => {
+        'worklet';
+        const dayMix = 1 - interpolate(progress.value, [THEME_FROM, THEME_TO], [0, 1], Extrapolation.CLAMP);
+        return { opacity: dayMix };
+    });
 
     const fill = StyleSheet.absoluteFill;
 
     return (
         <SceneCtx.Provider value={geo}>
             <View style={fill} pointerEvents="none">
-                <Animated.View style={[fill, { opacity: starOpacity }]}>
+                <Animated.View style={[fill, starAnimatedStyle]}>
                     <Stars />
                 </Animated.View>
-                <Animated.View style={[fill, { opacity: dayMix }]}>
+                <Animated.View style={[fill, dayMixAnimatedStyle]}>
                     <Clouds mode="day" />
                 </Animated.View>
-                <Animated.View style={[fill, { opacity: nightMix }]}>
+                <Animated.View style={[fill, nightMixAnimatedStyle]}>
                     <Clouds mode="night" />
                 </Animated.View>
 
-                <Animated.View
-                    style={[fill, { opacity: sunOpacity, transform: [{ translateX: sunX }, { translateY: sunY }] }]}
-                >
+                <Animated.View style={[fill, sunAnimatedStyle]}>
                     <Sun />
                 </Animated.View>
-                <Animated.View style={[fill, { opacity: moonOpacity, transform: [{ translateY: moonY }] }]}>
+                <Animated.View style={[fill, moonAnimatedStyle]}>
                     <Moon />
                 </Animated.View>
 
@@ -418,7 +434,7 @@ function SkyScene({
                 <View style={fill}>
                     <Hills mode="day" />
                 </View>
-                <Animated.View style={[fill, { opacity: nightMix }]}>
+                <Animated.View style={[fill, nightMixAnimatedStyle]}>
                     <Hills mode="night" />
                 </Animated.View>
             </View>
@@ -427,24 +443,70 @@ function SkyScene({
 }
 
 // Full-screen background that follows the same progress value.
-// Render this as the first child of your SafeAreaView on steps 1–2.
-export function SkyBackground({ progress }: { progress: Animated.Value }) {
-    const backgroundColor = themeMix(progress).interpolate({
-        inputRange: [0, 1],
-        outputRange: [DAY_BG, NIGHT_BG],
+export function SkyBackground({ progress }: { progress: SharedValue<number> }) {
+    const animatedStyle = useAnimatedStyle(() => {
+        'worklet';
+        const backgroundColor = interpolateColor(
+            progress.value,
+            [THEME_FROM, THEME_TO],
+            [DAY_BG, NIGHT_BG]
+        );
+        return { backgroundColor };
     });
-    return <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor }]} />;
+    return <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, animatedStyle]} />;
 }
 
-// Same timing for the progress-bar track in your setup screen
-export function skyTrackColor(progress: Animated.Value) {
-    return themeMix(progress).interpolate({
-        inputRange: [0, 1],
-        outputRange: ["#ECDCCE", "#1E212E"],
-    });
+interface TimeDigitColumnProps {
+    value: number;
+    onUp: () => void;
+    onDown: () => void;
+    label: string;
+    upColor: string;
+    downColor: string;
+    digitStyle: any;
+    boxStyle: any;
+    styles: any;
 }
 
-// ─── Time picker card ────────────────────────────────────────────────────────
+const TimeDigitColumn = React.memo(function TimeDigitColumn({
+    value,
+    onUp,
+    onDown,
+    label,
+    upColor,
+    downColor,
+    digitStyle,
+    boxStyle,
+    styles,
+}: TimeDigitColumnProps) {
+    return (
+        <View style={styles.digitCol}>
+            <Pressable
+                style={styles.chevronBtn}
+                onPress={onUp}
+                hitSlop={12}
+                accessibilityRole="button"
+                accessibilityLabel={`Increase ${label}`}
+            >
+                <Ionicons name="chevron-up" size={22} color={upColor} />
+            </Pressable>
+            <View style={boxStyle}>
+                <Text style={digitStyle}>{String(value).padStart(2, "0")}</Text>
+            </View>
+            <Pressable
+                style={styles.chevronBtn}
+                onPress={onDown}
+                hitSlop={12}
+                accessibilityRole="button"
+                accessibilityLabel={`Decrease ${label}`}
+            >
+                <Ionicons name="chevron-down" size={22} color={downColor} />
+            </Pressable>
+        </View>
+    );
+});
+
+// Time picker card
 export function InteractiveTimeCard({
     time,
     onChange,
@@ -458,7 +520,6 @@ export function InteractiveTimeCard({
     const styles = useMemo(() => makeStyles(theme.fonts), [theme.fonts]);
     const { hours, minutes, ampm } = useMemo(() => parseTimeString(time), [time]);
 
-    // 0–23 representation, used for hour increments math so AM/PM flips correctly
     const militaryHour = ampm === "PM" ? (hours % 12) + 12 : hours % 12;
     const displayHour = hours === 0 ? 12 : hours;
 
@@ -487,51 +548,36 @@ export function InteractiveTimeCard({
     const down = isSleepStep ? "#8B90A0" : "#1F2937";
     const digitStyle = isSleepStep ? styles.digitNight : styles.digitDay;
     const colonStyle = isSleepStep ? styles.colonNight : styles.colonDay;
-
-    const Column = ({
-        value,
-        onUp,
-        onDown,
-        label,
-    }: {
-        value: number;
-        onUp: () => void;
-        onDown: () => void;
-        label: string;
-    }) => (
-        <View style={styles.digitCol}>
-            <Pressable
-                style={styles.chevronBtn}
-                onPress={onUp}
-                hitSlop={12}
-                accessibilityRole="button"
-                accessibilityLabel={`Increase ${label}`}
-            >
-                <Ionicons name="chevron-up" size={22} color={up} />
-            </Pressable>
-            <View style={isSleepStep ? styles.digitBoxNight : styles.digitBoxDay}>
-                <Text style={digitStyle}>{String(value).padStart(2, "0")}</Text>
-            </View>
-            <Pressable
-                style={styles.chevronBtn}
-                onPress={onDown}
-                hitSlop={12}
-                accessibilityRole="button"
-                accessibilityLabel={`Decrease ${label}`}
-            >
-                <Ionicons name="chevron-down" size={22} color={down} />
-            </Pressable>
-        </View>
-    );
+    const boxStyle = isSleepStep ? styles.digitBoxNight : styles.digitBoxDay;
 
     return (
         <View style={isSleepStep ? styles.timeCardNight : styles.timeCardDay}>
             <Text style={isSleepStep ? styles.timeLabelNight : styles.timeLabelDay}>Select Time</Text>
 
             <View style={isSleepStep ? styles.timePillNight : styles.timePillDay}>
-                <Column value={displayHour} onUp={() => changeHour(1)} onDown={() => changeHour(-1)} label="hours" />
+                <TimeDigitColumn
+                    value={displayHour}
+                    onUp={() => changeHour(1)}
+                    onDown={() => changeHour(-1)}
+                    label="hours"
+                    upColor={up}
+                    downColor={down}
+                    digitStyle={digitStyle}
+                    boxStyle={boxStyle}
+                    styles={styles}
+                />
                 <Text style={colonStyle}>:</Text>
-                <Column value={minutes} onUp={() => changeMinute(5)} onDown={() => changeMinute(-5)} label="minutes" />
+                <TimeDigitColumn
+                    value={minutes}
+                    onUp={() => changeMinute(5)}
+                    onDown={() => changeMinute(-5)}
+                    label="minutes"
+                    upColor={up}
+                    downColor={down}
+                    digitStyle={digitStyle}
+                    boxStyle={boxStyle}
+                    styles={styles}
+                />
 
                 <Pressable
                     style={isSleepStep ? styles.ampmNight : styles.ampmDay}
@@ -559,7 +605,7 @@ export function StepTime({
     onSkip,
     skyProgress,
 }: {
-    mode: Mode; // "day" = step 1, "night" = step 2
+    mode: Mode;
     wakeTime: string;
     sleepTime: string;
     onUpdateWake: (val: string) => void;
@@ -567,63 +613,39 @@ export function StepTime({
     onNext: () => void;
     onBack: () => void;
     onSkip: () => void;
-    skyProgress: Animated.Value;
+    skyProgress: SharedValue<number>;
 }) {
     const { theme } = useTheme();
     const styles = useMemo(() => makeStyles(theme.fonts), [theme.fonts]);
 
-    // `shown` lags behind `mode`: the text/cards fade out, swap, then fade back in
     const [shown, setShown] = useState<Mode>(mode);
     const shownRef = useRef<Mode>(mode);
-    const fade = useRef(new Animated.Value(1)).current;
+    const fade = useSharedValue(1);
     const busy = useRef(false);
-    // `motion` drives the scene on the native thread (smooth); `skyProgress` only
-    // drives colours (background, progress-bar track), which need the JS driver.
-    const motion = useRef(new Animated.Value(mode === "night" ? 1 : 0)).current;
 
     const [box, setBox] = useState({ w: SCREEN_WIDTH, h: 0 });
     const [slot, setSlot] = useState({ y: 0, h: 0 });
 
-    useLayoutEffect(() => {
-        skyProgress.setValue(mode === "night" ? 1 : 0);
-        motion.setValue(mode === "night" ? 1 : 0);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
     useEffect(() => {
-        skyProgress.stopAnimation();
-        motion.stopAnimation();
-        fade.stopAnimation();
-
-        const target = mode === "night" ? 1 : 0;
-        const timing = { toValue: target, duration: 2800, easing: Easing.inOut(Easing.sin) };
-        Animated.timing(skyProgress, { ...timing, useNativeDriver: false }).start();
-        Animated.timing(motion, { ...timing, useNativeDriver: true }).start();
-
         if (mode === shownRef.current) {
             busy.current = false;
-            Animated.timing(fade, { toValue: 1, duration: 250, useNativeDriver: true }).start();
+            fade.value = withTiming(1, { duration: 250 });
             return;
         }
 
         busy.current = true;
-        Animated.timing(fade, { toValue: 0, duration: 250, useNativeDriver: true }).start(
-            ({ finished }) => {
-                if (!finished) return;
-                shownRef.current = mode;
-                setShown(mode);
-                Animated.timing(fade, {
-                    toValue: 1,
-                    duration: 700,
-                    delay: 1250, // UI returns just as the moon starts rising
-                    useNativeDriver: true,
-                }).start(() => {
-                    busy.current = false;
-                });
-            }
-        );
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [mode]);
+        fade.value = withTiming(0, { duration: 250 }, (finished) => {
+            if (!finished) return;
+            shownRef.current = mode;
+            runOnJS(setShown)(mode);
+            fade.value = withTiming(1, { duration: 700 });
+            busy.current = false;
+        });
+    }, [mode, fade]);
+
+    const fadeAnimatedStyle = useAnimatedStyle(() => ({
+        opacity: fade.value,
+    }));
 
     const night = shown === "night";
     const time = night ? sleepTime : wakeTime;
@@ -648,7 +670,7 @@ export function StepTime({
             }}
         >
             {/* Full-page animated scene, behind everything */}
-            {box.h > 0 && slot.h > 0 && <SkyScene progress={motion} box={box} slot={slot} />}
+            {box.h > 0 && slot.h > 0 && <SkyScene progress={skyProgress} box={box} slot={slot} />}
 
             <ScrollView
                 style={{ flex: 1 }}
@@ -657,7 +679,7 @@ export function StepTime({
                 bounces={false}
             >
                 {/* Header */}
-                <Animated.View style={[styles.header, { opacity: fade }]}>
+                <Animated.View style={[styles.header, fadeAnimatedStyle]}>
                     <View style={styles.headerTop}>
                         <Text style={styles.eyebrow}>
                             {night ? "STEP 2 OF 4 · EVENING REST" : "STEP 1 OF 4 · MORNING ANCHOR"}
@@ -682,14 +704,14 @@ export function StepTime({
                 <View
                     style={styles.illustrationWrap}
                     onLayout={(e) => {
-                        if (busy.current) return; // keep the scene still while it animates
+                        if (busy.current) return;
                         const { y, height } = e.nativeEvent.layout;
                         setSlot((prev) => (prev.y === y && prev.h === height ? prev : { y, h: height }));
                     }}
                 />
 
                 {/* Cards */}
-                <Animated.View style={[styles.cards, { opacity: fade }]}>
+                <Animated.View style={[styles.cards, fadeAnimatedStyle]}>
                     <InteractiveTimeCard time={time} onChange={onUpdateTime} isSleepStep={night} />
 
                     {night && sleepInfo ? (
@@ -714,7 +736,7 @@ export function StepTime({
             </ScrollView>
 
             {/* Bottom bar */}
-            <Animated.View style={[styles.bottomBar, { opacity: fade }]}>
+            <Animated.View style={[styles.bottomBar, fadeAnimatedStyle]}>
                 <Pressable style={night ? styles.backNight : styles.backDay} onPress={press(onBack)}>
                     <Ionicons name="arrow-back" size={18} color={night ? "#FFFFFF" : "#111827"} />
                     <Text style={night ? styles.backTextNight : styles.backTextDay}>Back</Text>
@@ -745,13 +767,13 @@ const makeStyles = (fonts: Theme["fonts"]) =>
             marginBottom: 10,
         },
         eyebrow: {
-            fontSize: 12,
+            fontSize: themeTokens.fonts.size.xs,
             lineHeight: 16,
             fontFamily: fonts.bold,
             color: RED,
             letterSpacing: 1.4,
         },
-        skip: { fontSize: 14, lineHeight: 18, fontFamily: fonts.medium },
+        skip: { fontSize: themeTokens.fonts.size.sm, lineHeight: 18, fontFamily: fonts.medium },
         title: {
             fontSize: 36,
             lineHeight: 42,
@@ -789,7 +811,7 @@ const makeStyles = (fonts: Theme["fonts"]) =>
             elevation: 4,
         },
         timeLabelDay: {
-            fontSize: 14,
+            fontSize: themeTokens.fonts.size.sm,
             fontFamily: fonts.medium,
             color: "#1F2937",
             textAlign: "center",
@@ -815,7 +837,7 @@ const makeStyles = (fonts: Theme["fonts"]) =>
             borderColor: "#1B1F2C",
         },
         timeLabelNight: {
-            fontSize: 14,
+            fontSize: themeTokens.fonts.size.sm,
             fontFamily: fonts.medium,
             color: "#C4C7D0",
             textAlign: "center",
@@ -883,8 +905,8 @@ const makeStyles = (fonts: Theme["fonts"]) =>
             paddingVertical: 10,
             borderRadius: 12,
         },
-        ampmTextDay: { fontSize: 14, fontFamily: fonts.bold, color: RED },
-        ampmTextNight: { fontSize: 16, fontFamily: fonts.bold, color: "#FF4D55" },
+        ampmTextDay: { fontSize: themeTokens.fonts.size.sm, fontFamily: fonts.bold, color: RED },
+        ampmTextNight: { fontSize: themeTokens.fonts.size.md, fontFamily: fonts.bold, color: "#FF4D55" },
 
         // Insight cards
         insightDay: {
@@ -899,7 +921,7 @@ const makeStyles = (fonts: Theme["fonts"]) =>
         },
         insightTextDay: {
             flex: 1,
-            fontSize: 14,
+            fontSize: themeTokens.fonts.size.sm,
             lineHeight: 20,
             fontFamily: fonts.regular,
             color: "#374151",
@@ -924,13 +946,13 @@ const makeStyles = (fonts: Theme["fonts"]) =>
             justifyContent: "center",
         },
         insightTitleNight: {
-            fontSize: 17,
+            fontSize: themeTokens.fonts.size.lg - 1,
             fontFamily: fonts.bold,
             color: "#FFFFFF",
             marginBottom: 4,
         },
         insightDescNight: {
-            fontSize: 13,
+            fontSize: themeTokens.fonts.size.sm - 1,
             lineHeight: 18,
             fontFamily: fonts.regular,
             color: "#9EA2B0",
@@ -969,18 +991,18 @@ const makeStyles = (fonts: Theme["fonts"]) =>
             justifyContent: "center",
             gap: 8,
         },
-        backTextDay: { fontSize: 16, fontFamily: fonts.bold, color: "#111827" },
-        backTextNight: { fontSize: 16, fontFamily: fonts.bold, color: "#FFFFFF" },
+        backTextDay: { fontSize: themeTokens.fonts.size.md, fontFamily: fonts.bold, color: "#111827" },
+        backTextNight: { fontSize: themeTokens.fonts.size.md, fontFamily: fonts.bold, color: "#FFFFFF" },
         next: {
             flex: 1,
             height: 56,
             borderRadius: 22,
-            backgroundColor: "#EF4444",
+            backgroundColor: themeTokens.colors.danger,
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "center",
             gap: 8,
-            shadowColor: "#EF4444",
+            shadowColor: themeTokens.colors.danger,
             shadowOffset: { width: 0, height: 6 },
             shadowOpacity: 0.3,
             shadowRadius: 12,
@@ -990,5 +1012,5 @@ const makeStyles = (fonts: Theme["fonts"]) =>
             shadowOpacity: 0.55,
             shadowRadius: 18,
         },
-        nextText: { fontSize: 17, fontFamily: fonts.bold, color: "#FFFFFF" },
+        nextText: { fontSize: themeTokens.fonts.size.lg - 1, fontFamily: fonts.bold, color: "#FFFFFF" },
     });
