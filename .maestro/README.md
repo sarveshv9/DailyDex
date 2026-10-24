@@ -15,13 +15,35 @@ This suite contains 8 automated E2E flows covering the critical paths of Zen-app
    adb devices
    ```
 
+> [!CAUTION]
+> **RUN FLOWS ON AN ANDROID EMULATOR ONLY**:
+> **DO NOT** execute this Maestro test suite on your personal physical phone!
+> - **Flow 1 (`01_onboarding_setup.yaml`) invokes `clearState: true`**, which immediately wipes all app storage on the target device.
+> - **Flows 3 and 5 create dummy test tasks and routines**.
+> - Always run smoke test flows against an isolated emulator instance.
+
 ---
 
 ## Build & Installation Instructions (Personal Device & E2E Testing)
 
-Choose any of the following 3 methods to install or update the app on your connected device:
+### Keystore & Signing Warning for Personal Devices:
+> [!WARNING]
+> `adb install -r` and `expo run:android --variant release` require the **exact same signing keystore** as your currently installed build. If you built your current installed build via EAS Cloud and try to sideload a locally generated APK signed with a different key, Android will fail with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`.
+> **Never uninstall the app to bypass a signing mismatch**, as uninstalling immediately deletes all local AsyncStorage data.
 
-### Option A: Direct Local Install via USB (Fastest)
+### Inspect Your Currently Installed Build:
+Before building or upgrading, check what permissions your currently installed phone build actually holds:
+```bash
+adb shell dumpsys package com.anonymous.Zenapp | grep -i foreground
+```
+*(If empty, your installed build was built from the committed `android/` and lacks foreground audio permissions; if present, it was built via managed prebuild).*
+
+---
+
+### Installation Options:
+Choose any of the following methods to install or update the app:
+
+### Option A: Direct Local Install via USB (Fastest for Emulator)
 ```bash
 # Debug dev build:
 npx expo run:android --device

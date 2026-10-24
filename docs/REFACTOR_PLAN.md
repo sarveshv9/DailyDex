@@ -68,6 +68,17 @@ graph TD
 
 ---
 
+### Stage 0.1: Pre-Stage 1 Data Backup & Restore Harness (Completed in Stage 0)
+- **Module**: `utils/storageBackup.ts` & `__tests__/storageBackup.test.ts`
+- **Objective**: Provide a verified, standalone JSON export and import utility for all `@zen_*` (and `@todo_*`) AsyncStorage keys before any refactored build is installed on physical personal hardware.
+- **Implementation**:
+  - `exportZenDataToJson()`: Gathers all keys starting with `@zen_` and `@todo_`, envelopes them with versioning and timestamp metadata, and outputs a clean JSON string.
+  - `importZenDataFromJson(jsonStr)`: Validates envelope format and batch-restores all key-values into AsyncStorage.
+- **Verification**: 4 passing Jest unit tests covering selective key extraction, multi-key restoration, corrupt JSON rejection, and invalid schema protection.
+- **Personal Device Safety Gate**: Allows creating a local JSON snapshot of personal tasks, routines, and settings before installing any build on physical hardware.
+
+---
+
 ### Baseline Capture (Before Any Code Changes)
 - Record in [`/docs/baseline/`](file:///Users/sarveshvarvatkar/projects/Zen-app/docs/baseline):
   - Cold start (TTI) on release build, low-end Android (via `adb shell am start-activity -W`).
