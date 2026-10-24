@@ -3,19 +3,9 @@ import { STATS_STORAGE_KEY } from "../constants/storageKeys";
 
 export { STATS_STORAGE_KEY };
 
-export interface DailyStats {
-    tasks: number;
-    focusMinutes: number;
-}
+import type { DailyStats, UserStats } from "../types/stats";
 
-export interface UserStats {
-    totalFocusMinutes: number;
-    tasksCompleted: number;
-    sessionsCompleted: number;
-    currentStreak: number;
-    bestStreak: number;
-    history: Record<string, DailyStats>; // "YYYY-MM-DD" -> DailyStats
-}
+export type { DailyStats, UserStats };
 
 const DEFAULT_STATS: UserStats = {
     totalFocusMinutes: 0,

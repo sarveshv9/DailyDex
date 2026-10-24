@@ -2,13 +2,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 
-interface Settings {
-  notifications: {
-    taskReminders: boolean;
-  };
-  hapticsEnabled: boolean;
-  musicPreference: number;
-}
+import type { UserSettings } from "../types/user";
+
+export type Settings = UserSettings;
 
 interface SettingsContextType {
   settings: Settings;
