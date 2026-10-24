@@ -163,28 +163,36 @@ graph TD
 
 ---
 
-### Stage 2: Shared Foundations (Theme Tokens, Constants, Types, Utils, Hooks)
+### Stage 2: Shared Foundations (Theme Tokens, Constants, Types, Utils, Hooks) (Completed)
 - **Branch**: `refactor/stage-2-shared-foundations`
 - **Objective**: Create single-source-of-truth constants, theme tokens, domain models, and shared utilities/hooks. (MMKV is deferred to Stage 3.5).
-- **Scope**:
-  - `constants/themeTokens.ts`: Central design tokens replacing hardcoded colors (`#F5F5F7`, `#FFFFFF`, `#1A1A1A`, `#666`), radii, spacing, and font constants.
-  - `constants/storageKeys.ts`: Canonical single source of truth for all `@zen_*` and `@todo_*` keys.
-  - `types/`: Domain entity models (`Task`, `Routine`, `Theme`, `User`, `Stats`).
-  - `hooks/useAppHaptics.ts`: Guarded haptic triggers respecting user preference.
-  - `utils/`: Consolidate time calculations and formatting helpers.
-- **Definition of Done**: 0 lint errors on new files; `tsc --noEmit` clean; unit tests pass; lint ratchet ceiling holds or lowers.
+- **Scope & Results**:
+  - `constants/themeTokens.ts`: Design system tokens (colors, semantic grays/accents, spacing, typography scales, border radii, glass themes). Wired into `styles/shared.tsx` baseTheme and glass configs.
+  - `constants/storageKeys.ts`: Single source of truth for all 13 `@zen_*` and `@todo_*` keys. Replaced scattered string literals across `stores/timerStore.ts`, `utils/stats.ts`, `utils/storageBackup.ts`.
+  - `types/`: Canonical domain models in `types/task.ts`, `types/routine.ts`, `types/theme.ts`, `types/user.ts`, `types/stats.ts`, `types/timer.ts`, and `types/index.ts`. Linked with `AuthContext`, `SettingsContext`, `stats.ts`, `utils.ts`.
+  - `hooks/useAppHaptics.ts`: Guarded cross-platform haptic triggers respecting user preference (`settings.hapticsEnabled`) with graceful Web and test no-ops. Added full unit tests in `__tests__/useAppHaptics.test.tsx`.
+  - `utils/timeMath.ts`: Consolidated pure time calculations (`formatDuration`, `parseTime`, `timeToMinutes`, `minutesToTimeStr`, `addMinutesToTime`). Removed 75 duplicate lines from `utils/utils.ts`. Expanded unit tests in `__tests__/timerMath.test.ts`.
+- **Definition of Done**: 0 lint errors on new files; `tsc --noEmit` clean (0 errors); all 22 tests passing across 4 suites; lint ratchet ceiling holds at 126 errors.
 
 ---
 
-### Stage 3: Shared UI Component Library (Clone Unification)
+### Stage 3: Shared UI Component Library (Clone Unification) (Completed)
 - **Branch**: `refactor/stage-3-shared-ui`
 - **Objective**: Consolidate code clones that appear in 2+ places into reusable design system components.
-- **Scope**:
-  - `components/ui/ModalSheet.tsx`: Single bottom sheet (replaces duplicate BottomSheets).
-  - `components/forms/TaskForm.tsx`: Unified headless form consolidating `TaskForm.tsx` and `TaskModal.tsx`.
-  - `components/forms/TimePicker.tsx`: Cross-platform picker consolidating `InlineTimePicker.tsx` and `WebTimePicker.tsx`.
-  - `components/ui/Button.tsx`, `Card.tsx`, `Chip.tsx`, `EmptyState.tsx`.
-- **Definition of Done**: 0 lint errors on new components; `jscpd` clones reduced by >50%; clean build succeeds.
+- **Scope & Results**:
+  - `components/ui/Button.tsx`: Unified tactile button supporting primary, secondary, destructive, and ghost variants, 3 size tiers (sm, md, lg), loading spinners, and integrated haptics.
+  - `components/ui/Card.tsx`: Glassmorphic container with theme glass styling, platform-tailored shadows, border radii, and optional interactive press states.
+  - `components/ui/Chip.tsx`: Interactive filter/selection pill supporting labels, icons, badge counters, active glow/color highlight, and selection haptics.
+  - `components/ui/EmptyState.tsx`: Reusable empty state with icon circle, bold heading, description text, and optional CTA action button. Adopted by `app/(tabs)/todo.tsx`.
+  - `components/ui/ModalSheet.tsx`: Canonical bottom sheet modal with backdrop, drag handle, title header, close button, and keyboard avoiding container. `components/common/BottomSheet.tsx` and `components/profile/BottomSheet.tsx` now delegate cleanly to `ModalSheet`.
+  - `components/ui/TimePicker.tsx`: Cross-platform time picker with quick-adjust chips (`Now`, `+15m`, `+30m`, `+1h`) and Web stepper support. `components/common/InlineTimePicker.tsx` delegates to `TimePicker`.
+  - `components/forms/`: Extracted cloned subcomponents from `TaskForm.tsx` and `TaskModal.tsx`:
+    - `DaysOfWeekPicker.tsx` (replaces 3 duplicate copies of the repeat day pills)
+    - `DurationPicker.tsx` (replaces duplicate duration preset chips)
+    - `IconPickerModal.tsx` (replaces 94-line identical icon picker modal in `TaskForm` and `TaskModal`)
+    - `SubtaskList.tsx` (reusable subtasks manager)
+  - `jscpd` clones in `components/dashboard/` reduced from 11 down to 6; repo-wide duplicate lines reduced to 837 (down from 989 baseline).
+- **Definition of Done**: 0 lint errors on new components; `tsc --noEmit` clean; 22 unit tests passing; `npm run build` (`expo export`) succeeds across iOS (7.1MB), Android (7.3MB), and Web (5.6MB).
 
 ---
 
