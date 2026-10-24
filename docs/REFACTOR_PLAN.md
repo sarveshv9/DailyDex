@@ -119,12 +119,13 @@ graph TD
     - On `startTimer` or `resumeTimer`, call `scheduleFocusTimerAlarm(title, body, remainingSeconds)`.
     - On `pauseTimer`, `stopTimer`, or completion, call `cancelFocusTimerAlarm()`.
     - On app resume (`AppState`), reconcile `Date.now() >= targetEndTime` and trigger completion if elapsed.
-  - **Proposed Product Behavior Changes (Awaiting User Sign-off)**:
-    - *2-Hour Recency Window*: Current code displays completed session card indefinitely on cold start even if expired days ago. Proposed refinement: If the timer elapsed within 2 hours (`Date.now() - targetEndTime <= 2 * 60 * 60 * 1000`), transition store to `isCompleted: true, isActive: false, targetEndTime: null` and show the "Session Accomplished" card on next launch. If more than 2 hours have elapsed, silently reset to idle state to avoid stale interruptions. *(Requires explicit user approval before Stage 1B implementation)*.
-    - *Pomodoro Mode on Relaunch*: Current code auto-cascades to next phase only via in-memory timer completion. Proposed refinement: Phases require explicit human initiation on cold start/relaunch. If a work or break session expired while closed, complete *only that specific phase* and await user action ("Start Next Phase" or "Finish"). Never auto-cascade multiple unobserved cycles. *(Requires explicit user approval before Stage 1B implementation)*.
+  - **Exact Preservation of Existing Behaviors (Zero Product Logic Changes)**:
+    - *Cold start from disk*: Current code completes the current phase without advancing (sets `isCompleted: true, timeLeft: 0`). Stage 1B reproduces this exact behavior. *Known issue preserved*: A stale completion card will continue to show indefinitely upon next launch if the timer expired while the app was closed.
+    - *App alive / resumed from background*: Current code auto-cascades to the next Pomodoro phase after a 1.5s delay upon timer completion. Stage 1B reproduces this exact behavior.
+    - Neither behavior is altered during this refactor.
   - **Testing Scope & Manual Verification**:
     - Pure calculation (`calculateRemainingSeconds`, `formatSecondsToMMSS`) is 100% covered by Jest fake timers in `__tests__/timerMath.test.ts`.
-    - Maestro Flow 8 verifies in-app countdown accuracy after returning from the background. Note: Maestro cannot assert on native system notifications or verify behavior when the app is swiped away.
+    - Maestro Flow 8 verifies in-app countdown accuracy after returning from the background. Note: Maestro flows are statically reviewed smoke tests; Maestro cannot assert on native system notifications or verify behavior when the app is swiped away.
     - **Stage 1B Manual Device Test Checklist** (must be verified on physical hardware):
       1. [ ] Timer ends while the app is backgrounded: notification fires on time.
       2. [ ] Timer ends with the screen locked (Doze): notification fires.
@@ -220,3 +221,13 @@ graph TD
   - Guardrails: Enforce import boundaries and no `useNativeDriver: false`.
   - Re-measure against Baseline: Run all Phase 0 tools and record comparison in `/docs/REFACTOR_RESULTS.md`.
 - **Definition of Done**: Full before/after comparison documented; all 8 Maestro flows passing; 0 lint errors repo-wide.
+
+---
+
+## Post-Refactor Candidates (Out of Scope for This Refactor)
+The following items represent potential functional improvements, policy changes, or cleanup tasks. They are deliberately excluded from this refactoring effort to ensure zero unintended regressions:
+1. **Timer Recency Window (Known Issue)**: Currently, cold start displays a completed session card indefinitely even if the timer ended days ago. Candidate for future UX update: cap at 2 hours and reset to idle if expired longer.
+2. **Pomodoro Manual Advance on Background Resume**: Currently, when the app resumes from background after timer completion, it auto-advances to the next phase after 1.5s. Candidate for future UX update: require explicit user action ("Start Next Phase") on background resume, matching the cold-start behavior.
+3. **USE_EXACT_ALARM Permission Migration**: Consider requesting `USE_EXACT_ALARM` instead of `SCHEDULE_EXACT_ALARM` on Android 13+ to avoid the permission being denied by default on new installs. Note: Google Play strictly restricts `USE_EXACT_ALARM` to core alarm/timer apps, so policy compliance must be vetted before adoption.
+4. **Application Package Identity**: The app is configured with placeholder package `com.anonymous.Zenapp`. If not yet published to production app stores, migrating to a branded package name (e.g. `com.zenapp.productivity`) should be executed as a separate, dedicated identity decision outside this performance refactor.
+5. **RECORD_AUDIO Permission Pruning**: `expo-audio` includes `RECORD_AUDIO` by default. Since the app only plays ambient audio and does not record microphone input, configure `["expo-audio", { "recordAudioAndroid": false }]` to drop the microphone permission.

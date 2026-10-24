@@ -11,6 +11,7 @@ module.exports = defineConfig([
       '.expo/**',
       'dist/**',
       'coverage/**',
+      // Node.js CI/build tooling scripts run in Node environment, separate from React/Expo client runtime
       'scripts/**',
     ],
   },

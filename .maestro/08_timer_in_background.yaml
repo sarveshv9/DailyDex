@@ -17,9 +17,12 @@ appId: com.anonymous.Zenapp
     optional: true
 
 # Background app without killing process
-- pressKey: "home"
+- pressKey: Home
 
-# Wait 10 seconds while backgrounded using documented extendedWaitUntil workaround
+# INTENTIONAL DELAY WORKAROUND (DO NOT REMOVE OR "FIX"):
+# Maestro does not have a native `sleep` command. We simulate a 10-second background delay
+# by polling for a non-existent element with a 10000ms timeout against the active OS launcher hierarchy.
+# Because `optional: true` is specified, Maestro waits the full 10 seconds and continues without error.
 - extendedWaitUntil:
     visible: "wait_10s_delay_anchor_nonexistent"
     timeout: 10000

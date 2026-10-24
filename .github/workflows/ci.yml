@@ -21,7 +21,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Install Dependencies
@@ -36,11 +36,24 @@ jobs:
       - name: ESLint Ratchet Check
         run: node scripts/lint-ratchet.js
 
-      - name: Verify No E2E Test Leak in Production Bundle
+      - name: Verify No E2E Test Leak in Production Bundle (Positive & Negative Control)
         run: |
-          npx expo export -p android --no-bytecode
+          # 1. Positive Control: Confirm that EXPO_PUBLIC_E2E=1 DOES include the test button in the bundle
+          echo "Running Positive Control with EXPO_PUBLIC_E2E=1..."
+          EXPO_PUBLIC_E2E=1 npx expo export -c -p android --no-bytecode --output-dir dist-e2e
+          if ! grep -rn "focus-start-debug-20s-btn" dist-e2e/; then
+            echo "❌ Positive control failed: grep did NOT find focus-start-debug-20s-btn even with EXPO_PUBLIC_E2E=1!"
+            exit 1
+          fi
+          echo "✅ Positive control passed: grep successfully detects test button when E2E flag is active."
+          rm -rf dist-e2e
+
+          # 2. Production Negative Check: Confirm standard production bundle tree-shakes and removes the test button
+          echo "Running Production Negative Check..."
+          npx expo export -c -p android --no-bytecode --output-dir dist
           if grep -rn "focus-start-debug-20s-btn" dist/; then
             echo "❌ Leak detected: focus-start-debug-20s-btn found in production bundle!"
             exit 1
           fi
           echo "✅ Production bundle clean: E2E debug button tree-shaken."
+          rm -rf dist
