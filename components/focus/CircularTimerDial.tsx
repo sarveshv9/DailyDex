@@ -6,6 +6,7 @@ import Svg, { Circle } from "react-native-svg";
 import { useTheme } from "../../context/ThemeContext";
 import { useTimerRemainingSeconds } from "../../hooks/useTimerRemainingSeconds";
 import { useTimerStore } from "../../stores/timerStore";
+import { themeTokens } from "../../constants/themeTokens";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const DIAL_SIZE = Math.min(SCREEN_WIDTH * 0.76, 290);
@@ -88,7 +89,7 @@ export const CircularTimerDial: React.FC<CircularTimerDialProps> = ({
       return {
         label: pomodoroPhase === "shortBreak" ? "SHORT REST" : "LONG REST",
         icon: "cafe" as const,
-        color: "#30D158",
+        color: themeTokens.colors.success,
       };
     }
     if (isActive) {
@@ -270,7 +271,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   statusTagText: {
-    fontSize: 10,
+    fontSize: themeTokens.fonts.size.xs,
     fontWeight: "700",
     letterSpacing: 0.8,
   },
@@ -280,7 +281,7 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
   },
   timerSubtext: {
-    fontSize: 12,
+    fontSize: themeTokens.fonts.size.xs,
     marginTop: 4,
     letterSpacing: 0.2,
   },
