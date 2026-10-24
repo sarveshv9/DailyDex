@@ -63,6 +63,8 @@ export interface ThemeState {
 
 const initialTheme = computeTheme("pokeball", false, {});
 
+let themeRevision = 0;
+
 export const useThemeStore = create<ThemeState>((set, get) => ({
   themeName: "pokeball",
   isAutoTheme: false,
@@ -76,6 +78,7 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
       set({ isLoaded: true });
       return;
     }
+    const startRevision = themeRevision;
     try {
       let localThemeName = "pokeball";
       let localIsDarkMode = false;
@@ -122,13 +125,18 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
 
       const computed = computeTheme(localThemeName, localIsDarkMode, localCustomThemes);
 
-      set({
-        themeName: localThemeName,
-        isAutoTheme: localIsAutoTheme,
-        isDarkMode: localIsDarkMode,
-        customThemes: localCustomThemes,
-        theme: computed,
-        isLoaded: true,
+      set((state) => {
+        if (themeRevision > startRevision) {
+          return { isLoaded: true };
+        }
+        return {
+          themeName: localThemeName,
+          isAutoTheme: localIsAutoTheme,
+          isDarkMode: localIsDarkMode,
+          customThemes: localCustomThemes,
+          theme: computed,
+          isLoaded: true,
+        };
       });
     } catch (e) {
       console.error("Failed to load theme in themeStore", e);
@@ -137,6 +145,7 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
   },
 
   setThemeName: async (name: string) => {
+    themeRevision++;
     if (Platform.OS !== "web") LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     const isDark = get().isDarkMode;
     const customs = get().customThemes;
@@ -149,6 +158,7 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
   },
 
   setIsAutoTheme: async (val: boolean) => {
+    themeRevision++;
     set({ isAutoTheme: val });
     try {
       await AsyncStorage.setItem(AUTO_THEME_STORAGE_KEY, String(val));
@@ -158,6 +168,7 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
   },
 
   setIsDarkMode: async (val: boolean) => {
+    themeRevision++;
     if (Platform.OS !== "web") LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     const name = get().themeName;
     const customs = get().customThemes;
@@ -170,6 +181,7 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
   },
 
   addCustomTheme: async (id: string, config: CustomThemeConfig) => {
+    themeRevision++;
     const updated = { ...get().customThemes, [id]: config };
     if (Platform.OS !== "web") LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     const isDark = get().isDarkMode;
@@ -187,6 +199,7 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
   },
 
   removeCustomTheme: async (id: string) => {
+    themeRevision++;
     const updated = { ...get().customThemes };
     delete updated[id];
     const name = get().themeName;
@@ -202,11 +215,6 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
     }
   },
 }));
-
-// Hydrate store immediately in client environments (skip during Node SSR)
-if (Platform.OS !== "web" || typeof window !== "undefined") {
-  useThemeStore.getState().loadTheme();
-}
 
 /* ---------------------- FINE-GRAINED SELECTORS ------------------------ */
 /** Selects only the active Theme object directly from the store (referentially stable) */

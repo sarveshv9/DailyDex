@@ -23,6 +23,8 @@ export interface SettingsState {
   setMusicPreference: (id: number) => Promise<void>;
 }
 
+let settingsRevision = 0;
+
 export const useSettingsStore = create<SettingsState>((set, get) => ({
   settings: DEFAULT_SETTINGS,
   isLoading: true,
@@ -32,13 +34,18 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       set({ isLoading: false });
       return;
     }
+    const startRevision = settingsRevision;
     try {
       const stored = await AsyncStorage.getItem(SETTINGS_STORAGE_KEY);
       if (stored) {
-        set({
-          settings: { ...DEFAULT_SETTINGS, ...JSON.parse(stored) },
+        set((state) => ({
+          settings: {
+            ...DEFAULT_SETTINGS,
+            ...JSON.parse(stored),
+            ...(settingsRevision > startRevision ? state.settings : {}),
+          },
           isLoading: false,
-        });
+        }));
       } else {
         set({ settings: DEFAULT_SETTINGS, isLoading: false });
       }
@@ -49,6 +56,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   },
 
   toggleNotification: async (key: keyof Settings["notifications"]) => {
+    settingsRevision++;
     const prev = get().settings;
     const nextVal = !prev.notifications[key];
     const newSettings: Settings = {
@@ -85,6 +93,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   },
 
   setHapticsEnabled: async (enabled: boolean) => {
+    settingsRevision++;
     const newSettings: Settings = { ...get().settings, hapticsEnabled: enabled };
     set({ settings: newSettings });
     AsyncStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(newSettings)).catch((e) =>
@@ -93,6 +102,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   },
 
   setMusicPreference: async (id: number) => {
+    settingsRevision++;
     const newSettings: Settings = { ...get().settings, musicPreference: id };
     set({ settings: newSettings });
     AsyncStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(newSettings)).catch((e) =>
@@ -100,11 +110,6 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     );
   },
 }));
-
-// Auto-hydrate settings store immediately on client load (skip during Node SSR)
-if (Platform.OS !== "web" || typeof window !== "undefined") {
-  useSettingsStore.getState().loadSettings();
-}
 
 /* ---------------------- FINE-GRAINED SELECTORS ------------------------ */
 export const useHapticsEnabled = () =>

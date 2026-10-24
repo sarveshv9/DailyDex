@@ -116,6 +116,38 @@ describe("Store Hydration from Legacy Storage Shapes", () => {
       );
       warnSpy.mockRestore();
     });
+
+    it("guarantees that a delayed hydration cannot overwrite in-flight user changes", async () => {
+      // Seed disk with stale settings
+      const staleDiskPayload = {
+        notifications: { taskReminders: true },
+        hapticsEnabled: false,
+        musicPreference: 1,
+      };
+
+      let resolveDiskRead!: (val: string | null) => void;
+      const delayedDiskPromise = new Promise<string | null>((resolve) => {
+        resolveDiskRead = resolve;
+      });
+
+      jest.spyOn(AsyncStorage, "getItem").mockImplementationOnce(() => delayedDiskPromise);
+
+      // Start hydration (in-flight)
+      const loadPromise = useSettingsStore.getState().loadSettings();
+
+      // User makes an intentional setting change before disk read resolves
+      await useSettingsStore.getState().setHapticsEnabled(true);
+      await useSettingsStore.getState().setMusicPreference(9);
+
+      // Disk read finishes later with stale data
+      resolveDiskRead(JSON.stringify(staleDiskPayload));
+      await loadPromise;
+
+      // Assert user changes were preserved and NOT overwritten by stale disk payload
+      const state = useSettingsStore.getState();
+      expect(state.settings.hapticsEnabled).toBe(true);
+      expect(state.settings.musicPreference).toBe(9);
+    });
   });
 
   describe("ThemeStore Hydration & Zero Theme Flash Guard", () => {
