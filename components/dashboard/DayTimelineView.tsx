@@ -1223,7 +1223,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
             clearTimeout(t2);
             interaction?.cancel?.();
         };
-    }, [viewMode, selectedDate, SCREEN_WIDTH, pages, initialPageIndex]);
+    }, [viewMode, selectedDate, SCREEN_WIDTH, pages, initialPageIndex, visiblePageIndex]);
 
     const renderPage = useCallback(({ item: pageDates }: { item: Date[] }) => (
         <TimelinePage

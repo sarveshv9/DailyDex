@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 import { create } from "zustand";
 import { ROUTINE_STORAGE_KEY, SETTINGS_STORAGE_KEY } from "../constants/storageKeys";
+import { cancelAllRoutineNotifications, scheduleRoutineNotifications } from "../utils/notifications";
 import type { UserSettings } from "../types/user";
 
 export type Settings = UserSettings;
@@ -25,6 +26,10 @@ export interface SettingsState {
 
 let userChangedSettings: Partial<Settings> = {};
 
+export const _resetUserChangedSettings = () => {
+  userChangedSettings = {};
+};
+
 export const useSettingsStore = create<SettingsState>((set, get) => ({
   settings: DEFAULT_SETTINGS,
   isLoading: true,
@@ -37,35 +42,49 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     try {
       const stored = await AsyncStorage.getItem(SETTINGS_STORAGE_KEY);
       if (stored) {
-        const diskSettings = JSON.parse(stored);
-        set(() => ({
-          settings: {
-            ...DEFAULT_SETTINGS,
-            ...diskSettings,
-            ...userChangedSettings,
-            notifications: {
-              ...DEFAULT_SETTINGS.notifications,
-              ...(diskSettings.notifications || {}),
-              ...(userChangedSettings.notifications || {}),
-            },
-          },
-          isLoading: false,
-        }));
+        let diskSettings: Partial<Settings> = {};
+        try {
+          diskSettings = JSON.parse(stored);
+        } catch (parseErr) {
+          console.error("Corrupted settings JSON in storage, resetting to defaults", parseErr);
+          diskSettings = {};
+        }
+
+        const mergedNotifications = {
+          ...DEFAULT_SETTINGS.notifications,
+          ...(diskSettings.notifications || {}),
+          ...(userChangedSettings.notifications || {}),
+        };
+
+        const mergedSettings: Settings = {
+          ...DEFAULT_SETTINGS,
+          ...diskSettings,
+          ...userChangedSettings,
+          notifications: mergedNotifications,
+        };
+
+        set({
+          settings: mergedSettings,
+        });
       } else {
-        set(() => ({
+        const mergedNotifications = {
+          ...DEFAULT_SETTINGS.notifications,
+          ...(userChangedSettings.notifications || {}),
+        };
+
+        set({
           settings: {
             ...DEFAULT_SETTINGS,
             ...userChangedSettings,
-            notifications: {
-              ...DEFAULT_SETTINGS.notifications,
-              ...(userChangedSettings.notifications || {}),
-            },
+            notifications: mergedNotifications,
           },
-          isLoading: false,
-        }));
+        });
       }
     } catch (e) {
       console.error("Failed to load settings in settingsStore", e);
+      set({ settings: DEFAULT_SETTINGS });
+    } finally {
+      userChangedSettings = {};
       set({ isLoading: false });
     }
   },
@@ -96,17 +115,13 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
     if (key === "taskReminders") {
       if (!nextVal) {
-        import("../utils/notifications").then(({ cancelAllRoutineNotifications }) => {
-          cancelAllRoutineNotifications();
-        });
+        cancelAllRoutineNotifications();
       } else {
         AsyncStorage.getItem(ROUTINE_STORAGE_KEY).then((data) => {
           if (data) {
             try {
               const routines = JSON.parse(data);
-              import("../utils/notifications").then(({ scheduleRoutineNotifications }) => {
-                scheduleRoutineNotifications(routines);
-              });
+              scheduleRoutineNotifications(routines);
             } catch {}
           }
         });

@@ -88,7 +88,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
     }
     const idx = Math.abs(hash) % FALLBACK_COLORS.length;
     return FALLBACK_COLORS[idx];
-  }, [editedTask?.imageKey, editedTask?.task, theme.colors.primary]);
+  }, [editedTask, theme.colors.primary]);
 
   /* ── Save and Close ── */
   const closeAndSave = () => {

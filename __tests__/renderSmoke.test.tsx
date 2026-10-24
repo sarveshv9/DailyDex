@@ -34,7 +34,7 @@ jest.mock("expo-router", () => ({
       return () => {
         if (typeof cleanup === "function") cleanup();
       };
-    }, []);
+    }, [callback]);
   },
   useLocalSearchParams: () => ({}),
 }));

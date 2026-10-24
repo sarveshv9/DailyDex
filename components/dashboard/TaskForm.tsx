@@ -132,7 +132,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
       setEditActivePicker("none");
       setIconPickerTarget(null);
     }
-  }, [visible, isEditing, formData.time]);
+  }, [visible, isEditing, formData]);
 
   /* ── Smooth open/close spring animation ── */
   useEffect(() => {

@@ -291,160 +291,165 @@ The following items represent potential functional refinements or local hygiene 
 
 ---
 
-## 8. Remaining Work Plan (Ordered by Value)
+## 8. Remaining Work Plan (Revised Execution Order & Specifications)
 
 > [!IMPORTANT]
 > **Execution Status**: Paused. Implementation will NOT begin until personal device testing feedback is received and accepted.
 
 ```mermaid
 graph TD
-    A["A. UI Component Adoption Pass (High-Impact UI Consolidation)"] --> B["B. Large Screen Decomposition (todo.tsx, setup.tsx, routine.tsx)"]
-    B --> C["C. Stage 5E: Profile & Theme Modals (Lint Elimination & expo-image)"]
-    C --> D["D. Stage 6: Dead Code Pruning, Audio Compression & Guardrails"]
+    W1["1. Clear Compiler-Blocking Errors (31 refs + 9 set-state-in-effect)"] --> W2["2. Screen Decomposition (todo.tsx, setup.tsx, routine.tsx)"]
+    W2 --> W3["3. Selective Adoption Pass (Visual & Haptic Parity Only)"]
+    W3 --> W4["4. Stage 5E: Profile & Theme Modals (expo-image)"]
+    W4 --> W5["5. Stage 6: Knip Dead Code & Tokenization (Audio Compression Dropped)"]
+    W5 --> W6["6. Baseline vs Now Measurement (adb Benchmark: 592ed1d vs HEAD)"]
 ```
 
 ---
 
-### A. Adoption Pass: Design System Component Unification
+### Workstream 1: Clear React Compiler-Blocking Errors
 
-Replace ad-hoc inline controls with canonical `Button`, `Card`, and `Chip` primitives to eliminate UI fragmentation and redundant styling.
+Eliminate the 40 errors (31 `react-hooks/refs` and 9 `react-hooks/set-state-in-effect`) that cause the React Compiler to skip components entirely.
 
-#### Ad-Hoc Pattern Audit Table
+#### Compiler-Skipped Components & Per-File Error Breakdown
 
-| File | Ad-Hoc Pattern & Elements | Count | Target Primitive | Justification & Expected Replacement |
-| :--- | :--- | :---: | :--- | :--- |
-| `app/setup.tsx` | Next/Back buttons, step toggles (`<Pressable>`) | 25 | `Button` (primary/secondary) | Replaces manual `pressed` opacity and inline border styling with unified tactile haptics. |
-| `components/dashboard/TaskForm.tsx` | Save/Cancel buttons, recurrence selectors (`<Pressable>`) | 16 | `Button` & `Chip` | Replaces custom tag badges and action buttons with theme-governed components. |
-| `app/(tabs)/todo.tsx` | Priority pills, filter chips, action triggers (`<Pressable>`) | 15 | `Chip` & `Button` | Replaces inline category filter pills and status toggles with `Chip`. |
-| `components/dashboard/TaskModal.tsx` | Modal actions & option tiles (`<Pressable>`, `<TouchableOpacity>`) | 11 | `Button` & `Card` | Replaces raw touchable wrappers with consistent elevation cards and action buttons. |
-| `components/dashboard/DayTimelineView.tsx` | Event badges, quick actions (`<Pressable>`) | 8 | `Chip` | Replaces timeline category badges with unified `Chip`. |
-| `components/SetupTimeSteps.tsx` | Stepper buttons, time slot selectors (`<Pressable>`) | 6 | `Button` & `Chip` | Replaces custom stepper buttons with `Button` (size: sm). |
-| `components/focus/FocusConfirmModal.tsx` | Confirmation & cancel actions (`<Pressable>`) | 6 | `Button` | Standardizes modal primary and destructive actions. |
-| `components/profile/ThemeSelectionModal.tsx` | Color swatch chips, selection tiles (`<Pressable>`) | 6 | `Chip` & `Card` | Replaces inline bordered touchables with theme-aware cards and selection chips. |
-| `components/forms/IconPickerModal.tsx` | Icon selection grid items (`<Pressable>`) | 5 | `Chip` / `Button` (ghost) | Standardizes grid cell tap feedback. |
-| `components/focus/FocusActiveControls.tsx` | Play, Pause, Skip, Reset buttons (`<Pressable>`) | 4 | `Button` | Replaces custom round buttons with `Button` variant="primary" / "ghost". |
-| `components/focus/FocusSetupControls.tsx` | Duration preset chips (`<Pressable>`) | 4 | `Chip` | Replaces manual active border chips with `Chip`. |
-| `components/profile/RestoreModal.tsx` | Restore / Cancel actions (`<Pressable>`) | 4 | `Button` | Standardizes destructive vs ghost dialog buttons. |
-| `styles/shared.tsx` | Glass card helper wrappers (`<Pressable>`) | 4 | `Card` | Eliminates duplicated raw styles. |
-| `components/profile/ProfileCard.tsx` | Edit profile, action pills (`<Pressable>`) | 3 | `Button` (sm) | Standardizes profile action buttons. |
-
-#### Single-Consumer Component Audit & Deletion Rule
-- Any shared component with only **1 consumer** must either be adopted into 2+ files or eliminated:
-  - `components/common/CrossPlatformSegmentedControl.tsx` (1 consumer: `components/focus/FocusSetupControls.tsx`): Either adopt into `TaskModal.tsx` / `todo.tsx` tabs or inline into `FocusSetupControls.tsx` and delete the shared file.
-  - `components/common/WebTimePicker.tsx`: Internal dependency of `components/ui/TimePicker.tsx`. Move into `components/ui/internal/` or keep collocated.
-  - `components/common/ErrorBoundary.tsx` (1 consumer: `app/_layout.tsx`): Legitimate single-consumer root architectural boundary; preserved.
+| File | `react-hooks/refs` | `set-state-in-effect` | Other Errors | Skipped Component | Root Cause & Resolution Pattern |
+| :--- | :---: | :---: | :---: | :--- | :--- |
+| `components/dashboard/TaskModal.tsx` | 14 | 1 | 0 | `TaskModal` | Accessing animated values / panHandlers on refs during render; setState inside layout effect. Move to stable callbacks & handlers. |
+| `components/dashboard/TaskForm.tsx` | 9 | 1 | 0 | `TaskForm` | Accessing panHandlers / refs during render; synchronous setState in modal open effect. Derive state or trigger in action handlers. |
+| `app/(tabs)/_layout.tsx` | 4 | 0 | 0 | `TabLayout` | Accessing refs during render for tab indicator animations. Decouple to useSharedValue / worklets. |
+| `components/common/CrossPlatformSegmentedControl.tsx` | 4 | 0 | 0 | `CrossPlatformSegmentedControl` | Reading layout measure refs during render. Stabilize via native event measurements. Preserved as shared component. |
+| `components/dashboard/DayTimelineView.tsx` | 0 | 2 | 3 (`react/display-name`) | `DayTimelineView` | Synchronous setState in layout transition effects. Move to InteractionManager / post-mount event triggers. |
+| `components/dashboard/MonthCalendarView.tsx` | 0 | 2 | 0 | `MonthCalendarView` | Synchronous state synchronization in calendar month effect. |
+| `components/profile/ThemeSelectionModal.tsx` | 0 | 2 | 0 | `ThemeSelectionModal` | Synchronous reset of custom theme form inside effect. Trigger reset in modal `onDismiss` / `onOpen`. |
+| `components/profile/SettingModal.tsx` | 0 | 1 | 0 | `SettingModal` | Synchronous props-to-state synchronization effect. Use `key={user?.id}` to reset modal tree declaratively. |
+| **Totals** | **31** | **9** | **3** | **8 components** | **Clearing these enables React Compiler auto-memoization repo-wide.** |
 
 #### Scope, Risk & Verification
-- **Scope**: Replace ~110 ad-hoc `<Pressable>` / `<TouchableOpacity>` / inline card implementations across 14 files.
-- **Risk**: Low-Medium (visual styling regressions, margin/padding shifts, or broken `onPress` closures).
+- **Scope**: 8 component files, 40 lint errors eliminated.
+- **Risk**: Low-Medium (ensuring animations and form state transitions remain identical).
 - **How to Verify**:
-  - Run `git diff -w` to inspect DOM structure and ensure props map 1:1.
-  - Run `npx tsc --noEmit` and `npm test` (all 38 unit tests pass).
-  - Verify `renderSmoke.test.tsx` mounts all screens cleanly.
+  - Run `npx eslint . -f json` to verify errors drop by 40.
+  - Run Babel compiler check (`npx expo export`) to confirm compiler emits `_c()` memoization caches for all 8 components.
+  - `npm test` and `renderSmoke.test.tsx` pass cleanly.
 - **What You Must Hand-Test**:
-  - Tap button states in `todo.tsx` (Add Task, Filter chips, Priority toggles) — confirm haptic tap response and active colors.
-  - Test modal CTA buttons in `TaskModal` and `FocusConfirmModal` (Confirm, Cancel, Delete).
-  - Visual check for alignment and margins around cards on mobile screen widths.
+  - Open TaskModal and TaskForm: verify spring open/close and drag-to-dismiss work smoothly.
+  - Switch tabs in `_layout.tsx`: verify smooth indicator slide.
 
 ---
 
-### B. Screen Decomposition: Split `todo.tsx`, `setup.tsx` (and `routine.tsx`)
+### Workstream 2: Screen Decomposition (`todo.tsx`, `setup.tsx`, and `routine.tsx`)
 
-Decompose monolithic screen files into focused, testable leaf components using move-only refactoring.
+Decompose monolithic screens into focused leaf components using strict move-only diffs.
 
-#### Decomposition Target Breakdown
+#### Target Decompositions
 1. **`app/(tabs)/todo.tsx` (Current: 1,789 lines)**:
    - Extract `components/todo/TodoHeader.tsx` (~250 lines): Search input, category filter scroll, statistics row.
    - Extract `components/todo/TodoTaskItem.tsx` (~450 lines): Task card, checkbox, priority indicator, swipe actions.
    - Extract `components/todo/TodoBatchActions.tsx` (~150 lines): Multi-select bar, batch delete, batch complete.
-   - Retain in `app/(tabs)/todo.tsx`: Screen scaffold, state orchestration, FlashList rendering (~400 lines).
+   - Target line count for `app/(tabs)/todo.tsx`: **< 500 lines**.
 2. **`app/setup.tsx` (Current: 2,100 lines)**:
    - Extract `components/setup/SetupHeroStep.tsx` (~300 lines): Welcome card, mascot animation, intro copy.
    - Extract `components/setup/SetupRoutineStep.tsx` (~400 lines): Preset routine picker, time allocation.
    - Extract `components/setup/SetupSummaryStep.tsx` (~350 lines): Schedule review, notification permissions.
-   - Retain in `app/setup.tsx`: Step state machine, pager transitions, final submit logic (~500 lines).
+   - Target line count for `app/setup.tsx`: **< 600 lines**.
 3. **`app/routine.tsx` (Current: 1,073 lines)**:
-   - Extract `components/routine/RoutineHeader.tsx` (~180 lines): Date picker, calendar toggle, day progress.
-   - Extract `components/routine/RoutineTimelinePager.tsx` (~220 lines): Gesture responder, date swiper container.
-   - Retain in `app/routine.tsx`: Main screen coordinator, modal state, data queries (~670 lines).
+   - If still large, extract `components/routine/RoutineHeader.tsx` (~180 lines) and `components/routine/RoutineTimelinePager.tsx` (~220 lines).
 
-#### Move-Only Diff Check Protocol
-- Strictly separate code movement from behavior changes:
-  1. Commit 1: Pure code extraction into new component files (zero edits to logic, props, or styles).
-  2. Run `git diff --color-moved=dimmed-zebra -w` to prove that all extracted lines are 100% moved blocks with zero altered expressions.
-  3. Commit 2: Re-wire imports in parent screens.
-
-#### Scope, Risk & Verification
-- **Scope**: Extract ~2,800 lines across 3 screens into 8 modular subcomponents in `components/todo/`, `components/setup/`, and `components/routine/`.
-- **Risk**: Low (prop passing errors, stale closure references in extracted callbacks).
-- **How to Verify**:
-  - `git diff --color-moved=dimmed-zebra -w` shows all additions matching deletions.
-  - `npx tsc --noEmit` verifies all prop interfaces are sound.
-  - `npm test` runs full suite; `renderSmoke.test.tsx` passes for all 6 screens.
+#### Move-Only Diff Protocol
+- Every extraction is isolated into a dedicated commit with zero expression edits:
+  - Command: `git diff --color-moved=dimmed-zebra -w` must show 100% moved blocks.
+- **Verification**: `npx tsc --noEmit` and `npm test` pass.
 - **What You Must Hand-Test**:
-  - In Todo: Add, complete, and delete a task. Toggle priority filters.
-  - In Routine: Swipe between days (left/right gesture) to ensure the PanResponder remained completely intact.
-  - In Setup: Step through the wizard from step 1 to final completion.
+  - Todo list: create, complete, edit, and delete tasks; verify batch operations.
+  - Setup wizard: advance through all steps from intro to routine creation.
 
 ---
 
-### C. Stage 5E: Profile & Theme Modals (Lint Elimination & `expo-image`)
+### Workstream 3: Selective Adoption Pass (Visual & Haptic Parity Only)
 
-Eliminate remaining React 19 lint errors in profile modals and upgrade legacy `<Image>` to `<expo-image>`.
+Replace ad-hoc inline controls with canonical `Button`, `Card`, and `Chip` primitives **ONLY** when the result is visually identical and haptic behavior matches existing behavior.
 
-#### Target Files & Error Breakdown
-- `components/profile/ThemeSelectionModal.tsx` (2 errors):
-  - Line 100: `react-hooks/set-state-in-effect` (synchronous `setState` resetting custom form in effect).
-  - Line 122: `react-hooks/set-state-in-effect` (synchronous `setState` resetting preview sprite in effect).
-  - *Fix*: Derive reset states or trigger resets inside the action handlers (`onOpen`, `onDismiss`, `onSearchChange`).
-- `components/profile/SettingModal.tsx` (1 error):
-  - Line 43: `react-hooks/set-state-in-effect` (`setName`, `setRole`, `setEmail` in effect syncing props).
-  - *Fix*: Use `key={user?.id || 'new'}` on the modal content to reset state on identity change, eliminating synchronous effect state sync.
-- **`expo-image` Migration**:
-  - Replace `react-native` `<Image>` in `components/profile/ProfileCard.tsx` and `components/profile/ThemeSelectionModal.tsx` with `<Image>` from `expo-image`.
-  - Add disk caching (`cachePolicy="disk"`), smooth fade transitions, and memory recycling.
+#### Guardrails & Haptic Parity Rules
+1. **Haptic Opt-Out**: The shared `Button` component triggers tactile haptics by default. Where the original ad-hoc code had **NO** haptics, pass `haptics={false}` to preserve exact original tactile behavior.
+2. **Strict Visual Identity**: If an ad-hoc Pressable/View has custom layout geometry, custom animated border colors, or non-standard elevation that cannot be cleanly replicated by `Button`/`Card`/`Chip` without visual drift, **SKIP IT**.
+3. **Preserve Single-Consumer Components**: Do **NOT** inline single-consumer components like `CrossPlatformSegmentedControl.tsx`. Retain them as dedicated components.
 
-#### Scope, Risk & Verification
-- **Scope**: 3 modal files, ~650 lines total, 3 ESLint errors eliminated.
-- **Risk**: Low (modal form resets failing on open/close).
-- **How to Verify**:
-  - `npx eslint components/profile/` returns 0 errors and 0 warnings.
-  - `npm run lint:ratchet` passes with ratchet ceiling reduced by 3 errors.
-  - `renderSmoke.test.tsx` mounts Profile and Theme screens without warnings.
-- **What You Must Hand-Test**:
-  - Open Profile screen -> Open "Edit Profile" modal -> Change name/email -> Save -> Confirm values persist.
-  - Open "Theme Selection" modal -> Search for Pokémon (e.g., "gengar") -> Verify sprite loads smoothly -> Select theme -> Verify theme instantly applies app-wide.
+#### Candidate Adoption Table
+
+| File | Ad-Hoc Pattern | Count | Target | Haptics Policy | Parity Action |
+| :--- | :--- | :---: | :--- | :--- | :--- |
+| `components/dashboard/TaskForm.tsx` | Recurrence day pills (`<Pressable>`) | 7 | `Chip` | Retain haptics | Replace with `Chip` (visually identical pill). |
+| `app/(tabs)/todo.tsx` | Category filter pills (`<Pressable>`) | 5 | `Chip` | Retain haptics | Replace with `Chip` variant="outline" / "filled". |
+| `components/focus/FocusConfirmModal.tsx` | Confirm / Cancel modal buttons | 4 | `Button` | Retain haptics | Replace with `Button` (variant: primary / ghost). |
+| `components/profile/RestoreModal.tsx` | Restore / Cancel dialog buttons | 4 | `Button` | Retain haptics | Replace with `Button` (variant: destructive / ghost). |
+| `components/focus/FocusActiveControls.tsx` | Play / Pause / Skip buttons | 4 | `Button` | Use `haptics={false}` if old had none | Replace with round `Button`. |
+| `components/profile/ProfileCard.tsx` | Action buttons | 3 | `Button` | Retain haptics | Replace with `Button` (size: sm). |
+| *Other complex Pressables* | Custom animations / non-standard layouts | ~70 | *None* | N/A | **SKIP** (preserve existing implementation). |
 
 ---
 
-### D. Stage 6: Dead Code Pruning, Audio Compression & Long-Term Guardrails
+### Workstream 4: Stage 5E: Profile & Theme Modals (expo-image)
 
-Final polish, bundle shrinking, asset optimization, and permanent regression prevention.
+- Fix remaining profile modal lint errors (`ThemeSelectionModal.tsx` and `SettingModal.tsx`).
+- Replace legacy `react-native` `<Image>` with `<Image>` from `expo-image` across `components/profile/ProfileCard.tsx` and `components/profile/ThemeSelectionModal.tsx`.
+- Enable disk caching (`cachePolicy="disk"`), smooth fade transitions, and memory recycling.
+- **Verification**: `npx eslint components/profile/` returns 0 errors; `npm test` passes.
+- **What You Must Hand-Test**: Search Pokémon in theme modal (e.g. "lucario"); confirm sprite loads instantly with disk cache.
 
-#### Target Workstreams
-1. **Knip Dead Code Audit**:
-   - Run `npx knip` to identify unreferenced exports, unused npm packages, and stale type declarations.
-   - Safely prune verified dead exports in `types/` and `utils/`.
-2. **Design Tokenization Cleanup**:
-   - Grep for remaining raw hex strings (`#[0-9a-fA-F]{3,6}`) outside `constants/themeTokens.ts` and `styles/shared.tsx`.
-   - Tokenize font sizes and spacing margins to `SPACING.*` and `TYPOGRAPHY.*`.
-3. **Audio Asset Compression**:
-   - 10 bundled MP3 files currently take **25.5 MB** of app size.
-   - Compress MP3s using `ffmpeg` with `-codec:a libmp3lame -b:a 64k` (targeting ~10 MB total, a ~60% size reduction).
-   - **Safety Rule**: Preserve original uncompressed audio files in an archive directory (`assets/audio/originals/`, excluded from bundle) so no source assets are ever lost.
-4. **Permanent Lint Ratchet & ESLint Rule Hardening**:
-   - Drive ESLint error ceiling down to **0**.
-   - Drive ESLint warning ceiling down to **0**.
-   - Add ESLint rule preventing uncurated imports of `react-native` `Button` or raw `TouchableOpacity`.
+---
 
-#### Scope, Risk & Verification
-- **Scope**: Entire repository asset footprint and CI configuration.
-- **Risk**: Low-Medium (audio quality degradation if bitrate too low; accidental deletion of dynamically referenced assets).
-- **How to Verify**:
-  - Run audio comparison tests (listen check and waveform verification).
-  - Run full export build: `npx expo export --platform all` to verify production bundle size reduction.
-  - `npm run lint:ratchet` passes at `maxErrors: 0, maxWarnings: 0`.
-- **What You Must Hand-Test**:
-  - In Focus screen: Play all 10 ambient soundscapes (Rain, Waves, Forest, White Noise, etc.) — verify crystal-clear playback without distortion or clipping.
-  - Background the app with audio playing: verify lock screen playback continues seamlessly.
+### Workstream 5: Stage 6: Knip Dead Code, Tokenization & Permanent Guardrails
+
+- **Audio Compression Dropped**: The app is exclusively for personal device installation; audio compression is dropped to eliminate audio degradation risk.
+- **Knip Dead Code Audit**: Run `npx knip` to identify unreferenced exports, prune dead types and unused utilities.
+- **Tokenization**: Replace remaining scattered hex strings with `themeTokens.ts`.
+- **Ratchet Ceilings**:
+  - Rather than an arbitrary zero, ceilings will be set to the true remaining count after dead code removal.
+  - Static asset requires are already permitted by `eslint-config-expo/flat` (`allow: ['\\.(aac|...|png|jpg|mp3|svg)$']`).
+  - Set `maxErrors` and `maxWarnings` in `lint-baseline.json` to lock in the final hardened baseline.
+
+---
+
+### Workstream 6: Baseline vs Now Benchmark Measurement
+
+Execute standardized benchmarks on the same Android emulator comparing commit `592ed1d` (pre-refactor baseline) vs HEAD (final refactored build).
+
+#### Standardized Measurement Protocols & Exact `adb` Commands
+
+1. **Cold Start Time (Median of 5 Iterations)**:
+   ```bash
+   # Run 5 iterations, record TotalTime in ms, and compute median
+   adb shell am force-stop com.anonymous.Zenapp
+   sleep 2
+   adb shell am start-activity -W -n com.anonymous.Zenapp/.MainActivity | grep TotalTime
+   ```
+2. **Running Timer Render Counts over 60 Seconds**:
+   - Start a 25-minute focus session.
+   - Measure re-render counts on `HomeScreen`, `TodoScreen`, and `FocusScreen` using React DevTools Profiler / hook logger over a 60-second window.
+3. **Todo List Scroll Jank & Frame Statistics**:
+   ```bash
+   # 1. Reset frame statistics buffer
+   adb shell dumpsys gfxinfo com.anonymous.Zenapp reset
+   # 2. Perform standardized 1000px fling scroll down and up
+   adb shell input swipe 500 1600 500 600 250
+   sleep 1
+   adb shell input swipe 500 600 500 1600 250
+   # 3. Dump graphics frame stats
+   adb shell dumpsys gfxinfo com.anonymous.Zenapp framestats
+   ```
+
+#### Benchmark Comparison Table Template
+
+| Metric | Measurement Method | Baseline (`592ed1d`) | Refactored (HEAD) | Delta | Verification Notes |
+| :--- | :--- | :---: | :---: | :---: | :--- |
+| **Cold Start TTI (ms)** | `am start-activity -W` (median of 5) | *TBD ms* | *TBD ms* | *-%* | Cold start time to interactive |
+| **Home Timer Re-renders** | React Profiler (60s running timer) | 60 renders | **0 renders** | **-100%** | Decoupled via `ActiveTimerBadge` |
+| **Todo Timer Re-renders** | React Profiler (60s running timer) | 60 renders | **0 renders** | **-100%** | Decoupled via `ActiveTimerBadge` |
+| **Focus Screen FPS** | SurfaceFlinger / dumpsys | *TBD fps* | *TBD fps* | - | Dial animation smoothness |
+| **Todo Scroll Janky Frames** | `dumpsys gfxinfo framestats` | *TBD %* | *TBD %* | *-%* | Percentage of frames > 16.6ms |
+| **Total ESLint Errors** | `npm run lint:ratchet` | 128 errors | **47 errors** | **-63%** | On track to < 10 errors |
+| **Exhaustive-Deps Warnings** | `eslint -f json` | 5 warnings | **0 warnings** | **-100%** | All stale closure risks resolved |
+| **Unit Test Coverage** | Jest (`npm test`) | 0 tests | **41 tests (8 suites)** | **+41** | 100% passing test harness |
+
 

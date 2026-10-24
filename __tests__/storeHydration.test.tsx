@@ -4,6 +4,7 @@ import { render } from "@testing-library/react-native";
 import {
   useSettingsStore,
   DEFAULT_SETTINGS,
+  _resetUserChangedSettings,
   useHapticsEnabled,
   useMusicPreference,
   useTaskReminders,
@@ -23,10 +24,24 @@ jest.mock("@react-native-async-storage/async-storage", () =>
   require("@react-native-async-storage/async-storage/jest/async-storage-mock")
 );
 
+jest.mock("../utils/notifications", () => ({
+  cancelAllRoutineNotifications: jest.fn(),
+  scheduleRoutineNotifications: jest.fn(),
+}));
+
 describe("Store Hydration from Legacy Storage Shapes", () => {
   beforeEach(async () => {
     await AsyncStorage.clear();
     jest.clearAllMocks();
+    _resetUserChangedSettings();
+    useSettingsStore.setState({ settings: DEFAULT_SETTINGS, isLoading: true });
+    useThemeStore.setState({
+      themeName: "default",
+      isDarkMode: true,
+      isAutoTheme: false,
+      isLoaded: false,
+      customThemes: {},
+    });
   });
 
   describe("SettingsStore Hydration", () => {
@@ -148,6 +163,83 @@ describe("Store Hydration from Legacy Storage Shapes", () => {
       expect(state.settings.musicPreference).toBe(3);
       // 3. Untouched saved nested key from disk must survive (not replaced by DEFAULT_SETTINGS true)
       expect(state.settings.notifications.taskReminders).toBe(false);
+    });
+
+    it("deep-merges the nested notifications object preserving defaults for untouched keys and user changes for modified keys", async () => {
+      const partialDiskPayload = {
+        notifications: {},
+        hapticsEnabled: true,
+        musicPreference: 1,
+      };
+
+      let resolveDiskRead!: (val: string | null) => void;
+      const delayedDiskPromise = new Promise<string | null>((resolve) => {
+        resolveDiskRead = resolve;
+      });
+
+      jest.spyOn(AsyncStorage, "getItem").mockImplementationOnce(() => delayedDiskPromise);
+
+      const loadPromise = useSettingsStore.getState().loadSettings();
+
+      // User modifies taskReminders in-flight
+      await useSettingsStore.getState().toggleNotification("taskReminders");
+
+      resolveDiskRead(JSON.stringify(partialDiskPayload));
+      await loadPromise;
+
+      const state = useSettingsStore.getState();
+      expect(state.isLoading).toBe(false);
+      // taskReminders was true by default, toggled to false by user
+      expect(state.settings.notifications.taskReminders).toBe(false);
+    });
+
+    it("falls back to defaults and sets isLoading: false when storage contains corrupted JSON", async () => {
+      const errSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+      await AsyncStorage.setItem(SETTINGS_STORAGE_KEY, "INVALID_CORRUPTED_JSON_{{[}");
+
+      await useSettingsStore.getState().loadSettings();
+
+      const state = useSettingsStore.getState();
+      expect(state.isLoading).toBe(false);
+      expect(state.settings).toEqual(DEFAULT_SETTINGS);
+      expect(errSpy).toHaveBeenCalledWith(
+        "Corrupted settings JSON in storage, resetting to defaults",
+        expect.any(SyntaxError)
+      );
+      errSpy.mockRestore();
+    });
+
+    it("clears userChangedSettings on hydrate completion so a second hydrate after a restore loads new disk values cleanly", async () => {
+      // 1. First hydrate with user change in-flight
+      let resolveFirstDiskRead!: (val: string | null) => void;
+      const firstDiskPromise = new Promise<string | null>((resolve) => {
+        resolveFirstDiskRead = resolve;
+      });
+      jest.spyOn(AsyncStorage, "getItem").mockImplementationOnce(() => firstDiskPromise);
+
+      const firstLoad = useSettingsStore.getState().loadSettings();
+      await useSettingsStore.getState().setHapticsEnabled(false);
+      resolveFirstDiskRead(JSON.stringify({ hapticsEnabled: true, musicPreference: 1 }));
+      await firstLoad;
+
+      expect(useSettingsStore.getState().settings.hapticsEnabled).toBe(false);
+
+      // 2. Simulate backup restore: write completely new data to disk
+      const restoredPayload = {
+        notifications: { taskReminders: false },
+        hapticsEnabled: true, // Should be true now from restore
+        musicPreference: 5,
+      };
+      await AsyncStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(restoredPayload));
+
+      // 3. Second hydrate (triggered after backup restore)
+      await useSettingsStore.getState().loadSettings();
+
+      const finalState = useSettingsStore.getState();
+      expect(finalState.isLoading).toBe(false);
+      expect(finalState.settings.hapticsEnabled).toBe(true); // Restored value survives, not clobbered by stale change
+      expect(finalState.settings.musicPreference).toBe(5);
+      expect(finalState.settings.notifications.taskReminders).toBe(false);
     });
   });
 

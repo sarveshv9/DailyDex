@@ -8,6 +8,11 @@ jest.mock("@react-native-async-storage/async-storage", () =>
   require("@react-native-async-storage/async-storage/jest/async-storage-mock")
 );
 
+jest.mock("../utils/notifications", () => ({
+  cancelAllRoutineNotifications: jest.fn(),
+  scheduleRoutineNotifications: jest.fn(),
+}));
+
 jest.mock("../utils/haptics", () => ({
   selectionAsync: jest.fn(),
   impactAsync: jest.fn(),

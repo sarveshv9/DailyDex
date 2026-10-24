@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     Platform,
     Pressable,
@@ -199,12 +199,12 @@ export function MonthCalendarView({ currentDate, routineItems, onSelectDate, the
     }, [year, month]);
 
     // Data-accurate routine item retrieval matching timeline
-    const getDayItems = (date: Date) => {
+    const getDayItems = useCallback((date: Date): RoutineItem[] => {
         return getRoutineItemsForDate(routineItems, date)
             .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
-    };
+    }, [routineItems]);
 
-    const selectedItems = useMemo(() => getDayItems(selectedDate), [selectedDate, routineItems]);
+    const selectedItems = useMemo(() => getDayItems(selectedDate), [selectedDate, getDayItems]);
 
     // Tapping a grid cell selects it; tapping the already selected date confirms and navigates
     const handleCellPress = (date: Date) => {
