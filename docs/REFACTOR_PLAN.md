@@ -99,20 +99,20 @@ graph TD
 
 ---
 
-### Stage 1: Health, Config, Dependency Pruning & React Compiler
+### Stage 1: Health, Config, Dependency Pruning & React Compiler (Completed)
 - **Branch**: `refactor/stage-1-health-config`
 - **Objective**: Fix `expo-doctor` schema errors, install missing peers, prune verified dead dependencies, and enable React Compiler.
-- **Scope**:
-  - `app.json`: Remove obsolete `android.edgeToEdgeEnabled` and unused `NSCalendarsUsageDescription`.
-  - Install missing required peer dependencies: `expo-asset` (for `expo-audio`), `react-native-worklets` (for `react-native-reanimated`).
-  - Prune verified dead packages from `package.json` (**one commit per package**, removing `app.json` plugins/permissions/env vars, verifying with `expo-doctor` and clean build):
-    - Commit 1: `@supabase/supabase-js` (delete dummy `lib/supabase.ts`)
-    - Commit 2: `expo-calendar` (clean infoPlist)
-    - Commit 3: `react-native-pager-view`
-    - Commit 4: `react-native-tab-view`
-    - Commit 5: `@react-native-segmented-control/segmented-control`
-  - **Dedicated PR for React Compiler**: Set `"reactCompiler": true` in `app.json` `experiments`. Verify compiled components in React DevTools ("Memo ✨" badge) and list components skipped due to lint errors.
-- **Definition of Done**: `npx expo-doctor` passes 100% of checks; clean build succeeds; Maestro smoke tests pass.
+- **Scope & Results**:
+  - `app.json`: Removed obsolete `android.edgeToEdgeEnabled` and unused `NSCalendarsUsageDescription`.
+  - Installed missing required peer dependencies: `expo-asset` (for `expo-audio`), `react-native-worklets` (for `react-native-reanimated`).
+  - Pruned verified dead packages:
+    - `@supabase/supabase-js` (deleted unused `lib/supabase.ts`)
+    - `expo-calendar` (cleaned infoPlist)
+    - `@react-native-segmented-control/segmented-control`
+  - *Dependency discovery note*: `react-native-tab-view` and `react-native-pager-view` were initially slated for removal based on `knip` static scan. However, `app/(tabs)/_layout.tsx` relies on `expo-router/js-top-tabs`, which dynamically requires `react-native-tab-view` (and its native pager `react-native-pager-view`). Full export build verification showed removing them broke static export with `Error: Install the 'react-native-tab-view' package and its peer dependencies to use the Expo Router's TopTabs.` They are safely retained until the tab navigator is migrated.
+  - Enabled `"reactCompiler": true` in `app.json` `experiments`.
+  - Documented 17 components with lint errors skipped by React Compiler pending per-screen migrations.
+- **Definition of Done**: `npm test`, `npm run lint:ratchet`, `npx tsc --noEmit`, and `npm run build` (`expo export`) all pass cleanly.
 
 ---
 
