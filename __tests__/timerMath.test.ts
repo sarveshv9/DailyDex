@@ -1,4 +1,11 @@
-import { calculateRemainingSeconds, formatSecondsToMMSS } from "../utils/timeMath";
+import {
+  addMinutesToTime,
+  calculateRemainingSeconds,
+  formatDuration,
+  formatSecondsToMMSS,
+  parseTime,
+  timeToMinutes,
+} from "../utils/timeMath";
 
 describe("Timer Math & Drift Prevention (calculateRemainingSeconds)", () => {
   beforeEach(() => {
@@ -49,5 +56,33 @@ describe("Timer Math & Drift Prevention (calculateRemainingSeconds)", () => {
     expect(formatSecondsToMMSS(65)).toBe("01:05");
     expect(formatSecondsToMMSS(0)).toBe("00:00");
     expect(formatSecondsToMMSS(-10)).toBe("00:00");
+  });
+
+  it("formats duration in minutes correctly", () => {
+    expect(formatDuration(15)).toBe("15m");
+    expect(formatDuration(60)).toBe("1h");
+    expect(formatDuration(90)).toBe("1h 30m");
+    expect(formatDuration(125)).toBe("2h 5m");
+  });
+
+  it("parses 12h and 24h time strings correctly", () => {
+    expect(parseTime("8:30 AM")).toEqual({ hours: 8, minutes: 30, isValid: true });
+    expect(parseTime("12:00 PM")).toEqual({ hours: 12, minutes: 0, isValid: true });
+    expect(parseTime("11:45 PM")).toEqual({ hours: 23, minutes: 45, isValid: true });
+    expect(parseTime("12:15 AM")).toEqual({ hours: 0, minutes: 15, isValid: true });
+    expect(parseTime("invalid")).toEqual({ hours: 0, minutes: 0, isValid: false });
+  });
+
+  it("converts time string to chronological day minutes with late-night shift", () => {
+    // 8:00 AM = 480
+    expect(timeToMinutes("8:00 AM")).toBe(480);
+    // 1:00 AM (late night) shifts by +24h to logically appear at end of day (1500 min)
+    expect(timeToMinutes("1:00 AM")).toBe((1 + 24) * 60);
+  });
+
+  it("adds minutes to time string correctly", () => {
+    expect(addMinutesToTime("8:00 AM", 45)).toBe("8:45 AM");
+    expect(addMinutesToTime("11:30 AM", 60)).toBe("12:30 PM");
+    expect(addMinutesToTime("11:00 PM", 90)).toBe("12:30 AM");
   });
 });

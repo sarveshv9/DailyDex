@@ -1,31 +1,20 @@
 // src/utils/utils.ts
-export interface SubTask {
-  id: string;
-  title: string;
-  completed: boolean;
-}
+import type { RoutineFormData, RoutineItem, SubTask } from "../types";
+import {
+  addMinutesToTime,
+  formatDuration,
+  minutesToTimeStr,
+  parseTime,
+  timeToMinutes,
+} from "./timeMath";
 
-export interface RoutineItem {
-  id: string;
-  time: string;
-  task: string;
-  description: string;
-  imageKey?: string;
-  insertionOrder?: number;
-  daysOfWeek?: number[]; // [0,1,2,3,4,5,6] (0 = Sunday)
-  date?: string; // "YYYY-MM-DD"
-  duration?: number;
-  subtasks?: SubTask[];
-  parentId?: string; // ID of the recurring parent item for one-off modifications/skips
-  isSkipped?: boolean; // Flag to indicate a deleted one-off occurrence of a recurring task
-  completed?: boolean;
-}
-
-export const formatDuration = (minutes: number): string => {
-  if (minutes < 60) return `${minutes}m`;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return m === 0 ? `${h}h` : `${h}h ${m}m`;
+export type { SubTask, RoutineItem, RoutineFormData as FormData };
+export {
+  addMinutesToTime,
+  formatDuration,
+  minutesToTimeStr,
+  parseTime,
+  timeToMinutes,
 };
 
 export const isWakeupOrSleep = (item: RoutineItem): boolean => {
@@ -269,80 +258,6 @@ export const ICON_GROUPS: { category: string; icons: { key: string; label: strin
   },
 ];
 
-export interface FormData {
-  time: string;
-  task: string;
-  description: string;
-  imageKey?: string;
-  daysOfWeek: number[];
-  date?: string;
-  duration?: number;
-  subtasks?: SubTask[];
-}
-
-export const parseTime = (
-  timeStr: string
-): { hours: number; minutes: number; isValid: boolean } => {
-  if (!timeStr || typeof timeStr !== "string") {
-    return { hours: 0, minutes: 0, isValid: false };
-  }
-
-  const cleanTime = timeStr.trim().toUpperCase();
-  const timeRegex = /^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?$/;
-  const match = cleanTime.match(timeRegex);
-
-  if (!match) {
-    return { hours: 0, minutes: 0, isValid: false };
-  }
-
-  let hours = parseInt(match[1], 10);
-  const minutes = parseInt(match[2] || "0", 10);
-  const ampm = match[3];
-
-  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
-    return { hours: 0, minutes: 0, isValid: false };
-  }
-
-  if (ampm) {
-    if (hours < 1 || hours > 12) {
-      return { hours: 0, minutes: 0, isValid: false };
-    }
-
-    if (ampm === "PM" && hours !== 12) {
-      hours += 12;
-    } else if (ampm === "AM" && hours === 12) {
-      hours = 0;
-    }
-  }
-
-  return { hours, minutes, isValid: true };
-};
-
-export const timeToMinutes = (timeStr: string): number => {
-  const { hours, minutes, isValid } = parseTime(timeStr);
-  if (!isValid) {
-    return Number.MAX_SAFE_INTEGER;
-  }
-  // Shift late-night times (before 4 AM) so they logically appear at the end of the day
-  const adjustedHours = hours < 4 ? hours + 24 : hours;
-  return adjustedHours * 60 + minutes;
-};
-
-export const minutesToTimeStr = (totalMinutes: number): string => {
-  let m = ((totalMinutes % 1440) + 1440) % 1440;
-  const hours = Math.floor(m / 60);
-  const mins = m % 60;
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  const displayHours = hours % 12 || 12;
-  return `${displayHours}:${mins.toString().padStart(2, '0')} ${ampm}`;
-};
-
-export const addMinutesToTime = (timeStr: string, minutesToAdd: number): string => {
-  const { hours, minutes, isValid } = parseTime(timeStr);
-  if (!isValid) return timeStr;
-  const total = hours * 60 + minutes + minutesToAdd;
-  return minutesToTimeStr(total);
-};
 
 export const sortRoutineItems = (items: RoutineItem[]): RoutineItem[] => {
   return [...items].sort((a, b) => {
