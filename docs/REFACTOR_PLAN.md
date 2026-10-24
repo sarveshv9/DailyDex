@@ -104,14 +104,32 @@ graph TD
 - **Objective**: Fix `expo-doctor` schema errors, install missing peers, prune verified dead dependencies, and enable React Compiler.
 - **Scope & Results**:
   - `app.json`: Removed obsolete `android.edgeToEdgeEnabled` and unused `NSCalendarsUsageDescription`.
+  - *Native Directory Handling*: Because the `android/` folder is committed and stale, edits in `app.json` (such as removing calendar permissions/plugins) do not reach the native manifest until Stage 0.5 (CNG transition). To respect the rule not to modify `android/` or run `expo prebuild --clean`, `android/` is left untouched on the working branch until the CNG transition.
   - Installed missing required peer dependencies: `expo-asset` (for `expo-audio`), `react-native-worklets` (for `react-native-reanimated`).
   - Pruned verified dead packages:
     - `@supabase/supabase-js` (deleted unused `lib/supabase.ts`)
     - `expo-calendar` (cleaned infoPlist)
     - `@react-native-segmented-control/segmented-control`
   - *Dependency discovery note*: `react-native-tab-view` and `react-native-pager-view` were initially slated for removal based on `knip` static scan. However, `app/(tabs)/_layout.tsx` relies on `expo-router/js-top-tabs`, which dynamically requires `react-native-tab-view` (and its native pager `react-native-pager-view`). Full export build verification showed removing them broke static export with `Error: Install the 'react-native-tab-view' package and its peer dependencies to use the Expo Router's TopTabs.` They are safely retained until the tab navigator is migrated.
-  - Enabled `"reactCompiler": true` in `app.json` `experiments`.
-  - Documented 17 components with lint errors skipped by React Compiler pending per-screen migrations.
+  - Enabled `"reactCompiler": true` in `app.json` `experiments`. Confirmed React Compiler active via Babel transform output emitting `react/compiler-runtime` and memoization caches (`_c()`).
+  - **17 Components Skipped by React Compiler Due to Existing Lint Errors**:
+    1. `app/(tabs)/_layout.tsx` (4 `react-hooks/refs` errors)
+    2. `app/(tabs)/todo.tsx` (5 `react-hooks/immutability`, `react-hooks/set-state-in-effect` errors)
+    3. `app/+not-found.tsx` (1 `react/no-unescaped-entities` error)
+    4. `app/routine.tsx` (47 `react-hooks/refs` errors)
+    5. `app/setup.tsx` (10 `react-hooks/refs` errors)
+    6. `app/terms.tsx` (2 `react/no-unescaped-entities` errors)
+    7. `components/SetupTimeSteps.tsx` (12 `react-hooks/static-components`, `react-hooks/refs` errors)
+    8. `components/common/CrossPlatformSegmentedControl.tsx` (4 `react-hooks/refs` errors)
+    9. `components/common/ErrorBoundary.tsx` (1 `react/no-unescaped-entities` error)
+    10. `components/dashboard/DayTimelineView.tsx` (5 `react/display-name`, `react-hooks/set-state-in-effect` errors)
+    11. `components/dashboard/MonthCalendarView.tsx` (2 `react-hooks/set-state-in-effect` errors)
+    12. `components/dashboard/TaskForm.tsx` (10 `react-hooks/refs`, `react-hooks/set-state-in-effect` errors)
+    13. `components/dashboard/TaskModal.tsx` (15 `react-hooks/refs`, `react-hooks/set-state-in-effect` errors)
+    14. `components/dashboard/TimelineEventCard.tsx` (5 `react-hooks/refs` errors)
+    15. `components/profile/SettingModal.tsx` (1 `react-hooks/set-state-in-effect` error)
+    16. `components/profile/ThemeSelectionModal.tsx` (2 `react-hooks/set-state-in-effect` errors)
+    17. `context/TimerContext.tsx` (2 `react-hooks/refs` errors — resolved in Stage 1B!)
 - **Definition of Done**: `npm test`, `npm run lint:ratchet`, `npx tsc --noEmit`, and `npm run build` (`expo export`) all pass cleanly.
 
 ---
@@ -125,13 +143,15 @@ graph TD
     - Store manages `targetEndTime: number | null`, `isActive: boolean`, `duration: number`, `taskId`, `taskName`, `pomodoroMode`, `pomodoroPhase`, `pomodoroSession`, `pausedTimeRemaining`, and actions.
     - Single `setTimeout` to `targetEndTime` drives completion logic.
     - `AppState` synchronization recalculates expiration and schedules single timeout on app resume.
-    - Unit tests in `__tests__/timerStore.test.ts` (7 passing test cases covering exact alarms, completion timeout, and Pomodoro auto-cascade).
+    - Added `cleanupTimerStore()` for explicit listener cleanup.
+    - Unit tests in `__tests__/timerStore.test.ts` (8 passing test cases covering exact alarms, completion timeout, Pomodoro auto-cascade, and cold start expired timer hydration).
   - **Isolated Leaf Component**: `components/common/ActiveTimerBadge.tsx`:
     - Unified the clone between `index.tsx` (HomeScreen) and `todo.tsx` (TaskItem).
     - Drives local 1-second countdown display via `hooks/useTimerRemainingSeconds.ts` without triggering ANY parent re-renders.
   - **Decoupled Screens**:
-    - `HomeScreen` (`app/(tabs)/index.tsx`): Completely removed `useTimer()` subscription. Renders `<ActiveTimerBadge>`. Timer tick re-renders: **0/second** (eliminated 60 re-renders/minute).
-    - `TodoScreen` (`app/(tabs)/todo.tsx`): Completely removed `useTimer()` from both `TodoScreen` and `TaskItem`. Uses `ActiveTimerBadge` and reads store state imperatively in delete/clear callbacks. Timer tick re-renders: **0/second** (eliminated 60 re-renders/minute for the screen plus all visible tasks).
+    - `HomeScreen` (`app/(tabs)/index.tsx`): Completely removed `useTimer()` subscription. Renders `<ActiveTimerBadge>`. Timer tick re-renders: **0/second** (ESTIMATED: eliminated 60 re-renders/minute, to be verified with React Profiler on device).
+    - `TodoScreen` (`app/(tabs)/todo.tsx`): Completely removed `useTimer()` from both `TodoScreen` and `TaskItem`. Uses `ActiveTimerBadge` and reads store state imperatively in delete/clear callbacks. Timer tick re-renders: **0/second** (ESTIMATED: eliminated 60 re-renders/minute for the screen plus all visible tasks).
+    - *Note on `focus.tsx`*: Retains its 1Hz re-render while open until dedicated focus modal refactor in Stage 5C.
   - **Exact Behavior Preservation**:
     - Cold-start expired state displays completion indefinitely.
     - App alive/resumed auto-cascades to next Pomodoro phase after 1.5s delay.
@@ -139,35 +159,43 @@ graph TD
   - **Lint Ratchet Lowered**:
     - Fixed 2 `react-hooks/refs` errors in `TimerContext.tsx`.
     - Lowered ratchet ceiling in `lint-baseline.json` from 128 to **126 errors**.
-- **Definition of Done**: Unit tests pass (15/15 across 3 suites); `tsc --noEmit` clean; `lint:ratchet` passes at 126; clean bundle export succeeds.
+- **Definition of Done**: Unit tests pass (16/16 across 3 suites); `tsc --noEmit` clean; `lint:ratchet` passes at 126; clean bundle export succeeds.
 
 ---
 
-### Stage 2: Shared Foundations & MMKV Migration Layer
+### Stage 2: Shared Foundations (Theme Tokens, Constants, Types, Utils, Hooks)
 - **Branch**: `refactor/stage-2-shared-foundations`
-- **Objective**: Create single-source-of-truth constants, types, domain models, and safe MMKV migration.
+- **Objective**: Create single-source-of-truth constants, theme tokens, domain models, and shared utilities/hooks. (MMKV is deferred to Stage 3.5).
 - **Scope**:
-  - `constants/themeTokens.ts`, `constants/storageKeys.ts`, `types/` domain models.
-  - `storage/mmkvMigration.ts`:
-    - **Pre-Upgrade Backup Step**: Before installing the refactored build over the existing installed build, perform a local backup of personal data (export all `@zen_*` AsyncStorage keys to a local JSON file or take screenshots of existing routines, active habits, and custom settings) to guarantee zero risk of data loss.
-    - **One-time idempotent migration**: Runs before any provider reads storage, holding splash screen. Reads all `@zen_*` keys from `AsyncStorage`, batch-writes to MMKV with per-key fallback, sets `@zen_mmkv_migrated_v1 = true`.
-    - **Do NOT delete old AsyncStorage data in this release** (ensures immediate fallback safety).
-    - **Upgrade-path test procedure**: Verify in-place update over my existing installed build; confirm 100% data retention (routines, tasks, history, settings) across app restarts.
-    - Note: MMKV requires dev build (`expo run:android`), does not run in Expo Go.
-    - Take advantage of synchronous MMKV to convert hydrate-in-`useEffect` to lazy initial state (`useState(() => mmkv.getString(...))`), eliminating `set-state-in-effect` errors.
-  - `hooks/useStorage.ts`, `hooks/useHaptics.ts`, `utils/timeMath.ts`.
-- **Definition of Done**: Unit tests for MMKV migration pass with 100% coverage; 0 lint errors on new files.
+  - `constants/themeTokens.ts`: Central design tokens replacing hardcoded colors (`#F5F5F7`, `#FFFFFF`, `#1A1A1A`, `#666`), radii, spacing, and font constants.
+  - `constants/storageKeys.ts`: Canonical single source of truth for all `@zen_*` and `@todo_*` keys.
+  - `types/`: Domain entity models (`Task`, `Routine`, `Theme`, `User`, `Stats`).
+  - `hooks/useAppHaptics.ts`: Guarded haptic triggers respecting user preference.
+  - `utils/`: Consolidate time calculations and formatting helpers.
+- **Definition of Done**: 0 lint errors on new files; `tsc --noEmit` clean; unit tests pass; lint ratchet ceiling holds or lowers.
 
 ---
 
-### Stage 3: Shared UI Component Library
+### Stage 3: Shared UI Component Library (Clone Unification)
 - **Branch**: `refactor/stage-3-shared-ui`
-- **Objective**: Consolidate code clones into reusable design system components.
+- **Objective**: Consolidate code clones that appear in 2+ places into reusable design system components.
 - **Scope**:
-  - `components/ui/ModalSheet.tsx`: Single bottom sheet (replaces duplicate implementations).
+  - `components/ui/ModalSheet.tsx`: Single bottom sheet (replaces duplicate BottomSheets).
   - `components/forms/TaskForm.tsx`: Unified headless form consolidating `TaskForm.tsx` and `TaskModal.tsx`.
   - `components/forms/TimePicker.tsx`: Cross-platform picker consolidating `InlineTimePicker.tsx` and `WebTimePicker.tsx`.
   - `components/ui/Button.tsx`, `Card.tsx`, `Chip.tsx`, `EmptyState.tsx`.
+- **Definition of Done**: 0 lint errors on new components; `jscpd` clones reduced by >50%; clean build succeeds.
+
+---
+
+### Stage 3.5: MMKV Migration Layer (Isolated Data Migration Stage)
+- **Branch**: `refactor/stage-3.5-mmkv-migration`
+- **Objective**: Implement isolated, idempotent MMKV storage migration before screen-level changes.
+- **Scope**:
+  - Install `react-native-mmkv` (requires dev build).
+  - Implement `storage/mmkvMigration.ts` with one-time idempotent migration and per-key fallback.
+  - Preserve AsyncStorage data untouched as immediate fallback.
+  - Unit tests for migration logic with 100% branch coverage.
 - **Definition of Done**: 0 lint errors on new components; `jscpd` clones reduced by >50%; Maestro smoke tests pass.
 
 ---

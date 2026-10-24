@@ -1,7 +1,7 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useTimerRemainingSeconds } from "../hooks/useTimerRemainingSeconds";
-import { PomodoroPhase, useTimerStore } from "../stores/timerStore";
+import { cleanupTimerStore, PomodoroPhase, useTimerStore } from "../stores/timerStore";
 
 export type { PomodoroPhase };
 
@@ -25,6 +25,12 @@ export interface TimerContextType {
 }
 
 export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  useEffect(() => {
+    return () => {
+      cleanupTimerStore();
+    };
+  }, []);
+
   return <>{children}</>;
 };
 

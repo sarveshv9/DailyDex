@@ -175,4 +175,36 @@ describe("Zustand Timer Store", () => {
     expect(breakState.pomodoroPhase).toBe("shortBreak");
     expect(breakState.duration).toBe(5 * 60);
   });
+
+  it("hydrates from storage on cold start with an expired timer showing completion state indefinitely", async () => {
+    const expiredTimestamp = 500000;
+    const now = 1000000;
+    jest.setSystemTime(now);
+
+    const oldSavedTimer = {
+      taskId: "task-old",
+      taskName: "Old Task",
+      duration: 1500,
+      targetEndTime: expiredTimestamp,
+      timeLeft: 0,
+      isActive: true,
+      isCompleted: false,
+      pomodoroMode: false,
+      pomodoroPhase: "work",
+      pomodoroSession: 1,
+    };
+    await AsyncStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify(oldSavedTimer));
+
+    // Force re-initialization
+    useTimerStore.setState({ isInitialized: false });
+    await useTimerStore.getState().initialize();
+
+    const state = useTimerStore.getState();
+    expect(state.taskId).toBe("task-old");
+    expect(state.taskName).toBe("Old Task");
+    expect(state.isActive).toBe(false);
+    expect(state.isCompleted).toBe(true);
+    expect(state.targetEndTime).toBeNull();
+    expect(notifications.cancelFocusTimerAlarm).toHaveBeenCalled();
+  });
 });

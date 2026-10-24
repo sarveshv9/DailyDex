@@ -72,6 +72,14 @@ function clearScheduledTimeouts() {
   }
 }
 
+export function cleanupTimerStore() {
+  clearScheduledTimeouts();
+  if (appStateSubscription) {
+    appStateSubscription.remove();
+    appStateSubscription = null;
+  }
+}
+
 function scheduleCompletion(targetEndTime: number, onComplete: () => void) {
   clearScheduledTimeouts();
   const delayMs = targetEndTime - Date.now();
