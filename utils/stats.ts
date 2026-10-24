@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { STATS_STORAGE_KEY } from "../constants/storageKeys";
 
-export const STATS_STORAGE_KEY = "@zen_stats";
+export { STATS_STORAGE_KEY };
 
 export interface DailyStats {
     tasks: number;

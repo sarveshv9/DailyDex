@@ -14,8 +14,10 @@ export const POMODORO_DURATIONS: Record<PomodoroPhase, number> = {
   longBreak: 15 * 60,
 };
 
+import { STORAGE_KEYS, TIMER_STORAGE_KEY } from "../constants/storageKeys";
+
+export { TIMER_STORAGE_KEY };
 export const SESSIONS_BEFORE_LONG_BREAK = 4;
-export const TIMER_STORAGE_KEY = "@zen_active_timer";
 
 export interface StoredTimerState {
   taskId: string | null;
