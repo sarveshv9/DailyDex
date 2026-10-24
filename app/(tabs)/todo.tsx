@@ -35,6 +35,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../context/ThemeContext";
 import { useTimerStore } from "../../stores/timerStore";
 import { ActiveTimerBadge } from "../../components/common/ActiveTimerBadge";
+import { EmptyState as SharedEmptyState } from "../../components/ui/EmptyState";
 import { getSharedStyles, Theme } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
 import { addTaskCompleted, removeTaskCompleted } from "../../utils/stats";
@@ -689,11 +690,7 @@ interface EmptyStateProps {
 const EmptyState = ({
   filter,
   onAddTask,
-  theme,
-  isDarkMode,
 }: EmptyStateProps) => {
-  const styles = useMemo(() => getStyles(theme, isDarkMode), [theme, isDarkMode]);
-
   const message =
     filter === "today"
       ? "No tasks set for today. Plan your key priorities."
@@ -703,24 +700,15 @@ const EmptyState = ({
 
   return (
     <Animated.View
-      style={styles.emptyContainer}
       entering={FadeIn.delay(120).duration(260)}
       layout={LinearTransition.springify()}
     >
-      <View style={styles.emptyIconCircle}>
-        <Ionicons
-          name="sparkles-outline"
-          size={36}
-          color={theme.colors.primary}
-        />
-      </View>
-      <Text style={styles.emptyTitle}>Clear & Focused</Text>
-      <Text style={styles.emptySubtitle}>{message}</Text>
-
-      <Pressable style={styles.emptyCtaButton} onPress={onAddTask}>
-        <Ionicons name="add" size={20} color={theme.colors.white} />
-        <Text style={styles.emptyCtaButtonText}>Add a Task</Text>
-      </Pressable>
+      <SharedEmptyState
+        title="Clear & Focused"
+        description={message}
+        actionLabel="Add a Task"
+        onAction={onAddTask}
+      />
     </Animated.View>
   );
 };

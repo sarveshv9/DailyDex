@@ -29,6 +29,7 @@ import {
   ICON_GROUPS,
 } from "../../utils/utils";
 import { InlineTimePicker } from "../common/InlineTimePicker";
+import { DaysOfWeekPicker, DurationPicker, IconPickerModal } from "../forms";
 
 /* ─────────────────────────────── Types ──────────────────────────────── */
 
@@ -587,67 +588,21 @@ const TaskForm: React.FC<TaskFormProps> = ({
                 {/* Duration Picker Accordion */}
                 {editActivePicker === "duration" && (
                   <View style={styles.accordionBox}>
-                    <View style={styles.durPresetRow}>
-                      {DURATION_PRESETS.map((dur) => (
-                        <Pressable
-                          key={dur}
-                          style={[
-                            styles.durChip,
-                            formData.duration === dur && {
-                              backgroundColor: theme.colors.primary,
-                              borderColor: theme.colors.primary,
-                            },
-                          ]}
-                          onPress={() => {
-                            Haptics.selectionAsync();
-                            onUpdateField("duration", dur);
-                          }}
-                        >
-                          <Text
-                            style={[
-                              styles.durChipText,
-                              formData.duration === dur && { color: theme.colors.white },
-                            ]}
-                          >
-                            {dur}m
-                          </Text>
-                        </Pressable>
-                      ))}
-                    </View>
+                    <DurationPicker
+                      selectedDuration={formData.duration || 30}
+                      onChange={(dur) => onUpdateField("duration", dur)}
+                      activeColor={theme.colors.primary}
+                    />
                   </View>
                 )}
 
                 {/* Repeat Days */}
                 <View style={styles.repeatRow}>
-                  {DAYS_OF_WEEK.map((day) => {
-                    const active = (formData.daysOfWeek ?? []).includes(day.value);
-                    return (
-                      <TouchableOpacity
-                        key={day.value}
-                        style={[
-                          styles.dayCircle,
-                          active && { backgroundColor: theme.colors.primary },
-                        ]}
-                        onPress={() => {
-                          Haptics.selectionAsync();
-                          const current = formData.daysOfWeek ?? [];
-                          const next = current.includes(day.value)
-                            ? current.filter((d) => d !== day.value)
-                            : [...current, day.value].sort();
-                          onUpdateField("daysOfWeek", next as any);
-                        }}
-                      >
-                        <Text
-                          style={[
-                            styles.dayCircleText,
-                            active && { color: theme.colors.white },
-                          ]}
-                        >
-                          {day.label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
+                  <DaysOfWeekPicker
+                    selectedDays={formData.daysOfWeek ?? []}
+                    onChange={(days) => onUpdateField("daysOfWeek", days as any)}
+                    activeColor={theme.colors.primary}
+                  />
                 </View>
 
                 {/* Notes Input */}
@@ -1001,96 +956,11 @@ const TaskForm: React.FC<TaskFormProps> = ({
           {/* ══════════════════════════════════════════════════════════
               ICON PICKER MODAL (FOR ANY CUSTOM RITUAL)
              ══════════════════════════════════════════════════════════ */}
-          <Modal
+          <IconPickerModal
             visible={!!iconPickerTarget}
-            transparent
-            animationType="fade"
-            onRequestClose={() => setIconPickerTarget(null)}
-            statusBarTranslucent
-          >
-            <Pressable
-              style={styles.iconModalOverlay}
-              onPress={() => setIconPickerTarget(null)}
-            >
-              <Pressable
-                style={styles.iconModalCard}
-                onPress={(e) => e.stopPropagation()}
-              >
-                <View style={styles.iconModalHeader}>
-                  <View>
-                    <Text style={styles.iconModalTitle}>Choose an Icon</Text>
-                    <Text style={styles.iconModalSub}>Pick an icon for your custom ritual</Text>
-                  </View>
-                  <Pressable
-                    onPress={() => setIconPickerTarget(null)}
-                    hitSlop={10}
-                    style={styles.iconModalCloseBtn}
-                  >
-                    <Ionicons name="close" size={20} color={theme.colors.textSecondary} />
-                  </Pressable>
-                </View>
-
-                {/* Category Pills */}
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.iconCatTabs}
-                >
-                  {ICON_GROUPS.map((grp, idx) => (
-                    <Pressable
-                      key={idx}
-                      style={[
-                        styles.iconCatTab,
-                        iconPickerCat === idx && styles.iconCatTabActive,
-                      ]}
-                      onPress={() => {
-                        Haptics.selectionAsync();
-                        setIconPickerCat(idx);
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.iconCatTabText,
-                          iconPickerCat === idx && { color: theme.colors.white },
-                        ]}
-                      >
-                        {grp.category}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-
-                {/* Icons Grid */}
-                <ScrollView
-                  style={styles.iconGridScroll}
-                  contentContainerStyle={styles.iconGrid}
-                  showsVerticalScrollIndicator={false}
-                >
-                  {ICON_GROUPS[iconPickerCat].icons.map((item) => (
-                    <Pressable
-                      key={item.key}
-                      style={({ pressed }) => [
-                        styles.iconGridItem,
-                        pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] },
-                      ]}
-                      onPress={() => handleSelectIcon(item.key)}
-                    >
-                      <View style={styles.iconGridCircle}>
-                        <Ionicons
-                          name={getRoutineIcon(item.key)}
-                          size={22}
-                          color={theme.colors.primary}
-                        />
-                      </View>
-                      <Text style={styles.iconGridLabel} numberOfLines={1}>
-                        {item.label}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-              </Pressable>
-            </Pressable>
-          </Modal>
+            onClose={() => setIconPickerTarget(null)}
+            onSelectIcon={(iconKey) => handleSelectIcon(iconKey)}
+          />
         </Animated.View>
       </View>
     </Modal>

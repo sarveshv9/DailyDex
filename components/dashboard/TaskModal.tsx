@@ -29,6 +29,7 @@ import {
   ICON_GROUPS,
 } from "../../utils/utils";
 import { InlineTimePicker } from "../common/InlineTimePicker";
+import { DaysOfWeekPicker, DurationPicker, IconPickerModal } from "../forms";
 
 interface TaskModalProps {
   visible: boolean;
@@ -626,63 +627,22 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 </View>
 
                 {/* Preset Chips */}
-                <View style={styles.presetChipsRow}>
-                  {DURATION_PRESETS.map((dur) => (
-                    <TouchableOpacity
-                      key={dur}
-                      style={[
-                        styles.durChip,
-                        editedTask.duration === dur && {
-                          backgroundColor: taskColor,
-                          borderColor: taskColor,
-                        },
-                      ]}
-                      onPress={() => {
-                        Haptics.selectionAsync();
-                        setEditedTask((prev) => (prev ? { ...prev, duration: dur } : null));
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.durChipText,
-                          editedTask.duration === dur && { color: "#FFFFFF" },
-                        ]}
-                      >
-                        {formatDuration(dur)}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+                <DurationPicker
+                  selectedDuration={editedTask.duration || 30}
+                  onChange={(dur) => setEditedTask((prev) => (prev ? { ...prev, duration: dur } : null))}
+                  activeColor={taskColor}
+                />
               </View>
             )}
 
             {/* ── Accordion: Repeat Schedule ── */}
             {activeAccordion === "repeat" && (
               <View style={styles.accordionContainer}>
-                <View style={styles.daysRow}>
-                  {DAYS_OF_WEEK.map((day) => {
-                    const active = (editedTask.daysOfWeek || []).includes(day.value);
-                    return (
-                      <TouchableOpacity
-                        key={day.value}
-                        style={[
-                          styles.dayBtn,
-                          active && { backgroundColor: taskColor, borderColor: taskColor },
-                        ]}
-                        onPress={() => toggleDay(day.value)}
-                      >
-                        <Text
-                          style={[
-                            styles.dayBtnText,
-                            { color: active ? "#FFFFFF" : theme.colors.textSecondary },
-                          ]}
-                        >
-                          {day.label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+                <DaysOfWeekPicker
+                  selectedDays={editedTask.daysOfWeek || []}
+                  onChange={(days) => setEditedTask((prev) => (prev ? { ...prev, daysOfWeek: days } : null))}
+                  activeColor={taskColor}
+                />
 
                 {/* Quick Presets */}
                 <View style={styles.repeatPresetRow}>
@@ -905,100 +865,15 @@ const TaskModal: React.FC<TaskModalProps> = ({
           {/* ══════════════════════════════════════════════════════════
               ICON PICKER MODAL (CATEGORIZED 50+ ICONS)
              ══════════════════════════════════════════════════════════ */}
-          <Modal
+          <IconPickerModal
             visible={showIconPicker}
-            transparent
-            animationType="fade"
-            onRequestClose={() => setShowIconPicker(false)}
-            statusBarTranslucent
-          >
-            <Pressable
-              style={styles.iconModalOverlay}
-              onPress={() => setShowIconPicker(false)}
-            >
-              <Pressable
-                style={styles.iconModalCard}
-                onPress={(e) => e.stopPropagation()}
-              >
-                <View style={styles.iconModalHeader}>
-                  <View>
-                    <Text style={styles.iconModalTitle}>Choose an Icon</Text>
-                    <Text style={styles.iconModalSub}>Pick an icon for this ritual</Text>
-                  </View>
-                  <Pressable
-                    onPress={() => setShowIconPicker(false)}
-                    hitSlop={10}
-                    style={styles.iconModalCloseBtn}
-                  >
-                    <Ionicons name="close" size={20} color={theme.colors.textSecondary} />
-                  </Pressable>
-                </View>
-
-                {/* Category Tabs */}
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.iconCatTabs}
-                >
-                  {ICON_GROUPS.map((grp, idx) => (
-                    <Pressable
-                      key={idx}
-                      style={[
-                        styles.iconCatTab,
-                        iconPickerCat === idx && styles.iconCatTabActive,
-                      ]}
-                      onPress={() => {
-                        Haptics.selectionAsync();
-                        setIconPickerCat(idx);
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.iconCatTabText,
-                          iconPickerCat === idx && { color: "#FFFFFF" },
-                        ]}
-                      >
-                        {grp.category}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-
-                {/* Grid */}
-                <ScrollView
-                  style={styles.iconGridScroll}
-                  contentContainerStyle={styles.iconGrid}
-                  showsVerticalScrollIndicator={false}
-                >
-                  {ICON_GROUPS[iconPickerCat].icons.map((item) => (
-                    <Pressable
-                      key={item.key}
-                      style={({ pressed }) => [
-                        styles.iconGridItem,
-                        pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] },
-                      ]}
-                      onPress={() => {
-                        Haptics.selectionAsync();
-                        setEditedTask((prev) => (prev ? { ...prev, imageKey: item.key } : null));
-                        setShowIconPicker(false);
-                      }}
-                    >
-                      <View style={[styles.iconGridCircle, { backgroundColor: `${taskColor}15` }]}>
-                        <Ionicons
-                          name={getRoutineIcon(item.key)}
-                          size={22}
-                          color={taskColor}
-                        />
-                      </View>
-                      <Text style={styles.iconGridLabel} numberOfLines={1}>
-                        {item.label}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-              </Pressable>
-            </Pressable>
-          </Modal>
+            onClose={() => setShowIconPicker(false)}
+            activeColor={taskColor}
+            currentIconKey={editedTask?.imageKey}
+            onSelectIcon={(iconKey) => {
+              setEditedTask((prev) => (prev ? { ...prev, imageKey: iconKey } : null));
+            }}
+          />
         </Animated.View>
       </View>
     </Modal>
