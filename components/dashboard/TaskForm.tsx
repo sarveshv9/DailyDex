@@ -40,7 +40,8 @@ import {
 export interface TaskFormProps {
   visible: boolean;
   isEditing: boolean;
-  formData: FormData;
+  formData: FormData & { id?: string };
+  initialItem?: RoutineItem;
   onUpdateField: (field: keyof FormData, value: any) => void;
   onSave: () => void;
   onSaveAndAddAnother?: () => void;
@@ -81,7 +82,7 @@ const QUICK_INSPIRATIONS = [
 
 /* ─────────────────────────────── Component ──────────────────────────── */
 
-const TaskForm: React.FC<TaskFormProps> = ({
+const TaskFormInner: React.FC<TaskFormProps> = ({
   visible,
   isEditing,
   formData,
@@ -98,8 +99,23 @@ const TaskForm: React.FC<TaskFormProps> = ({
 
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
 
-  /* ── Stacked tasks for effortless sequential creation ── */
-  const [stackedTasks, setStackedTasks] = useState<StackedTask[]>([]);
+  /* ── Stacked tasks initialized once per open/identity lifecycle ── */
+  const [stackedTasks, setStackedTasks] = useState<StackedTask[]>(() => {
+    if (isEditing) return [];
+    return [
+      {
+        id: Date.now().toString(),
+        task: formData.task || "",
+        time: formData.time || "8:00 AM",
+        duration: formData.duration || 30,
+        imageKey: formData.imageKey || "breathe",
+        daysOfWeek: formData.daysOfWeek && formData.daysOfWeek.length > 0 ? formData.daysOfWeek : [0, 1, 2, 3, 4, 5, 6],
+        notes: formData.description || "",
+        subtasks: formData.subtasks || [],
+        activePicker: "none",
+      },
+    ];
+  });
   const [editActivePicker, setEditActivePicker] = useState<"none" | "time" | "duration">("none");
 
   /* ── Icon Picker Modal State ── */
@@ -108,31 +124,6 @@ const TaskForm: React.FC<TaskFormProps> = ({
     id?: string;
   } | null>(null);
   const [iconPickerCat, setIconPickerCat] = useState<number>(0);
-
-  /* ── Initialize state when modal opens ── */
-  useEffect(() => {
-    if (visible) {
-      if (isEditing) {
-        setStackedTasks([]);
-      } else {
-        setStackedTasks([
-          {
-            id: Date.now().toString(),
-            task: formData.task || "",
-            time: formData.time || "8:00 AM",
-            duration: formData.duration || 30,
-            imageKey: formData.imageKey || "breathe",
-            daysOfWeek: formData.daysOfWeek && formData.daysOfWeek.length > 0 ? formData.daysOfWeek : [0, 1, 2, 3, 4, 5, 6],
-            notes: formData.description || "",
-            subtasks: formData.subtasks || [],
-            activePicker: "none",
-          },
-        ]);
-      }
-      setEditActivePicker("none");
-      setIconPickerTarget(null);
-    }
-  }, [visible, isEditing, formData]);
 
   /* ── Smooth open/close spring animation ── */
   useEffect(() => {
@@ -1360,5 +1351,12 @@ const getStyles = (theme: Theme) =>
       textAlign: "center",
     },
   });
+
+export const TaskForm: React.FC<TaskFormProps> = (props) => {
+  const { visible, isEditing, formData, initialItem } = props;
+  const editId = initialItem?.id || formData.id || "edit";
+  const formKey = visible ? (isEditing ? editId : "create") : "closed";
+  return <TaskFormInner key={formKey} {...props} />;
+};
 
 export default TaskForm;

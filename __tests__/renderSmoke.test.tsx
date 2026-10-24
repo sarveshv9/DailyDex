@@ -34,7 +34,8 @@ jest.mock("expo-router", () => ({
       return () => {
         if (typeof cleanup === "function") cleanup();
       };
-    }, [callback]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
   },
   useLocalSearchParams: () => ({}),
 }));

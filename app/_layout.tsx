@@ -40,6 +40,8 @@ function RootLayoutNav() {
   // Theme & settings hydration gate: always sets themeReady(true) in .finally so app never hangs
   useEffect(() => {
     const safetyTimeout = setTimeout(() => {
+      useThemeStore.setState({ isLoaded: true });
+      useSettingsStore.setState({ isLoading: false });
       setThemeReady(true);
       SplashScreen.hideAsync().catch(() => {});
     }, 2000);
@@ -53,6 +55,8 @@ function RootLayoutNav() {
       })
       .finally(() => {
         clearTimeout(safetyTimeout);
+        useThemeStore.setState({ isLoaded: true });
+        useSettingsStore.setState({ isLoading: false });
         setThemeReady(true);
         SplashScreen.hideAsync().catch(() => {});
       });
@@ -74,7 +78,7 @@ function RootLayoutNav() {
       try {
         const setup = await AsyncStorage.getItem(SETUP_STORAGE_KEY);
         setIsSetupComplete(setup === "true");
-      } catch (e) {
+      } catch {
         setIsSetupComplete(false);
       }
     };
@@ -107,7 +111,7 @@ function RootLayoutNav() {
           } else {
             router.replace("/(tabs)" as any);
           }
-        } catch (e) {
+        } catch {
           router.replace("/setup" as any);
         }
         return;
@@ -122,7 +126,7 @@ function RootLayoutNav() {
           } else if (setup === "true" && isSetupComplete === false) {
             setIsSetupComplete(true);
           }
-        } catch (e) {
+        } catch {
           if (inTabsGroup) {
             router.replace("/setup" as any);
           }

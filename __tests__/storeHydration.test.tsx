@@ -1,6 +1,8 @@
 import React from "react";
+import { View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { render } from "@testing-library/react-native";
+import { render, act } from "@testing-library/react-native";
+import RootLayout from "../app/_layout";
 import {
   useSettingsStore,
   DEFAULT_SETTINGS,
@@ -16,17 +18,64 @@ import {
   DARK_MODE_STORAGE_KEY,
   AUTO_THEME_STORAGE_KEY,
   STORAGE_KEYS,
+  SETUP_STORAGE_KEY,
 } from "../constants/storageKeys";
 
 jest.mock("lucide-react-native", () => ({}));
 
 jest.mock("@react-native-async-storage/async-storage", () =>
-  require("@react-native-async-storage/async-storage/jest/async-storage-mock")
+  jest.requireActual("@react-native-async-storage/async-storage/jest/async-storage-mock")
 );
 
 jest.mock("../utils/notifications", () => ({
   cancelAllRoutineNotifications: jest.fn(),
   scheduleRoutineNotifications: jest.fn(),
+  requestNotificationPermissions: jest.fn(),
+}));
+
+jest.mock("expo-splash-screen", () => ({
+  preventAutoHideAsync: jest.fn().mockResolvedValue(true),
+  hideAsync: jest.fn().mockResolvedValue(true),
+}));
+
+jest.mock("expo-font", () => ({
+  useFonts: () => [true, null],
+}));
+
+jest.mock("expo-router", () => {
+  const mockReact = jest.requireActual("react");
+  const mockRN = jest.requireActual("react-native");
+  const Stack: any = ({ children }: any) =>
+    mockReact.createElement(mockRN.View, { testID: "root-layout-stack" }, children);
+  Stack.Screen = () => null;
+  return {
+    Stack,
+    useRouter: () => ({
+      push: jest.fn(),
+      replace: jest.fn(),
+      back: jest.fn(),
+      setParams: jest.fn(),
+    }),
+    useSegments: () => ["(tabs)"],
+  };
+});
+
+jest.mock("expo-status-bar", () => ({
+  StatusBar: () => null,
+}));
+
+jest.mock("expo-blur", () => ({
+  BlurView: "BlurView",
+}));
+
+jest.mock("expo-audio", () => ({
+  createAudioPlayer: () => ({
+    play: jest.fn(),
+    pause: jest.fn(),
+    remove: jest.fn(),
+    seekTo: jest.fn(),
+  }),
+  setAudioModeAsync: jest.fn().mockResolvedValue(undefined),
 }));
 
 describe("Store Hydration from Legacy Storage Shapes", () => {
@@ -73,8 +122,6 @@ describe("Store Hydration from Legacy Storage Shapes", () => {
 
       const captured: { haptics?: boolean; music?: number; reminders?: boolean } = {};
 
-      const { act } = require("@testing-library/react-native");
-      const { View } = require("react-native");
       const Consumer = () => {
         captured.haptics = useHapticsEnabled();
         captured.music = useMusicPreference();
@@ -99,36 +146,37 @@ describe("Store Hydration from Legacy Storage Shapes", () => {
       expect(state.settings).toEqual(DEFAULT_SETTINGS);
     });
 
-    it("forces hydration to reject and asserts themeReady is marked true in finally to prevent blank screen", async () => {
-      jest.spyOn(useThemeStore.getState(), "loadTheme").mockRejectedValueOnce(new Error("AsyncStorage read error"));
-      jest.spyOn(useSettingsStore.getState(), "loadSettings").mockRejectedValueOnce(new Error("Storage disk error"));
+    it("forces hydration to reject and asserts real RootLayout renders content without a blank screen", async () => {
+      await AsyncStorage.setItem(SETUP_STORAGE_KEY, "true");
+      const originalLoadTheme = useThemeStore.getState().loadTheme;
+      const originalLoadSettings = useSettingsStore.getState().loadSettings;
+      useThemeStore.setState({
+        loadTheme: jest.fn().mockRejectedValue(new Error("AsyncStorage read error")),
+      });
+      useSettingsStore.setState({
+        loadSettings: jest.fn().mockRejectedValue(new Error("Storage disk error")),
+      });
       const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
 
-      let themeReady = false;
-      let safetyTimeoutCleared = false;
-      const safetyTimeout = setTimeout(() => {}, 2000);
-
-      // Simulate root layout gate
-      await Promise.all([
-        useSettingsStore.getState().loadSettings(),
-        useThemeStore.getState().loadTheme(),
-      ])
-        .catch((err) => {
-          console.warn("Hydration failed, using fallback:", err);
-        })
-        .finally(() => {
-          clearTimeout(safetyTimeout);
-          safetyTimeoutCleared = true;
-          themeReady = true;
+      try {
+        let screenResult: any;
+        await act(async () => {
+          screenResult = await render(<RootLayout />);
         });
 
-      expect(themeReady).toBe(true);
-      expect(safetyTimeoutCleared).toBe(true);
-      expect(warnSpy).toHaveBeenCalledWith(
-        "Hydration failed, using fallback:",
-        expect.any(Error)
-      );
-      warnSpy.mockRestore();
+        // Assert that RootLayout does NOT return null (blank screen) and actually renders content
+        const stack = await screenResult.findByTestId("root-layout-stack");
+        expect(stack).toBeTruthy();
+
+        expect(warnSpy).toHaveBeenCalledWith(
+          "Hydration failed, using fallback theme/settings:",
+          expect.any(Error)
+        );
+      } finally {
+        useThemeStore.setState({ loadTheme: originalLoadTheme });
+        useSettingsStore.setState({ loadSettings: originalLoadSettings });
+        warnSpy.mockRestore();
+      }
     });
 
     it("guarantees that a delayed hydration cannot overwrite in-flight user changes and preserves untouched saved keys", async () => {

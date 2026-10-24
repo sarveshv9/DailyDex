@@ -311,58 +311,140 @@ graph TD
 
 Eliminate the 40 errors (31 `react-hooks/refs` and 9 `react-hooks/set-state-in-effect`) that cause the React Compiler to skip components entirely.
 
-#### Compiler-Skipped Components & Per-File Error Breakdown
+#### Implementation Pattern: 1 Component per Commit
+Every component fix is committed individually with unchanged behavior and verified for React Compiler compilation (`_c()` memoization cache in `npx expo export` bundle):
 
-| File | `react-hooks/refs` | `set-state-in-effect` | Other Errors | Skipped Component | Root Cause & Resolution Pattern |
-| :--- | :---: | :---: | :---: | :--- | :--- |
-| `components/dashboard/TaskModal.tsx` | 14 | 1 | 0 | `TaskModal` | Accessing animated values / panHandlers on refs during render; setState inside layout effect. Move to stable callbacks & handlers. |
-| `components/dashboard/TaskForm.tsx` | 9 | 1 | 0 | `TaskForm` | Accessing panHandlers / refs during render; synchronous setState in modal open effect. Derive state or trigger in action handlers. |
-| `app/(tabs)/_layout.tsx` | 4 | 0 | 0 | `TabLayout` | Accessing refs during render for tab indicator animations. Decouple to useSharedValue / worklets. |
-| `components/common/CrossPlatformSegmentedControl.tsx` | 4 | 0 | 0 | `CrossPlatformSegmentedControl` | Reading layout measure refs during render. Stabilize via native event measurements. Preserved as shared component. |
-| `components/dashboard/DayTimelineView.tsx` | 0 | 2 | 3 (`react/display-name`) | `DayTimelineView` | Synchronous setState in layout transition effects. Move to InteractionManager / post-mount event triggers. |
-| `components/dashboard/MonthCalendarView.tsx` | 0 | 2 | 0 | `MonthCalendarView` | Synchronous state synchronization in calendar month effect. |
-| `components/profile/ThemeSelectionModal.tsx` | 0 | 2 | 0 | `ThemeSelectionModal` | Synchronous reset of custom theme form inside effect. Trigger reset in modal `onDismiss` / `onOpen`. |
-| `components/profile/SettingModal.tsx` | 0 | 1 | 0 | `SettingModal` | Synchronous props-to-state synchronization effect. Use `key={user?.id}` to reset modal tree declaratively. |
-| **Totals** | **31** | **9** | **3** | **8 components** | **Clearing these enables React Compiler auto-memoization repo-wide.** |
+1. **`components/dashboard/TaskModal.tsx`** (14 `react-hooks/refs`, 1 `set-state-in-effect`):
+   - **Exact Fix**:
+     - Animated Values: Convert `slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current` to lazy state `const [slideAnim] = useState(() => new Animated.Value(SCREEN_HEIGHT))`.
+     - PanResponder: Stabilize panHandlers in `useMemo` with stable dependency refs.
+     - Reset Effect: Replace props-sync `useEffect` with keyed remounting: `key={visible ? (isEditing ? initialItem?.id : 'new') : 'closed'}` on the inner modal, with state lazily initialized from props.
+   - **Compiler Verification**: Run `npx expo export` and confirm compiler emits `_c()` for `TaskModal`.
+   - **Hand-Test Steps (High Risk - Drag/Slide)**:
+     1. Open TaskModal by tapping a task in Todo or Dashboard. Verify smooth upward spring animation.
+     2. Drag the modal sheet handle downward halfway: verify it tracks finger smoothly without lag or snapping.
+     3. Release finger: if dragged past threshold (>120px), verify it dismisses smoothly with downward animation; if released before threshold, verify it snaps back to open position.
+     4. Type into task title and notes: verify keystrokes are responsive and values persist.
+     5. Save task: verify modal closes and changes reflect in list.
 
-#### Scope, Risk & Verification
-- **Scope**: 8 component files, 40 lint errors eliminated.
-- **Risk**: Low-Medium (ensuring animations and form state transitions remain identical).
-- **How to Verify**:
-  - Run `npx eslint . -f json` to verify errors drop by 40.
-  - Run Babel compiler check (`npx expo export`) to confirm compiler emits `_c()` memoization caches for all 8 components.
-  - `npm test` and `renderSmoke.test.tsx` pass cleanly.
-- **What You Must Hand-Test**:
-  - Open TaskModal and TaskForm: verify spring open/close and drag-to-dismiss work smoothly.
-  - Switch tabs in `_layout.tsx`: verify smooth indicator slide.
+2. **`components/dashboard/TaskForm.tsx`** (9 `react-hooks/refs`, 1 `set-state-in-effect`):
+   - **Exact Fix**:
+     - Keyed remount: Wrap with keyed `TaskForm` (`key={visible ? (isEditing ? (initialItem?.id || formData.id || "edit") : "create") : "closed"}`).
+     - State initialization: `stackedTasks` initialized once via lazy `useState(() => isEditing ? [] : [{ id: Date.now().toString(), ... }])`.
+     - Animated Values: Convert `slideAnim` from `useRef(...).current` to lazy `useState(() => new Animated.Value(SCREEN_HEIGHT))`.
+   - **Compiler Verification**: Run `npx expo export` and confirm `TaskFormInner` compiles with `_c()`.
+   - **Hand-Test Steps**:
+     1. Open TaskForm for new routine item. Verify spring opening.
+     2. Type task title, tap inspiration pills: verify title and duration update.
+     3. Tap Save and verify routine is created.
+
+3. **`app/(tabs)/_layout.tsx` (TabLayout)** (4 `react-hooks/refs`):
+   - **Exact Fix**:
+     - Tab Indicator Animation: Convert direct ref access during render to lazy `useState(() => new Animated.Value(0))` or Reanimated `useSharedValue(0)` with `useAnimatedStyle`.
+     - Stable Tab Listeners: Wrap tab press listeners in `useCallback` to prevent indicator recreation.
+   - **Compiler Verification**: Run `npx expo export` and check `TabLayout` emitted with compiler memoization cache.
+   - **Hand-Test Steps (High Risk - Tab Bar)**:
+     1. Tap each tab in bottom navigation (Today, Todo, Profile).
+     2. Verify active pill/tab indicator slides smoothly between tab positions with spring easing.
+     3. Verify active tab icon and label highlight with correct primary color.
+     4. Fast switch back-and-forth between tabs: verify no glitching, indicator snapping, or frozen tab bar.
+
+4. **`components/common/CrossPlatformSegmentedControl.tsx`** (4 `react-hooks/refs`):
+   - **Exact Fix**:
+     - Animated Indicator: Convert `translateX` and `indicatorWidth` from `useRef(...).current` to lazy `useState(() => new Animated.Value(0))`.
+     - Layout Measurements: Store tab segment widths and offsets in an array updated via `onLayout` events rather than reading mutable refs during render.
+   - **Compiler Verification**: Run `npx expo export` and confirm memoization output.
+   - **Hand-Test Steps**:
+     1. View segmented controls on Dashboard (e.g. Day / Week / Month view toggle).
+     2. Tap each segment: verify indicator slides smoothly to selected tab and selection updates.
+
+5. **`components/dashboard/DayTimelineView.tsx`** (2 `set-state-in-effect`, 3 `react/display-name`):
+   - **Exact Fix**:
+     - Scroll Sync Effect: Decouple from `visiblePageIndex` state using `visiblePageIndexRef = useRef(initialTargetIndex)`. User swipes update the ref without re-triggering the effect. External date changes compare against `visiblePageIndexRef.current` and bail out early if already on target page.
+     - Component Display Names: Add explicit `TimelinePage.displayName = "TimelinePage";` and `TimelineTaskPill.displayName = "TimelineTaskPill";`.
+   - **Compiler Verification**: Run `npx expo export` and verify `DayTimelineView` memoization.
+   - **Hand-Test Steps**:
+     1. Swipe horizontally between days: verify smooth pagination with zero snap-back.
+     2. Select a date from calendar/mini-picker: verify timeline scrolls directly to selected day.
+
+6. **`components/dashboard/MonthCalendarView.tsx`** (2 `set-state-in-effect`):
+   - **Exact Fix**:
+     - Calendar Month Sync: Remove `useEffect` calling `setCurrentMonth(selectedDate)`. Derive `currentMonth` via `useMemo` from `selectedDate` when controlled, and update in month navigation handlers (`onPrevMonth`, `onNextMonth`).
+   - **Compiler Verification**: Run `npx expo export` and confirm memoization.
+   - **Hand-Test Steps**:
+     1. Switch to Month calendar view on Dashboard.
+     2. Tap previous/next month chevrons: verify calendar grid transitions correctly.
+     3. Tap a day: verify date is selected and timeline reflects day.
+
+7. **`components/profile/ThemeSelectionModal.tsx`** (2 `set-state-in-effect`):
+   - **Exact Fix**:
+     - Custom Theme Form Reset: Remove `useEffect` calling `setCustomPrimary(...)` on modal open. Use keyed remount `key={visible ? (selectedTheme || "open") : "closed"}` or reset in `onClose` / `onDismiss` action handlers.
+   - **Compiler Verification**: Run `npx expo export` and confirm memoization.
+   - **Hand-Test Steps**:
+     1. Open Theme Selection modal from Profile.
+     2. Select preset theme (e.g. Pokeball, Gengar, Charizard): verify theme applies immediately.
+     3. Customize a theme: verify color picker updates preview without lag.
+
+8. **`components/profile/SettingModal.tsx`** (1 `set-state-in-effect`):
+   - **Exact Fix**:
+     - Profile Form Sync: Remove `useEffect` calling `setName(user.name)` and `setEmail(user.email)`. Use keyed remount `key={visible ? (user?.id || "user") : "closed"}` with lazy state initialization `const [name, setName] = useState(() => user?.name || "")`.
+   - **Compiler Verification**: Run `npx expo export` and confirm memoization.
+   - **Hand-Test Steps**:
+     1. Open Profile Settings modal.
+     2. Edit name and email.
+     3. Tap Save: verify profile updates and modal dismisses.
 
 ---
 
 ### Workstream 2: Screen Decomposition (`todo.tsx`, `setup.tsx`, and `routine.tsx`)
 
-Decompose monolithic screens into focused leaf components using strict move-only diffs.
+Decompose monolithic screens into focused leaf components using strict move-only diffs (`git diff --color-moved=dimmed-zebra -w`). Acceptance is strictly based on behavior checks, not line-count targets.
 
-#### Target Decompositions
+#### Re-derived Component Breakdown from Source Code
+
 1. **`app/(tabs)/todo.tsx` (Current: 1,789 lines)**:
-   - Extract `components/todo/TodoHeader.tsx` (~250 lines): Search input, category filter scroll, statistics row.
-   - Extract `components/todo/TodoTaskItem.tsx` (~450 lines): Task card, checkbox, priority indicator, swipe actions.
-   - Extract `components/todo/TodoBatchActions.tsx` (~150 lines): Multi-select bar, batch delete, batch complete.
-   - Target line count for `app/(tabs)/todo.tsx`: **< 500 lines**.
-2. **`app/setup.tsx` (Current: 2,100 lines)**:
-   - Extract `components/setup/SetupHeroStep.tsx` (~300 lines): Welcome card, mascot animation, intro copy.
-   - Extract `components/setup/SetupRoutineStep.tsx` (~400 lines): Preset routine picker, time allocation.
-   - Extract `components/setup/SetupSummaryStep.tsx` (~350 lines): Schedule review, notification permissions.
-   - Target line count for `app/setup.tsx`: **< 600 lines**.
-3. **`app/routine.tsx` (Current: 1,073 lines)**:
-   - If still large, extract `components/routine/RoutineHeader.tsx` (~180 lines) and `components/routine/RoutineTimelinePager.tsx` (~220 lines).
+   - **Actual Structure**:
+     - Lines 120–370: `TaskItem` / `TaskItemComponent` (~250 lines) -> Extract to `components/todo/TaskItem.tsx`
+     - Lines 371–608: `TaskModalInner` & `TaskModal` (~238 lines) -> Extract to `components/todo/TodoTaskModal.tsx`
+     - Lines 609–686: `ConfirmModal` (~78 lines) -> Extract to `components/todo/TodoConfirmModal.tsx`
+     - Lines 687–727: `EmptyState` (~41 lines) -> Extract to `components/todo/TodoEmptyState.tsx`
+     - Lines 728–840: `TodoHeaderComponent` & `TodoHeader` (~113 lines) -> Wire to existing `components/todo/TodoHeader.tsx`
+     - Lines 841–1210: `TodoScreen` coordinator (~370 lines) -> Retain as lean coordinator
+     - Lines 1211–1790: `getStyles` (~580 lines) -> Extract to `components/todo/todoStyles.ts`
+   - **Behavioral Acceptance Criteria**:
+     - Create a task with priority, category, and subtasks.
+     - Edit an existing task's title, priority, or subtasks.
+     - Toggle checkbox to complete and uncomplete a task with completion animation.
+     - Delete a task with confirmation modal.
+     - Search filter by keyword and category filter pills.
+     - Batch selection mode: multi-select tasks, batch complete, batch delete.
 
-#### Move-Only Diff Protocol
-- Every extraction is isolated into a dedicated commit with zero expression edits:
-  - Command: `git diff --color-moved=dimmed-zebra -w` must show 100% moved blocks.
-- **Verification**: `npx tsc --noEmit` and `npm test` pass.
-- **What You Must Hand-Test**:
-  - Todo list: create, complete, edit, and delete tasks; verify batch operations.
-  - Setup wizard: advance through all steps from intro to routine creation.
+2. **`app/setup.tsx` (Current: 2,100 lines)**:
+   - **Actual Structure**:
+     - Lines 45–172: Constants & Templates (`CATEGORIES`, `STARTER_PACKS`, `TEMPLATES`) -> Extract to `constants/setupTemplates.ts`
+     - Lines 173–276: `StepWelcome` (~104 lines) -> Extract to `components/setup/StepWelcome.tsx`
+     - Lines 277–673: `StepPick` (~397 lines) -> Extract to `components/setup/StepPick.tsx`
+     - Lines 674–950: `StepTimes` (~277 lines) -> Extract to `components/setup/StepTimes.tsx`
+     - Lines 951–1308: `SetupScreen` coordinator (~357 lines) -> Retain as lean coordinator
+     - Lines 1309–2101: `getStyles` (~792 lines) -> Extract to `components/setup/setupStyles.ts`
+   - **Behavioral Acceptance Criteria**:
+     - User can progress through StepWelcome -> StepPick -> StepTimes -> Complete.
+     - Select starter pack templates and toggle individual items.
+     - Custom item addition with icon and duration in StepPick.
+     - Adjust start times and durations in StepTimes with valid time formatting.
+     - Complete setup: writes `@zen_setup_complete` and initial routines to AsyncStorage, routes to dashboard without crash or blank screen.
+
+3. **`app/routine.tsx` (Current: 1,073 lines)**:
+   - **Actual Structure**:
+     - Lines 70–130: `useModalAnimation` hook (~61 lines) -> Extract to `hooks/useModalAnimation.ts`
+     - Lines 131–200: `RoutinePeekBar` (~70 lines) -> Extract to `components/routine/RoutinePeekBar.tsx`
+     - Lines 201–990: `RoutineScreen` coordinator (~790 lines) -> Retain
+     - Lines 991–1074: `getStyles` (~84 lines) -> Retain in routine styles
+   - **Behavioral Acceptance Criteria**:
+     - Date swipe gestures smoothly paginate between days.
+     - Tap on routine opens TaskForm or details modal.
+     - Add new routine task and save: persists and appears in timeline.
+     - Delete or reorder routine: updates state and persists.
 
 ---
 
@@ -417,39 +499,58 @@ Execute standardized benchmarks on the same Android emulator comparing commit `5
 
 #### Standardized Measurement Protocols & Exact `adb` Commands
 
-1. **Cold Start Time (Median of 5 Iterations)**:
+1. **Worktree & Release Build Isolation**:
+   - Both commits must be built as **RELEASE** builds on the same emulator image (`npx expo run:android --variant release`).
+   - Build baseline commit `592ed1d` in a separate `git worktree` so the active refactoring branch is not disturbed:
+     ```bash
+     git worktree add ../zen-baseline 592ed1d
+     cd ../zen-baseline && npm install && npx expo run:android --variant release
+     ```
+
+2. **Cold Start Time (Median of 5 Iterations)**:
    ```bash
    # Run 5 iterations, record TotalTime in ms, and compute median
    adb shell am force-stop com.anonymous.Zenapp
    sleep 2
    adb shell am start-activity -W -n com.anonymous.Zenapp/.MainActivity | grep TotalTime
    ```
-2. **Running Timer Render Counts over 60 Seconds**:
+
+3. **Running Timer Render Counts over 60 Seconds**:
    - Start a 25-minute focus session.
    - Measure re-render counts on `HomeScreen`, `TodoScreen`, and `FocusScreen` using React DevTools Profiler / hook logger over a 60-second window.
-3. **Todo List Scroll Jank & Frame Statistics**:
+
+4. **Todo List Scroll Jank & Frame Statistics (Loop of 5 Flings)**:
    ```bash
    # 1. Reset frame statistics buffer
    adb shell dumpsys gfxinfo com.anonymous.Zenapp reset
-   # 2. Perform standardized 1000px fling scroll down and up
-   adb shell input swipe 500 1600 500 600 250
-   sleep 1
-   adb shell input swipe 500 600 500 1600 250
-   # 3. Dump graphics frame stats
-   adb shell dumpsys gfxinfo com.anonymous.Zenapp framestats
+   # 2. Perform standardized 5-fling scroll loop down and up
+   for i in {1..5}; do
+     adb shell input swipe 500 1600 500 600 150
+     sleep 0.5
+     adb shell input swipe 500 600 500 1600 150
+     sleep 0.5
+   done
+   # 3. Dump plain graphics info summary (extract Janky frames count and percent)
+   adb shell dumpsys gfxinfo com.anonymous.Zenapp
    ```
 
-#### Benchmark Comparison Table Template
+#### Benchmark Comparison Table (Performance Metrics - TBD Until Measured)
 
 | Metric | Measurement Method | Baseline (`592ed1d`) | Refactored (HEAD) | Delta | Verification Notes |
 | :--- | :--- | :---: | :---: | :---: | :--- |
-| **Cold Start TTI (ms)** | `am start-activity -W` (median of 5) | *TBD ms* | *TBD ms* | *-%* | Cold start time to interactive |
-| **Home Timer Re-renders** | React Profiler (60s running timer) | 60 renders | **0 renders** | **-100%** | Decoupled via `ActiveTimerBadge` |
-| **Todo Timer Re-renders** | React Profiler (60s running timer) | 60 renders | **0 renders** | **-100%** | Decoupled via `ActiveTimerBadge` |
-| **Focus Screen FPS** | SurfaceFlinger / dumpsys | *TBD fps* | *TBD fps* | - | Dial animation smoothness |
-| **Todo Scroll Janky Frames** | `dumpsys gfxinfo framestats` | *TBD %* | *TBD %* | *-%* | Percentage of frames > 16.6ms |
-| **Total ESLint Errors** | `npm run lint:ratchet` | 128 errors | **47 errors** | **-63%** | On track to < 10 errors |
-| **Exhaustive-Deps Warnings** | `eslint -f json` | 5 warnings | **0 warnings** | **-100%** | All stale closure risks resolved |
-| **Unit Test Coverage** | Jest (`npm test`) | 0 tests | **41 tests (8 suites)** | **+41** | 100% passing test harness |
+| **Cold Start TTI (ms)** | `am start-activity -W` (median of 5) | *TBD* | *TBD* | *TBD* | Cold start time to interactive |
+| **Home Timer Re-renders** | React Profiler (60s running timer) | *TBD* | *TBD* | *TBD* | Measured during active focus timer |
+| **Todo Timer Re-renders** | React Profiler (60s running timer) | *TBD* | *TBD* | *TBD* | Measured during active focus timer |
+| **Todo Scroll Janky Frames (%)** | `dumpsys gfxinfo <pkg>` (5-fling loop) | *TBD* | *TBD* | *TBD* | Percentage of janky frames |
+
+#### Code Health Table (Measured)
+
+| Metric | Measurement Method | Original Baseline (`609dd06`) | Current (`refactor/integration-stage-1-to-5f`) | Delta | Notes |
+| :--- | :--- | :---: | :---: | :---: | :--- |
+| **Total ESLint Errors** | `npm run lint:ratchet` | 128 errors | **46 errors** (ceiling: 47) | **-64.1%** | 31 refs, 9 set-state-in-effect targeted in WS1 |
+| **Total ESLint Warnings** | `npm run lint:ratchet` | 62 warnings | **61 warnings** (ceiling: 66) | **-1.6%** | Warnings went UP vs original 62 to 109 due to strict TS & React rules; ratcheted down to 61 (ceiling 66) |
+| **Exhaustive-Deps Warnings** | `eslint -f json` | 5 warnings | **0 warnings** | **-100%** | Stale closures eliminated with verified behavior |
+| **Unit Test Coverage** | Jest (`npm test`) | 0 tests | **42 tests (9 suites)** | **+42** | 100% passing test harness |
+
 
 

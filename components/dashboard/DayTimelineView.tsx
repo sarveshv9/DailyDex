@@ -1115,6 +1115,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
     }, [pages, selectedDate, initialPageIndex]);
 
     const [visiblePageIndex, setVisiblePageIndex] = React.useState<number>(initialTargetIndex);
+    const visiblePageIndexRef = useRef<number>(initialTargetIndex);
 
     const flatListRef = useRef<FlatList>(null);
     const scrollSnapTimer = useRef<any>(null);
@@ -1127,6 +1128,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
         if (scrollSnapTimer.current) clearTimeout(scrollSnapTimer.current);
         scrollSnapTimer.current = setTimeout(() => {
             const pageIndex = Math.round(offsetX / SCREEN_WIDTH);
+            visiblePageIndexRef.current = pageIndex;
             setVisiblePageIndex(pageIndex);
             flatListRef.current?.scrollToOffset({
                 offset: pageIndex * SCREEN_WIDTH,
@@ -1153,6 +1155,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
     const handleMomentumScrollEnd = useCallback((e: any) => {
         const offsetX = e.nativeEvent.contentOffset.x;
         const pageIndex = Math.round(offsetX / SCREEN_WIDTH);
+        visiblePageIndexRef.current = pageIndex;
         setVisiblePageIndex(pageIndex);
         const page = pages[pageIndex];
         if (page && page.length > 0) {
@@ -1179,7 +1182,8 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
         const targetIndex = pages.findIndex(page => page.some(d => formatDateKey(d) === dateStr));
         const indexToScroll = targetIndex !== -1 ? targetIndex : initialPageIndex;
 
-        if (indexToScroll === visiblePageIndex) return;
+        if (indexToScroll === visiblePageIndexRef.current) return;
+        visiblePageIndexRef.current = indexToScroll;
         setVisiblePageIndex(indexToScroll);
 
         const scrollToTarget = (animated = false) => {
@@ -1223,7 +1227,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
             clearTimeout(t2);
             interaction?.cancel?.();
         };
-    }, [viewMode, selectedDate, SCREEN_WIDTH, pages, initialPageIndex, visiblePageIndex]);
+    }, [viewMode, selectedDate, SCREEN_WIDTH, pages, initialPageIndex]);
 
     const renderPage = useCallback(({ item: pageDates }: { item: Date[] }) => (
         <TimelinePage
