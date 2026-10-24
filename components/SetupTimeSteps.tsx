@@ -627,6 +627,15 @@ export function StepTime({
     const [box, setBox] = useState({ w: SCREEN_WIDTH, h: 0 });
     const [slot, setSlot] = useState({ y: 0, h: 0 });
 
+    const handleSetMode = (nextMode: Mode) => {
+        shownRef.current = nextMode;
+        setShown(nextMode);
+    };
+
+    const handleUnlock = () => {
+        busy.current = false;
+    };
+
     useEffect(() => {
         if (mode === shownRef.current) {
             busy.current = false;
@@ -635,13 +644,27 @@ export function StepTime({
         }
 
         busy.current = true;
-        fade.value = withTiming(0, { duration: 250 }, (finished) => {
-            if (!finished) return;
-            shownRef.current = mode;
-            runOnJS(setShown)(mode);
-            fade.value = withDelay(1250, withTiming(1, { duration: 700 }));
+        const safetyTimer = setTimeout(() => {
             busy.current = false;
+        }, 2500);
+
+        fade.value = withTiming(0, { duration: 250 }, (finished) => {
+            if (!finished) {
+                runOnJS(handleUnlock)();
+                return;
+            }
+            runOnJS(handleSetMode)(mode);
+            fade.value = withDelay(
+                1250,
+                withTiming(1, { duration: 700 }, () => {
+                    runOnJS(handleUnlock)();
+                })
+            );
         });
+
+        return () => {
+            clearTimeout(safetyTimer);
+        };
     }, [mode, fade]);
 
     const fadeAnimatedStyle = useAnimatedStyle(() => ({
@@ -658,7 +681,7 @@ export function StepTime({
 
     const press = (fn: () => void) => () => {
         if (busy.current) return;
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
         fn();
     };
 

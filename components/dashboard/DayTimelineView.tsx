@@ -975,7 +975,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
 }) => {
     const { theme, isDarkMode } = useTheme();
     const { width: SCREEN_WIDTH } = useWindowDimensions();
-    const styles = useMemo(() => getStyles(theme), [theme]);
+    const styles = useMemo(() => getCachedStyles(theme), [theme]);
 
     const [viewMode, setViewMode] = React.useState<'week' | 'month'>('week');
     const [todayTrigger, setTodayTrigger] = React.useState(0);
@@ -1091,8 +1091,8 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
     const selectedKey = selectedDate ? formatDateKey(selectedDate) : '';
     const todayKey = formatDateKey(today);
 
-    // Number of pages around today (e.g. 260 weeks = 5 years)
-    const RANGE_PAGES = 260;
+    // Number of pages around today (52 weeks = 2 years range)
+    const RANGE_PAGES = 52;
 
     // Compute the pages and initial index
     const { pages, initialPageIndex } = useMemo(() => {
@@ -1186,46 +1186,17 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
         visiblePageIndexRef.current = indexToScroll;
         setVisiblePageIndex(indexToScroll);
 
-        const scrollToTarget = (animated = false) => {
+        const raf = requestAnimationFrame(() => {
             if (flatListRef.current && SCREEN_WIDTH > 0) {
                 flatListRef.current.scrollToOffset({
                     offset: indexToScroll * SCREEN_WIDTH,
-                    animated,
+                    animated: false,
                 });
             }
-        };
-
-        // 1. Immediate positioning
-        scrollToTarget(false);
-
-        // 2. Next animation frame
-        const raf = requestAnimationFrame(() => {
-            scrollToTarget(false);
         });
-
-        // 3. Short layout timeout
-        const t1 = setTimeout(() => {
-            scrollToTarget(false);
-        }, 60);
-
-        // 4. Post-navigation transition timeout (Expo Router stack push finishes at ~300ms)
-        const t2 = setTimeout(() => {
-            scrollToTarget(false);
-        }, 320);
-
-        // 5. InteractionManager guarantee
-        let interaction: any;
-        if (InteractionManager?.runAfterInteractions) {
-            interaction = InteractionManager.runAfterInteractions(() => {
-                scrollToTarget(false);
-            });
-        }
 
         return () => {
             cancelAnimationFrame(raf);
-            clearTimeout(t1);
-            clearTimeout(t2);
-            interaction?.cancel?.();
         };
     }, [viewMode, selectedDate, SCREEN_WIDTH, pages, initialPageIndex]);
 
@@ -1414,6 +1385,17 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
 };
 
 /* ─────────────────────────────── Styles ─────────────────────────────── */
+
+const stylesCache = new Map<string, ReturnType<typeof getStyles>>();
+const getCachedStyles = (theme: Theme) => {
+    const key = `${theme.colors.background}-${theme.colors.primary}-${theme.colors.card}`;
+    let s = stylesCache.get(key);
+    if (!s) {
+        s = getStyles(theme);
+        stylesCache.set(key, s);
+    }
+    return s;
+};
 
 const getStyles = (theme: Theme) =>
     StyleSheet.create({

@@ -62,15 +62,30 @@ const TaskModal: React.FC<TaskModalProps> = ({
   onChainNextTask,
 }) => {
   const { theme, isDarkMode } = useTheme();
-  const styles = useMemo(() => getStyles(theme), [theme]);
+  const styles = useMemo(() => getCachedStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
 
-  const [editedTask, setEditedTask] = useState<RoutineItem | null>(null);
+  const cloneTask = (t: RoutineItem): RoutineItem => ({
+    ...t,
+    daysOfWeek: t.daysOfWeek ? [...t.daysOfWeek] : [],
+    subtasks: t.subtasks ? t.subtasks.map((s) => ({ ...s })) : [],
+  });
+
+  const [currentTaskId, setCurrentTaskId] = useState<string | null>(task?.id ?? null);
+  const [editedTask, setEditedTask] = useState<RoutineItem | null>(() => (task ? cloneTask(task) : null));
   const [activeAccordion, setActiveAccordion] = useState<"none" | "time" | "duration" | "repeat">("none");
   const [newSubtaskText, setNewSubtaskText] = useState("");
   const [showIconPicker, setShowIconPicker] = useState(false);
-  const [iconPickerCat, setIconPickerCat] = useState<number>(0);
+
+  // Synchronously sync state during render when a new task is received or modal becomes visible
+  if (visible && task && (task.id !== currentTaskId || !editedTask)) {
+    setCurrentTaskId(task.id);
+    setEditedTask(cloneTask(task));
+    setActiveAccordion("none");
+    setShowIconPicker(false);
+    setNewSubtaskText("");
+  }
 
   const scrollOffset = useRef(0);
   const handleSaveRef = useRef<(() => void) | null>(null);
@@ -94,7 +109,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
   const closeAndSave = () => {
     Animated.timing(slideAnim, {
       toValue: SCREEN_HEIGHT,
-      duration: 240,
+      duration: 220,
       useNativeDriver: true,
     }).start(() => {
       handleSaveRef.current?.();
@@ -104,7 +119,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
   const closeWithoutSave = () => {
     Animated.timing(slideAnim, {
       toValue: SCREEN_HEIGHT,
-      duration: 240,
+      duration: 220,
       useNativeDriver: true,
     }).start(() => {
       onClose();
@@ -164,16 +179,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
   };
 
   useEffect(() => {
-    if (visible && task) {
-      setEditedTask(JSON.parse(JSON.stringify(task)));
-      setActiveAccordion("none");
-      setShowIconPicker(false);
-      setNewSubtaskText("");
-    }
-  }, [visible, task]);
-
-  useEffect(() => {
     if (visible) {
+      slideAnim.setValue(SCREEN_HEIGHT);
       Animated.spring(slideAnim, {
         toValue: 0,
         tension: 85,
@@ -183,7 +190,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
     } else {
       Animated.timing(slideAnim, {
         toValue: SCREEN_HEIGHT,
-        duration: 240,
+        duration: 220,
         useNativeDriver: true,
       }).start();
     }
@@ -305,19 +312,18 @@ const TaskModal: React.FC<TaskModalProps> = ({
           },
         ]}
       >
-        {Platform.OS === "web" ? (
+        {Platform.OS === "ios" ? (
+          <BlurView
+            style={StyleSheet.absoluteFill}
+            intensity={25}
+            tint={isDarkMode ? "dark" : "light"}
+          />
+        ) : (
           <View
             style={[
               StyleSheet.absoluteFill,
               { backgroundColor: isDarkMode ? "rgba(0,0,0,0.65)" : "rgba(0,0,0,0.4)" },
             ]}
-          />
-        ) : (
-          <BlurView
-            style={StyleSheet.absoluteFill}
-            intensity={Platform.OS === "ios" ? 25 : 45}
-            tint={isDarkMode ? "dark" : "light"}
-            experimentalBlurMethod="dimezisBlurView"
           />
         )}
         <Pressable style={StyleSheet.absoluteFill} onPress={closeAndSave} />
@@ -327,19 +333,18 @@ const TaskModal: React.FC<TaskModalProps> = ({
         <Animated.View
           style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}
         >
-          {Platform.OS === "web" ? (
+          {Platform.OS === "ios" ? (
+            <BlurView
+              style={StyleSheet.absoluteFill}
+              intensity={70}
+              tint={isDarkMode ? "dark" : "light"}
+            />
+          ) : (
             <View
               style={[
                 StyleSheet.absoluteFill,
                 { backgroundColor: isDarkMode ? theme.colors.card : theme.colors.background },
               ]}
-            />
-          ) : (
-            <BlurView
-              style={StyleSheet.absoluteFill}
-              intensity={Platform.OS === "ios" ? 70 : 100}
-              tint={isDarkMode ? "dark" : "light"}
-              experimentalBlurMethod="dimezisBlurView"
             />
           )}
 
@@ -754,22 +759,36 @@ const TaskModal: React.FC<TaskModalProps> = ({
           {/* ══════════════════════════════════════════════════════════
               ICON PICKER MODAL (CATEGORIZED 50+ ICONS)
              ══════════════════════════════════════════════════════════ */}
-          <IconPickerModal
-            visible={showIconPicker}
-            onClose={() => setShowIconPicker(false)}
-            activeColor={taskColor}
-            currentIconKey={editedTask?.imageKey}
-            onSelectIcon={(iconKey) => {
-              setEditedTask((prev) => (prev ? { ...prev, imageKey: iconKey } : null));
-            }}
-          />
+          {showIconPicker && (
+            <IconPickerModal
+              visible={showIconPicker}
+              onClose={() => setShowIconPicker(false)}
+              activeColor={taskColor}
+              currentIconKey={editedTask?.imageKey}
+              onSelectIcon={(iconKey) => {
+                setEditedTask((prev) => (prev ? { ...prev, imageKey: iconKey } : null));
+                setShowIconPicker(false);
+              }}
+            />
+          )}
         </Animated.View>
       </View>
     </Modal>
   );
 };
 
-export default TaskModal;
+export default React.memo(TaskModal);
+
+const stylesCache = new Map<string, ReturnType<typeof getStyles>>();
+const getCachedStyles = (theme: Theme) => {
+  const key = `${theme.colors.background}-${theme.colors.primary}-${theme.colors.card}`;
+  let s = stylesCache.get(key);
+  if (!s) {
+    s = getStyles(theme);
+    stylesCache.set(key, s);
+  }
+  return s;
+};
 
 const getStyles = (theme: Theme) =>
   StyleSheet.create({

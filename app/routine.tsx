@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect } from "expo-router";
-import React, { useCallback, useLayoutEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import {
   ActionSheetIOS,
   Alert,
@@ -66,42 +66,6 @@ const INITIAL_ROUTINE: RoutineItem[] = [
 
 const STORAGE_KEY = ROUTINE_STORAGE_KEY;
 
-/* -------------------- Modal Hook -------------------- */
-const useModalAnimation = (screenWidth: number, screenHeight: number) => {
-  const [scaleAnim] = useState(() => new Animated.Value(0));
-  const [translateX] = useState(() => new Animated.Value(0));
-  const [translateY] = useState(() => new Animated.Value(0));
-
-  const animatedStyle = useMemo(
-    () => ({ transform: [{ translateX }, { translateY }, { scale: scaleAnim }] }),
-    [translateX, translateY, scaleAnim]
-  );
-
-  const openAnimation = useCallback(
-    (x: number, y: number) => {
-      translateX.setValue(x - screenWidth / 2);
-      translateY.setValue(y - screenHeight / 2);
-      scaleAnim.setValue(0);
-
-      Animated.parallel([
-        Animated.spring(translateX, { toValue: 0, useNativeDriver: true, tension: 100, friction: 9 }),
-        Animated.spring(translateY, { toValue: 0, useNativeDriver: true, tension: 100, friction: 9 }),
-        Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, tension: 100, friction: 9 }),
-      ]).start();
-    },
-    [translateX, translateY, scaleAnim, screenWidth, screenHeight]
-  );
-
-  const closeAnimation = useCallback(
-    (onComplete: () => void) => {
-      Animated.spring(scaleAnim, { toValue: 0, useNativeDriver: true, tension: 100, friction: 9 }).start(onComplete);
-    },
-    [scaleAnim]
-  );
-
-  return { animatedStyle, openAnimation, closeAnimation };
-};
-
 /* -------------------- Screen Component -------------------- */
 export default function RoutineScreen() {
   const { theme } = useTheme();
@@ -109,7 +73,16 @@ export default function RoutineScreen() {
   const insets = useSafeAreaInsets();
   const bottomOffset = Math.max(16, insets.bottom + 8);
   const tabBarWidth = Math.min(SCREEN_WIDTH * 0.9, 440);
-  const styles = useMemo(() => getStyles(theme), [theme]);
+  const styles = useMemo(() => getCachedStyles(theme), [theme]);
+
+  const [isAdjacentPagesLoaded, setIsAdjacentPagesLoaded] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsAdjacentPagesLoaded(true);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, []);
 
   const [allRoutines, setAllRoutines] = useState<RoutineItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -263,6 +236,9 @@ export default function RoutineScreen() {
               return Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5;
             },
             onPanResponderMove: (_, g) => {
+              if (!isAdjacentPagesLoaded) {
+                setIsAdjacentPagesLoaded(true);
+              }
               if (Math.abs(g.dx) > Math.abs(g.dy) && Math.abs(g.dx) > 8) {
                 pagerX.setValue(g.dx);
               }
@@ -375,8 +351,6 @@ export default function RoutineScreen() {
     [scrollY, listOpen, closeList]
   );
 
-  const { animatedStyle, openAnimation, closeAnimation } = useModalAnimation(SCREEN_WIDTH, SCREEN_HEIGHT);
-
   const [refreshing, setRefreshing] = useState(false);
 
   /* -------------------- Data Fetching -------------------- */
@@ -445,18 +419,15 @@ export default function RoutineScreen() {
   }, []);
 
   /* -------------------- Handlers -------------------- */
-  const openModal = useCallback((task: RoutineItem, x: number, y: number) => {
+  const openModal = useCallback((task: RoutineItem) => {
     setSelectedTask(task);
     setModalVisible(true);
-    openAnimation(x, y);
-  }, [openAnimation]);
+  }, []);
 
   const closeModal = useCallback(() => {
-    closeAnimation(() => {
-      setModalVisible(false);
-      setSelectedTask(null);
-    });
-  }, [closeAnimation]);
+    setModalVisible(false);
+    setSelectedTask(null);
+  }, []);
 
   const openForm = useCallback((item?: RoutineItem, customSuggestedTime?: string) => {
     if (item) {
@@ -807,12 +778,12 @@ export default function RoutineScreen() {
   }, []);
 
   const handleTimelineTaskPress = useCallback((item: RoutineItem) => {
-    openModal(item, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
-  }, [openModal, SCREEN_WIDTH, SCREEN_HEIGHT]);
+    openModal(item);
+  }, [openModal]);
 
   const handleDayListTaskPress = useCallback((item: RoutineItem) => {
-    openModal(item, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
-  }, [openModal, SCREEN_WIDTH, SCREEN_HEIGHT]);
+    openModal(item);
+  }, [openModal]);
 
   const handleFabPress = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -910,7 +881,8 @@ export default function RoutineScreen() {
           >
             {([0, 1, 2] as const).map(idx => {
               const date = pageDates[idx];
-              const pageItems = getItemsForDate(date);
+              const shouldRender = idx === 1 || isAdjacentPagesLoaded;
+              const pageItems = shouldRender ? getItemsForDate(date) : [];
               return (
                 <RoutineDayList
                   key={idx}
@@ -953,7 +925,6 @@ export default function RoutineScreen() {
       <TaskModal
         visible={modalVisible}
         task={selectedTask}
-        animatedStyle={animatedStyle}
         onClose={closeModal}
         onEdit={handleEditFromModal}
         onSaveTask={handleSaveFromModal}
@@ -988,6 +959,17 @@ export default function RoutineScreen() {
 }
 
 /* -------------------- Styles -------------------- */
+const stylesCache = new Map<string, ReturnType<typeof getStyles>>();
+const getCachedStyles = (theme: Theme) => {
+  const key = `${theme.colors.background}-${theme.colors.primary}-${theme.colors.card}`;
+  let s = stylesCache.get(key);
+  if (!s) {
+    s = getStyles(theme);
+    stylesCache.set(key, s);
+  }
+  return s;
+};
+
 const getStyles = (theme: Theme) =>
   StyleSheet.create({
     safeArea: {

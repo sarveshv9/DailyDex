@@ -69,6 +69,17 @@ const TIME_COL_W = 50;
 const NODE_COL_W = 54;
 const SPINE_WIDTH = 2;
 
+const stylesCache = new Map<string, ReturnType<typeof getStyles>>();
+const getCachedStyles = (theme: Theme, isDarkMode: boolean) => {
+  const key = `${isDarkMode ? 'dark' : 'light'}-${theme.colors.primary}-${theme.colors.background}`;
+  let styles = stylesCache.get(key);
+  if (!styles) {
+    styles = getStyles(theme, isDarkMode);
+    stylesCache.set(key, styles);
+  }
+  return styles;
+};
+
 const TimelineEventCardComponent: React.FC<TimelineEventCardProps> = ({
   item,
   onPress,
@@ -79,7 +90,7 @@ const TimelineEventCardComponent: React.FC<TimelineEventCardProps> = ({
   chainPosition = 'none',
 }) => {
   const { theme, isDarkMode } = useTheme();
-  const styles = useMemo(() => getStyles(theme, isDarkMode), [theme, isDarkMode]);
+  const styles = useMemo(() => getCachedStyles(theme, isDarkMode), [theme, isDarkMode]);
 
   const routineData = item;
   const isWakeupSleep = isWakeupOrSleep(routineData);
