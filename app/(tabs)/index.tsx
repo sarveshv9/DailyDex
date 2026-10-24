@@ -24,7 +24,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle } from "react-native-svg";
 import TaskModal from "../../components/dashboard/TaskModal";
 import { useTheme } from "../../context/ThemeContext";
-import { useTimer } from "../../context/TimerContext";
+import { ActiveTimerBadge } from "../../components/common/ActiveTimerBadge";
 import { Theme, themes } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
 import { scheduleRoutineNotifications } from "../../utils/notifications";
@@ -754,7 +754,6 @@ const SETUP_KEY = "@zen_setup_complete";
 
 function HomeScreen() {
   const router = useRouter();
-  const timer = useTimer();
   const [isReady, setIsReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [routines, setRoutines] = useState<RoutineItem[]>([]);
@@ -886,9 +885,6 @@ function HomeScreen() {
     }
   }, [currentTaskItem, setThemeName, themeName, isAutoTheme, isLoading, isReady]);
 
-  const isCurrentTimer = Boolean(currentTaskItem && timer.taskId === currentTaskItem.id);
-  const isTimerActive = isCurrentTimer && timer.isActive;
-
   /* Primary CTA action: Defaults to timeline */
   const handleOpenTimeline = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -911,21 +907,6 @@ function HomeScreen() {
       router.push("/focus" as any);
     }
   }, [currentTaskItem, router]);
-
-  const handleToggleTimer = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (timer.isActive) {
-      timer.pauseTimer();
-    } else {
-      timer.resumeTimer();
-    }
-  }, [timer]);
-
-  const formatTimerSeconds = useCallback((seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, "0")}`;
-  }, []);
 
   const handlePressUpcoming = useCallback((task: RoutineItem) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -1329,49 +1310,27 @@ function HomeScreen() {
                     ) : null}
 
                     {currentTaskItem ? (
-                      isCurrentTimer && timer.timeLeft > 0 ? (
-                        <Pressable
-                          onPress={handleOpenFocus}
-                          hitSlop={6}
-                          style={styles.activeTimerBadge}
-                          accessibilityLabel="View Active Focus Timer"
-                        >
-                          <Ionicons
-                            name={isTimerActive ? "pulse" : "pause"}
-                            size={12}
-                            color={theme.colors.primary}
-                          />
-                          <Text style={styles.activeTimerText}>
-                            {formatTimerSeconds(timer.timeLeft)}
-                          </Text>
+                      <ActiveTimerBadge
+                        taskId={currentTaskItem.id}
+                        onOpenFocus={handleOpenFocus}
+                        primaryColor={theme.colors.primary}
+                        badgeStyle={styles.activeTimerBadge}
+                        textStyle={styles.activeTimerText}
+                        fallback={
                           <Pressable
-                            onPress={(e) => {
-                              e.stopPropagation();
-                              handleToggleTimer();
-                            }}
-                            hitSlop={6}
+                            style={styles.focusTimerIconButton}
+                            onPress={handleOpenFocus}
+                            hitSlop={8}
+                            accessibilityLabel="Start Focus Timer"
                           >
                             <Ionicons
-                              name={isTimerActive ? "pause-circle" : "play-circle"}
-                              size={16}
+                              name="timer-outline"
+                              size={18}
                               color={theme.colors.primary}
                             />
                           </Pressable>
-                        </Pressable>
-                      ) : (
-                        <Pressable
-                          style={styles.focusTimerIconButton}
-                          onPress={handleOpenFocus}
-                          hitSlop={8}
-                          accessibilityLabel="Start Focus Timer"
-                        >
-                          <Ionicons
-                            name="timer-outline"
-                            size={18}
-                            color={theme.colors.primary}
-                          />
-                        </Pressable>
-                      )
+                        }
+                      />
                     ) : null}
                   </View>
                 </View>

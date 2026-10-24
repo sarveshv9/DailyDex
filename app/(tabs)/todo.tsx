@@ -33,7 +33,8 @@ import Animated, {
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../context/ThemeContext";
-import { useTimer } from "../../context/TimerContext";
+import { useTimerStore } from "../../stores/timerStore";
+import { ActiveTimerBadge } from "../../components/common/ActiveTimerBadge";
 import { getSharedStyles, Theme } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
 import { addTaskCompleted, removeTaskCompleted } from "../../utils/stats";
@@ -126,7 +127,6 @@ const TaskItem = ({
   isDarkMode,
 }: TaskItemProps) => {
   const router = useRouter();
-  const timer = useTimer();
   const styles = useMemo(() => getStyles(theme, isDarkMode), [theme, isDarkMode]);
 
   const cardScale = useSharedValue(1);
@@ -178,17 +178,14 @@ const TaskItem = ({
     opacity: checkedProgress.value,
   }));
 
-  const isCurrentTimer = timer.taskId === task.id;
-  const isTimerActive = isCurrentTimer && timer.isActive;
-
   const handleToggle = () => {
     if (!task.completed) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } else {
       Haptics.selectionAsync();
     }
-    if (!task.completed && isCurrentTimer) {
-      timer.stopTimer();
+    if (!task.completed && useTimerStore.getState().taskId === task.id) {
+      useTimerStore.getState().stopTimer();
     }
     onToggle(task.id);
   };
@@ -199,21 +196,6 @@ const TaskItem = ({
       pathname: "/focus" as any,
       params: { taskId: task.id, taskName: task.text },
     });
-  };
-
-  const handleToggleTimer = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (timer.isActive) {
-      timer.pauseTimer();
-    } else {
-      timer.resumeTimer();
-    }
-  };
-
-  const formatSeconds = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
   return (
@@ -307,36 +289,13 @@ const TaskItem = ({
       {/* Action Buttons */}
       <View style={styles.taskActionsRow}>
         {!task.completed && (
-          <>
-            {isCurrentTimer && timer.timeLeft > 0 ? (
-              <Pressable
-                onPress={handleOpenFocus}
-                hitSlop={6}
-                style={styles.activeTimerBadge}
-              >
-                <Ionicons
-                  name={isTimerActive ? "pulse" : "pause"}
-                  size={12}
-                  color={theme.colors.primary}
-                />
-                <Text style={styles.activeTimerText}>
-                  {formatSeconds(timer.timeLeft)}
-                </Text>
-                <Pressable
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    handleToggleTimer();
-                  }}
-                  hitSlop={6}
-                >
-                  <Ionicons
-                    name={isTimerActive ? "pause-circle" : "play-circle"}
-                    size={16}
-                    color={theme.colors.primary}
-                  />
-                </Pressable>
-              </Pressable>
-            ) : (
+          <ActiveTimerBadge
+            taskId={task.id}
+            onOpenFocus={handleOpenFocus}
+            primaryColor={theme.colors.primary}
+            badgeStyle={styles.activeTimerBadge}
+            textStyle={styles.activeTimerText}
+            fallback={
               <Pressable
                 style={styles.iconActionButton}
                 onPress={(e) => {
@@ -352,8 +311,8 @@ const TaskItem = ({
                   color={theme.colors.primary}
                 />
               </Pressable>
-            )}
-          </>
+            }
+          />
         )}
 
         {/* Edit Button */}
@@ -769,7 +728,6 @@ const EmptyState = ({
 /* ---------------------- MAIN TODO SCREEN ------------------------ */
 export default function TodoScreen() {
   const { theme, isDarkMode } = useTheme();
-  const timer = useTimer();
   const styles = useMemo(() => getStyles(theme, isDarkMode), [theme, isDarkMode]);
   const sharedStyles = useMemo(() => getSharedStyles(theme), [theme]);
 
@@ -929,8 +887,8 @@ export default function TodoScreen() {
       "Are you sure you want to permanently delete this task?",
       "Delete",
       () => {
-        if (timer.taskId === id) {
-          timer.stopTimer();
+        if (useTimerStore.getState().taskId === id) {
+          useTimerStore.getState().stopTimer();
         }
         setTasks((prev) => prev.filter((t) => t.id !== id));
       }
@@ -954,8 +912,9 @@ export default function TodoScreen() {
       "Clear All",
       () => {
         const completedIds = new Set(tasks.filter((t) => t.completed).map((t) => t.id));
-        if (timer.taskId && completedIds.has(timer.taskId)) {
-          timer.stopTimer();
+        const activeTimerId = useTimerStore.getState().taskId;
+        if (activeTimerId && completedIds.has(activeTimerId)) {
+          useTimerStore.getState().stopTimer();
         }
         setTasks((prev) => prev.filter((t) => !t.completed));
         setConfirmState((prev) => ({ ...prev, visible: false }));
