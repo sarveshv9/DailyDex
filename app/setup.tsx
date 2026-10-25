@@ -2,12 +2,10 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
-import React, { useEffect, useRef, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
     Alert,
-    Animated,
     BackHandler,
-    Dimensions,
     KeyboardAvoidingView,
     Platform,
     Pressable,
@@ -17,17 +15,26 @@ import {
     TextInput,
     View,
 } from "react-native";
+import Animated, {
+    useSharedValue,
+    useAnimatedStyle,
+    withRepeat,
+    withTiming,
+    Easing,
+    interpolateColor,
+} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Theme } from "../styles/shared";
 import { useTheme } from "../context/ThemeContext";
 import * as Haptics from "../utils/haptics";
 import { scheduleRoutineNotifications } from "../utils/notifications";
 import { getRoutineIcon, RoutineItem, timeToMinutes } from "../utils/utils";
-import { StepTime, InteractiveTimeCard, SkyBackground, skyTrackColor } from "../components/SetupTimeSteps";
+import { StepTime, InteractiveTimeCard, SkyBackground } from "../components/SetupTimeSteps";
+import { ROUTINE_STORAGE_KEY, SETUP_STORAGE_KEY } from "../constants/storageKeys";
+import { themeTokens } from "../constants/themeTokens";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const STORAGE_KEY = "@zen_routine";
-const SETUP_KEY = "@zen_setup_complete";
+const STORAGE_KEY = ROUTINE_STORAGE_KEY;
+const SETUP_KEY = SETUP_STORAGE_KEY;
 
 interface CategoryDef {
     key: string;
@@ -172,26 +179,19 @@ function StepWelcome({
 }) {
     const { theme } = useTheme();
     const styles = getStyles(theme);
-    const pulseAnim = useRef(new Animated.Value(1)).current;
+    const pulseAnim = useSharedValue(1);
 
     useEffect(() => {
-        const pulse = Animated.loop(
-            Animated.sequence([
-                Animated.timing(pulseAnim, {
-                    toValue: 1.08,
-                    duration: 2400,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(pulseAnim, {
-                    toValue: 1,
-                    duration: 2400,
-                    useNativeDriver: true,
-                }),
-            ])
+        pulseAnim.value = withRepeat(
+            withTiming(1.08, { duration: 2400, easing: Easing.inOut(Easing.ease) }),
+            -1,
+            true
         );
-        pulse.start();
-        return () => pulse.stop();
     }, [pulseAnim]);
+
+    const pulseAnimatedStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: pulseAnim.value }],
+    }));
 
     return (
         <View style={styles.welcomeContainer}>
@@ -215,7 +215,7 @@ function StepWelcome({
                     <Animated.View
                         style={[
                             styles.welcomeAuraRing,
-                            { transform: [{ scale: pulseAnim }] },
+                            pulseAnimatedStyle,
                         ]}
                     />
                     <View style={styles.welcomeIconCard}>
@@ -873,7 +873,7 @@ function StepTimes({
                                                         accessibilityRole="button"
                                                         accessibilityLabel={`Remove ${item.task}`}
                                                     >
-                                                        <Ionicons name="trash-outline" size={16} color="#EF4444" />
+                                                        <Ionicons name="trash-outline" size={16} color={themeTokens.colors.danger} />
                                                         <Text style={styles.actionBtnDestructiveText}>Remove</Text>
                                                     </Pressable>
                                                 </View>
@@ -968,7 +968,15 @@ export default function SetupScreen() {
 
     const [step, setStep] = useState<0 | 1 | 2 | 3 | 4>(0);
     const [saving, setSaving] = useState(false);
-    const skyProgress = useRef(new Animated.Value(0)).current;
+    const skyProgress = useSharedValue(0);
+
+    useEffect(() => {
+        if (step === 1) {
+            skyProgress.value = withTiming(0, { duration: 2800, easing: Easing.inOut(Easing.sin) });
+        } else if (step === 2) {
+            skyProgress.value = withTiming(1, { duration: 2800, easing: Easing.inOut(Easing.sin) });
+        }
+    }, [step, skyProgress]);
 
     // Android hardware back button handler
     useEffect(() => {
@@ -1194,6 +1202,16 @@ export default function SetupScreen() {
         }
     };
 
+    const progressBarAnimatedStyle = useAnimatedStyle(() => {
+        'worklet';
+        if (step === 0) return { backgroundColor: "transparent" };
+        if (step === 1 || step === 2) {
+            const bg = interpolateColor(skyProgress.value, [0.25, 0.75], ["#ECDCCE", "#1E212E"]);
+            return { backgroundColor: bg };
+        }
+        return { backgroundColor: `${theme.colors.primary}18` };
+    });
+
     return (
         <SafeAreaView
             style={[
@@ -1207,16 +1225,14 @@ export default function SetupScreen() {
             <Animated.View
                 style={[
                     styles.progressBar,
-                    step === 0 && { backgroundColor: "transparent" },
-                    (step === 1 || step === 2) && { backgroundColor: skyTrackColor(skyProgress) },
-                    (step === 3 || step === 4) && { backgroundColor: `${theme.colors.primary}18` },
+                    progressBarAnimatedStyle,
                 ]}
             >
                 <View
                     style={[
                         styles.progressFill,
                         { width: `${(step / 4) * 100}%` },
-                        (step === 1 || step === 2) && { backgroundColor: "#FF3B30" },
+                        (step === 1 || step === 2) && { backgroundColor: themeTokens.colors.danger },
                     ]}
                 />
             </Animated.View>
@@ -1348,7 +1364,7 @@ const getStyles = (theme: Theme) =>
             ...theme.glows.card,
         },
         welcomeBrand: {
-            fontSize: 12,
+            fontSize: themeTokens.fonts.size.xs,
             fontFamily: theme.fonts.bold,
             letterSpacing: 4,
             color: theme.colors.primary,
@@ -1363,7 +1379,7 @@ const getStyles = (theme: Theme) =>
             marginBottom: 10,
         },
         welcomeSubtitle: {
-            fontSize: 14,
+            fontSize: themeTokens.fonts.size.sm,
             fontFamily: theme.fonts.regular,
             color: theme.colors.textSecondary,
             textAlign: "center",
@@ -1397,7 +1413,7 @@ const getStyles = (theme: Theme) =>
             justifyContent: "center",
         },
         welcomeHighlightText: {
-            fontSize: 13,
+            fontSize: themeTokens.fonts.size.sm - 1,
             fontFamily: theme.fonts.medium,
             color: theme.colors.text,
         },
@@ -1416,7 +1432,7 @@ const getStyles = (theme: Theme) =>
             marginBottom: 10,
         },
         stepEyebrow: {
-            fontSize: 12,
+            fontSize: themeTokens.fonts.size.xs,
             lineHeight: 16,
             fontFamily: theme.fonts.bold,
             color: theme.colors.primary,
@@ -1427,20 +1443,20 @@ const getStyles = (theme: Theme) =>
             justifyContent: "center",
         },
         skipText: {
-            fontSize: 14,
+            fontSize: themeTokens.fonts.size.sm,
             lineHeight: 18,
             fontFamily: theme.fonts.medium,
             color: theme.colors.textSecondary,
         },
         stepTitle: {
-            fontSize: 30,
+            fontSize: themeTokens.fonts.size.display + 2,
             fontFamily: theme.fonts.bold,
             color: theme.colors.text,
             lineHeight: 36,
             marginBottom: 4,
         },
         stepSubtitle: {
-            fontSize: 14,
+            fontSize: themeTokens.fonts.size.sm,
             fontFamily: theme.fonts.regular,
             color: theme.colors.textSecondary,
             lineHeight: 19,
@@ -1956,12 +1972,12 @@ const getStyles = (theme: Theme) =>
             gap: 6,
             height: 40,
             borderRadius: 12,
-            backgroundColor: "#EF444412",
+            backgroundColor: `${themeTokens.colors.danger}12`,
         },
         actionBtnDestructiveText: {
-            fontSize: 13,
+            fontSize: themeTokens.fonts.size.sm - 1,
             fontFamily: theme.fonts.bold,
-            color: "#EF4444",
+            color: themeTokens.colors.danger,
         },
 
         // ─── Modal & Preview ─────────────────────

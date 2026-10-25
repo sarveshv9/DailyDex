@@ -4,16 +4,22 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
+  GestureResponderEvent,
   Modal,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   PanResponder,
+  PanResponderGestureState,
   Platform,
   Pressable,
   ScrollView,
+  StyleProp,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
+  ViewStyle,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Theme } from "../../styles/shared";
@@ -21,19 +27,24 @@ import { useTheme } from "../../context/ThemeContext";
 import * as Haptics from "../../utils/haptics";
 import {
   RoutineItem,
-  SubTask,
-  parseTime,
   getRoutineIcon,
   addMinutesToTime,
   guessRoutineIconKey,
-  ICON_GROUPS,
 } from "../../utils/utils";
-import { InlineTimePicker } from "../common/InlineTimePicker";
+import { TimePicker } from "../ui/TimePicker";
+import { DaysOfWeekPicker, DurationPicker, IconPickerModal, SubtaskList } from "../forms";
+import { Button } from "../ui/Button";
+import { Card } from "../ui/Card";
+import {
+  TASK_COLORS,
+  FALLBACK_COLORS,
+  formatDuration,
+} from "../../hooks/useRoutineTaskForm";
 
 interface TaskModalProps {
   visible: boolean;
   task: RoutineItem | null;
-  animatedStyle?: any;
+  animatedStyle?: StyleProp<ViewStyle>;
   onClose: () => void;
   onEdit?: () => void;
   onSaveTask?: (updatedTask: RoutineItem) => void;
@@ -42,56 +53,6 @@ interface TaskModalProps {
 }
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
-
-const DAYS_OF_WEEK = [
-  { label: "S", full: "Sun", value: 0 },
-  { label: "M", full: "Mon", value: 1 },
-  { label: "T", full: "Tue", value: 2 },
-  { label: "W", full: "Wed", value: 3 },
-  { label: "T", full: "Thu", value: 4 },
-  { label: "F", full: "Fri", value: 5 },
-  { label: "S", full: "Sat", value: 6 },
-];
-
-const DURATION_PRESETS = [10, 15, 20, 30, 45, 60, 90, 120];
-
-const TASK_COLORS: Record<string, string> = {
-  wakeup: "#FFB347",
-  sleep: "#9CBBE3",
-  water: "#77CCEE",
-  tea_journal: "#E6D5B8",
-  breakfast: "#FFD1BA",
-  lunch: "#FFD1BA",
-  dinner: "#FFD1BA",
-  study: "#A0C4FF",
-  walk: "#B9FBC0",
-  yoga: "#CFBAF0",
-  reflect: "#A0C4FF",
-  prepare_sleep: "#BDB2FF",
-  breathe: "#B9FBC0",
-  commute: "#79B4B7",
-  gym: "#FF9F80",
-  cleaning: "#80CED7",
-  pet: "#E3C75F",
-  shopping: "#F6B8B8",
-  coding: "#7EA0B7",
-  gaming: "#BD93F9",
-  finances: "#9AD0C2",
-  laundry: "#C5DFF8",
-  travel: "#7BC9FF",
-  health: "#F875AA",
-  podcast: "#C683D7",
-};
-
-const FALLBACK_COLORS = ["#7B8CDE", "#C084FC", "#4DA8DA", "#6BCB77", "#E8975E", "#B89B72"];
-
-/** Format minutes into clean text (e.g. "30m", "1h 15m") */
-const formatDuration = (minutes: number): string => {
-  if (minutes < 60) return `${minutes}m`;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return m === 0 ? `${h}h` : `${h}h ${m}m`;
-};
 
 const TaskModal: React.FC<TaskModalProps> = ({
   visible,
@@ -102,15 +63,28 @@ const TaskModal: React.FC<TaskModalProps> = ({
   onChainNextTask,
 }) => {
   const { theme, isDarkMode } = useTheme();
-  const styles = useMemo(() => getStyles(theme), [theme]);
+  const styles = useMemo(() => getCachedStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
-  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const [slideAnim] = useState(() => new Animated.Value(SCREEN_HEIGHT));
 
-  const [editedTask, setEditedTask] = useState<RoutineItem | null>(null);
+  const cloneTask = (t: RoutineItem): RoutineItem => ({
+    ...t,
+    daysOfWeek: t.daysOfWeek ? [...t.daysOfWeek] : [],
+    subtasks: t.subtasks ? t.subtasks.map((s) => ({ ...s })) : [],
+  });
+
+  const [currentTaskId, setCurrentTaskId] = useState<string | null>(task?.id ?? null);
+  const [editedTask, setEditedTask] = useState<RoutineItem | null>(() => (task ? cloneTask(task) : null));
   const [activeAccordion, setActiveAccordion] = useState<"none" | "time" | "duration" | "repeat">("none");
-  const [newSubtaskText, setNewSubtaskText] = useState("");
   const [showIconPicker, setShowIconPicker] = useState(false);
-  const [iconPickerCat, setIconPickerCat] = useState<number>(0);
+
+  // Synchronously sync state during render when a new task is received or modal becomes visible
+  if (visible && task && (task.id !== currentTaskId || !editedTask)) {
+    setCurrentTaskId(task.id);
+    setEditedTask(cloneTask(task));
+    setActiveAccordion("none");
+    setShowIconPicker(false);
+  }
 
   const scrollOffset = useRef(0);
   const handleSaveRef = useRef<(() => void) | null>(null);
@@ -128,13 +102,13 @@ const TaskModal: React.FC<TaskModalProps> = ({
     }
     const idx = Math.abs(hash) % FALLBACK_COLORS.length;
     return FALLBACK_COLORS[idx];
-  }, [editedTask?.imageKey, editedTask?.task, theme.colors.primary]);
+  }, [editedTask, theme.colors.primary]);
 
   /* ── Save and Close ── */
   const closeAndSave = () => {
     Animated.timing(slideAnim, {
       toValue: SCREEN_HEIGHT,
-      duration: 240,
+      duration: 220,
       useNativeDriver: true,
     }).start(() => {
       handleSaveRef.current?.();
@@ -144,7 +118,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
   const closeWithoutSave = () => {
     Animated.timing(slideAnim, {
       toValue: SCREEN_HEIGHT,
-      duration: 240,
+      duration: 220,
       useNativeDriver: true,
     }).start(() => {
       onClose();
@@ -152,13 +126,13 @@ const TaskModal: React.FC<TaskModalProps> = ({
   };
 
   /* ── Pan Gesture for Smooth Pull-Down Dismiss ── */
-  const handlePanResponderMove = (_: any, gestureState: any) => {
+  const handlePanResponderMove = (_: GestureResponderEvent, gestureState: PanResponderGestureState) => {
     if (gestureState.dy > 0) {
       slideAnim.setValue(gestureState.dy);
     }
   };
 
-  const handlePanResponderRelease = (_: any, gestureState: any) => {
+  const handlePanResponderRelease = (_: GestureResponderEvent, gestureState: PanResponderGestureState) => {
     if (gestureState.dy > 90 || gestureState.vy > 0.9) {
       closeAndSave();
     } else {
@@ -171,32 +145,42 @@ const TaskModal: React.FC<TaskModalProps> = ({
     }
   };
 
-  const headerPanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => Platform.OS !== "web",
-      onMoveShouldSetPanResponder: (_, gestureState) => Platform.OS !== "web" && Math.abs(gestureState.dy) > 10,
-      onPanResponderMove: handlePanResponderMove,
-      onPanResponderRelease: handlePanResponderRelease,
-    })
-  ).current;
+   const headerPanResponder = useMemo(
+    () =>
+      Platform.OS === "web"
+        ? { panHandlers: {} }
+        // eslint-disable-next-line react-hooks/refs
+        : PanResponder.create({
+            onStartShouldSetPanResponder: () => true,
+            onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dy) > 10,
+            onPanResponderMove: handlePanResponderMove,
+            onPanResponderRelease: handlePanResponderRelease,
+          }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [slideAnim]
+  );
 
-  const bodyPanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponderCapture: (_, gestureState) => {
-        if (Platform.OS === "web") return false;
-        return gestureState.dy > 15 && scrollOffset.current <= 1;
-      },
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        if (Platform.OS === "web") return false;
-        return gestureState.dy > 15 && scrollOffset.current <= 1;
-      },
-      onPanResponderMove: handlePanResponderMove,
-      onPanResponderRelease: handlePanResponderRelease,
-    })
-  ).current;
+   const bodyPanResponder = useMemo(
+    () =>
+      Platform.OS === "web"
+        ? { panHandlers: {} }
+        // eslint-disable-next-line react-hooks/refs
+        : PanResponder.create({
+            onStartShouldSetPanResponder: () => false,
+            onMoveShouldSetPanResponderCapture: (_, gestureState) => {
+              return gestureState.dy > 15 && scrollOffset.current <= 1;
+            },
+            onMoveShouldSetPanResponder: (_, gestureState) => {
+              return gestureState.dy > 15 && scrollOffset.current <= 1;
+            },
+            onPanResponderMove: handlePanResponderMove,
+            onPanResponderRelease: handlePanResponderRelease,
+          }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [slideAnim]
+  );
 
-  const handleScroll = (e: any) => {
+  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     scrollOffset.current = e.nativeEvent.contentOffset.y;
     if (scrollOffset.current < -60) {
       closeAndSave();
@@ -204,16 +188,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
   };
 
   useEffect(() => {
-    if (visible && task) {
-      setEditedTask(JSON.parse(JSON.stringify(task)));
-      setActiveAccordion("none");
-      setShowIconPicker(false);
-      setNewSubtaskText("");
-    }
-  }, [visible, task]);
-
-  useEffect(() => {
     if (visible) {
+      slideAnim.setValue(SCREEN_HEIGHT);
       Animated.spring(slideAnim, {
         toValue: 0,
         tension: 85,
@@ -223,13 +199,11 @@ const TaskModal: React.FC<TaskModalProps> = ({
     } else {
       Animated.timing(slideAnim, {
         toValue: SCREEN_HEIGHT,
-        duration: 240,
+        duration: 220,
         useNativeDriver: true,
       }).start();
     }
   }, [visible, slideAnim]);
-
-  if (!task || !editedTask) return null;
 
   const handleSave = () => {
     if (onSaveTask && editedTask) {
@@ -238,7 +212,11 @@ const TaskModal: React.FC<TaskModalProps> = ({
     onClose();
   };
 
-  handleSaveRef.current = handleSave;
+  useEffect(() => {
+    handleSaveRef.current = handleSave;
+  });
+
+  if (!task || !editedTask) return null;
 
   /* ── Time Calculations ── */
   const getDisplayTime = () => {
@@ -257,68 +235,12 @@ const TaskModal: React.FC<TaskModalProps> = ({
     return `${days.length}d/wk`;
   };
 
-  const toggleDay = (dayValue: number) => {
-    Haptics.selectionAsync();
-    setEditedTask((prev) => {
-      if (!prev) return prev;
-      const current = prev.daysOfWeek || [];
-      const next = current.includes(dayValue)
-        ? current.filter((d) => d !== dayValue)
-        : [...current, dayValue].sort();
-      return { ...prev, daysOfWeek: next };
-    });
-  };
-
   const adjustDuration = (delta: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setEditedTask((prev) => {
       if (!prev) return prev;
       const cur = prev.duration || 30;
       return { ...prev, duration: Math.max(5, Math.min(240, cur + delta)) };
-    });
-  };
-
-  /* ── Subtask Handlers ── */
-  const toggleSubtask = (id: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setEditedTask((prev) => {
-      if (!prev) return prev;
-      const subtasks = prev.subtasks?.map((st) =>
-        st.id === id ? { ...st, completed: !st.completed } : st
-      );
-      return { ...prev, subtasks };
-    });
-  };
-
-  const addSubtask = () => {
-    if (!newSubtaskText.trim()) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setEditedTask((prev) => {
-      if (!prev) return prev;
-      const newSt: SubTask = {
-        id: Date.now().toString(),
-        title: newSubtaskText.trim(),
-        completed: false,
-      };
-      return { ...prev, subtasks: [...(prev.subtasks || []), newSt] };
-    });
-    setNewSubtaskText("");
-  };
-
-  const editSubtask = (id: string, text: string) => {
-    setEditedTask((prev) => {
-      if (!prev) return prev;
-      const subtasks = prev.subtasks?.map((st) => (st.id === id ? { ...st, title: text } : st));
-      return { ...prev, subtasks };
-    });
-  };
-
-  const deleteSubtask = (id: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setEditedTask((prev) => {
-      if (!prev) return prev;
-      const subtasks = prev.subtasks?.filter((st) => st.id !== id);
-      return { ...prev, subtasks };
     });
   };
 
@@ -345,19 +267,18 @@ const TaskModal: React.FC<TaskModalProps> = ({
           },
         ]}
       >
-        {Platform.OS === "web" ? (
+        {Platform.OS === "ios" ? (
+          <BlurView
+            style={StyleSheet.absoluteFill}
+            intensity={25}
+            tint={isDarkMode ? "dark" : "light"}
+          />
+        ) : (
           <View
             style={[
               StyleSheet.absoluteFill,
               { backgroundColor: isDarkMode ? "rgba(0,0,0,0.65)" : "rgba(0,0,0,0.4)" },
             ]}
-          />
-        ) : (
-          <BlurView
-            style={StyleSheet.absoluteFill}
-            intensity={Platform.OS === "ios" ? 25 : 45}
-            tint={isDarkMode ? "dark" : "light"}
-            experimentalBlurMethod="dimezisBlurView"
           />
         )}
         <Pressable style={StyleSheet.absoluteFill} onPress={closeAndSave} />
@@ -367,19 +288,18 @@ const TaskModal: React.FC<TaskModalProps> = ({
         <Animated.View
           style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}
         >
-          {Platform.OS === "web" ? (
+          {Platform.OS === "ios" ? (
+            <BlurView
+              style={StyleSheet.absoluteFill}
+              intensity={70}
+              tint={isDarkMode ? "dark" : "light"}
+            />
+          ) : (
             <View
               style={[
                 StyleSheet.absoluteFill,
                 { backgroundColor: isDarkMode ? theme.colors.card : theme.colors.background },
               ]}
-            />
-          ) : (
-            <BlurView
-              style={StyleSheet.absoluteFill}
-              intensity={Platform.OS === "ios" ? 70 : 100}
-              tint={isDarkMode ? "dark" : "light"}
-              experimentalBlurMethod="dimezisBlurView"
             />
           )}
 
@@ -406,17 +326,13 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 <Text style={styles.timeRangeText}>{getDisplayTime()}</Text>
               </View>
 
-              <TouchableOpacity
-                style={[styles.saveActionBtn, { backgroundColor: theme.colors.primary }]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  closeAndSave();
-                }}
-                hitSlop={10}
-              >
-                <Ionicons name="checkmark" size={18} color="#FFFFFF" style={{ marginRight: 4 }} />
-                <Text style={styles.saveActionText}>Save</Text>
-              </TouchableOpacity>
+              <Button
+                title="Save"
+                variant="primary"
+                size="sm"
+                icon={<Ionicons name="checkmark" size={16} color="#FFFFFF" />}
+                onPress={closeAndSave}
+              />
             </View>
 
             {/* ── Hero Ritual Card: Icon Ring + Editable Title ── */}
@@ -592,7 +508,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
             {/* ── Accordion: Inline Time Picker ── */}
             {activeAccordion === "time" && (
               <View style={styles.accordionContainer}>
-                <InlineTimePicker
+                <TimePicker
                   value={editedTask.time || "8:00 AM"}
                   onChange={(t) => setEditedTask((prev) => (prev ? { ...prev, time: t } : null))}
                 />
@@ -626,63 +542,22 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 </View>
 
                 {/* Preset Chips */}
-                <View style={styles.presetChipsRow}>
-                  {DURATION_PRESETS.map((dur) => (
-                    <TouchableOpacity
-                      key={dur}
-                      style={[
-                        styles.durChip,
-                        editedTask.duration === dur && {
-                          backgroundColor: taskColor,
-                          borderColor: taskColor,
-                        },
-                      ]}
-                      onPress={() => {
-                        Haptics.selectionAsync();
-                        setEditedTask((prev) => (prev ? { ...prev, duration: dur } : null));
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.durChipText,
-                          editedTask.duration === dur && { color: "#FFFFFF" },
-                        ]}
-                      >
-                        {formatDuration(dur)}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+                <DurationPicker
+                  selectedDuration={editedTask.duration || 30}
+                  onChange={(dur) => setEditedTask((prev) => (prev ? { ...prev, duration: dur } : null))}
+                  activeColor={taskColor}
+                />
               </View>
             )}
 
             {/* ── Accordion: Repeat Schedule ── */}
             {activeAccordion === "repeat" && (
               <View style={styles.accordionContainer}>
-                <View style={styles.daysRow}>
-                  {DAYS_OF_WEEK.map((day) => {
-                    const active = (editedTask.daysOfWeek || []).includes(day.value);
-                    return (
-                      <TouchableOpacity
-                        key={day.value}
-                        style={[
-                          styles.dayBtn,
-                          active && { backgroundColor: taskColor, borderColor: taskColor },
-                        ]}
-                        onPress={() => toggleDay(day.value)}
-                      >
-                        <Text
-                          style={[
-                            styles.dayBtnText,
-                            { color: active ? "#FFFFFF" : theme.colors.textSecondary },
-                          ]}
-                        >
-                          {day.label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+                <DaysOfWeekPicker
+                  selectedDays={editedTask.daysOfWeek || []}
+                  onChange={(days) => setEditedTask((prev) => (prev ? { ...prev, daysOfWeek: days } : null))}
+                  activeColor={taskColor}
+                />
 
                 {/* Quick Presets */}
                 <View style={styles.repeatPresetRow}>
@@ -752,76 +627,17 @@ const TaskModal: React.FC<TaskModalProps> = ({
                   )}
                 </View>
 
-                {subtasksList.map((st) => (
-                  <View key={st.id} style={styles.subtaskRow}>
-                    <TouchableOpacity
-                      onPress={() => toggleSubtask(st.id)}
-                      style={styles.subtaskCheck}
-                      hitSlop={8}
-                    >
-                      <Ionicons
-                        name={st.completed ? "checkmark-circle" : "ellipse-outline"}
-                        size={22}
-                        color={st.completed ? taskColor : `${theme.colors.textSecondary}70`}
-                      />
-                    </TouchableOpacity>
-                    <TextInput
-                      style={[
-                        styles.subtaskInput,
-                        { color: theme.colors.text },
-                        st.completed && {
-                          textDecorationLine: "line-through",
-                          opacity: 0.45,
-                        },
-                      ]}
-                      value={st.title}
-                      onChangeText={(t) => editSubtask(st.id, t)}
-                    />
-                    <TouchableOpacity
-                      onPress={() => deleteSubtask(st.id)}
-                      style={styles.subtaskDelete}
-                      hitSlop={8}
-                    >
-                      <Ionicons
-                        name="close"
-                        size={18}
-                        color={`${theme.colors.textSecondary}70`}
-                      />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-
-                {/* Add Subtask Input */}
-                <View style={styles.addSubtaskRow}>
-                  <Ionicons
-                    name="add"
-                    size={20}
-                    color={`${theme.colors.textSecondary}70`}
-                    style={{ marginRight: 10 }}
-                  />
-                  <TextInput
-                    style={[styles.subtaskInput, { color: theme.colors.text }]}
-                    placeholder="Add step or milestone..."
-                    placeholderTextColor={`${theme.colors.textSecondary}50`}
-                    value={newSubtaskText}
-                    onChangeText={setNewSubtaskText}
-                    onSubmitEditing={addSubtask}
-                    returnKeyType="done"
-                  />
-                  {newSubtaskText.trim().length > 0 && (
-                    <TouchableOpacity
-                      onPress={addSubtask}
-                      style={[styles.subtaskAddBtn, { backgroundColor: taskColor }]}
-                      hitSlop={6}
-                    >
-                      <Ionicons name="arrow-up" size={16} color="#FFFFFF" />
-                    </TouchableOpacity>
-                  )}
-                </View>
+                <SubtaskList
+                  subtasks={subtasksList}
+                  onChange={(updated) =>
+                    setEditedTask((prev) => (prev ? { ...prev, subtasks: updated } : null))
+                  }
+                  activeColor={taskColor}
+                />
               </View>
 
               {/* ── Notes / Intention Card ── */}
-              <View style={styles.card}>
+              <Card style={styles.card}>
                 <View style={styles.cardHeaderRow}>
                   <View style={styles.cardTitleWithIcon}>
                     <Ionicons name="document-text-outline" size={17} color={taskColor} />
@@ -839,7 +655,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                   }
                   textAlignVertical="top"
                 />
-              </View>
+              </Card>
 
               <View style={{ height: 20 }} />
             </ScrollView>
@@ -880,23 +696,16 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 const isProtected = taskName === "wake up" || taskName === "sleep";
                 if (isProtected) return null;
                 return (
-                  <TouchableOpacity
-                    style={styles.deletePillBtn}
+                  <Button
+                    title="Delete"
+                    variant="destructive"
+                    size="sm"
+                    icon={<Ionicons name="trash-outline" size={16} color="#FF453A" />}
                     onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                       onDelete();
                       closeWithoutSave();
                     }}
-                    activeOpacity={0.75}
-                  >
-                    <Ionicons
-                      name="trash-outline"
-                      size={17}
-                      color="#FF453A"
-                      style={{ marginRight: 6 }}
-                    />
-                    <Text style={styles.deleteText}>Delete</Text>
-                  </TouchableOpacity>
+                  />
                 );
               })()}
             </View>
@@ -905,107 +714,36 @@ const TaskModal: React.FC<TaskModalProps> = ({
           {/* ══════════════════════════════════════════════════════════
               ICON PICKER MODAL (CATEGORIZED 50+ ICONS)
              ══════════════════════════════════════════════════════════ */}
-          <Modal
-            visible={showIconPicker}
-            transparent
-            animationType="fade"
-            onRequestClose={() => setShowIconPicker(false)}
-            statusBarTranslucent
-          >
-            <Pressable
-              style={styles.iconModalOverlay}
-              onPress={() => setShowIconPicker(false)}
-            >
-              <Pressable
-                style={styles.iconModalCard}
-                onPress={(e) => e.stopPropagation()}
-              >
-                <View style={styles.iconModalHeader}>
-                  <View>
-                    <Text style={styles.iconModalTitle}>Choose an Icon</Text>
-                    <Text style={styles.iconModalSub}>Pick an icon for this ritual</Text>
-                  </View>
-                  <Pressable
-                    onPress={() => setShowIconPicker(false)}
-                    hitSlop={10}
-                    style={styles.iconModalCloseBtn}
-                  >
-                    <Ionicons name="close" size={20} color={theme.colors.textSecondary} />
-                  </Pressable>
-                </View>
-
-                {/* Category Tabs */}
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.iconCatTabs}
-                >
-                  {ICON_GROUPS.map((grp, idx) => (
-                    <Pressable
-                      key={idx}
-                      style={[
-                        styles.iconCatTab,
-                        iconPickerCat === idx && styles.iconCatTabActive,
-                      ]}
-                      onPress={() => {
-                        Haptics.selectionAsync();
-                        setIconPickerCat(idx);
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.iconCatTabText,
-                          iconPickerCat === idx && { color: "#FFFFFF" },
-                        ]}
-                      >
-                        {grp.category}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-
-                {/* Grid */}
-                <ScrollView
-                  style={styles.iconGridScroll}
-                  contentContainerStyle={styles.iconGrid}
-                  showsVerticalScrollIndicator={false}
-                >
-                  {ICON_GROUPS[iconPickerCat].icons.map((item) => (
-                    <Pressable
-                      key={item.key}
-                      style={({ pressed }) => [
-                        styles.iconGridItem,
-                        pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] },
-                      ]}
-                      onPress={() => {
-                        Haptics.selectionAsync();
-                        setEditedTask((prev) => (prev ? { ...prev, imageKey: item.key } : null));
-                        setShowIconPicker(false);
-                      }}
-                    >
-                      <View style={[styles.iconGridCircle, { backgroundColor: `${taskColor}15` }]}>
-                        <Ionicons
-                          name={getRoutineIcon(item.key)}
-                          size={22}
-                          color={taskColor}
-                        />
-                      </View>
-                      <Text style={styles.iconGridLabel} numberOfLines={1}>
-                        {item.label}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-              </Pressable>
-            </Pressable>
-          </Modal>
+          {showIconPicker && (
+            <IconPickerModal
+              visible={showIconPicker}
+              onClose={() => setShowIconPicker(false)}
+              activeColor={taskColor}
+              currentIconKey={editedTask?.imageKey}
+              onSelectIcon={(iconKey) => {
+                setEditedTask((prev) => (prev ? { ...prev, imageKey: iconKey } : null));
+                setShowIconPicker(false);
+              }}
+            />
+          )}
         </Animated.View>
       </View>
     </Modal>
   );
 };
 
-export default TaskModal;
+export default React.memo(TaskModal);
+
+const stylesCache = new Map<string, ReturnType<typeof getStyles>>();
+const getCachedStyles = (theme: Theme) => {
+  const key = `${theme.colors.background}-${theme.colors.primary}-${theme.colors.card}`;
+  let s = stylesCache.get(key);
+  if (!s) {
+    s = getStyles(theme);
+    stylesCache.set(key, s);
+  }
+  return s;
+};
 
 const getStyles = (theme: Theme) =>
   StyleSheet.create({

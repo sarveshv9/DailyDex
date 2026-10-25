@@ -1,14 +1,10 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { USER_PROFILE_STORAGE_KEY } from '../constants/storageKeys';
 
-export type UserProfile = {
-  id: string;
-  name: string;
-  email?: string;
-  avatar?: string;
-  role?: string;
-  bio?: string;
-};
+import type { UserProfile } from "../types/user";
+
+export type { UserProfile };
 
 type AuthContextType = {
   user: UserProfile | null;
@@ -37,7 +33,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const loadProfile = async () => {
       try {
-        const stored = await AsyncStorage.getItem('@zen_user_profile');
+        const stored = await AsyncStorage.getItem(USER_PROFILE_STORAGE_KEY);
         if (stored) {
           setUser(JSON.parse(stored));
         }
@@ -54,7 +50,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const updated = { ...(user || { id: 'local_user', name: 'Zen User' }), ...profile };
       setUser(updated);
-      await AsyncStorage.setItem('@zen_user_profile', JSON.stringify(updated));
+      await AsyncStorage.setItem(USER_PROFILE_STORAGE_KEY, JSON.stringify(updated));
     } catch (e) {
       console.error('Failed to update local user profile', e);
     }
@@ -62,7 +58,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     try {
-      await AsyncStorage.removeItem('@zen_user_profile');
+      await AsyncStorage.removeItem(USER_PROFILE_STORAGE_KEY);
       setUser(null);
     } catch (e) {
       console.error('Failed to clear profile', e);

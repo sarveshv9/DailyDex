@@ -1,20 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { STATS_STORAGE_KEY } from "../constants/storageKeys";
 
-export const STATS_STORAGE_KEY = "@zen_stats";
+import type { DailyStats, UserStats } from "../types/stats";
 
-export interface DailyStats {
-    tasks: number;
-    focusMinutes: number;
-}
-
-export interface UserStats {
-    totalFocusMinutes: number;
-    tasksCompleted: number;
-    sessionsCompleted: number;
-    currentStreak: number;
-    bestStreak: number;
-    history: Record<string, DailyStats>; // "YYYY-MM-DD" -> DailyStats
-}
+export { STATS_STORAGE_KEY };
+export type { DailyStats, UserStats };
 
 const DEFAULT_STATS: UserStats = {
     totalFocusMinutes: 0,

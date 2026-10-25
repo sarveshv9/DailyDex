@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Animated,
   LayoutChangeEvent,
@@ -37,11 +37,11 @@ export const CrossPlatformSegmentedControl: React.FC<
   disabled = false,
 }) => {
   const { theme } = useTheme();
-  const styles = useMemo(() => getStyles(theme, tintColor), [theme, tintColor]);
+  const styles = useMemo(() => getStyles(theme), [theme]);
 
   const activeColor = tintColor || theme.colors.primary;
-  const slideAnim = useRef(new Animated.Value(selectedIndex)).current;
-  const [containerWidth, setContainerWidth] = React.useState<number>(0);
+  const [slideAnim] = useState(() => new Animated.Value(selectedIndex));
+  const [containerWidth, setContainerWidth] = useState<number>(0);
 
   useEffect(() => {
     Animated.spring(slideAnim, {
@@ -165,9 +165,7 @@ export const CrossPlatformSegmentedControl: React.FC<
   );
 };
 
-const getStyles = (theme: Theme, tintColor?: string) => {
-  const activeColor = tintColor || theme.colors.primary;
-
+const getStyles = (theme: Theme) => {
   return StyleSheet.create({
     container: {
       flexDirection: "row",

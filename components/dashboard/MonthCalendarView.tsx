@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
     Platform,
     Pressable,
@@ -151,32 +151,117 @@ function DayDetail({ date, items, theme }: DayDetailProps) {
     );
 }
 
+interface CalendarCellProps {
+    date: Date | null;
+    cellIdx: number;
+    isToday: boolean;
+    isSelected: boolean;
+    isWeekend: boolean;
+    dotColors: string[];
+    taskCount: number;
+    theme: Theme;
+    onPress: (date: Date) => void;
+}
+
+const CalendarCellComponent: React.FC<CalendarCellProps> = ({
+    date,
+    isToday,
+    isSelected,
+    isWeekend,
+    dotColors,
+    taskCount,
+    theme,
+    onPress,
+}) => {
+    if (!date) {
+        return <View style={grid.cell} />;
+    }
+
+    return (
+        <Pressable
+            onPress={() => onPress(date)}
+            style={({ pressed }) => [
+                grid.cell,
+                isSelected && [grid.cellSelected, { backgroundColor: theme.colors.primary }],
+                isToday && !isSelected && [grid.cellToday, { borderColor: theme.colors.primary }],
+                pressed && !isSelected && { opacity: 0.6 },
+            ]}
+        >
+            {/* Date Number */}
+            <Text
+                style={[
+                    grid.cellNum,
+                    { fontFamily: theme.fonts.medium },
+                    isSelected
+                        ? [grid.cellNumSelected, { fontFamily: theme.fonts.bold }]
+                        : isToday
+                            ? [grid.cellNumToday, { color: theme.colors.primary, fontFamily: theme.fonts.bold }]
+                            : { color: isWeekend ? theme.colors.textSecondary : theme.colors.text },
+                ]}
+            >
+                {date.getDate()}
+            </Text>
+
+            {/* Task dots */}
+            {taskCount > 0 && (
+                <View style={grid.dotsRow}>
+                    {dotColors.map((color, di) => (
+                        <View
+                            key={di}
+                            style={[
+                                grid.dot,
+                                { backgroundColor: isSelected ? '#FFFFFF' : color },
+                            ]}
+                        />
+                    ))}
+                    {taskCount > 3 && (
+                        <Text
+                            style={[
+                                grid.dotMore,
+                                {
+                                    color: isSelected ? '#FFFFFF' : theme.colors.textSecondary,
+                                    fontFamily: theme.fonts.bold,
+                                },
+                            ]}
+                        >
+                            +{taskCount - 3}
+                        </Text>
+                    )}
+                </View>
+            )}
+        </Pressable>
+    );
+};
+
+const CalendarCell = React.memo(CalendarCellComponent);
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 
-export function MonthCalendarView({ currentDate, routineItems, onSelectDate, theme, todayTrigger }: Props) {
+function MonthCalendarViewComponent({ currentDate, routineItems, onSelectDate, theme, todayTrigger }: Props) {
     const [year, setYear] = useState(currentDate.getFullYear());
     const [month, setMonth] = useState(currentDate.getMonth());
     const [selectedDate, setSelectedDate] = useState<Date>(currentDate);
 
-    useEffect(() => {
-        if (!todayTrigger) return;
-        const target = new Date();
-        setYear(target.getFullYear());
-        setMonth(target.getMonth());
-        setSelectedDate(target);
-    }, [todayTrigger]);
+    const [prevCurrentDate, setPrevCurrentDate] = useState(currentDate);
+    const [prevTodayTrigger, setPrevTodayTrigger] = useState(todayTrigger);
 
-    useEffect(() => {
+    if (todayTrigger !== prevTodayTrigger) {
+        setPrevTodayTrigger(todayTrigger);
+        if (todayTrigger) {
+            const target = new Date();
+            setYear(target.getFullYear());
+            setMonth(target.getMonth());
+            setSelectedDate(target);
+        }
+    } else if (currentDate !== prevCurrentDate) {
+        setPrevCurrentDate(currentDate);
         setYear(currentDate.getFullYear());
         setMonth(currentDate.getMonth());
         setSelectedDate(currentDate);
-    }, [currentDate]);
+    }
 
     const todayStr = fmtDateKey(new Date());
     const selectedStr = fmtDateKey(selectedDate);
-
-    const now = new Date();
-    const isCurrentMonth = month === now.getMonth() && year === now.getFullYear();
 
     const prevMonth = () => {
         if (month === 0) { setYear(y => y - 1); setMonth(11); }
@@ -198,16 +283,34 @@ export function MonthCalendarView({ currentDate, routineItems, onSelectDate, the
         return cells;
     }, [year, month]);
 
+    // Pre-calculate dot colors and total counts for the entire month once
+    const monthDotsMap = useMemo(() => {
+        const map = new Map<string, { colors: string[]; total: number }>();
+        for (const date of gridCells) {
+            if (!date) continue;
+            const dateStr = fmtDateKey(date);
+            const items = getRoutineItemsForDate(routineItems, date);
+            const colors = items.slice(0, 3).map((item, i) => getTaskColor(item, i));
+            map.set(dateStr, { colors, total: items.length });
+        }
+        return map;
+    }, [gridCells, routineItems]);
+
     // Data-accurate routine item retrieval matching timeline
-    const getDayItems = (date: Date) => {
+    const getDayItems = useCallback((date: Date): RoutineItem[] => {
         return getRoutineItemsForDate(routineItems, date)
             .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
-    };
+    }, [routineItems]);
 
-    const selectedItems = useMemo(() => getDayItems(selectedDate), [selectedDate, routineItems]);
+    const selectedItems = useMemo(() => getDayItems(selectedDate), [selectedDate, getDayItems]);
+
+    const handleDetailCardPress = useCallback(() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        onSelectDate(selectedDate);
+    }, [onSelectDate, selectedDate]);
 
     // Tapping a grid cell selects it; tapping the already selected date confirms and navigates
-    const handleCellPress = (date: Date) => {
+    const handleCellPress = useCallback((date: Date) => {
         const dateStr = fmtDateKey(date);
         if (dateStr === selectedStr) {
             handleDetailCardPress();
@@ -215,19 +318,7 @@ export function MonthCalendarView({ currentDate, routineItems, onSelectDate, the
         }
         Haptics.selectionAsync();
         setSelectedDate(date);
-    };
-
-    const handleDetailCardPress = () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        onSelectDate(selectedDate);
-    };
-
-    // Dot colors for a cell (up to 3 unique colors)
-    const getCellDots = (date: Date) => {
-        const items = getDayItems(date);
-        const colors = items.slice(0, 3).map((item, i) => getTaskColor(item, i));
-        return { colors, total: items.length };
-    };
+    }, [selectedStr, handleDetailCardPress]);
 
     return (
         <ScrollView
@@ -298,65 +389,21 @@ export function MonthCalendarView({ currentDate, routineItems, onSelectDate, the
                             }
 
                             const dateStr = fmtDateKey(date);
-                            const isToday = dateStr === todayStr;
-                            const isSelected = dateStr === selectedStr;
-                            const isWeekend = cellIdx === 0 || cellIdx === 6;
-                            const { colors: dotColors, total: taskCount } = getCellDots(date);
+                            const dots = monthDotsMap.get(dateStr) || { colors: [], total: 0 };
 
                             return (
-                                <Pressable
+                                <CalendarCell
                                     key={dateStr}
-                                    onPress={() => handleCellPress(date)}
-                                    style={({ pressed }) => [
-                                        grid.cell,
-                                        isSelected && [grid.cellSelected, { backgroundColor: theme.colors.primary }],
-                                        isToday && !isSelected && [grid.cellToday, { borderColor: theme.colors.primary }],
-                                        pressed && !isSelected && { opacity: 0.6 },
-                                    ]}
-                                >
-                                    {/* Date Number */}
-                                    <Text
-                                        style={[
-                                            grid.cellNum,
-                                            { fontFamily: theme.fonts.medium },
-                                            isSelected
-                                                ? [grid.cellNumSelected, { fontFamily: theme.fonts.bold }]
-                                                : isToday
-                                                    ? [grid.cellNumToday, { color: theme.colors.primary, fontFamily: theme.fonts.bold }]
-                                                    : { color: isWeekend ? theme.colors.textSecondary : theme.colors.text },
-                                        ]}
-                                    >
-                                        {date.getDate()}
-                                    </Text>
-
-                                    {/* Task dots */}
-                                    {taskCount > 0 && (
-                                        <View style={grid.dotsRow}>
-                                            {dotColors.map((color, di) => (
-                                                <View
-                                                    key={di}
-                                                    style={[
-                                                        grid.dot,
-                                                        { backgroundColor: isSelected ? '#FFFFFF' : color },
-                                                    ]}
-                                                />
-                                            ))}
-                                            {taskCount > 3 && (
-                                                <Text
-                                                    style={[
-                                                        grid.dotMore,
-                                                        {
-                                                            color: isSelected ? '#FFFFFF' : theme.colors.textSecondary,
-                                                            fontFamily: theme.fonts.bold,
-                                                        },
-                                                    ]}
-                                                >
-                                                    +{taskCount - 3}
-                                                </Text>
-                                            )}
-                                        </View>
-                                    )}
-                                </Pressable>
+                                    date={date}
+                                    cellIdx={cellIdx}
+                                    isToday={dateStr === todayStr}
+                                    isSelected={dateStr === selectedStr}
+                                    isWeekend={cellIdx === 0 || cellIdx === 6}
+                                    dotColors={dots.colors}
+                                    taskCount={dots.total}
+                                    theme={theme}
+                                    onPress={handleCellPress}
+                                />
                             );
                         })}
                     </View>
@@ -380,6 +427,8 @@ export function MonthCalendarView({ currentDate, routineItems, onSelectDate, the
         </ScrollView>
     );
 }
+
+export const MonthCalendarView = React.memo(MonthCalendarViewComponent);
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 

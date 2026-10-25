@@ -17,6 +17,7 @@ import { Theme } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
 import { scheduleRoutineNotifications } from "../../utils/notifications";
 import { RoutineItem } from "../../utils/utils";
+import { ROUTINE_STORAGE_KEY } from "../../constants/storageKeys";
 
 interface RestoreModalProps {
   visible: boolean;
@@ -46,7 +47,7 @@ export function RestoreModal({
       let parsed: Record<string, any>;
       try {
         parsed = JSON.parse(jsonText.trim());
-      } catch (parseErr) {
+      } catch {
         Alert.alert(
           "Invalid JSON",
           "The pasted text is not valid JSON format. Please verify the content you exported."
@@ -81,9 +82,9 @@ export function RestoreModal({
       }
 
       // If routines were included, re-schedule notifications
-      if (parsed["@zen_routine"]) {
+      if (parsed[ROUTINE_STORAGE_KEY]) {
         try {
-          const raw = parsed["@zen_routine"];
+          const raw = parsed[ROUTINE_STORAGE_KEY];
           const routines: RoutineItem[] =
             typeof raw === "string" ? JSON.parse(raw) : raw;
           if (Array.isArray(routines)) {

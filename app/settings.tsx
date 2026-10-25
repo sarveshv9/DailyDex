@@ -37,8 +37,10 @@ export default function SettingsScreen() {
     setHapticsEnabled(value);
   };
 
+  type IconName = React.ComponentProps<typeof Ionicons>["name"];
+
   const renderSwitchRow = (
-    icon: string,
+    icon: IconName,
     label: string,
     value: boolean,
     onValueChange: (v: boolean) => void,
@@ -73,7 +75,7 @@ export default function SettingsScreen() {
               { backgroundColor: `${theme.colors.primary}15` },
             ]}
           >
-            <Ionicons name={icon as any} size={20} color={theme.colors.primary} />
+            <Ionicons name={icon} size={20} color={theme.colors.primary} />
           </View>
           <Text style={styles.rowLabel}>{label}</Text>
         </View>
@@ -89,14 +91,13 @@ export default function SettingsScreen() {
             true: theme.colors.primary,
           }}
           thumbColor="#FFFFFF"
-          {...({ activeThumbColor: "#FFFFFF" } as any)}
         />
       </Pressable>
     );
   };
 
   const renderNavRow = (
-    icon: string,
+    icon: IconName,
     label: string,
     onPress: () => void,
     isLast = false,
@@ -127,7 +128,7 @@ export default function SettingsScreen() {
             { backgroundColor: `${theme.colors.primary}15` },
           ]}
         >
-          <Ionicons name={icon as any} size={20} color={theme.colors.primary} />
+          <Ionicons name={icon} size={20} color={theme.colors.primary} />
         </View>
         <Text style={styles.rowLabel}>{label}</Text>
       </View>

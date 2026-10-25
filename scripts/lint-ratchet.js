@@ -75,10 +75,22 @@ if (totalErrors > MAX_ALLOWED_ERRORS) {
   process.exit(1);
 }
 
+if (totalWarnings > MAX_ALLOWED_WARNINGS) {
+  console.error(`\n❌ LINT RATCHET FAILED!`);
+  console.error(`   Found ${totalWarnings} warnings, which exceeds the allowed ceiling of ${MAX_ALLOWED_WARNINGS}.`);
+  console.error(`   You introduced ${totalWarnings - MAX_ALLOWED_WARNINGS} new lint warning(s).\n`);
+  process.exit(1);
+}
+
 if (totalErrors < MAX_ALLOWED_ERRORS) {
   console.log(`\n🎉 GREAT NEWS: Error count decreased from ${MAX_ALLOWED_ERRORS} to ${totalErrors}!`);
   console.log(`👉 Please update maxErrors in lint-baseline.json to ${totalErrors} to lower the ceiling.\n`);
 }
 
-console.log(`✅ LINT RATCHET PASSED: Error count (${totalErrors}) is within ceiling (${MAX_ALLOWED_ERRORS}).\n`);
+if (totalWarnings < MAX_ALLOWED_WARNINGS) {
+  console.log(`\n🎉 GREAT NEWS: Warning count decreased from ${MAX_ALLOWED_WARNINGS} to ${totalWarnings}!`);
+  console.log(`👉 Please update maxWarnings in lint-baseline.json to ${totalWarnings} to lower the ceiling.\n`);
+}
+
+console.log(`✅ LINT RATCHET PASSED: Error count (${totalErrors}) is within ceiling (${MAX_ALLOWED_ERRORS}) and warning count (${totalWarnings}) is within ceiling (${MAX_ALLOWED_WARNINGS}).\n`);
 process.exit(0);

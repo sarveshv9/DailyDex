@@ -2,6 +2,7 @@ import * as Notifications from "expo-notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 import { RoutineItem, timeToMinutes } from "./utils";
+import { SETTINGS_STORAGE_KEY } from "../constants/storageKeys";
 
 // Configure how notifications appear while app is in the foreground
 // Skip on web - expo-notifications doesn't work on web
@@ -65,7 +66,7 @@ export const scheduleRoutineNotifications = async (
 
     // Respect user's notification setting
     try {
-        const storedSettings = await AsyncStorage.getItem("@zen_user_settings_v2");
+        const storedSettings = await AsyncStorage.getItem(SETTINGS_STORAGE_KEY);
         if (storedSettings) {
             const parsed = JSON.parse(storedSettings);
             if (parsed?.notifications?.taskReminders === false) {
@@ -216,7 +217,7 @@ export const cancelFocusTimerAlarm = async (): Promise<void> => {
     if (Platform.OS === 'web') return;
     try {
         await Notifications.cancelScheduledNotificationAsync(FOCUS_NOTIFICATION_ID);
-    } catch (e) {
+    } catch {
         // ignore cancellation failure
     }
 };

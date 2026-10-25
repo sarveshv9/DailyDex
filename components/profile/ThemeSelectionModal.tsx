@@ -10,12 +10,12 @@ import {
     Text,
     TextInput,
     View,
-    ActivityIndicator,
     Alert,
 } from "react-native";
-import { darkThemes, lightThemes, Theme } from "../../styles/shared";
-import { BottomSheet } from "./BottomSheet";
+import { lightThemes, Theme } from "../../styles/shared";
+import { ModalSheet } from "../ui/ModalSheet";
 import { useTheme } from "../../context/ThemeContext";
+import { usePokemonQuery } from "../../api/pokemon";
 
 type ThemeSelectionModalProps = {
     visible: boolean;
@@ -84,64 +84,49 @@ export function ThemeSelectionModal({
     const [cPokemonName, setCPokemonName] = React.useState("");
     const [cColor, setCColor] = React.useState(SPECIES_COLORS.red); // Default fallback
     const [cCustomHex, setCCustomHex] = React.useState("");
-    const [isFetching, setIsFetching] = React.useState(false);
+    const [debouncedQuery, setDebouncedQuery] = React.useState("");
+    const [lastAutoColorId, setLastAutoColorId] = React.useState<string | null>(null);
 
-    // Live preview state
-    const [previewSprite, setPreviewSprite] = React.useState<string | null>(null);
-    const [previewName, setPreviewName] = React.useState<string | null>(null);
-    const [previewId, setPreviewId] = React.useState<string | null>(null);
-    const [previewError, setPreviewError] = React.useState(false);
-    const searchTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    // Reset form
+    // Debounce the input by 400ms
     React.useEffect(() => {
-        if (!showCustomForm) {
-            setCPokemonName(""); setCColor(SPECIES_COLORS.red); setCCustomHex("");
-            setPreviewSprite(null); setPreviewName(null); setPreviewId(null); setPreviewError(false);
-        }
-    }, [showCustomForm]);
-
-    // Debounced Pokemon search for live preview
-    React.useEffect(() => {
-        if (searchTimer.current) clearTimeout(searchTimer.current);
-        setPreviewError(false);
-
-        if (!cPokemonName.trim()) {
-            setPreviewSprite(null); setPreviewName(null); setPreviewId(null);
-            return;
-        }
-
-        searchTimer.current = setTimeout(async () => {
-            try {
-                const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${cPokemonName.toLowerCase().trim()}`);
-                if (!res.ok) throw new Error();
-                const data = await res.json();
-                setPreviewSprite(data.sprites.front_default);
-                setPreviewName(data.name.charAt(0).toUpperCase() + data.name.slice(1));
-                setPreviewId(data.id.toString());
-                setPreviewError(false);
-
-                // Auto-pick accent color from the Pokémon's physical species color
-                if (data.species && data.species.url) {
-                    const speciesRes = await fetch(data.species.url);
-                    if (speciesRes.ok) {
-                        const speciesData = await speciesRes.json();
-                        const colorName = speciesData.color?.name;
-                        const autoColor = SPECIES_COLORS[colorName];
-                        if (autoColor) {
-                            setCColor(autoColor);
-                            setCCustomHex('');
-                        }
-                    }
-                }
-            } catch {
-                setPreviewSprite(null); setPreviewName(null); setPreviewId(null);
-                setPreviewError(true);
-            }
-        }, 600);
-
-        return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
+        const timer = setTimeout(() => {
+            setDebouncedQuery(cPokemonName.trim());
+        }, 400);
+        return () => clearTimeout(timer);
     }, [cPokemonName]);
+
+    // TanStack Query with automatic caching and deduplication
+    const { data: pokemonData, isError: queryError } = usePokemonQuery(
+        debouncedQuery,
+        showCustomForm && debouncedQuery.length > 0
+    );
+
+    // Derive preview state directly from query
+    const previewSprite = pokemonData?.spriteUrl ?? null;
+    const previewName = pokemonData?.name ?? null;
+    const previewId = pokemonData?.id ?? null;
+    const previewError = Boolean(debouncedQuery && queryError);
+
+    // Automatically adopt species color when a new Pokémon is loaded
+    if (pokemonData && pokemonData.id !== lastAutoColorId) {
+        setLastAutoColorId(pokemonData.id);
+        if (pokemonData.speciesColorName) {
+            const autoColor = SPECIES_COLORS[pokemonData.speciesColorName];
+            if (autoColor) {
+                setCColor(autoColor);
+                setCCustomHex("");
+            }
+        }
+    }
+
+    const closeCustomForm = () => {
+        setShowCustomForm(false);
+        setCPokemonName("");
+        setCColor(SPECIES_COLORS.red);
+        setCCustomHex("");
+        setDebouncedQuery("");
+        setLastAutoColorId(null);
+    };
 
     const resolvedColor = cCustomHex.match(/^#[0-9A-Fa-f]{6}$/) ? cCustomHex : cColor;
 
@@ -154,7 +139,7 @@ export function ThemeSelectionModal({
         addCustomTheme(previewId, { pokemonId: previewId, primaryColor: resolvedColor, name: previewName });
         onSelectTheme(`custom_${previewId}`);
         if (isAutoTheme) onToggleAutoTheme(false);
-        setShowCustomForm(false);
+        closeCustomForm();
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setTimeout(() => onClose(), 300);
     };
@@ -168,7 +153,7 @@ export function ThemeSelectionModal({
     };
 
     return (
-        <BottomSheet
+        <ModalSheet
             visible={visible}
             onClose={onClose}
             theme={currentTheme}
@@ -191,7 +176,7 @@ export function ThemeSelectionModal({
                             }}
                             trackColor={{ false: `${currentTheme.colors.secondary}40`, true: currentTheme.colors.primary }}
                             thumbColor="#FFFFFF"
-                            {...({ activeThumbColor: "#FFFFFF" } as any)}
+                            {...({ activeThumbColor: "#FFFFFF" } as Record<string, string>)}
                         />
                     </View>
 
@@ -210,7 +195,7 @@ export function ThemeSelectionModal({
                             }}
                             trackColor={{ false: `${currentTheme.colors.secondary}40`, true: currentTheme.colors.primary }}
                             thumbColor="#FFFFFF"
-                            {...({ activeThumbColor: "#FFFFFF" } as any)}
+                            {...({ activeThumbColor: "#FFFFFF" } as Record<string, string>)}
                         />
                     </View>
                 </View>
@@ -343,7 +328,7 @@ export function ThemeSelectionModal({
                         <View style={styles.customForm}>
                             <View style={styles.customFormHeader}>
                                 <Text style={styles.customFormTitle}>Create Custom Theme</Text>
-                                <Pressable hitSlop={10} onPress={() => setShowCustomForm(false)}>
+                                <Pressable hitSlop={10} onPress={closeCustomForm}>
                                     <Ionicons name="close" size={24} color={currentTheme.colors.textSecondary} />
                                 </Pressable>
                             </View>
@@ -407,7 +392,7 @@ export function ThemeSelectionModal({
                     )}
                 </View>
             </ScrollView>
-        </BottomSheet>
+        </ModalSheet>
     );
 }
 

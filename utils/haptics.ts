@@ -5,32 +5,39 @@
  */
 import { Platform } from "react-native";
 
-// Re-export the types so consumers can still reference them
-export { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
-
 import {
   ImpactFeedbackStyle,
   NotificationFeedbackType,
 } from "expo-haptics";
 
+// Re-export the types so consumers can still reference them
+export { ImpactFeedbackStyle, NotificationFeedbackType };
+
 export const selectionAsync = async (): Promise<void> => {
   if (Platform.OS === "web") return;
-  const Haptics = await import("expo-haptics");
-  return Haptics.selectionAsync();
+  try {
+    const Haptics = await import("expo-haptics");
+    await Haptics.selectionAsync();
+  } catch {}
 };
 
 export const impactAsync = async (
   style: ImpactFeedbackStyle = ImpactFeedbackStyle.Medium
 ): Promise<void> => {
   if (Platform.OS === "web") return;
-  const Haptics = await import("expo-haptics");
-  return Haptics.impactAsync(style);
+  try {
+    const Haptics = await import("expo-haptics");
+    await Haptics.impactAsync(style);
+  } catch {}
 };
 
 export const notificationAsync = async (
   type: NotificationFeedbackType = NotificationFeedbackType.Success
 ): Promise<void> => {
   if (Platform.OS === "web") return;
-  const Haptics = await import("expo-haptics");
-  return Haptics.notificationAsync(type);
+  try {
+    const Haptics = await import("expo-haptics");
+    await Haptics.notificationAsync(type);
+  } catch {}
 };
+

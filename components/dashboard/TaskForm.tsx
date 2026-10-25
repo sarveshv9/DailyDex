@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Animated,
@@ -26,17 +26,23 @@ import {
   RoutineItem,
   SubTask,
   guessRoutineIconKey,
-  ICON_GROUPS,
 } from "../../utils/utils";
-import { InlineTimePicker } from "../common/InlineTimePicker";
+import { TimePicker } from "../ui/TimePicker";
+import { DaysOfWeekPicker, DurationPicker, IconPickerModal } from "../forms";
+import {
+  DAYS_OF_WEEK,
+  DURATION_PRESETS,
+  formatDuration,
+} from "../../hooks/useRoutineTaskForm";
 
 /* ─────────────────────────────── Types ──────────────────────────────── */
 
 export interface TaskFormProps {
   visible: boolean;
   isEditing: boolean;
-  formData: FormData;
-  onUpdateField: (field: keyof FormData, value: any) => void;
+  formData: FormData & { id?: string };
+  initialItem?: RoutineItem;
+  onUpdateField: (field: keyof FormData, value: FormData[keyof FormData]) => void;
   onSave: () => void;
   onSaveAndAddAnother?: () => void;
   onBatchSave?: (items: RoutineItem[]) => void;
@@ -62,18 +68,6 @@ interface StackedTask {
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-const DAYS_OF_WEEK = [
-  { label: "S", full: "Sun", value: 0 },
-  { label: "M", full: "Mon", value: 1 },
-  { label: "T", full: "Tue", value: 2 },
-  { label: "W", full: "Wed", value: 3 },
-  { label: "T", full: "Thu", value: 4 },
-  { label: "F", full: "Fri", value: 5 },
-  { label: "S", full: "Sat", value: 6 },
-];
-
-const DURATION_PRESETS = [10, 15, 20, 30, 45, 60];
-
 const QUICK_INSPIRATIONS = [
   { task: "Meditate", duration: 15, icon: "meditate" },
   { task: "Hydrate", duration: 5, icon: "water" },
@@ -86,17 +80,9 @@ const QUICK_INSPIRATIONS = [
   { task: "Wind Down", duration: 20, icon: "prepare_sleep" },
 ];
 
-/** Format minutes into clean text (e.g. "30m", "1h 15m") */
-const formatDuration = (minutes: number): string => {
-  if (minutes < 60) return `${minutes}m`;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return m === 0 ? `${h}h` : `${h}h ${m}m`;
-};
-
 /* ─────────────────────────────── Component ──────────────────────────── */
 
-const TaskForm: React.FC<TaskFormProps> = ({
+const TaskFormInner: React.FC<TaskFormProps> = ({
   visible,
   isEditing,
   formData,
@@ -111,10 +97,25 @@ const TaskForm: React.FC<TaskFormProps> = ({
   const isDark = isDarkMode;
   const styles = useMemo(() => getStyles(theme), [theme]);
 
-  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const [slideAnim] = useState(() => new Animated.Value(SCREEN_HEIGHT));
 
-  /* ── Stacked tasks for effortless sequential creation ── */
-  const [stackedTasks, setStackedTasks] = useState<StackedTask[]>([]);
+  /* ── Stacked tasks initialized once per open/identity lifecycle ── */
+  const [stackedTasks, setStackedTasks] = useState<StackedTask[]>(() => {
+    if (isEditing) return [];
+    return [
+      {
+        id: Date.now().toString(),
+        task: formData.task || "",
+        time: formData.time || "8:00 AM",
+        duration: formData.duration || 30,
+        imageKey: formData.imageKey || "breathe",
+        daysOfWeek: formData.daysOfWeek && formData.daysOfWeek.length > 0 ? formData.daysOfWeek : [0, 1, 2, 3, 4, 5, 6],
+        notes: formData.description || "",
+        subtasks: formData.subtasks || [],
+        activePicker: "none",
+      },
+    ];
+  });
   const [editActivePicker, setEditActivePicker] = useState<"none" | "time" | "duration">("none");
 
   /* ── Icon Picker Modal State ── */
@@ -122,32 +123,6 @@ const TaskForm: React.FC<TaskFormProps> = ({
     type: "editing" | "stacked";
     id?: string;
   } | null>(null);
-  const [iconPickerCat, setIconPickerCat] = useState<number>(0);
-
-  /* ── Initialize state when modal opens ── */
-  useEffect(() => {
-    if (visible) {
-      if (isEditing) {
-        setStackedTasks([]);
-      } else {
-        setStackedTasks([
-          {
-            id: Date.now().toString(),
-            task: formData.task || "",
-            time: formData.time || "8:00 AM",
-            duration: formData.duration || 30,
-            imageKey: formData.imageKey || "breathe",
-            daysOfWeek: formData.daysOfWeek && formData.daysOfWeek.length > 0 ? formData.daysOfWeek : [0, 1, 2, 3, 4, 5, 6],
-            notes: formData.description || "",
-            subtasks: formData.subtasks || [],
-            activePicker: "none",
-          },
-        ]);
-      }
-      setEditActivePicker("none");
-      setIconPickerTarget(null);
-    }
-  }, [visible, isEditing, formData.time]);
 
   /* ── Smooth open/close spring animation ── */
   useEffect(() => {
@@ -577,7 +552,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                 {/* Time Picker Accordion */}
                 {editActivePicker === "time" && (
                   <View style={styles.accordionBox}>
-                    <InlineTimePicker
+                    <TimePicker
                       value={formData.time || "8:00 AM"}
                       onChange={(t) => onUpdateField("time", t)}
                     />
@@ -587,67 +562,21 @@ const TaskForm: React.FC<TaskFormProps> = ({
                 {/* Duration Picker Accordion */}
                 {editActivePicker === "duration" && (
                   <View style={styles.accordionBox}>
-                    <View style={styles.durPresetRow}>
-                      {DURATION_PRESETS.map((dur) => (
-                        <Pressable
-                          key={dur}
-                          style={[
-                            styles.durChip,
-                            formData.duration === dur && {
-                              backgroundColor: theme.colors.primary,
-                              borderColor: theme.colors.primary,
-                            },
-                          ]}
-                          onPress={() => {
-                            Haptics.selectionAsync();
-                            onUpdateField("duration", dur);
-                          }}
-                        >
-                          <Text
-                            style={[
-                              styles.durChipText,
-                              formData.duration === dur && { color: theme.colors.white },
-                            ]}
-                          >
-                            {dur}m
-                          </Text>
-                        </Pressable>
-                      ))}
-                    </View>
+                    <DurationPicker
+                      selectedDuration={formData.duration || 30}
+                      onChange={(dur) => onUpdateField("duration", dur)}
+                      activeColor={theme.colors.primary}
+                    />
                   </View>
                 )}
 
                 {/* Repeat Days */}
                 <View style={styles.repeatRow}>
-                  {DAYS_OF_WEEK.map((day) => {
-                    const active = (formData.daysOfWeek ?? []).includes(day.value);
-                    return (
-                      <TouchableOpacity
-                        key={day.value}
-                        style={[
-                          styles.dayCircle,
-                          active && { backgroundColor: theme.colors.primary },
-                        ]}
-                        onPress={() => {
-                          Haptics.selectionAsync();
-                          const current = formData.daysOfWeek ?? [];
-                          const next = current.includes(day.value)
-                            ? current.filter((d) => d !== day.value)
-                            : [...current, day.value].sort();
-                          onUpdateField("daysOfWeek", next as any);
-                        }}
-                      >
-                        <Text
-                          style={[
-                            styles.dayCircleText,
-                            active && { color: theme.colors.white },
-                          ]}
-                        >
-                          {day.label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
+                  <DaysOfWeekPicker
+                    selectedDays={formData.daysOfWeek ?? []}
+                    onChange={(days) => onUpdateField("daysOfWeek", days)}
+                    activeColor={theme.colors.primary}
+                  />
                 </View>
 
                 {/* Notes Input */}
@@ -861,7 +790,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                       {/* Expandable Time Picker */}
                       {item.activePicker === "time" && (
                         <View style={styles.accordionBox}>
-                          <InlineTimePicker
+                          <TimePicker
                             value={item.time}
                             onChange={(newTime) => updateStackedItem(item.id, { time: newTime })}
                           />
@@ -1001,96 +930,11 @@ const TaskForm: React.FC<TaskFormProps> = ({
           {/* ══════════════════════════════════════════════════════════
               ICON PICKER MODAL (FOR ANY CUSTOM RITUAL)
              ══════════════════════════════════════════════════════════ */}
-          <Modal
+          <IconPickerModal
             visible={!!iconPickerTarget}
-            transparent
-            animationType="fade"
-            onRequestClose={() => setIconPickerTarget(null)}
-            statusBarTranslucent
-          >
-            <Pressable
-              style={styles.iconModalOverlay}
-              onPress={() => setIconPickerTarget(null)}
-            >
-              <Pressable
-                style={styles.iconModalCard}
-                onPress={(e) => e.stopPropagation()}
-              >
-                <View style={styles.iconModalHeader}>
-                  <View>
-                    <Text style={styles.iconModalTitle}>Choose an Icon</Text>
-                    <Text style={styles.iconModalSub}>Pick an icon for your custom ritual</Text>
-                  </View>
-                  <Pressable
-                    onPress={() => setIconPickerTarget(null)}
-                    hitSlop={10}
-                    style={styles.iconModalCloseBtn}
-                  >
-                    <Ionicons name="close" size={20} color={theme.colors.textSecondary} />
-                  </Pressable>
-                </View>
-
-                {/* Category Pills */}
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.iconCatTabs}
-                >
-                  {ICON_GROUPS.map((grp, idx) => (
-                    <Pressable
-                      key={idx}
-                      style={[
-                        styles.iconCatTab,
-                        iconPickerCat === idx && styles.iconCatTabActive,
-                      ]}
-                      onPress={() => {
-                        Haptics.selectionAsync();
-                        setIconPickerCat(idx);
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.iconCatTabText,
-                          iconPickerCat === idx && { color: theme.colors.white },
-                        ]}
-                      >
-                        {grp.category}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-
-                {/* Icons Grid */}
-                <ScrollView
-                  style={styles.iconGridScroll}
-                  contentContainerStyle={styles.iconGrid}
-                  showsVerticalScrollIndicator={false}
-                >
-                  {ICON_GROUPS[iconPickerCat].icons.map((item) => (
-                    <Pressable
-                      key={item.key}
-                      style={({ pressed }) => [
-                        styles.iconGridItem,
-                        pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] },
-                      ]}
-                      onPress={() => handleSelectIcon(item.key)}
-                    >
-                      <View style={styles.iconGridCircle}>
-                        <Ionicons
-                          name={getRoutineIcon(item.key)}
-                          size={22}
-                          color={theme.colors.primary}
-                        />
-                      </View>
-                      <Text style={styles.iconGridLabel} numberOfLines={1}>
-                        {item.label}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-              </Pressable>
-            </Pressable>
-          </Modal>
+            onClose={() => setIconPickerTarget(null)}
+            onSelectIcon={(iconKey) => handleSelectIcon(iconKey)}
+          />
         </Animated.View>
       </View>
     </Modal>
@@ -1506,5 +1350,12 @@ const getStyles = (theme: Theme) =>
       textAlign: "center",
     },
   });
+
+export const TaskForm: React.FC<TaskFormProps> = (props) => {
+  const { visible, isEditing, formData, initialItem } = props;
+  const editId = initialItem?.id || formData.id || "edit";
+  const formKey = visible ? (isEditing ? editId : "create") : "closed";
+  return <TaskFormInner key={formKey} {...props} />;
+};
 
 export default TaskForm;

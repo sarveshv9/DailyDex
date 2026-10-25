@@ -12,7 +12,6 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.Zen-app",
       "infoPlist": {
-        "NSCalendarsUsageDescription": "Allow Zen to seamlessly integrate routines with your calendar.",
         "NSUserNotificationsUsageDescription": "Zen uses notifications to gently remind you of your daily routines."
       }
     },
@@ -21,7 +20,6 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
       "package": "com.anonymous.Zenapp",
       "permissions": [
         "SCHEDULE_EXACT_ALARM",
@@ -48,10 +46,12 @@
       "expo-audio",
       "expo-web-browser",
       "@react-native-community/datetimepicker",
-      "expo-status-bar"
+      "expo-status-bar",
+      "expo-asset"
     ],
     "experiments": {
-      "typedRoutes": true
+      "typedRoutes": true,
+      "reactCompiler": true
     }
   }
 }

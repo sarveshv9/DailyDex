@@ -1,26 +1,27 @@
 import React, { useMemo } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { Clock } from "lucide-react-native";
-import { Theme } from "../../styles/shared";
 import { useTheme } from "../../context/ThemeContext";
-import * as Haptics from "../../utils/haptics";
+import { useAppHaptics } from "../../hooks/useAppHaptics";
+import { WebTimePicker } from "../common/WebTimePicker";
+import { Theme } from "../../styles/shared";
 
-interface InlineTimePickerProps {
+export interface TimePickerProps {
   value: string;
   onChange: (time: string) => void;
   showQuickChips?: boolean;
 }
 
-export const InlineTimePicker: React.FC<InlineTimePickerProps> = ({
+export const TimePicker: React.FC<TimePickerProps> = ({
   value,
   onChange,
   showQuickChips = true,
 }) => {
   const { theme } = useTheme();
+  const { light, selection } = useAppHaptics();
   const styles = useMemo(() => getStyles(theme), [theme]);
 
   if (Platform.OS === "web") {
-    const { WebTimePicker } = require("./WebTimePicker");
     return (
       <View style={styles.container}>
         <WebTimePicker value={value || "1:00 AM"} onChange={onChange} />
@@ -47,9 +48,9 @@ export const InlineTimePicker: React.FC<InlineTimePickerProps> = ({
 
   const currentDate = getDateFromString(value);
 
-  const handleChange = (event: any, selectedDate?: Date) => {
+  const handleChange = (_event: any, selectedDate?: Date) => {
     if (selectedDate) {
-      Haptics.selectionAsync();
+      selection();
       let h = selectedDate.getHours();
       const m = selectedDate.getMinutes();
       const ampm = h >= 12 ? "PM" : "AM";
@@ -59,7 +60,7 @@ export const InlineTimePicker: React.FC<InlineTimePickerProps> = ({
   };
 
   const addMinutes = (extraMin: number) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    light();
     const newDate = new Date(currentDate.getTime() + extraMin * 60 * 1000);
     let h = newDate.getHours();
     const m = newDate.getMinutes();
@@ -69,7 +70,7 @@ export const InlineTimePicker: React.FC<InlineTimePickerProps> = ({
   };
 
   const setNow = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    light();
     const now = new Date();
     let h = now.getHours();
     const m = Math.round(now.getMinutes() / 5) * 5;
@@ -113,36 +114,44 @@ export const InlineTimePicker: React.FC<InlineTimePickerProps> = ({
         />
       </View>
 
-      {/* Quick Adjust Pills for Native */}
+      {/* Quick Adjust Pills */}
       {showQuickChips && (
         <View style={styles.quickRow}>
           <Pressable
             onPress={setNow}
-            style={({ pressed }) => [styles.quickChip, pressed && styles.quickChipPressed]}
+            style={({ pressed }) => [
+              styles.quickPill,
+              pressed && styles.quickPillPressed,
+            ]}
           >
-            <Clock size={12} color={theme.colors.primary} strokeWidth={2} />
-            <Text style={styles.quickChipText}>Now</Text>
+            <Text style={styles.quickPillText}>Now</Text>
           </Pressable>
-
           <Pressable
             onPress={() => addMinutes(15)}
-            style={({ pressed }) => [styles.quickChip, pressed && styles.quickChipPressed]}
+            style={({ pressed }) => [
+              styles.quickPill,
+              pressed && styles.quickPillPressed,
+            ]}
           >
-            <Text style={styles.quickChipText}>+15m</Text>
+            <Text style={styles.quickPillText}>+15m</Text>
           </Pressable>
-
           <Pressable
             onPress={() => addMinutes(30)}
-            style={({ pressed }) => [styles.quickChip, pressed && styles.quickChipPressed]}
+            style={({ pressed }) => [
+              styles.quickPill,
+              pressed && styles.quickPillPressed,
+            ]}
           >
-            <Text style={styles.quickChipText}>+30m</Text>
+            <Text style={styles.quickPillText}>+30m</Text>
           </Pressable>
-
           <Pressable
             onPress={() => addMinutes(60)}
-            style={({ pressed }) => [styles.quickChip, pressed && styles.quickChipPressed]}
+            style={({ pressed }) => [
+              styles.quickPill,
+              pressed && styles.quickPillPressed,
+            ]}
           >
-            <Text style={styles.quickChipText}>+1h</Text>
+            <Text style={styles.quickPillText}>+1h</Text>
           </Pressable>
         </View>
       )}
@@ -150,62 +159,61 @@ export const InlineTimePicker: React.FC<InlineTimePickerProps> = ({
   );
 };
 
-const getStyles = (theme: Theme) =>
-  StyleSheet.create({
+const getStyles = (theme: Theme) => {
+  return StyleSheet.create({
     container: {
       alignItems: "center",
-      justifyContent: "center",
       width: "100%",
-      paddingVertical: 4,
+      paddingVertical: theme.spacing.sm,
     },
     previewBadge: {
       flexDirection: "row",
       alignItems: "center",
       gap: 6,
-      paddingHorizontal: 14,
+      paddingHorizontal: 12,
       paddingVertical: 6,
-      borderRadius: 999,
+      borderRadius: 16,
       borderWidth: 1,
-      marginBottom: 8,
+      marginBottom: theme.spacing.sm,
     },
     previewText: {
-      fontSize: 14,
+      fontSize: 15,
       fontFamily: theme.fonts.bold,
-      letterSpacing: 0.3,
+      letterSpacing: 0.5,
     },
     pickerWrapper: {
       width: "100%",
       alignItems: "center",
       justifyContent: "center",
+      overflow: "hidden",
+      borderRadius: theme.borderRadius.lg,
+      backgroundColor: theme.glass.neutralFill,
+      paddingVertical: theme.spacing.xs,
     },
     quickRow: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
+      gap: theme.spacing.sm,
+      marginTop: theme.spacing.md,
       flexWrap: "wrap",
-      gap: 8,
-      marginTop: 8,
     },
-    quickChip: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 4,
+    quickPill: {
       paddingHorizontal: 12,
       paddingVertical: 6,
-      borderRadius: 999,
+      borderRadius: 14,
       backgroundColor: theme.glass.neutralFill,
       borderWidth: 1,
       borderColor: theme.glass.borderColor,
     },
-    quickChipPressed: {
+    quickPillPressed: {
       opacity: 0.6,
-      transform: [{ scale: 0.95 }],
+      transform: [{ scale: 0.96 }],
     },
-    quickChipText: {
+    quickPillText: {
       fontSize: 12,
       fontFamily: theme.fonts.medium,
-      color: theme.colors.text,
+      color: theme.colors.textSecondary,
     },
   });
-
-export default InlineTimePicker;
+};

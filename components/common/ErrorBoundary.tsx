@@ -17,6 +17,7 @@ import {
   Copy,
   Check,
 } from "lucide-react-native";
+import { router } from "expo-router";
 import { useTheme } from "../../context/ThemeContext";
 import { darkThemes, lightThemes, Theme } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
@@ -113,7 +114,6 @@ function ErrorFallbackView({ error, errorInfo, onReset }: ErrorFallbackProps) {
       window.location.href = "/";
     } else {
       try {
-        const { router } = require("expo-router");
         router.replace("/");
       } catch {
         onReset();
@@ -190,7 +190,7 @@ function ErrorFallbackView({ error, errorInfo, onReset }: ErrorFallbackProps) {
             },
           ]}
         >
-          Zen encountered an unexpected issue. Don't worry, your routines and data are safely stored.
+          Zen encountered an unexpected issue. Don&apos;t worry, your routines and data are safely stored.
         </Text>
 
         {/* Action Buttons */}

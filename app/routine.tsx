@@ -1,23 +1,18 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect } from "expo-router";
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import * as Haptics from "../utils/haptics";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import {
   ActionSheetIOS,
   Alert,
   Animated,
   Dimensions,
-  Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
   PanResponder,
   Platform,
   Pressable,
-  RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   useWindowDimensions,
@@ -26,23 +21,32 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { DayTimelineView, TASK_COLORS } from "../components/dashboard/DayTimelineView";
-import TaskForm from "../components/dashboard/TaskForm";
+import { TaskForm } from "../components/dashboard/TaskForm";
 import TaskModal from "../components/dashboard/TaskModal";
-import { TimelineEventCard, SkeletonTimelineEventCard } from "../components/dashboard/TimelineEventCard";
-import { Theme } from "../styles/shared";
+import { RoutineConfirmModal } from "../components/routine/RoutineConfirmModal";
+import { RoutineDayList } from "../components/routine/RoutineDayList";
+import { RoutinePeekBar } from "../components/routine/RoutinePeekBar";
+import { ROUTINE_STORAGE_KEY } from "../constants/storageKeys";
+import { themeTokens } from "../constants/themeTokens";
 import { useTheme } from "../context/ThemeContext";
+import { Theme } from "../styles/shared";
+import * as Haptics from "../utils/haptics";
 import { scheduleRoutineNotifications } from "../utils/notifications";
-import { FormData, RoutineItem, getDateString, sortRoutineItems, timeToMinutes, getRoutineItemsForDate, addMinutesToTime, guessRoutineIconKey, isWakeupOrSleep, ICON_MAP } from "../utils/utils";
+import {
+  addMinutesToTime,
+  FormData,
+  getDateString,
+  getRoutineItemsForDate,
+  guessRoutineIconKey,
+  ICON_MAP,
+  RoutineItem,
+  sortRoutineItems,
+  timeToMinutes,
+} from "../utils/utils";
 
 /* -------------------- Assets & Constants -------------------- */
 
-// Use useWindowDimensions() inside components for dynamic values on web
-// These fallbacks are only used for initial/modal animations outside the component
-const { width: INITIAL_SCREEN_WIDTH, height: INITIAL_SCREEN_HEIGHT } = Dimensions.get("window");
-
-/** Height of the timeline panel when fully expanded.
- *  BODY_HEIGHT(320) + day header(~55) + peek card(~90) + padding(~30) */
-const PANEL_EXPANDED_HEIGHT = 510;
+const { width: INITIAL_SCREEN_WIDTH } = Dimensions.get("window");
 
 /* Initial routine preserved */
 const INITIAL_ROUTINE: RoutineItem[] = [
@@ -60,137 +64,25 @@ const INITIAL_ROUTINE: RoutineItem[] = [
   { id: "12", time: "10:00 PM", task: "Sleep", description: "Rest deeply and recharge.", imageKey: "sleep", insertionOrder: 12, duration: 480 },
 ];
 
-const STORAGE_KEY = "@zen_routine";
-
-/* -------------------- Modal Hook -------------------- */
-const useModalAnimation = (screenWidth: number, screenHeight: number) => {
-  const scaleAnim = React.useRef(new Animated.Value(0)).current;
-  const translateX = React.useRef(new Animated.Value(0)).current;
-  const translateY = React.useRef(new Animated.Value(0)).current;
-
-  const animatedStyle = useMemo(
-    () => ({ transform: [{ translateX }, { translateY }, { scale: scaleAnim }] }),
-    [translateX, translateY, scaleAnim]
-  );
-
-  const openAnimation = useCallback(
-    (x: number, y: number) => {
-      translateX.setValue(x - screenWidth / 2);
-      translateY.setValue(y - screenHeight / 2);
-      scaleAnim.setValue(0);
-
-      Animated.parallel([
-        Animated.spring(translateX, { toValue: 0, useNativeDriver: true, tension: 100, friction: 9 }),
-        Animated.spring(translateY, { toValue: 0, useNativeDriver: true, tension: 100, friction: 9 }),
-        Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, tension: 100, friction: 9 }),
-      ]).start();
-    },
-    [translateX, translateY, scaleAnim, screenWidth, screenHeight]
-  );
-
-  const closeAnimation = useCallback(
-    (onComplete: () => void) => {
-      Animated.spring(scaleAnim, { toValue: 0, useNativeDriver: true, tension: 100, friction: 9 }).start(onComplete);
-    },
-    [scaleAnim]
-  );
-
-  return { animatedStyle, openAnimation, closeAnimation };
-};
-
-/* -------------------- CONFIRM MODAL (IN-APP) -------------------- */
-const ConfirmModal = ({ visible, title, message, confirmText, onCancel, onConfirm, theme, isDarkMode }: any) => {
-  if (!visible) return null;
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-        <BlurView
-          intensity={Platform.OS === 'ios' ? 25 : 100}
-          tint={isDarkMode ? 'dark' : 'light'}
-          style={StyleSheet.absoluteFill}
-        />
-        <View
-          style={{
-            backgroundColor: theme.colors.card,
-            width: '100%',
-            maxWidth: 340,
-            borderRadius: 24,
-            padding: 24,
-            alignItems: 'center',
-            borderWidth: 1,
-            borderColor: theme.glass.borderColor,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 12 },
-            shadowOpacity: 0.15,
-            shadowRadius: 20,
-            elevation: 10,
-          }}
-        >
-          <Text style={{ fontSize: 19, fontFamily: theme.fonts.bold, color: theme.colors.text, marginBottom: 8, textAlign: 'center' }}>
-            {title}
-          </Text>
-          <Text style={{ fontSize: 15, fontFamily: theme.fonts.regular, color: theme.colors.textSecondary, textAlign: 'center', marginBottom: 24, lineHeight: 22 }}>
-            {message}
-          </Text>
-          <View style={{ flexDirection: 'row', gap: 12, width: '100%' }}>
-            <Pressable
-              style={({ pressed }) => [
-                {
-                  flex: 1,
-                  paddingVertical: 14,
-                  backgroundColor: theme.colors.background,
-                  borderRadius: 14,
-                  alignItems: 'center',
-                  borderWidth: 1,
-                  borderColor: theme.glass.borderColor,
-                },
-                pressed && { opacity: 0.7 }
-              ]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                onCancel();
-              }}
-            >
-              <Text style={{ fontSize: 15, fontFamily: theme.fonts.bold, color: theme.colors.text }}>Cancel</Text>
-            </Pressable>
-            <Pressable
-              style={({ pressed }) => [
-                {
-                  flex: 1,
-                  paddingVertical: 14,
-                  backgroundColor: theme.colors.primary,
-                  borderRadius: 14,
-                  alignItems: 'center',
-                  shadowColor: theme.colors.primary,
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 8,
-                  elevation: 4,
-                },
-                pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] }
-              ]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                onConfirm();
-              }}
-            >
-              <Text style={{ fontSize: 15, fontFamily: theme.fonts.bold, color: theme.colors.white }}>{confirmText}</Text>
-            </Pressable>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
-};
+const STORAGE_KEY = ROUTINE_STORAGE_KEY;
 
 /* -------------------- Screen Component -------------------- */
 export default function RoutineScreen() {
-  const { theme, isDarkMode } = useTheme();
+  const { theme } = useTheme();
   const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const bottomOffset = Math.max(16, insets.bottom + 8);
   const tabBarWidth = Math.min(SCREEN_WIDTH * 0.9, 440);
-  const styles = useMemo(() => getStyles(theme), [theme]);
+  const styles = useMemo(() => getCachedStyles(theme), [theme]);
+
+  const [isAdjacentPagesLoaded, setIsAdjacentPagesLoaded] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsAdjacentPagesLoaded(true);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, []);
 
   const [allRoutines, setAllRoutines] = useState<RoutineItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -207,7 +99,7 @@ export default function RoutineScreen() {
     title: "",
     message: "",
     confirmText: "Transfer",
-    action: () => { },
+    action: () => {},
   });
 
   const requestConfirm = useCallback((title: string, message: string, confirmText: string, action: () => void) => {
@@ -240,7 +132,7 @@ export default function RoutineScreen() {
     return [p, c, n];
   });
 
-  const activeDate = selectedDate || new Date();
+  const activeDate = useMemo(() => selectedDate || new Date(), [selectedDate]);
 
   const routineItems = useMemo(() => {
     return getRoutineItemsForDate(allRoutines, activeDate);
@@ -270,61 +162,10 @@ export default function RoutineScreen() {
     ? (ICON_MAP[nextTask.imageKey] ?? "alarm-outline")
     : (sortedDayTasks.length > 0 ? "checkmark-circle-outline" : "calendar-outline");
 
-  const collapsedSubtitle = useMemo(() => {
-    if (sortedDayTasks.length === 0) return "No tasks scheduled for today";
-    const completedCount = sortedDayTasks.filter(t => t.completed).length;
-    if (completedCount === sortedDayTasks.length) {
-      return "All tasks completed";
-    }
-    if (nextTask) {
-      return `Next: ${nextTask.time} • ${nextTask.task}`;
-    }
-    return `${completedCount} of ${sortedDayTasks.length} tasks completed`;
-  }, [sortedDayTasks, nextTask]);
-
-  /* -------------------- Timeline panel state -------------------- */
-  const [panelOpen, setPanelOpen] = useState(false);
-  const panelAnim = useRef(new Animated.Value(0)).current;
-
-  // Track scroll position to only trigger swipe-down from the top
-  const scrollOffsetRef = useRef(0);
-  // Track last known drag direction from scroll events
-  const lastScrollY = useRef(0);
-  // Pager container height (measured via onLayout)
   const [pagerHeight, setPagerHeight] = useState(0);
 
-  const openPanel = useCallback(() => {
-    setPanelOpen(true);
-    Animated.spring(panelAnim, {
-      toValue: 1,
-      useNativeDriver: false,
-      tension: 60,
-      friction: 12,
-    }).start();
-  }, [panelAnim]);
-
-  const closePanel = useCallback(() => {
-    Animated.spring(panelAnim, {
-      toValue: 0,
-      useNativeDriver: false,
-      tension: 80,
-      friction: 14,
-    }).start(() => setPanelOpen(false));
-  }, [panelAnim]);
-
-  const togglePanel = useCallback(() => {
-    if (panelOpen) closePanel();
-    else openPanel();
-  }, [panelOpen, openPanel, closePanel]);
-
-  // Animated panel height (fixed expanded height for the DayTimelineView part)
-  const panelHeight = panelAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [PANEL_EXPANDED_HEIGHT, PANEL_EXPANDED_HEIGHT], // Keep it constant for now, or use to hide it if needed
-  });
-
   // Animation for the detail list expansion
-  const listAnim = useRef(new Animated.Value(1)).current;
+  const [listAnim] = useState(() => new Animated.Value(1));
   const [listOpen, setListOpen] = useState(true);
 
   const openList = useCallback(() => {
@@ -351,30 +192,21 @@ export default function RoutineScreen() {
     else openList();
   }, [listOpen, openList, closeList]);
 
-  const scrollY = useRef(new Animated.Value(0)).current;
+  const [scrollY] = useState(() => new Animated.Value(0));
   // Horizontal pager offset — starts at 0 (center panel)
-  const pagerX = useRef(new Animated.Value(0)).current;
-  // Stable Animated.add node — never recreated on re-render
-  // Uses initial screen width since this is only created once and mobile web won't resize
-  const pagerTranslateX = useRef(Animated.add(pagerX, new Animated.Value(-INITIAL_SCREEN_WIDTH))).current;
-  const isDraggingHorizontal = useRef(false);
-  // Flag set when a swipe completes — tells useLayoutEffect to reset pagerX
-  // after the new pageDates have been committed, preventing the flicker.
-  const pendingReset = useRef(false);
+  const [pagerX] = useState(() => new Animated.Value(0));
+  const pagerTranslateX = useMemo(
+    () => Animated.add(pagerX, new Animated.Value(-INITIAL_SCREEN_WIDTH)),
+    [pagerX]
+  );
 
   const shiftDate = useCallback((delta: number) => {
     Haptics.selectionAsync();
-    // Do NOT reset pagerX here — if we do it before React commits the new
-    // pageDates the center panel briefly shows stale content (the flicker).
-    // Instead, flag a reset and let useLayoutEffect do it after the commit.
-    pendingReset.current = true;
     setPageDates(prev => {
       if (delta === 1) {
-        // Swiped left → next day. Slide previous slot out, make next the new right
         const newRight = new Date(prev[2]); newRight.setDate(newRight.getDate() + 1);
         return [prev[1], prev[2], newRight];
       } else {
-        // Swiped right → prev day. Make prev the new left
         const newLeft = new Date(prev[0]); newLeft.setDate(newLeft.getDate() - 1);
         return [newLeft, prev[0], prev[1]];
       }
@@ -386,54 +218,43 @@ export default function RoutineScreen() {
     });
   }, []);
 
-  // Reset pagerX AFTER React has committed the new pageDates to the tree.
-  // useLayoutEffect fires synchronously post-commit, before the browser paints,
-  // so the center panel already shows the correct new day when we snap back to 0.
   useLayoutEffect(() => {
-    if (pendingReset.current) {
-      pendingReset.current = false;
-      pagerX.setValue(0);
-    }
+    pagerX.setValue(0);
   }, [pageDates, pagerX]);
 
-  // PanResponder for native gesture handling - disabled on web where it doesn't work well
-  const pagerPanResponder = useRef(
-    Platform.OS === 'web' 
-      ? { panHandlers: {} }
-      : PanResponder.create({
-          onStartShouldSetPanResponder: () => false,
-          onMoveShouldSetPanResponderCapture: (_, g) => {
-            const isHoriz = Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5;
-            const isDown = g.dy > 15 && scrollOffsetRef.current <= 1 && Math.abs(g.dy) > Math.abs(g.dx);
-            return isHoriz || isDown;
-          },
-          onMoveShouldSetPanResponder: (_, g) => {
-            const isHoriz = Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5;
-            const isDown = g.dy > 15 && scrollOffsetRef.current <= 1 && Math.abs(g.dy) > Math.abs(g.dx);
-            return isHoriz || isDown;
-          },
-          onPanResponderGrant: () => {
-            isDraggingHorizontal.current = false;
-          },
-          onPanResponderMove: (_, g) => {
-            if (Math.abs(g.dx) > Math.abs(g.dy) && Math.abs(g.dx) > 8) {
-              isDraggingHorizontal.current = true;
-              pagerX.setValue(g.dx);
-            }
-          },
-          onPanResponderRelease: (_, g) => {
-            if (isDraggingHorizontal.current) {
+  // PanResponder for native gesture handling - created once with referentially stable dependencies
+  const pagerPanResponder = useMemo(
+    () =>
+      Platform.OS === 'web'
+        ? { panHandlers: {} }
+        : PanResponder.create({
+            onStartShouldSetPanResponder: () => false,
+            onMoveShouldSetPanResponderCapture: (_, g) => {
+              return Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5;
+            },
+            onMoveShouldSetPanResponder: (_, g) => {
+              return Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5;
+            },
+            onPanResponderMove: (_, g) => {
+              if (!isAdjacentPagesLoaded) {
+                setIsAdjacentPagesLoaded(true);
+              }
+              if (Math.abs(g.dx) > Math.abs(g.dy) && Math.abs(g.dx) > 8) {
+                pagerX.setValue(g.dx);
+              }
+            },
+            onPanResponderRelease: (_, g) => {
               const LEFT = g.dx < -60 || g.vx < -0.8;
               const RIGHT = g.dx > 60 || g.vx > 0.8;
               if (LEFT || RIGHT) {
-                const target = LEFT ? -SCREEN_WIDTH : SCREEN_WIDTH;
+                const screenWidth = Dimensions.get('window').width;
+                const target = LEFT ? -screenWidth : screenWidth;
                 Animated.timing(pagerX, {
                   toValue: target,
                   duration: 220,
                   useNativeDriver: false,
                 }).start(() => {
                   shiftDate(LEFT ? 1 : -1);
-                  // pagerX already reset inside shiftDate
                 });
               } else {
                 Animated.spring(pagerX, {
@@ -443,44 +264,45 @@ export default function RoutineScreen() {
                   friction: 12,
                 }).start();
               }
-            } else if (g.dy > 50 || g.vy > 1) {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              closeList();
-            }
-            isDraggingHorizontal.current = false;
-          },
-        })
-  ).current;
+            },
+          }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
 
-  const listHeaderPanResponder = useRef(
-    Platform.OS === 'web'
-      ? { panHandlers: {} }
-      : PanResponder.create({
-          onStartShouldSetPanResponder: () => true,
-          onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dy) > 10,
-          onPanResponderRelease: (_, g) => {
-            if (g.dy > 50 || g.vy > 1) {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              closeList();
-            }
-          },
-        })
-  ).current;
+  const listHeaderPanResponder = useMemo(
+    () =>
+      Platform.OS === 'web'
+        ? { panHandlers: {} }
+        : PanResponder.create({
+            onStartShouldSetPanResponder: () => true,
+            onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dy) > 10,
+            onPanResponderRelease: (_, g) => {
+              if (g.dy > 50 || g.vy > 1) {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                closeList();
+              }
+            },
+          }),
+    [closeList]
+  );
 
-  const collapsedPanResponder = useRef(
-    Platform.OS === 'web'
-      ? { panHandlers: {} }
-      : PanResponder.create({
-          onStartShouldSetPanResponder: () => false,
-          onMoveShouldSetPanResponder: (_, g) => g.dy < -8,
-          onPanResponderRelease: (_, g) => {
-            if (g.dy < -20 || g.vy < -0.5) {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              openList();
-            }
-          },
-        })
-  ).current;
+  const collapsedPanResponder = useMemo(
+    () =>
+      Platform.OS === 'web'
+        ? { panHandlers: {} }
+        : PanResponder.create({
+            onStartShouldSetPanResponder: () => false,
+            onMoveShouldSetPanResponder: (_, g) => g.dy < -8,
+            onPanResponderRelease: (_, g) => {
+              if (g.dy < -20 || g.vy < -0.5) {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                openList();
+              }
+            },
+          }),
+    [openList]
+  );
 
   const overlayTop = insets.top + 148;
 
@@ -501,27 +323,9 @@ export default function RoutineScreen() {
     extrapolate: 'clamp',
   });
 
-  const collapseTranslateY = scrollY.interpolate({
-    inputRange: [0, 90],
-    outputRange: [0, -90],
-    extrapolate: "clamp",
-  });
-
   const listOpacity = listAnim.interpolate({
     inputRange: [0, 0.2, 1],
     outputRange: [0, 1, 1],
-  });
-
-  const fabScale = scrollY.interpolate({
-    inputRange: [0, 60],
-    outputRange: [1, 0],
-    extrapolate: "clamp",
-  });
-
-  const fabTranslate = scrollY.interpolate({
-    inputRange: [0, 60],
-    outputRange: [0, 40],
-    extrapolate: "clamp",
   });
 
   /* -------------------- Per-day items helper -------------------- */
@@ -529,35 +333,23 @@ export default function RoutineScreen() {
     const items = getRoutineItemsForDate(allRoutines, date);
     const sorted = sortRoutineItems(items);
 
-    const all: Array<{ minutes: number; type: 'routine'; data: RoutineItem }> = [
+    const all: { minutes: number; type: 'routine'; data: RoutineItem }[] = [
       ...sorted.map(r => ({ minutes: timeToMinutes(r.time), type: 'routine' as const, data: r })),
     ].sort((a, b) => a.minutes - b.minutes);
     return all;
   }, [allRoutines]);
 
-  // When the list is scrolled to the top AND the user over-scrolls downward,
-  // we interpret that as a "pull-down" to open the panel.
-  const handleScroll = Animated.event(
-    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-    {
-      useNativeDriver: false,
-      listener: (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-        const y = e.nativeEvent.contentOffset.y;
-        scrollOffsetRef.current = y;
-
-        // Pull down to close the list if scrolled to top
-        if (y < -60 && listOpen) {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          closeList();
-        }
-        lastScrollY.current = y;
-      },
-    }
+  const handleScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const y = e.nativeEvent.contentOffset.y;
+      scrollY.setValue(y);
+      if (y < -60 && listOpen) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        closeList();
+      }
+    },
+    [scrollY, listOpen, closeList]
   );
-
-  const { animatedStyle, openAnimation, closeAnimation } = useModalAnimation(SCREEN_WIDTH, SCREEN_HEIGHT);
-  const sortedRoutineItems = useMemo(() => sortRoutineItems(routineItems), [routineItems]);
-
 
   const [refreshing, setRefreshing] = useState(false);
 
@@ -570,13 +362,14 @@ export default function RoutineScreen() {
       }
       let finalRoutines: RoutineItem[] | null = null;
       let localRoutines: RoutineItem[] | null = null;
-      
-      // 1. Try to load local data (saved from setup or previous sessions)
+
       const localDataStr = await AsyncStorage.getItem(STORAGE_KEY);
       if (localDataStr) {
         try {
           localRoutines = JSON.parse(localDataStr);
-        } catch (e) {}
+        } catch {
+          // ignore parsing error
+        }
       }
 
       if (localRoutines && localRoutines.length > 0) {
@@ -588,7 +381,7 @@ export default function RoutineScreen() {
           const isDaily = item.task.toLowerCase() === "sleep" || item.task.toLowerCase() === "wake up";
           return { ...item, daysOfWeek: isDaily ? [0, 1, 2, 3, 4, 5, 6] : [new Date().getDay()] };
         });
-        
+
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(finalRoutines));
       }
 
@@ -618,28 +411,23 @@ export default function RoutineScreen() {
   const saveRoutines = useCallback(async (newItems: RoutineItem[]) => {
     try {
       setAllRoutines(newItems);
-      // Immediately save to local storage for offline preservation
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newItems));
       await scheduleRoutineNotifications(newItems);
-      
     } catch (e) {
       console.error("Failed to save routines.", e);
     }
   }, []);
 
   /* -------------------- Handlers -------------------- */
-  const openModal = useCallback((task: RoutineItem, x: number, y: number) => {
+  const openModal = useCallback((task: RoutineItem) => {
     setSelectedTask(task);
     setModalVisible(true);
-    openAnimation(x, y);
-  }, [openAnimation]);
+  }, []);
 
   const closeModal = useCallback(() => {
-    closeAnimation(() => {
-      setModalVisible(false);
-      setSelectedTask(null);
-    });
-  }, [closeAnimation]);
+    setModalVisible(false);
+    setSelectedTask(null);
+  }, []);
 
   const openForm = useCallback((item?: RoutineItem, customSuggestedTime?: string) => {
     if (item) {
@@ -702,8 +490,8 @@ export default function RoutineScreen() {
       return;
     }
 
-    let finalDays = (daysOfWeek || []).sort();
-    let finalDate = (finalDays.length > 0) ? undefined : date;
+    const finalDays = (daysOfWeek || []).sort();
+    const finalDate = (finalDays.length > 0) ? undefined : date;
 
     const newItem: RoutineItem = {
       id: Date.now().toString(),
@@ -737,7 +525,7 @@ export default function RoutineScreen() {
   const handleBatchSave = useCallback((newItems: RoutineItem[]) => {
     if (!newItems || newItems.length === 0) return;
 
-    let order = nextInsertionOrder;
+    const order = nextInsertionOrder;
     const itemsWithOrder = newItems.map((item, idx) => ({
       ...item,
       insertionOrder: order + idx,
@@ -760,8 +548,7 @@ export default function RoutineScreen() {
     if (!originalTask) return;
 
     const dateStr = getDateString(selectedDate || new Date());
-    
-    // Create new task mapped specifically to this date, without modifying the repeating original
+
     const newItem: RoutineItem = {
       id: Date.now().toString(),
       time: time.trim(),
@@ -769,13 +556,13 @@ export default function RoutineScreen() {
       description: description.trim(),
       imageKey: formData.imageKey || originalTask.imageKey || "breathe",
       insertionOrder: nextInsertionOrder,
-      daysOfWeek: [], // Single exact date
+      daysOfWeek: [],
       date: dateStr,
       parentId: originalTask.id,
       duration: duration || originalTask.duration || 30,
       subtasks: formData.subtasks || [],
     };
-    
+
     const updatedRoutines = [...allRoutines, newItem];
     saveRoutines(updatedRoutines);
     setNextInsertionOrder(prev => prev + 1);
@@ -792,12 +579,10 @@ export default function RoutineScreen() {
     const normalizedTask = task.trim().toLowerCase();
     const isSleepOrWake = normalizedTask === "sleep" || normalizedTask === "wake up";
 
-    // Allow sleep/wake tasks to have varying days of week, just like other tasks.
-    let finalDays = (daysOfWeek || []).sort();
-    let finalDate = (finalDays.length > 0) ? undefined : date;
+    const finalDays = (daysOfWeek || []).sort();
+    const finalDate = (finalDays.length > 0) ? undefined : date;
 
     if (isSleepOrWake) {
-      // Check if for ANY of the final days, a sleep/wake up task already exists (other than the editing one)
       const existing = allRoutines.find(item => {
         if (item.id === editingId) return false;
         if (item.task.toLowerCase() !== normalizedTask) return false;
@@ -876,8 +661,8 @@ export default function RoutineScreen() {
           "Do you want to delete this task for all repeating days, or just skip it on this date?",
           [
             { text: "Cancel", style: "cancel" },
-            { 
-              text: "Skip this date", 
+            {
+              text: "Skip this date",
               onPress: () => {
                 const dateStr = getDateString(selectedDate || new Date());
                 const newItem: RoutineItem = {
@@ -890,11 +675,11 @@ export default function RoutineScreen() {
                 };
                 saveRoutines([...allRoutines, newItem]);
                 closeModal();
-              } 
+              }
             },
-            { 
-              text: "Delete all days", 
-              style: "destructive", 
+            {
+              text: "Delete all days",
+              style: "destructive",
               onPress: () => {
                  saveRoutines(allRoutines.filter((item) => item.id !== taskToDelete.id));
                  setTimeout(() => closeModal(), 50);
@@ -954,8 +739,8 @@ export default function RoutineScreen() {
           "Do you want to save this change for this specific date only, or update the task for all days?",
           [
             { text: "Cancel", style: "cancel" },
-            { 
-              text: "This date only", 
+            {
+              text: "This date only",
               onPress: () => {
                 const dateStr = getDateString(selectedDate || new Date());
                 const newItem: RoutineItem = {
@@ -992,141 +777,62 @@ export default function RoutineScreen() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   }, []);
 
+  const handleTimelineTaskPress = useCallback((item: RoutineItem) => {
+    openModal(item);
+  }, [openModal]);
+
+  const handleDayListTaskPress = useCallback((item: RoutineItem) => {
+    openModal(item);
+  }, [openModal]);
+
+  const handleFabPress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    openForm();
+  }, [openForm]);
+
+  const handleCloseBarPress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    closeList();
+  }, [closeList]);
+
+  const handleDateSelect = useCallback((date: Date | null) => {
+    setSelectedDate(date);
+    if (date) {
+      const p = new Date(date); p.setDate(p.getDate() - 1);
+      const n = new Date(date); n.setDate(n.getDate() + 1);
+      setPageDates([p, date, n]);
+    }
+  }, []);
+
   return (
     <SafeAreaView style={styles.safeArea} testID="routine-safe-area">
       {/* ---- Day Timeline View (Unified with Calendar) ---- */}
       <View style={styles.panelWrapper}>
         <DayTimelineView
           selectedDate={selectedDate}
-          onSelectDate={(date) => {
-            setSelectedDate(date);
-            if (date) {
-              const p = new Date(date); p.setDate(p.getDate() - 1);
-              const n = new Date(date); n.setDate(n.getDate() + 1);
-              setPageDates([p, date, n]);
-            }
-          }}
+          onSelectDate={handleDateSelect}
           routineItems={allRoutines}
           onPressPeek={toggleList}
           scrollY={scrollY}
           listAnim={listAnim}
           isTaskModalOpen={listOpen || modalVisible || formVisible}
-          onPressTask={(item) => openModal(item, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)}
+          onPressTask={handleTimelineTaskPress}
         />
       </View>
 
       {/* ---- Collapsed Task Modal (Styled Identically to Tab Bar Container) ---- */}
-      <Animated.View
-        style={[
-          styles.tabBarContainer,
-          {
-            bottom: bottomOffset,
-            opacity: collapsedPillOpacity,
-            transform: [{ translateY: collapsedPillTranslateY }],
-          },
-        ]}
-        pointerEvents={listOpen ? "none" : "auto"}
-      >
-        <Pressable
-          style={({ pressed }) => [
-            styles.tabBar,
-            { width: tabBarWidth },
-            pressed && { opacity: 0.85 },
-          ]}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            openList();
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Open daily routine detail panel"
-          {...collapsedPanResponder.panHandlers}
-        >
-          {/* Blur background - fallback to solid bg on web */}
-          {Platform.OS === 'web' ? (
-            <View
-              style={[
-                StyleSheet.absoluteFill,
-                { backgroundColor: theme.colors.background, opacity: 0.92 }
-              ]}
-              pointerEvents="none"
-            />
-          ) : (
-            <BlurView
-              intensity={100}
-              tint={theme.colors.background === '#FFFFFF' || theme.colors.background.startsWith('#F') ? 'systemMaterialLight' : 'systemMaterialDark'}
-              style={StyleSheet.absoluteFill}
-              pointerEvents="none"
-            />
-          )}
-          {/* Glass tint overlay */}
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.glass.cardBg }]} />
-
-          {/* Collapsed Pill Content */}
-          <View style={styles.collapsedPillContent}>
-            <View
-              style={[
-                styles.collapsedIconCircle,
-                {
-                  backgroundColor: `${nextTaskBadgeColor}22`,
-                  borderColor: `${nextTaskBadgeColor}45`,
-                },
-              ]}
-            >
-              <Ionicons
-                name={nextTaskIcon as any}
-                size={20}
-                color={nextTaskBadgeColor}
-              />
-            </View>
-
-            <View style={styles.collapsedTextWrapper}>
-              <View style={styles.collapsedTimeRow}>
-                <Ionicons
-                  name="time-outline"
-                  size={12}
-                  color={theme.colors.textSecondary}
-                  style={{ marginRight: 3 }}
-                />
-                <Text style={styles.collapsedTime}>
-                  {nextTask ? nextTask.time : "Today"}
-                </Text>
-                {nextTask && (
-                  <View
-                    style={[
-                      styles.collapsedBadge,
-                      { backgroundColor: `${nextTaskBadgeColor}18` },
-                    ]}
-                  >
-                    {nextTask.daysOfWeek?.length ? (
-                      <Ionicons
-                        name="repeat"
-                        size={10}
-                        color={nextTaskBadgeColor}
-                        style={{ marginRight: 3 }}
-                      />
-                    ) : null}
-                    <Text
-                      style={[
-                        styles.collapsedBadgeText,
-                        { color: nextTaskBadgeColor },
-                      ]}
-                    >
-                      {nextTask.daysOfWeek?.length ? "Daily" : "Once"}
-                    </Text>
-                  </View>
-                )}
-              </View>
-              <Text style={styles.collapsedTitle} numberOfLines={1}>
-                {nextTask ? nextTask.task : "Daily Routine"}
-              </Text>
-            </View>
-
-            <View style={styles.collapsedChevronCircle}>
-              <Ionicons name="chevron-up" size={18} color={theme.colors.textSecondary} />
-            </View>
-          </View>
-        </Pressable>
-      </Animated.View>
+      <RoutinePeekBar
+        bottomOffset={bottomOffset}
+        tabBarWidth={tabBarWidth}
+        listOpen={listOpen}
+        opacity={collapsedPillOpacity}
+        translateY={collapsedPillTranslateY}
+        nextTask={nextTask}
+        nextTaskBadgeColor={nextTaskBadgeColor}
+        nextTaskIcon={nextTaskIcon}
+        onOpenList={openList}
+        panHandlers={collapsedPanResponder.panHandlers}
+      />
 
       {/* ---- Detail Task List (Pager) ---- */}
       <Animated.View
@@ -1140,7 +846,6 @@ export default function RoutineScreen() {
         ]}
         pointerEvents={listOpen ? "auto" : "none"}
       >
-        {/* Unified top gradient (corners and center) with a subtle glow */}
         <LinearGradient
           colors={[`${theme.colors.primary}3A`, `${theme.colors.primary}1A`, "transparent"]}
           style={styles.gradientTop}
@@ -1151,10 +856,7 @@ export default function RoutineScreen() {
           <Pressable
             style={({ pressed }) => [styles.closeBar, pressed && { opacity: 0.6 }]}
             hitSlop={14}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              closeList();
-            }}
+            onPress={handleCloseBarPress}
             accessibilityRole="button"
             accessibilityLabel="Collapse routine panel"
           />
@@ -1163,7 +865,7 @@ export default function RoutineScreen() {
 
         {/* 3-panel infinite pager */}
         <View
-          style={{ flex: 1, overflow: 'hidden' }}
+          style={styles.pagerContainer}
           onLayout={e => setPagerHeight(e.nativeEvent.layout.height)}
         >
           <Animated.View
@@ -1179,146 +881,50 @@ export default function RoutineScreen() {
           >
             {([0, 1, 2] as const).map(idx => {
               const date = pageDates[idx];
-              const pageItems = getItemsForDate(date);
+              const shouldRender = idx === 1 || isAdjacentPagesLoaded;
+              const pageItems = shouldRender ? getItemsForDate(date) : [];
               return (
-                <ScrollView
+                <RoutineDayList
                   key={idx}
-                  style={{ width: SCREEN_WIDTH, height: pagerHeight || undefined }}
-                  contentContainerStyle={styles.scrollContent}
-                  showsVerticalScrollIndicator={false}
+                  pageItems={pageItems}
+                  isLoading={isLoading}
+                  isCenterPage={idx === 1}
+                  refreshing={refreshing}
+                  onRefresh={idx === 1 ? onRefresh : undefined}
                   onScroll={idx === 1 ? handleScroll : undefined}
-                  scrollEventThrottle={16}
-                  bounces={false}
-                  refreshControl={
-                    idx === 1 ? (
-                      <RefreshControl
-                        refreshing={refreshing}
-                        onRefresh={onRefresh}
-                        tintColor={theme.colors.primary}
-                        colors={[theme.colors.primary]}
-                      />
-                    ) : undefined
-                  }
-                >
-                  <View style={styles.cardList}>
-                    {isLoading ? (
-                      Array.from({ length: 5 }).map((_, itemIdx) => (
-                        <SkeletonTimelineEventCard
-                          key={`skeleton-${itemIdx}`}
-                          isFirst={itemIdx === 0}
-                          isLast={itemIdx === 4}
-                        />
-                      ))
-                    ) : pageItems.length === 0 ? (
-                      <View style={styles.emptyStateContainer}>
-                        <View style={styles.emptyStateIconCircle}>
-                          <Ionicons name="sparkles-outline" size={30} color={theme.colors.primary} />
-                        </View>
-                        <Text style={styles.emptyStateTitle}>No Rituals Scheduled</Text>
-                        <Text style={styles.emptyStateSub}>Tap the + below to add a ritual to your day.</Text>
-                      </View>
-                    ) : (
-                      (() => {
-                        const chainPositions: ('none' | 'start' | 'middle' | 'end')[] = new Array(pageItems.length).fill('none');
-                        for (let i = 0; i < pageItems.length; i++) {
-                          const item = pageItems[i].data as RoutineItem;
-                          if (isWakeupOrSleep(item)) {
-                            chainPositions[i] = 'none';
-                            continue;
-                          }
-                          if (chainPositions[i] !== 'none') continue;
-
-                          const startMins = pageItems[i].minutes;
-                          const dur = item.duration ?? 30;
-                          let runEnd = startMins + dur;
-                          let j = i + 1;
-                          while (j < pageItems.length) {
-                            const nextItem = pageItems[j].data as RoutineItem;
-                            if (isWakeupOrSleep(nextItem)) break;
-                            const nextStart = pageItems[j].minutes;
-                            if (nextStart < runEnd) {
-                              runEnd = Math.max(runEnd, nextStart + (nextItem.duration ?? 30));
-                              j++;
-                            } else {
-                              break;
-                            }
-                          }
-
-                          if (j - i >= 2) {
-                            chainPositions[i] = 'start';
-                            for (let k = i + 1; k < j - 1; k++) {
-                              chainPositions[k] = 'middle';
-                            }
-                            chainPositions[j - 1] = 'end';
-                            i = j - 1;
-                          }
-                        }
-
-                        return pageItems.map((entry, itemIdx) => {
-                          const prevMins = itemIdx > 0 ? pageItems[itemIdx - 1].minutes : null;
-                          const breakMinutes = prevMins !== null ? (entry.minutes - prevMins) : 0;
-                          const showBreakBefore = prevMins !== null && breakMinutes > 45;
-                          return (
-                            <TimelineEventCard
-                              key={`${idx}-${(entry.data as any).id}`}
-                              item={entry.data}
-                              chainPosition={chainPositions[itemIdx]}
-                              isFirst={itemIdx === 0}
-                              isLast={itemIdx === pageItems.length - 1}
-                              showBreakBefore={showBreakBefore}
-                              breakDurationMinutes={showBreakBefore ? breakMinutes : undefined}
-                              onToggleComplete={idx === 1 ? handleToggleComplete : undefined}
-                              onPress={idx === 1
-                                ? () => openModal(entry.data as RoutineItem, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
-                                : undefined}
-                            />
-                          );
-                        });
-                      })()
-                    )}
-                  </View>
-                  <View style={{ height: 100 }} />
-                </ScrollView>
+                  onPressTask={handleDayListTaskPress}
+                  onToggleComplete={handleToggleComplete}
+                  onAddRitual={handleFabPress}
+                  width={SCREEN_WIDTH}
+                  height={pagerHeight}
+                />
               );
             })}
           </Animated.View>
         </View>
 
-        {/* Floating Action Button (FAB) - Minimalist Pokéball Style (Moved inside to sync with animation) */}
+        {/* Floating Action Button (FAB) */}
         {listOpen && (
-          <Animated.View
-            style={[
-              styles.fabContainer,
-              {
-                opacity: 1,
-                transform: [],
-              },
-            ]}
-          >
+          <View style={styles.fabContainer}>
             <Pressable
               style={({ pressed }) => [
                 styles.fab,
                 pressed && styles.fabPressed,
               ]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                openForm();
-              }}
+              onPress={handleFabPress}
               accessibilityRole="button"
               accessibilityLabel="Add new ritual"
               testID="routine-fab"
             >
               <Ionicons name="add" size={32} color={theme.colors.white} />
             </Pressable>
-          </Animated.View>
+          </View>
         )}
       </Animated.View>
-
 
       <TaskModal
         visible={modalVisible}
         task={selectedTask}
-        animatedStyle={animatedStyle}
         onClose={closeModal}
         onEdit={handleEditFromModal}
         onSaveTask={handleSaveFromModal}
@@ -1340,43 +946,48 @@ export default function RoutineScreen() {
         selectedDate={selectedDate || undefined}
       />
 
-      <ConfirmModal
+      <RoutineConfirmModal
         visible={confirmState.visible}
         title={confirmState.title}
         message={confirmState.message}
         confirmText={confirmState.confirmText}
         onCancel={() => setConfirmState(prev => ({ ...prev, visible: false }))}
         onConfirm={() => confirmState.action()}
-        theme={theme}
-        isDarkMode={isDarkMode}
       />
-    </SafeAreaView >
+    </SafeAreaView>
   );
 }
 
-
 /* -------------------- Styles -------------------- */
+const stylesCache = new Map<string, ReturnType<typeof getStyles>>();
+const getCachedStyles = (theme: Theme) => {
+  const key = `${theme.colors.background}-${theme.colors.primary}-${theme.colors.card}`;
+  let s = stylesCache.get(key);
+  if (!s) {
+    s = getStyles(theme);
+    stylesCache.set(key, s);
+  }
+  return s;
+};
+
 const getStyles = (theme: Theme) =>
   StyleSheet.create({
     safeArea: {
       flex: 1,
       backgroundColor: theme.colors.background,
     },
-
-    /* Animated timeline panel */
     panelWrapper: {
       flex: 1,
       backgroundColor: theme.colors.background,
     },
-
     listOverlay: {
       position: 'absolute',
       left: 0,
       right: 0,
       bottom: 0,
       backgroundColor: theme.colors.card,
-      borderTopLeftRadius: 50,
-      borderTopRightRadius: 50,
+      borderTopLeftRadius: themeTokens.borderRadius.xl * 2,
+      borderTopRightRadius: themeTokens.borderRadius.xl * 2,
       shadowColor: "#000",
       shadowOffset: { width: 0, height: -4 },
       shadowOpacity: 0.1,
@@ -1386,19 +997,19 @@ const getStyles = (theme: Theme) =>
     },
     listHeader: {
       alignItems: "center",
-      paddingVertical: 16,
+      paddingVertical: themeTokens.spacing.md,
       backgroundColor: theme.colors.card,
-      borderTopLeftRadius: 50,
-      borderTopRightRadius: 50,
+      borderTopLeftRadius: themeTokens.borderRadius.xl * 2,
+      borderTopRightRadius: themeTokens.borderRadius.xl * 2,
     },
     gradientTop: {
       position: "absolute",
-      top: 0, // Aligned with overlay top
+      top: 0,
       left: 0,
       right: 0,
-      height: 70, // Height to follow the 50px rounded corners
-      borderTopLeftRadius: 50,
-      borderTopRightRadius: 50,
+      height: 70,
+      borderTopLeftRadius: themeTokens.borderRadius.xl * 2,
+      borderTopRightRadius: themeTokens.borderRadius.xl * 2,
       zIndex: 20,
     },
     closeBar: {
@@ -1406,121 +1017,17 @@ const getStyles = (theme: Theme) =>
       height: 5,
       borderRadius: 2.5,
       backgroundColor: `${theme.colors.text}35`,
-      marginBottom: 8,
+      marginBottom: themeTokens.spacing.sm,
     },
     listTitle: {
-      fontSize: 16,
+      fontSize: themeTokens.fonts.size.md,
       fontFamily: theme.fonts.bold,
       color: theme.colors.text,
     },
-
-    /* ── Collapsed Task Modal (Styled Identically to Tab Bar Container) ── */
-    tabBarContainer: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      height: 68,
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 50,
-    },
-    tabBar: {
-      flexDirection: 'row',
-      height: 68,
-      borderRadius: 99,
-      borderWidth: 1,
-      borderColor: theme.glass.borderColor,
-      overflow: 'hidden',
-      elevation: 6,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.08,
-      shadowRadius: 16,
-      alignItems: 'center',
-      paddingHorizontal: 16,
-    },
-    collapsedPillContent: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      width: '100%',
-    },
-    collapsedIconCircle: {
-      width: 42,
-      height: 42,
-      borderRadius: 21,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 1.5,
-      marginRight: 12,
-    },
-    collapsedTextWrapper: {
-      flex: 1,
-      justifyContent: 'center',
-    },
-    collapsedTimeRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 3,
-    },
-    collapsedTime: {
-      fontSize: 11.5,
-      fontFamily: theme.fonts.medium,
-      color: theme.colors.textSecondary,
-      letterSpacing: 0.2,
-    },
-    collapsedBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 6,
-      paddingVertical: 1.5,
-      borderRadius: 6,
-      marginLeft: 5,
-    },
-    collapsedBadgeText: {
-      fontSize: 10,
-      fontFamily: theme.fonts.bold,
-      letterSpacing: 0.2,
-    },
-    collapsedTitle: {
-      fontSize: 16,
-      fontFamily: theme.fonts.bold,
-      color: theme.colors.text,
-      letterSpacing: -0.2,
-    },
-    collapsedChevronCircle: {
-      width: 30,
-      height: 30,
-      borderRadius: 15,
-      backgroundColor: `${theme.colors.text}08`,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginLeft: 8,
-      borderWidth: 1,
-      borderColor: `${theme.colors.text}10`,
-    },
-
-    /* Pager - these styles use initial dimensions but are overridden by inline styles in render */
-    pagerStrip: {
-      flexDirection: 'row',
-      width: INITIAL_SCREEN_WIDTH * 3,
+    pagerContainer: {
       flex: 1,
       overflow: 'hidden',
     },
-    pagerPage: {
-      width: INITIAL_SCREEN_WIDTH,
-      flex: 1,
-    },
-    scrollContainer: {
-      flex: 1,
-    },
-    scrollContent: {
-      paddingTop: 10,
-    },
-    cardList: {
-      gap: 0,
-    },
-
-    /* Minimalist Pokéball FAB */
     fabContainer: {
       position: "absolute",
       bottom: 30,
@@ -1545,36 +1052,4 @@ const getStyles = (theme: Theme) =>
       transform: [{ scale: 0.92 }],
       opacity: 0.9,
     },
-
-    /* Empty State */
-    emptyStateContainer: {
-      alignItems: "center",
-      justifyContent: "center",
-      paddingVertical: 64,
-      paddingHorizontal: 24,
-    },
-    emptyStateIconCircle: {
-      width: 64,
-      height: 64,
-      borderRadius: 32,
-      backgroundColor: `${theme.colors.primary}15`,
-      alignItems: "center",
-      justifyContent: "center",
-      marginBottom: 16,
-    },
-    emptyStateTitle: {
-      fontSize: 19,
-      fontFamily: theme.fonts.bold,
-      color: theme.colors.text,
-      marginBottom: 8,
-      textAlign: "center",
-    },
-    emptyStateSub: {
-      fontSize: 14,
-      fontFamily: theme.fonts.medium,
-      color: theme.colors.textSecondary,
-      textAlign: "center",
-      lineHeight: 20,
-      maxWidth: 260,
-    }
   });

@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { SONG_LIST } from "../../constants/songs";
 import { Theme } from "../../styles/shared";
-import { BottomSheet } from "./BottomSheet";
+import { ModalSheet } from "../ui/ModalSheet";
 
 type MusicSelectionModalProps = {
     visible: boolean;
@@ -28,7 +28,7 @@ export function MusicSelectionModal({
     const styles = useMemo(() => getStyles(currentTheme), [currentTheme]);
 
     return (
-        <BottomSheet
+        <ModalSheet
             visible={visible}
             onClose={onClose}
             theme={currentTheme}
@@ -96,7 +96,7 @@ export function MusicSelectionModal({
                     })}
                 </View>
             </ScrollView>
-        </BottomSheet>
+        </ModalSheet>
     );
 }
 
