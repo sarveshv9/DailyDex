@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
     Platform,
     Pressable,
@@ -242,25 +242,26 @@ function MonthCalendarViewComponent({ currentDate, routineItems, onSelectDate, t
     const [month, setMonth] = useState(currentDate.getMonth());
     const [selectedDate, setSelectedDate] = useState<Date>(currentDate);
 
-    useEffect(() => {
-        if (!todayTrigger) return;
-        const target = new Date();
-        setYear(target.getFullYear());
-        setMonth(target.getMonth());
-        setSelectedDate(target);
-    }, [todayTrigger]);
+    const [prevCurrentDate, setPrevCurrentDate] = useState(currentDate);
+    const [prevTodayTrigger, setPrevTodayTrigger] = useState(todayTrigger);
 
-    useEffect(() => {
+    if (todayTrigger !== prevTodayTrigger) {
+        setPrevTodayTrigger(todayTrigger);
+        if (todayTrigger) {
+            const target = new Date();
+            setYear(target.getFullYear());
+            setMonth(target.getMonth());
+            setSelectedDate(target);
+        }
+    } else if (currentDate !== prevCurrentDate) {
+        setPrevCurrentDate(currentDate);
         setYear(currentDate.getFullYear());
         setMonth(currentDate.getMonth());
         setSelectedDate(currentDate);
-    }, [currentDate]);
+    }
 
     const todayStr = fmtDateKey(new Date());
     const selectedStr = fmtDateKey(selectedDate);
-
-    const now = new Date();
-    const isCurrentMonth = month === now.getMonth() && year === now.getFullYear();
 
     const prevMonth = () => {
         if (month === 0) { setYear(y => y - 1); setMonth(11); }

@@ -10,10 +10,9 @@ import {
     Text,
     TextInput,
     View,
-    ActivityIndicator,
     Alert,
 } from "react-native";
-import { darkThemes, lightThemes, Theme } from "../../styles/shared";
+import { lightThemes, Theme } from "../../styles/shared";
 import { ModalSheet } from "../ui/ModalSheet";
 import { useTheme } from "../../context/ThemeContext";
 import { usePokemonQuery } from "../../api/pokemon";
@@ -85,23 +84,8 @@ export function ThemeSelectionModal({
     const [cPokemonName, setCPokemonName] = React.useState("");
     const [cColor, setCColor] = React.useState(SPECIES_COLORS.red); // Default fallback
     const [cCustomHex, setCCustomHex] = React.useState("");
-    const [isFetching, setIsFetching] = React.useState(false);
-
-    // Live preview state
-    const [previewSprite, setPreviewSprite] = React.useState<string | null>(null);
-    const [previewName, setPreviewName] = React.useState<string | null>(null);
-    const [previewId, setPreviewId] = React.useState<string | null>(null);
-    const [previewError, setPreviewError] = React.useState(false);
     const [debouncedQuery, setDebouncedQuery] = React.useState("");
-
-    // Reset form
-    React.useEffect(() => {
-        if (!showCustomForm) {
-            setCPokemonName(""); setCColor(SPECIES_COLORS.red); setCCustomHex("");
-            setDebouncedQuery("");
-            setPreviewSprite(null); setPreviewName(null); setPreviewId(null); setPreviewError(false);
-        }
-    }, [showCustomForm]);
+    const [lastAutoColorId, setLastAutoColorId] = React.useState<string | null>(null);
 
     // Debounce the input by 400ms
     React.useEffect(() => {
@@ -112,38 +96,37 @@ export function ThemeSelectionModal({
     }, [cPokemonName]);
 
     // TanStack Query with automatic caching and deduplication
-    const { data: pokemonData, isError: queryError, isLoading: queryLoading } = usePokemonQuery(
+    const { data: pokemonData, isError: queryError } = usePokemonQuery(
         debouncedQuery,
         showCustomForm && debouncedQuery.length > 0
     );
 
-    React.useEffect(() => {
-        if (!debouncedQuery) {
-            setPreviewSprite(null); setPreviewName(null); setPreviewId(null); setPreviewError(false);
-            return;
-        }
+    // Derive preview state directly from query
+    const previewSprite = pokemonData?.spriteUrl ?? null;
+    const previewName = pokemonData?.name ?? null;
+    const previewId = pokemonData?.id ?? null;
+    const previewError = Boolean(debouncedQuery && queryError);
 
-        if (queryError) {
-            setPreviewSprite(null); setPreviewName(null); setPreviewId(null);
-            setPreviewError(true);
-            return;
-        }
-
-        if (pokemonData) {
-            setPreviewSprite(pokemonData.spriteUrl);
-            setPreviewName(pokemonData.name);
-            setPreviewId(pokemonData.id);
-            setPreviewError(false);
-
-            if (pokemonData.speciesColorName) {
-                const autoColor = SPECIES_COLORS[pokemonData.speciesColorName];
-                if (autoColor) {
-                    setCColor(autoColor);
-                    setCCustomHex("");
-                }
+    // Automatically adopt species color when a new Pokémon is loaded
+    if (pokemonData && pokemonData.id !== lastAutoColorId) {
+        setLastAutoColorId(pokemonData.id);
+        if (pokemonData.speciesColorName) {
+            const autoColor = SPECIES_COLORS[pokemonData.speciesColorName];
+            if (autoColor) {
+                setCColor(autoColor);
+                setCCustomHex("");
             }
         }
-    }, [debouncedQuery, pokemonData, queryError]);
+    }
+
+    const closeCustomForm = () => {
+        setShowCustomForm(false);
+        setCPokemonName("");
+        setCColor(SPECIES_COLORS.red);
+        setCCustomHex("");
+        setDebouncedQuery("");
+        setLastAutoColorId(null);
+    };
 
     const resolvedColor = cCustomHex.match(/^#[0-9A-Fa-f]{6}$/) ? cCustomHex : cColor;
 
@@ -156,7 +139,7 @@ export function ThemeSelectionModal({
         addCustomTheme(previewId, { pokemonId: previewId, primaryColor: resolvedColor, name: previewName });
         onSelectTheme(`custom_${previewId}`);
         if (isAutoTheme) onToggleAutoTheme(false);
-        setShowCustomForm(false);
+        closeCustomForm();
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setTimeout(() => onClose(), 300);
     };
@@ -193,7 +176,7 @@ export function ThemeSelectionModal({
                             }}
                             trackColor={{ false: `${currentTheme.colors.secondary}40`, true: currentTheme.colors.primary }}
                             thumbColor="#FFFFFF"
-                            {...({ activeThumbColor: "#FFFFFF" } as any)}
+                            {...({ activeThumbColor: "#FFFFFF" } as Record<string, string>)}
                         />
                     </View>
 
@@ -212,7 +195,7 @@ export function ThemeSelectionModal({
                             }}
                             trackColor={{ false: `${currentTheme.colors.secondary}40`, true: currentTheme.colors.primary }}
                             thumbColor="#FFFFFF"
-                            {...({ activeThumbColor: "#FFFFFF" } as any)}
+                            {...({ activeThumbColor: "#FFFFFF" } as Record<string, string>)}
                         />
                     </View>
                 </View>
@@ -345,7 +328,7 @@ export function ThemeSelectionModal({
                         <View style={styles.customForm}>
                             <View style={styles.customFormHeader}>
                                 <Text style={styles.customFormTitle}>Create Custom Theme</Text>
-                                <Pressable hitSlop={10} onPress={() => setShowCustomForm(false)}>
+                                <Pressable hitSlop={10} onPress={closeCustomForm}>
                                     <Ionicons name="close" size={24} color={currentTheme.colors.textSecondary} />
                                 </Pressable>
                             </View>

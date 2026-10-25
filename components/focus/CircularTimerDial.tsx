@@ -145,7 +145,11 @@ export const CircularTimerDial: React.FC<CircularTimerDialProps> = ({
           />
 
           {/* SVG Progress Circle */}
-          <Svg width={DIAL_SIZE} height={DIAL_SIZE} style={StyleSheet.absoluteFill}>
+          <Svg
+            width={DIAL_SIZE}
+            height={DIAL_SIZE}
+            style={[StyleSheet.absoluteFill, { transform: [{ rotate: "-90deg" }] }]}
+          >
             <Circle
               cx={DIAL_SIZE / 2}
               cy={DIAL_SIZE / 2}
@@ -168,8 +172,6 @@ export const CircularTimerDial: React.FC<CircularTimerDialProps> = ({
               strokeDasharray={`${CIRCUMFERENCE} ${CIRCUMFERENCE}`}
               strokeDashoffset={strokeDashoffset}
               strokeLinecap="round"
-              rotation="-90"
-              origin={`${DIAL_SIZE / 2}, ${DIAL_SIZE / 2}`}
             />
           </Svg>
 

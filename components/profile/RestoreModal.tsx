@@ -47,7 +47,7 @@ export function RestoreModal({
       let parsed: Record<string, any>;
       try {
         parsed = JSON.parse(jsonText.trim());
-      } catch (parseErr) {
+      } catch {
         Alert.alert(
           "Invalid JSON",
           "The pasted text is not valid JSON format. Please verify the content you exported."

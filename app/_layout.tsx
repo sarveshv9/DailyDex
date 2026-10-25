@@ -1,7 +1,7 @@
 import "../utils/suppressWarnings";
 import * as SplashScreen from "expo-splash-screen";
 import { useFonts } from "expo-font";
-import { Stack, useRouter, useSegments } from "expo-router";
+import { type Href, Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { ThemeProvider } from "../context/ThemeContext";
 
@@ -99,20 +99,20 @@ function RootLayoutNav() {
 
     // Setup routing check — auth is optional, no sign-in gate
     const verifyRouting = async () => {
-      const inAuthGroup = segments[0] === ("(auth)" as any);
-      const inTabsGroup = segments[0] === "(tabs)";
+      const inAuthGroup = (segments[0] as string | undefined) === "(auth)";
+      const inTabsGroup = (segments[0] as string | undefined) === "(tabs)";
 
       // Offline-first routing: If on auth screen, route directly to setup or dashboard
       if (inAuthGroup) {
         try {
           const setup = await AsyncStorage.getItem(SETUP_STORAGE_KEY);
           if (setup !== "true") {
-            router.replace("/setup" as any);
+            router.replace("/setup" as Href);
           } else {
-            router.replace("/(tabs)" as any);
+            router.replace("/(tabs)" as Href);
           }
         } catch {
-          router.replace("/setup" as any);
+          router.replace("/setup" as Href);
         }
         return;
       }
@@ -122,13 +122,13 @@ function RootLayoutNav() {
         try {
           const setup = await AsyncStorage.getItem(SETUP_STORAGE_KEY);
           if (setup !== "true" && inTabsGroup) {
-            router.replace("/setup" as any);
+            router.replace("/setup" as Href);
           } else if (setup === "true" && isSetupComplete === false) {
             setIsSetupComplete(true);
           }
         } catch {
           if (inTabsGroup) {
-            router.replace("/setup" as any);
+            router.replace("/setup" as Href);
           }
         }
       }

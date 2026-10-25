@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 import * as Haptics from '../../utils/haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -7,7 +6,8 @@ import React, { memo, useCallback, useMemo, useRef } from 'react';
 import {
     Animated,
     FlatList,
-    InteractionManager,
+    NativeScrollEvent,
+    NativeSyntheticEvent,
     Platform,
     Pressable,
     ScrollView,
@@ -120,7 +120,7 @@ const TimeAxisItem = memo<{
     topY: number;
     circleHalf: number;
     theme: Theme;
-}>(({ num, ampm, topY, circleHalf, theme }) => (
+}>(({ num, ampm, topY, theme }) => (
     <View
         style={{
             position: 'absolute',
@@ -140,84 +140,7 @@ const TimeAxisItem = memo<{
         </Text>
     </View>
 ));
-
-/* ─────────────────────────── TimelineTaskPill ───────────────────────── */
-
-const TimelineTaskPill = memo<{
-    item: RoutineItem;
-    size: number;
-    pillHeight: number;
-    isSelected: boolean;
-    isDarkMode: boolean;
-    theme: Theme;
-    onPressTask?: (item: RoutineItem) => void;
-    isOverlapping?: boolean;
-    overlapIndex?: number;
-}>(({ item, size, pillHeight, isSelected, isDarkMode, theme, onPressTask, isOverlapping, overlapIndex }) => {
-    const taskColor = TASK_COLORS[item.imageKey ?? ''] ?? theme.colors.primary;
-    const iconSize = Math.round(size * 0.46);
-
-    return (
-        <View
-            style={[
-                isOverlapping && Platform.select({
-                    ios: {
-                        shadowColor: '#000000',
-                        shadowOffset: { width: 0, height: 2.5 },
-                        shadowOpacity: isDarkMode ? 0.45 : 0.22,
-                        shadowRadius: 4,
-                    },
-                    android: { elevation: 4 },
-                }),
-                !isOverlapping && isSelected && Platform.select({
-                    ios: {
-                        shadowColor: taskColor,
-                        shadowOffset: { width: 0, height: 3 },
-                        shadowOpacity: 0.35,
-                        shadowRadius: 6,
-                    },
-                    android: { elevation: 4 },
-                }),
-            ]}
-        >
-            <Pressable
-                onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    onPressTask?.(item);
-                }}
-                style={({ pressed }) => [
-                    {
-                        width: size,
-                        height: pillHeight,
-                        borderRadius: size / 2,
-                        backgroundColor: theme.colors.background,
-                        borderWidth: isOverlapping ? (isSelected ? 2 : 1.5) : (isSelected ? 1.5 : 1),
-                        borderColor: isOverlapping
-                            ? (isSelected ? `${taskColor}95` : `${taskColor}55`)
-                            : (isSelected ? `${taskColor}75` : `${taskColor}30`),
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        overflow: 'hidden',
-                    },
-                    pressed && { opacity: 0.82, transform: [{ scale: 0.94 }] },
-                ]}
-            >
-                {/* Pastel tint layer on top of solid opaque base (blocks the timeline line) */}
-                <View
-                    style={[
-                        StyleSheet.absoluteFill,
-                        { backgroundColor: isSelected ? `${taskColor}28` : `${taskColor}16` },
-                    ]}
-                />
-                <Ionicons
-                    name={ICON_MAP[item.imageKey ?? ''] ?? 'ellipse-outline'}
-                    size={iconSize}
-                    color={taskColor}
-                />
-            </Pressable>
-        </View>
-    );
-});
+TimeAxisItem.displayName = "TimeAxisItem";
 
 /* ───────────────────────────── TimelinePage ─────────────────────────── */
 
@@ -232,7 +155,7 @@ const TimelinePage = memo<{
     screenWidth: number;
     theme: Theme;
     isDarkMode: boolean;
-    styles: any;
+    styles: ReturnType<typeof getStyles>;
     handleSelectDate: (date: Date) => void;
     startHour: number;
     totalMinutes: number;
@@ -281,8 +204,6 @@ const TimelinePage = memo<{
         const maxTasksPerHour = new Array(TOTAL_HOURS).fill(0);
 
         pageDates.forEach(date => {
-            const di = date.getDay();
-            const dateStr = formatDateKey(date);
             const items = getRoutineItemsForDate(allRoutines, date);
 
             // Per-column hour counter (reset for every column)
@@ -363,8 +284,6 @@ const TimelinePage = memo<{
         // Process tasks in chronological order so shifts propagate correctly.
         const allTasks: { startMin: number; endMin: number }[] = [];
         pageDates.forEach(date => {
-            const di = date.getDay();
-            const dateStr = formatDateKey(date);
             getRoutineItemsForDate(allRoutines, date)
                 .forEach(item => {
                     const start = getTimelineMinute(item.time, startHour);
@@ -587,9 +506,6 @@ const TimelinePage = memo<{
                     const colItems = getRoutineItemsForDate(allRoutines, date)
                         .sort((a, b) => getTimelineMinute(a.time, startHour) - getTimelineMinute(b.time, startHour));
                     const circleSize = isSelected ? circleSel : circleOther;
-                    const lineColor = isSelected
-                        ? `${theme.colors.primary}35`
-                        : `${theme.colors.text}0D`;
 
                     return (
                         <View
@@ -625,7 +541,6 @@ const TimelinePage = memo<{
 
                                 colItems.forEach(item => {
                                     const start = getTimelineMinute(item.time, startHour);
-                                    const dur = item.duration ?? DEFAULT_DURATION;
                                     const topY = getCumY(start);
 
                                     if (isWakeupOrSleep(item)) {
@@ -960,6 +875,7 @@ const TimelinePage = memo<{
         </View>
     );
 });
+TimelinePage.displayName = "TimelinePage";
 
 /* ─────────────────────────────── Component ──────────────────────────── */
 
@@ -978,55 +894,19 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
     const styles = useMemo(() => getCachedStyles(theme), [theme]);
 
     const [viewMode, setViewMode] = React.useState<'week' | 'month'>('week');
-    const [todayTrigger, setTodayTrigger] = React.useState(0);
-    const COL_WIDTH = getColWidth(SCREEN_WIDTH);
-
-    React.useEffect(() => {
+    const [prevModalOpen, setPrevModalOpen] = React.useState(isTaskModalOpen);
+    if (isTaskModalOpen !== prevModalOpen) {
+        setPrevModalOpen(isTaskModalOpen);
         if (isTaskModalOpen && viewMode === 'month') {
             setViewMode('week');
         }
-    }, [isTaskModalOpen, viewMode]);
+    }
+
+    const [todayTrigger, setTodayTrigger] = React.useState(0);
+    const COL_WIDTH = getColWidth(SCREEN_WIDTH);
 
     const circleSel = CIRCLE_SEL;
     const circleOther = CIRCLE_OTHER;
-
-    /* ── Collapse animations (header shrinks when list scrolls) ── */
-    const headerCollapseAnim = useMemo(() => {
-        if (!scrollY && !listAnim) return new Animated.Value(0);
-        const anims: Animated.Value[] = [];
-        if (listAnim) anims.push(listAnim);
-        if (scrollY) {
-            anims.push(
-                scrollY.interpolate({
-                    inputRange: [0, 90],
-                    outputRange: [0, 1],
-                    extrapolate: 'clamp',
-                }) as unknown as Animated.Value
-            );
-        }
-        if (anims.length === 2) {
-            return Animated.add(anims[0], anims[1]).interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, 1],
-                extrapolate: 'clamp',
-            });
-        }
-        return anims[0] ?? new Animated.Value(0);
-    }, [scrollY, listAnim]);
-
-    const headerPaddingTop = headerCollapseAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: [14, 34],
-    });
-    const headerFontSize = headerCollapseAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: [22, 30],
-    });
-    const collapseOpacity = headerCollapseAnim.interpolate({
-        inputRange: [0, 0.6],
-        outputRange: [1, 0],
-        extrapolate: 'clamp',
-    });
 
     const handleSelectDate = useCallback((date: Date) => {
         Haptics.selectionAsync();
@@ -1034,7 +914,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
     }, [onSelectDate]);
 
     /* ── Dynamic Bounds based on Wake Up / Sleep tasks ── */
-    const { startHour, endHour, totalMinutes, timeLabels } = useMemo(() => {
+    const { startHour, totalMinutes, timeLabels } = useMemo(() => {
         let minH = 6;
         let maxH = 26;
 
@@ -1068,18 +948,8 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
             labels.push({ hour: h, num: num.toString(), ampm });
         }
 
-        return { startHour: minH, endHour: maxH, totalMinutes: tMins, timeLabels: labels };
+        return { startHour: minH, totalMinutes: tMins, timeLabels: labels };
     }, [routineItems]);
-
-    /* ── Items grouped by day-of-week ── */
-
-
-    const currentDayItems = useMemo(() => {
-        if (!selectedDate) return [];
-        return getRoutineItemsForDate(routineItems, selectedDate)
-            .sort((a, b) => getTimelineMinute(a.time, startHour) - getTimelineMinute(b.time, startHour));
-    }, [routineItems, selectedDate, startHour]);
-    const firstItem = currentDayItems[0] ?? null;
 
     /* ── Date helpers ── */
     const today = useMemo(() => {
@@ -1118,11 +988,11 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
     const visiblePageIndexRef = useRef<number>(initialTargetIndex);
 
     const flatListRef = useRef<FlatList>(null);
-    const scrollSnapTimer = useRef<any>(null);
+    const scrollSnapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const hasInitialScrolled = useRef(false);
 
     // Web: JS-based scroll snapping (CSS scroll-snap blocks virtualized scrolling)
-    const handleWebScrollSnap = useCallback((e: any) => {
+    const handleWebScrollSnap = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
         if (Platform.OS !== 'web') return;
         const offsetX = e.nativeEvent.contentOffset.x;
         if (scrollSnapTimer.current) clearTimeout(scrollSnapTimer.current);
@@ -1152,7 +1022,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
     }, [SCREEN_WIDTH, pages, selectedDate, today, onSelectDate]);
 
     // Handle horizontal page swiping to keep week dates aligned
-    const handleMomentumScrollEnd = useCallback((e: any) => {
+    const handleMomentumScrollEnd = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
         const offsetX = e.nativeEvent.contentOffset.x;
         const pageIndex = Math.round(offsetX / SCREEN_WIDTH);
         visiblePageIndexRef.current = pageIndex;
@@ -1383,6 +1253,7 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
         </View>
     );
 };
+DayTimelineView.displayName = "DayTimelineView";
 
 /* ─────────────────────────────── Styles ─────────────────────────────── */
 

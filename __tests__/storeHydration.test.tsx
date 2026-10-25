@@ -47,7 +47,9 @@ jest.mock("expo-router", () => {
   const mockRN = jest.requireActual("react-native");
   const Stack: any = ({ children }: any) =>
     mockReact.createElement(mockRN.View, { testID: "root-layout-stack" }, children);
-  Stack.Screen = () => null;
+  const StackScreen = () => null;
+  StackScreen.displayName = "StackScreen";
+  Stack.Screen = StackScreen;
   return {
     Stack,
     useRouter: () => ({

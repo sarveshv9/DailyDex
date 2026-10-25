@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Animated,
@@ -42,7 +42,7 @@ export interface TaskFormProps {
   isEditing: boolean;
   formData: FormData & { id?: string };
   initialItem?: RoutineItem;
-  onUpdateField: (field: keyof FormData, value: any) => void;
+  onUpdateField: (field: keyof FormData, value: FormData[keyof FormData]) => void;
   onSave: () => void;
   onSaveAndAddAnother?: () => void;
   onBatchSave?: (items: RoutineItem[]) => void;
@@ -97,7 +97,7 @@ const TaskFormInner: React.FC<TaskFormProps> = ({
   const isDark = isDarkMode;
   const styles = useMemo(() => getStyles(theme), [theme]);
 
-  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const [slideAnim] = useState(() => new Animated.Value(SCREEN_HEIGHT));
 
   /* ── Stacked tasks initialized once per open/identity lifecycle ── */
   const [stackedTasks, setStackedTasks] = useState<StackedTask[]>(() => {
@@ -123,7 +123,6 @@ const TaskFormInner: React.FC<TaskFormProps> = ({
     type: "editing" | "stacked";
     id?: string;
   } | null>(null);
-  const [iconPickerCat, setIconPickerCat] = useState<number>(0);
 
   /* ── Smooth open/close spring animation ── */
   useEffect(() => {
@@ -575,7 +574,7 @@ const TaskFormInner: React.FC<TaskFormProps> = ({
                 <View style={styles.repeatRow}>
                   <DaysOfWeekPicker
                     selectedDays={formData.daysOfWeek ?? []}
-                    onChange={(days) => onUpdateField("daysOfWeek", days as any)}
+                    onChange={(days) => onUpdateField("daysOfWeek", days)}
                     activeColor={theme.colors.primary}
                   />
                 </View>

@@ -4,9 +4,12 @@ import {
     Dimensions,
     Pressable,
     ScrollView,
+    StyleProp,
     StyleSheet,
     Text,
+    TextStyle,
     View,
+    ViewStyle,
 } from "react-native";
 import Animated, {
     Extrapolation,
@@ -464,9 +467,9 @@ interface TimeDigitColumnProps {
     label: string;
     upColor: string;
     downColor: string;
-    digitStyle: any;
-    boxStyle: any;
-    styles: any;
+    digitStyle: StyleProp<TextStyle>;
+    boxStyle: StyleProp<ViewStyle>;
+    styles: ReturnType<typeof makeStyles>;
 }
 
 const TimeDigitColumn = React.memo(function TimeDigitColumn({

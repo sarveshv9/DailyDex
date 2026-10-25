@@ -217,7 +217,7 @@ export const cancelFocusTimerAlarm = async (): Promise<void> => {
     if (Platform.OS === 'web') return;
     try {
         await Notifications.cancelScheduledNotificationAsync(FOCUS_NOTIFICATION_ID);
-    } catch (e) {
+    } catch {
         // ignore cancellation failure
     }
 };

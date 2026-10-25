@@ -1,7 +1,7 @@
 // components/profile/SettingsSection.tsx
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useMemo } from "react";
+import React from "react";
 import { Platform, Pressable, StyleSheet, Switch, Text, View } from "react-native";
 import { useSettings } from "../../context/SettingsContext";
 import { Theme } from "../../styles/shared";

@@ -54,7 +54,7 @@ export default function TermsScreen() {
                 
                 <Text style={styles.heading}>2. Use of Service</Text>
                 <Text style={styles.paragraph}>
-                    The app is provided "as is" to help you manage your daily routines and build mindfulness. We are not liable for any disruptions or inaccuracies in notification deliveries.
+                    The app is provided &quot;as is&quot; to help you manage your daily routines and build mindfulness. We are not liable for any disruptions or inaccuracies in notification deliveries.
                 </Text>
                 
                 <Text style={styles.heading}>3. User Data</Text>

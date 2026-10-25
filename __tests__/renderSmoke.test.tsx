@@ -73,7 +73,6 @@ const createAnimMock = () => {
 
 jest.mock("react-native-worklets", () => ({}));
 jest.mock("react-native-reanimated", () => {
-  const React = require("react");
   const { View, Text } = require("react-native");
   return {
     __esModule: true,

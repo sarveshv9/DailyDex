@@ -15,23 +15,32 @@ import { useTheme } from "../../context/ThemeContext";
 import { Theme } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
 
-interface ProfileCardProps {
-  userProfile: any;
+export interface ProfileUserData {
+  id?: string;
+  name: string;
+  avatar?: string;
+  role?: string;
+  email?: string;
+  bio?: string;
+}
+
+export interface ProfileCardProps<T extends ProfileUserData = ProfileUserData> {
+  userProfile: T;
   isEditingProfile: boolean;
-  setUserProfile: (fn: any) => void;
+  setUserProfile: React.Dispatch<React.SetStateAction<T>>;
   setIsEditingProfile: (v: boolean) => void;
   handleSaveProfile: () => void;
   onOpenEditModal?: () => void;
 }
 
-export const ProfileCard: React.FC<ProfileCardProps> = ({
+export function ProfileCard<T extends ProfileUserData = ProfileUserData>({
   userProfile,
   isEditingProfile,
   setUserProfile,
   setIsEditingProfile,
   handleSaveProfile,
   onOpenEditModal,
-}) => {
+}: ProfileCardProps<T>) {
   const { theme, isDarkMode } = useTheme();
   const styles = useMemo(() => getStyles(theme, isDarkMode), [theme, isDarkMode]);
 
@@ -114,7 +123,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
                 placeholder="Full Name"
                 placeholderTextColor={theme.colors.textSecondary + "70"}
                 onChangeText={(text) =>
-                  setUserProfile((prev: any) => ({ ...prev, name: text }))
+                  setUserProfile((prev) => ({ ...prev, name: text }))
                 }
               />
             </View>
@@ -134,7 +143,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
                 keyboardType="email-address"
                 autoCapitalize="none"
                 onChangeText={(text) =>
-                  setUserProfile((prev: any) => ({ ...prev, email: text }))
+                  setUserProfile((prev) => ({ ...prev, email: text }))
                 }
               />
             </View>
@@ -152,7 +161,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
                 placeholder="Mindful bio or daily intention..."
                 placeholderTextColor={theme.colors.textSecondary + "70"}
                 onChangeText={(text) =>
-                  setUserProfile((prev: any) => ({ ...prev, bio: text }))
+                  setUserProfile((prev) => ({ ...prev, bio: text }))
                 }
                 multiline
               />

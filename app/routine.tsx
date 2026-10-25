@@ -21,7 +21,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { DayTimelineView, TASK_COLORS } from "../components/dashboard/DayTimelineView";
-import TaskForm from "../components/dashboard/TaskForm";
+import { TaskForm } from "../components/dashboard/TaskForm";
 import TaskModal from "../components/dashboard/TaskModal";
 import { RoutineConfirmModal } from "../components/routine/RoutineConfirmModal";
 import { RoutineDayList } from "../components/routine/RoutineDayList";

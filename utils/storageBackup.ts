@@ -60,11 +60,11 @@ export async function importZenDataFromJson(
             success: true,
             restoredCount: entries.length,
         };
-    } catch (e: any) {
+    } catch (e: unknown) {
         return {
             success: false,
             restoredCount: 0,
-            error: e?.message || 'Failed to parse JSON backup string',
+            error: e instanceof Error ? e.message : 'Failed to parse JSON backup string',
         };
     }
 }

@@ -74,10 +74,15 @@ export interface RoutineTaskFormState {
 
 export type ActivePickerType = "none" | "time" | "duration" | "repeat" | "details" | "icon";
 
+export type RoutineItemWithNotes = Partial<RoutineItem> & { notes?: string };
+
 export interface UseRoutineTaskFormOptions {
-  initialItem?: Partial<RoutineItem> | null;
+  initialItem?: RoutineItemWithNotes | null;
   defaultTime?: string;
 }
+
+const getItemNotes = (item?: RoutineItemWithNotes | null): string =>
+  item?.description || item?.notes || "";
 
 export function useRoutineTaskForm(options: UseRoutineTaskFormOptions = {}) {
   const { initialItem, defaultTime = "8:00 AM" } = options;
@@ -91,7 +96,7 @@ export function useRoutineTaskForm(options: UseRoutineTaskFormOptions = {}) {
       initialItem?.daysOfWeek && initialItem.daysOfWeek.length > 0
         ? initialItem.daysOfWeek
         : [0, 1, 2, 3, 4, 5, 6],
-    notes: (initialItem as any)?.description || (initialItem as any)?.notes || "",
+    notes: getItemNotes(initialItem),
     subtasks: initialItem?.subtasks || [],
   });
 
@@ -133,7 +138,7 @@ export function useRoutineTaskForm(options: UseRoutineTaskFormOptions = {}) {
     []
   );
 
-  const resetForm = useCallback((item?: Partial<RoutineItem> | null) => {
+  const resetForm = useCallback((item?: RoutineItemWithNotes | null) => {
     setFormState({
       task: item?.task || "",
       time: item?.time || defaultTime,
@@ -143,7 +148,7 @@ export function useRoutineTaskForm(options: UseRoutineTaskFormOptions = {}) {
         item?.daysOfWeek && item.daysOfWeek.length > 0
           ? item.daysOfWeek
           : [0, 1, 2, 3, 4, 5, 6],
-      notes: (item as any)?.description || (item as any)?.notes || "",
+      notes: getItemNotes(item),
       subtasks: item?.subtasks || [],
     });
     setActivePicker("none");

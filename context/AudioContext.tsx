@@ -27,7 +27,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({
         await setAudioModeAsync({
           playsInSilentMode: true,
         });
-      } catch (error) {
+      } catch {
         // Error handling
       }
     };
@@ -61,7 +61,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({
       try {
         soundRef.current.pause();
         soundRef.current.remove();
-      } catch (error) {
+      } catch {
         // Ignore unload error
       }
       soundRef.current = null;
@@ -73,7 +73,7 @@ export const AudioProvider: React.FC<{ children: React.ReactNode }> = ({
       player.play();
       soundRef.current = player;
       setIsPlaying(true);
-    } catch (error) {
+    } catch {
       setIsPlaying(false);
     }
   }, []);

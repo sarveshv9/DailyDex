@@ -1,6 +1,6 @@
 // components/profile/SettingModal.tsx
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { Theme } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
@@ -37,15 +37,16 @@ export const SettingModal = ({
   const [email, setEmail] = useState(user.email);
   const [bio, setBio] = useState(user.bio);
 
-  // Sync state when visible changes
-  useEffect(() => {
-    if (visible && user) {
-      setName(user.name || "");
-      setRole(user.role || "");
-      setEmail(user.email || "");
-      setBio(user.bio || "");
-    }
-  }, [visible, user]);
+  const [prevVisible, setPrevVisible] = useState(visible);
+  if (visible && !prevVisible) {
+    setPrevVisible(true);
+    setName(user.name || "");
+    setRole(user.role || "");
+    setEmail(user.email || "");
+    setBio(user.bio || "");
+  } else if (!visible && prevVisible) {
+    setPrevVisible(false);
+  }
 
   const save = () => {
     const defaultAvatar = name ? name.trim().charAt(0).toUpperCase() : "U";

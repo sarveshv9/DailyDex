@@ -33,7 +33,14 @@ const ProgressRingComponent: React.FC<ProgressRingProps> = ({
         justifyContent: "center",
       }}
     >
-      <Svg width={size} height={size} style={{ position: "absolute" }}>
+      <Svg
+        width={size}
+        height={size}
+        style={{
+          position: "absolute",
+          transform: [{ rotate: "-90deg" }],
+        }}
+      >
         <Circle
           cx={size / 2}
           cy={size / 2}
@@ -52,8 +59,6 @@ const ProgressRingComponent: React.FC<ProgressRingProps> = ({
           strokeDasharray={`${circumference} ${circumference}`}
           strokeDashoffset={strokeDashoffset}
           strokeLinecap="round"
-          rotation="-90"
-          origin={`${size / 2}, ${size / 2}`}
         />
       </Svg>
       {children}

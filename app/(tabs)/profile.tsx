@@ -53,7 +53,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { theme, themeName, setThemeName, isAutoTheme, setIsAutoTheme, isDarkMode, setIsDarkMode } = useTheme();
   const { selectedSong, setSelectedSong } = useAudio();
-  const { session, signOut, updateUser } = useAuth();
+  const { signOut, updateUser } = useAuth();
   const { settings } = useSettings();
 
   const styles = useMemo(() => makeStyles(theme), [theme]);

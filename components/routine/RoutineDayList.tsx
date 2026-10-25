@@ -99,9 +99,14 @@ const RoutineDayListComponent: React.FC<RoutineDayListProps> = ({
     return positions;
   }, [pageItems]);
 
+  const containerStyle = useMemo(
+    () => ({ width, height: height || undefined }),
+    [width, height]
+  );
+
   return (
     <ScrollView
-      style={{ width, height: height || undefined }}
+      style={containerStyle}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
       onScroll={isCenterPage ? onScroll : undefined}

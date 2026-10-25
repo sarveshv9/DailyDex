@@ -4,16 +4,22 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
+  GestureResponderEvent,
   Modal,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   PanResponder,
+  PanResponderGestureState,
   Platform,
   Pressable,
   ScrollView,
+  StyleProp,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
+  ViewStyle,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Theme } from "../../styles/shared";
@@ -21,20 +27,15 @@ import { useTheme } from "../../context/ThemeContext";
 import * as Haptics from "../../utils/haptics";
 import {
   RoutineItem,
-  SubTask,
-  parseTime,
   getRoutineIcon,
   addMinutesToTime,
   guessRoutineIconKey,
-  ICON_GROUPS,
 } from "../../utils/utils";
 import { TimePicker } from "../ui/TimePicker";
 import { DaysOfWeekPicker, DurationPicker, IconPickerModal, SubtaskList } from "../forms";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import {
-  DAYS_OF_WEEK,
-  DURATION_PRESETS,
   TASK_COLORS,
   FALLBACK_COLORS,
   formatDuration,
@@ -43,7 +44,7 @@ import {
 interface TaskModalProps {
   visible: boolean;
   task: RoutineItem | null;
-  animatedStyle?: any;
+  animatedStyle?: StyleProp<ViewStyle>;
   onClose: () => void;
   onEdit?: () => void;
   onSaveTask?: (updatedTask: RoutineItem) => void;
@@ -64,7 +65,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
   const { theme, isDarkMode } = useTheme();
   const styles = useMemo(() => getCachedStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
-  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const [slideAnim] = useState(() => new Animated.Value(SCREEN_HEIGHT));
 
   const cloneTask = (t: RoutineItem): RoutineItem => ({
     ...t,
@@ -75,7 +76,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(task?.id ?? null);
   const [editedTask, setEditedTask] = useState<RoutineItem | null>(() => (task ? cloneTask(task) : null));
   const [activeAccordion, setActiveAccordion] = useState<"none" | "time" | "duration" | "repeat">("none");
-  const [newSubtaskText, setNewSubtaskText] = useState("");
   const [showIconPicker, setShowIconPicker] = useState(false);
 
   // Synchronously sync state during render when a new task is received or modal becomes visible
@@ -84,7 +84,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
     setEditedTask(cloneTask(task));
     setActiveAccordion("none");
     setShowIconPicker(false);
-    setNewSubtaskText("");
   }
 
   const scrollOffset = useRef(0);
@@ -127,13 +126,13 @@ const TaskModal: React.FC<TaskModalProps> = ({
   };
 
   /* ── Pan Gesture for Smooth Pull-Down Dismiss ── */
-  const handlePanResponderMove = (_: any, gestureState: any) => {
+  const handlePanResponderMove = (_: GestureResponderEvent, gestureState: PanResponderGestureState) => {
     if (gestureState.dy > 0) {
       slideAnim.setValue(gestureState.dy);
     }
   };
 
-  const handlePanResponderRelease = (_: any, gestureState: any) => {
+  const handlePanResponderRelease = (_: GestureResponderEvent, gestureState: PanResponderGestureState) => {
     if (gestureState.dy > 90 || gestureState.vy > 0.9) {
       closeAndSave();
     } else {
@@ -146,32 +145,42 @@ const TaskModal: React.FC<TaskModalProps> = ({
     }
   };
 
-  const headerPanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => Platform.OS !== "web",
-      onMoveShouldSetPanResponder: (_, gestureState) => Platform.OS !== "web" && Math.abs(gestureState.dy) > 10,
-      onPanResponderMove: handlePanResponderMove,
-      onPanResponderRelease: handlePanResponderRelease,
-    })
-  ).current;
+   const headerPanResponder = useMemo(
+    () =>
+      Platform.OS === "web"
+        ? { panHandlers: {} }
+        // eslint-disable-next-line react-hooks/refs
+        : PanResponder.create({
+            onStartShouldSetPanResponder: () => true,
+            onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dy) > 10,
+            onPanResponderMove: handlePanResponderMove,
+            onPanResponderRelease: handlePanResponderRelease,
+          }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [slideAnim]
+  );
 
-  const bodyPanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponderCapture: (_, gestureState) => {
-        if (Platform.OS === "web") return false;
-        return gestureState.dy > 15 && scrollOffset.current <= 1;
-      },
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        if (Platform.OS === "web") return false;
-        return gestureState.dy > 15 && scrollOffset.current <= 1;
-      },
-      onPanResponderMove: handlePanResponderMove,
-      onPanResponderRelease: handlePanResponderRelease,
-    })
-  ).current;
+   const bodyPanResponder = useMemo(
+    () =>
+      Platform.OS === "web"
+        ? { panHandlers: {} }
+        // eslint-disable-next-line react-hooks/refs
+        : PanResponder.create({
+            onStartShouldSetPanResponder: () => false,
+            onMoveShouldSetPanResponderCapture: (_, gestureState) => {
+              return gestureState.dy > 15 && scrollOffset.current <= 1;
+            },
+            onMoveShouldSetPanResponder: (_, gestureState) => {
+              return gestureState.dy > 15 && scrollOffset.current <= 1;
+            },
+            onPanResponderMove: handlePanResponderMove,
+            onPanResponderRelease: handlePanResponderRelease,
+          }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [slideAnim]
+  );
 
-  const handleScroll = (e: any) => {
+  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     scrollOffset.current = e.nativeEvent.contentOffset.y;
     if (scrollOffset.current < -60) {
       closeAndSave();
@@ -196,8 +205,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
     }
   }, [visible, slideAnim]);
 
-  if (!task || !editedTask) return null;
-
   const handleSave = () => {
     if (onSaveTask && editedTask) {
       onSaveTask(editedTask);
@@ -205,7 +212,11 @@ const TaskModal: React.FC<TaskModalProps> = ({
     onClose();
   };
 
-  handleSaveRef.current = handleSave;
+  useEffect(() => {
+    handleSaveRef.current = handleSave;
+  });
+
+  if (!task || !editedTask) return null;
 
   /* ── Time Calculations ── */
   const getDisplayTime = () => {
@@ -224,68 +235,12 @@ const TaskModal: React.FC<TaskModalProps> = ({
     return `${days.length}d/wk`;
   };
 
-  const toggleDay = (dayValue: number) => {
-    Haptics.selectionAsync();
-    setEditedTask((prev) => {
-      if (!prev) return prev;
-      const current = prev.daysOfWeek || [];
-      const next = current.includes(dayValue)
-        ? current.filter((d) => d !== dayValue)
-        : [...current, dayValue].sort();
-      return { ...prev, daysOfWeek: next };
-    });
-  };
-
   const adjustDuration = (delta: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setEditedTask((prev) => {
       if (!prev) return prev;
       const cur = prev.duration || 30;
       return { ...prev, duration: Math.max(5, Math.min(240, cur + delta)) };
-    });
-  };
-
-  /* ── Subtask Handlers ── */
-  const toggleSubtask = (id: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setEditedTask((prev) => {
-      if (!prev) return prev;
-      const subtasks = prev.subtasks?.map((st) =>
-        st.id === id ? { ...st, completed: !st.completed } : st
-      );
-      return { ...prev, subtasks };
-    });
-  };
-
-  const addSubtask = () => {
-    if (!newSubtaskText.trim()) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setEditedTask((prev) => {
-      if (!prev) return prev;
-      const newSt: SubTask = {
-        id: Date.now().toString(),
-        title: newSubtaskText.trim(),
-        completed: false,
-      };
-      return { ...prev, subtasks: [...(prev.subtasks || []), newSt] };
-    });
-    setNewSubtaskText("");
-  };
-
-  const editSubtask = (id: string, text: string) => {
-    setEditedTask((prev) => {
-      if (!prev) return prev;
-      const subtasks = prev.subtasks?.map((st) => (st.id === id ? { ...st, title: text } : st));
-      return { ...prev, subtasks };
-    });
-  };
-
-  const deleteSubtask = (id: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setEditedTask((prev) => {
-      if (!prev) return prev;
-      const subtasks = prev.subtasks?.filter((st) => st.id !== id);
-      return { ...prev, subtasks };
     });
   };
 

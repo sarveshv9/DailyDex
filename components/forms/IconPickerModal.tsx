@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
+  FlatList,
   Modal,
   Pressable,
   ScrollView,
@@ -99,16 +100,19 @@ export const IconPickerModal: React.FC<IconPickerModalProps> = ({
           </ScrollView>
 
           {/* Icon Grid */}
-          <ScrollView
+          <FlatList
+            key={currentCategory.category}
+            data={currentCategory.icons}
+            keyExtractor={(item) => item.key}
+            numColumns={4}
             style={styles.gridScroll}
             contentContainerStyle={styles.grid}
+            columnWrapperStyle={styles.columnWrapper}
             showsVerticalScrollIndicator={false}
-          >
-            {currentCategory.icons.map((item) => {
+            renderItem={({ item }) => {
               const isSelected = currentIconKey === item.key;
               return (
                 <Pressable
-                  key={item.key}
                   style={({ pressed }) => [
                     styles.gridItem,
                     pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] },
@@ -148,8 +152,8 @@ export const IconPickerModal: React.FC<IconPickerModalProps> = ({
                   </Text>
                 </Pressable>
               );
-            })}
-          </ScrollView>
+            }}
+          />
         </Pressable>
       </Pressable>
     </Modal>
@@ -213,10 +217,10 @@ const styles = StyleSheet.create({
     maxHeight: 340,
   },
   grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
     paddingTop: 8,
+  },
+  columnWrapper: {
+    justifyContent: "space-between",
   },
   gridItem: {
     width: "23%",

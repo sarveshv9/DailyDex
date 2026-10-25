@@ -117,14 +117,16 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       if (!nextVal) {
         cancelAllRoutineNotifications();
       } else {
-        AsyncStorage.getItem(ROUTINE_STORAGE_KEY).then((data) => {
-          if (data) {
-            try {
-              const routines = JSON.parse(data);
-              scheduleRoutineNotifications(routines);
-            } catch {}
-          }
-        });
+        AsyncStorage.getItem(ROUTINE_STORAGE_KEY)
+          .then((data) => {
+            if (data) {
+              try {
+                const routines = JSON.parse(data);
+                scheduleRoutineNotifications(routines);
+              } catch {}
+            }
+          })
+          .catch(() => {});
       }
     }
   },

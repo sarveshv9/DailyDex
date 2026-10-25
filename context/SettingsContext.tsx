@@ -1,6 +1,6 @@
 // context/SettingsContext.tsx
-import React, { createContext, useContext, useMemo } from 'react';
-import { useSettingsStore, Settings, DEFAULT_SETTINGS } from '../stores/settingsStore';
+import React, { createContext, useMemo } from 'react';
+import { useSettingsStore, Settings } from '../stores/settingsStore';
 
 export type { Settings };
 

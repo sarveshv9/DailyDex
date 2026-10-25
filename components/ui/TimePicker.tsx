@@ -3,6 +3,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { Clock } from "lucide-react-native";
 import { useTheme } from "../../context/ThemeContext";
 import { useAppHaptics } from "../../hooks/useAppHaptics";
+import { WebTimePicker } from "../common/WebTimePicker";
 import { Theme } from "../../styles/shared";
 
 export interface TimePickerProps {
@@ -21,7 +22,6 @@ export const TimePicker: React.FC<TimePickerProps> = ({
   const styles = useMemo(() => getStyles(theme), [theme]);
 
   if (Platform.OS === "web") {
-    const { WebTimePicker } = require("../common/WebTimePicker");
     return (
       <View style={styles.container}>
         <WebTimePicker value={value || "1:00 AM"} onChange={onChange} />

@@ -9,7 +9,6 @@ import {
   Home,
   Moon,
   MoonStar,
-  Play,
   User,
   type LucideIcon,
 } from "lucide-react-native";

@@ -26,7 +26,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   GestureHandlerRootView,
   State as GestureState,
-  PanGestureHandler
+  PanGestureHandler,
+  PanGestureHandlerStateChangeEvent,
 } from 'react-native-gesture-handler';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -53,6 +54,7 @@ function CustomTabBar({
 
   const tabBarWidth = width * 0.9;
   const tabWidth = tabBarWidth / state.routes.length;
+  type TabRoute = (typeof state.routes)[number];
 
   // Android hardware back button: return to 'index' (Home) tab if on another tab
   useEffect(() => {
@@ -71,12 +73,12 @@ function CustomTabBar({
 
   // Use interpolation to move the indicator
   const translateX = position.interpolate({
-    inputRange: state.routes.map((_: any, i: number) => i),
-    outputRange: state.routes.map((_: any, i: number) => i * tabWidth),
+    inputRange: state.routes.map((_: TabRoute, i: number) => i),
+    outputRange: state.routes.map((_: TabRoute, i: number) => i * tabWidth),
   });
 
   // Reference to track gesture translation
-  const gestureTranslationX = React.useRef(new Animated.Value(0)).current;
+  const [gestureTranslationX] = React.useState(() => new Animated.Value(0));
 
   // Add haptic feedback when screen swipe changes tabs
   useEffect(() => {
@@ -91,7 +93,7 @@ function CustomTabBar({
     { useNativeDriver: false }
   );
 
-  const onHandlerStateChange = (event: any) => {
+  const onHandlerStateChange = (event: PanGestureHandlerStateChangeEvent) => {
     if (event.nativeEvent.state === GestureState.END) {
       const { translationX, velocityX } = event.nativeEvent;
 
@@ -155,7 +157,7 @@ function CustomTabBar({
           {/* Glass tint overlay */}
           <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.glass.cardBg }]} />
           {/* Background icons (outlined) - each in their own position */}
-          {state.routes.map((route: any, index: number) => {
+          {state.routes.map((route: TabRoute, index: number) => {
             const { options } = descriptors[route.key];
             const icon = options.tabBarIcon as (props: {
               focused: boolean;
@@ -189,7 +191,7 @@ function CustomTabBar({
             ]}
           >
             {/* Foreground icons (filled) - these are revealed as the indicator moves */}
-            {state.routes.map((route: any, index: number) => {
+            {state.routes.map((route: TabRoute, index: number) => {
               const { options } = descriptors[route.key];
               const icon = options.tabBarIcon as (props: {
                 focused: boolean;
@@ -198,8 +200,8 @@ function CustomTabBar({
 
               // Calculate the position of each icon relative to the indicator
               const iconTranslateX = position.interpolate({
-                inputRange: state.routes.map((_: any, i: number) => i),
-                outputRange: state.routes.map((_: any, i: number) => (i - index) * tabWidth),
+                inputRange: state.routes.map((_: TabRoute, i: number) => i),
+                outputRange: state.routes.map((_: TabRoute, i: number) => (i - index) * tabWidth),
               });
 
               return (
@@ -224,7 +226,7 @@ function CustomTabBar({
           </Animated.View>
 
           {/* The pressable areas, layered on top */}
-          {state.routes.map((route: any, index: number) => {
+          {state.routes.map((route: TabRoute, index: number) => {
             const isFocused = state.index === index;
 
             const onPress = () => {
@@ -266,9 +268,9 @@ function CustomTabBar({
 
 export default function TabLayout() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={styles.root}>
       <MaterialTopTabs
-        tabBar={(props: any) => <CustomTabBar {...props} />}
+        tabBar={(props: MaterialTopTabBarProps) => <CustomTabBar {...props} />}
         tabBarPosition="bottom"
         initialRouteName="index"
         screenOptions={{
@@ -322,6 +324,9 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
   tabBarContainer: {
     position: 'absolute',
     bottom: 30,

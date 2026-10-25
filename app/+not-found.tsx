@@ -37,7 +37,7 @@ export default function NotFoundScreen() {
 
             <Text style={styles.title}>Page Not Found</Text>
             <Text style={styles.subtitle}>
-              The screen you are looking for doesn't exist or may have been moved.
+              The screen you are looking for doesn&apos;t exist or may have been moved.
             </Text>
 
             {/* Standard Primary CTA Button (height: 56, borderRadius: 22, glowing drop shadow) */}
