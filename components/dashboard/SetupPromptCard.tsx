@@ -3,7 +3,7 @@ import { BlurView } from "expo-blur";
 import React, { useMemo } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
-import { Theme } from "../../styles/shared";
+import { Theme, getSharedStyles } from "../../styles/shared";
 import { themeTokens } from "../../constants/themeTokens";
 
 export interface SetupPromptCardProps {
@@ -82,12 +82,11 @@ const SetupPromptCardComponent: React.FC<SetupPromptCardProps> = ({
 
 export const SetupPromptCard = React.memo(SetupPromptCardComponent);
 
-const getStyles = (theme: Theme, isDarkMode: boolean) =>
-  StyleSheet.create({
+const getStyles = (theme: Theme, isDarkMode: boolean) => {
+  const shared = getSharedStyles(theme);
+  return StyleSheet.create({
     container: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
+      ...shared.centeredContainer,
       paddingHorizontal: 20,
     },
     setupCard: {
@@ -147,19 +146,15 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
       marginBottom: 12,
     },
     primaryButton: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 8,
-      backgroundColor: theme.colors.primary,
+      ...shared.primaryButton,
       paddingVertical: 16,
       paddingHorizontal: 32,
       borderRadius: 20,
       width: "100%",
     },
     primaryButtonText: {
+      ...shared.primaryButtonText,
       fontSize: themeTokens.fonts.size.md,
-      fontFamily: theme.fonts.bold,
-      color: theme.colors.white,
     },
   });
+};

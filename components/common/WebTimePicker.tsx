@@ -7,7 +7,7 @@ import {
   View,
 } from "react-native";
 import { ChevronDown, ChevronUp, Clock, Plus, Minus } from "lucide-react-native";
-import { Theme } from "../../styles/shared";
+import { Theme, getSharedStyles } from "../../styles/shared";
 import { useTheme } from "../../context/ThemeContext";
 import * as Haptics from "../../utils/haptics";
 
@@ -376,8 +376,9 @@ export const WebDurationPicker: React.FC<WebDurationPickerProps> = ({
   );
 };
 
-const getStyles = (theme: Theme) =>
-  StyleSheet.create({
+const getStyles = (theme: Theme) => {
+  const shared = getSharedStyles(theme);
+  return StyleSheet.create({
     container: {
       alignItems: "center",
       justifyContent: "center",
@@ -385,13 +386,10 @@ const getStyles = (theme: Theme) =>
       paddingVertical: 4,
     },
     clockCard: {
+      ...shared.glassCard,
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: theme.glass.cardBg,
-      borderWidth: 1,
-      borderColor: theme.glass.borderColor,
-      borderRadius: theme.borderRadius.lg,
       padding: 12,
       gap: 8,
       ...Platform.select({
@@ -507,8 +505,7 @@ const getStyles = (theme: Theme) =>
       marginTop: 12,
     },
     quickChip: {
-      flexDirection: "row",
-      alignItems: "center",
+      ...shared.chip,
       gap: 4,
       paddingHorizontal: 12,
       paddingVertical: 6,
@@ -522,13 +519,11 @@ const getStyles = (theme: Theme) =>
       transform: [{ scale: 0.95 }],
     },
     quickChipText: {
-      fontSize: 12,
-      fontFamily: theme.fonts.medium,
+      ...shared.chipText,
       color: theme.colors.text,
     },
     summaryBadge: {
-      flexDirection: "row",
-      alignItems: "center",
+      ...shared.badge,
       gap: 6,
       paddingHorizontal: 12,
       paddingVertical: 5,
@@ -537,8 +532,8 @@ const getStyles = (theme: Theme) =>
       marginTop: 10,
     },
     summaryText: {
+      ...shared.badgeText,
       fontSize: 12,
-      fontFamily: theme.fonts.bold,
     },
     presetWrap: {
       flexDirection: "row",
@@ -578,5 +573,6 @@ const getStyles = (theme: Theme) =>
       fontFamily: theme.fonts.bold,
     },
   });
+};
 
 export default WebTimePicker;

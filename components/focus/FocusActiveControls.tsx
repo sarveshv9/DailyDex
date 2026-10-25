@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { themeTokens } from "../../constants/themeTokens";
-import { Theme } from "../../styles/shared";
+import { Theme, getSharedStyles } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
 
 export interface FocusActiveControlsProps {
@@ -159,8 +159,9 @@ const FocusActiveControlsComponent: React.FC<FocusActiveControlsProps> = ({
 
 export const FocusActiveControls = React.memo(FocusActiveControlsComponent);
 
-const getStyles = (theme: Theme, isDarkMode: boolean) =>
-  StyleSheet.create({
+const getStyles = (theme: Theme, isDarkMode: boolean) => {
+  const shared = getSharedStyles(theme);
+  return StyleSheet.create({
     activeControlsSection: {
       width: "100%",
       alignItems: "center",
@@ -174,12 +175,8 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
       width: "100%",
     },
     actionPillPrimary: {
+      ...shared.primaryButton,
       flex: 1.3,
-      height: 56,
-      borderRadius: themeTokens.borderRadius.xl,
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
       gap: themeTokens.spacing.sm,
     },
     actionPillResume: {
@@ -193,29 +190,23 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
       borderColor: `${theme.colors.primary}50`,
     },
     actionPillPrimaryText: {
-      fontFamily: theme.fonts.bold,
+      ...shared.primaryButtonText,
       fontSize: themeTokens.fonts.size.md,
-      color: theme.colors.white,
     },
     actionPillPauseText: {
       color: theme.colors.primary,
     },
     actionPillSecondary: {
+      ...shared.secondaryButton,
       flex: 1,
-      height: 56,
-      borderRadius: themeTokens.borderRadius.xl,
-      borderWidth: 1,
       borderColor: theme.glass.borderColor,
       backgroundColor: isDarkMode
         ? "rgba(255, 255, 255, 0.06)"
         : "rgba(0, 0, 0, 0.04)",
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
       gap: 6,
     },
     actionPillSecondaryText: {
-      fontFamily: theme.fonts.bold,
+      ...shared.secondaryButtonText,
       fontSize: themeTokens.fonts.size.sm,
       color: theme.colors.primary,
     },
@@ -252,3 +243,4 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
       transform: [{ scale: 0.97 }],
     },
   });
+};

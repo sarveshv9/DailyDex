@@ -15,7 +15,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-import { Theme } from "../../styles/shared";
+import { Theme, getSharedStyles } from "../../styles/shared";
 import { useTheme } from "../../context/ThemeContext";
 import * as Haptics from "../../utils/haptics";
 import {
@@ -943,8 +943,9 @@ const TaskFormInner: React.FC<TaskFormProps> = ({
 
 /* ─────────────────────────────── Styles ─────────────────────────────── */
 
-const getStyles = (theme: Theme) =>
-  StyleSheet.create({
+const getStyles = (theme: Theme) => {
+  const shared = getSharedStyles(theme);
+  return StyleSheet.create({
     overlay: {
       flex: 1,
       justifyContent: "flex-end",
@@ -969,11 +970,8 @@ const getStyles = (theme: Theme) =>
       }),
     },
     handle: {
+      ...shared.modalHandle,
       width: 36,
-      height: 4,
-      borderRadius: 2,
-      backgroundColor: `${theme.colors.text}20`,
-      alignSelf: "center",
       marginBottom: 12,
     },
     header: {
@@ -1037,18 +1035,13 @@ const getStyles = (theme: Theme) =>
       paddingRight: 10,
     },
     inspirationChip: {
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: `${theme.colors.text}08`,
-      borderWidth: 1,
-      borderColor: `${theme.colors.text}0E`,
+      ...shared.chip,
       paddingVertical: 6,
       paddingHorizontal: 12,
       borderRadius: 16,
     },
     inspirationText: {
-      fontSize: 12,
-      fontFamily: theme.fonts.medium,
+      ...shared.chipText,
       color: theme.colors.text,
     },
 
@@ -1350,6 +1343,7 @@ const getStyles = (theme: Theme) =>
       textAlign: "center",
     },
   });
+};
 
 export const TaskForm: React.FC<TaskFormProps> = (props) => {
   const { visible, isEditing, formData, initialItem } = props;

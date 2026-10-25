@@ -14,7 +14,7 @@ import {
 import { useTheme } from "../../context/ThemeContext";
 import { useAppHaptics } from "../../hooks/useAppHaptics";
 import { themeTokens } from "../../constants/themeTokens";
-import { Theme } from "../../styles/shared";
+import { getSharedStyles, Theme } from "../../styles/shared";
 
 export interface ModalSheetProps {
   visible: boolean;
@@ -42,6 +42,7 @@ export const ModalSheet: React.FC<ModalSheetProps> = ({
   const { theme: contextTheme } = useTheme();
   const theme = customTheme ?? contextTheme;
   const { light } = useAppHaptics();
+  const shared = useMemo(() => getSharedStyles(theme), [theme]);
   const styles = useMemo(() => getStyles(theme), [theme]);
 
   const handleClose = () => {
@@ -60,22 +61,23 @@ export const ModalSheet: React.FC<ModalSheetProps> = ({
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.container}
       >
-        <Pressable style={styles.backdrop} onPress={handleClose} />
+        <Pressable style={shared.modalBackdrop} onPress={handleClose} />
         <View style={[styles.sheet, contentContainerStyle]}>
-          {showHandle && <View style={styles.handle} />}
+          {showHandle && <View style={shared.modalHandle} />}
 
           {(title || showCloseButton) && (
-            <View style={styles.header}>
+            <View style={shared.modalHeader}>
               <View style={styles.titleContainer}>
-                {title && <Text style={styles.title}>{title}</Text>}
-                {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+                {title && <Text style={shared.modalTitle}>{title}</Text>}
+                {subtitle && <Text style={shared.modalSubtitle}>{subtitle}</Text>}
               </View>
 
               {showCloseButton && (
                 <Pressable
                   onPress={handleClose}
                   style={({ pressed }) => [
-                    styles.closeButton,
+                    shared.modalCloseButton,
+                    styles.closeButtonMargin,
                     pressed && styles.closeButtonPressed,
                   ]}
                   hitSlop={8}
@@ -103,10 +105,6 @@ const getStyles = (theme: Theme) => {
       flex: 1,
       justifyContent: "flex-end",
     },
-    backdrop: {
-      ...StyleSheet.absoluteFill,
-      backgroundColor: "rgba(0, 0, 0, 0.45)",
-    },
     sheet: {
       backgroundColor: theme.colors.card,
       borderTopLeftRadius: theme.borderRadius.lg + 8,
@@ -129,42 +127,10 @@ const getStyles = (theme: Theme) => {
         },
       }),
     },
-    handle: {
-      width: 40,
-      height: 4,
-      borderRadius: 2,
-      backgroundColor: theme.colors.textSecondary + "40",
-      alignSelf: "center",
-      marginBottom: theme.spacing.sm,
-    },
-    header: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingVertical: theme.spacing.sm,
-      marginBottom: theme.spacing.xs,
-    },
     titleContainer: {
       flex: 1,
     },
-    title: {
-      fontSize: 20,
-      fontFamily: theme.fonts.bold,
-      color: theme.colors.text,
-    },
-    subtitle: {
-      fontSize: 13,
-      fontFamily: theme.fonts.regular,
-      color: theme.colors.textSecondary,
-      marginTop: 2,
-    },
-    closeButton: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      backgroundColor: theme.glass.neutralFill,
-      alignItems: "center",
-      justifyContent: "center",
+    closeButtonMargin: {
       marginLeft: theme.spacing.md,
     },
     closeButtonPressed: {

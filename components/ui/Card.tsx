@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { useTheme } from "../../context/ThemeContext";
 import { useAppHaptics } from "../../hooks/useAppHaptics";
-import { Theme } from "../../styles/shared";
+import { getSharedStyles, Theme } from "../../styles/shared";
 
 export type CardVariant = "glass" | "solid" | "elevated";
 export type CardPadding = "none" | "sm" | "md" | "lg";
@@ -60,10 +60,24 @@ export const Card: React.FC<CardProps> = ({
 };
 
 const getStyles = (theme: Theme, variant: CardVariant, padding: CardPadding) => {
+  const shared = getSharedStyles(theme);
   let paddingValue = theme.spacing.md;
   if (padding === "none") paddingValue = 0;
   else if (padding === "sm") paddingValue = theme.spacing.sm;
   else if (padding === "lg") paddingValue = theme.spacing.lg;
+
+  if (variant === "glass") {
+    return StyleSheet.create({
+      card: {
+        ...shared.glassCard,
+        padding: paddingValue,
+      },
+      pressed: {
+        opacity: 0.88,
+        transform: [{ scale: Platform.OS === "ios" ? 0.99 : 1 }],
+      },
+    });
+  }
 
   let backgroundColor = theme.glass.cardBg;
   let borderColor = theme.glass.borderColor;

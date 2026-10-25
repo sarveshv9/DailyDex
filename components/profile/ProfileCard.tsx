@@ -12,7 +12,7 @@ import {
   View,
 } from "react-native";
 import { useTheme } from "../../context/ThemeContext";
-import { Theme } from "../../styles/shared";
+import { Theme, getSharedStyles } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
 
 export interface ProfileUserData {
@@ -223,13 +223,11 @@ export function ProfileCard<T extends ProfileUserData = ProfileUserData>({
   );
 };
 
-const getStyles = (theme: Theme, isDark: boolean) =>
-  StyleSheet.create({
+const getStyles = (theme: Theme, isDark: boolean) => {
+  const shared = getSharedStyles(theme);
+  return StyleSheet.create({
     cardContainer: {
-      borderRadius: 28,
-      overflow: "hidden",
-      borderWidth: 1,
-      borderColor: theme.glass.borderColor,
+      ...shared.glassCard,
       ...Platform.select({
         ios: {
           shadowColor: theme.glows.card.shadowColor,
@@ -372,20 +370,11 @@ const getStyles = (theme: Theme, isDark: boolean) =>
       marginTop: theme.spacing.xs,
     },
     inputSectionLabel: {
-      fontSize: 12,
-      fontFamily: theme.fonts.bold,
-      color: theme.colors.textSecondary,
-      textTransform: "uppercase",
-      letterSpacing: 0.8,
+      ...shared.inputLabel,
       marginBottom: 10,
     },
     inputWrapper: {
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: `${theme.colors.secondary}0A`,
-      borderRadius: 18,
-      borderWidth: 1,
-      borderColor: `${theme.colors.secondary}15`,
+      ...shared.inputWrapper,
       paddingHorizontal: 14,
       marginBottom: 10,
     },
@@ -393,32 +382,21 @@ const getStyles = (theme: Theme, isDark: boolean) =>
       marginRight: 10,
     },
     input: {
-      flex: 1,
+      ...shared.textInput,
       height: 48,
-      fontSize: 15,
-      color: theme.colors.text,
-      fontFamily: theme.fonts.medium,
     },
     bioInput: {
       height: 70,
       textAlignVertical: "top",
     },
     saveButton: {
-      height: 56,
-      borderRadius: 22,
-      backgroundColor: theme.colors.primary,
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 8,
+      ...shared.primaryButton,
       marginTop: 10,
-      ...theme.glows.primary,
     },
     saveButtonText: {
-      color: theme.colors.white,
-      fontSize: 16,
-      fontFamily: theme.fonts.bold,
+      ...shared.primaryButtonText,
     },
   });
+};
 
 export default ProfileCard;

@@ -76,7 +76,7 @@ export const SubtaskList: React.FC<SubtaskListProps> = ({
             hitSlop={8}
           >
             {st.completed && (
-              <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+              <Ionicons name="checkmark" size={14} color={theme.colors.white} />
             )}
           </TouchableOpacity>
 
@@ -138,7 +138,7 @@ export const SubtaskList: React.FC<SubtaskListProps> = ({
           onPress={handleAdd}
           disabled={!newSubtaskTitle.trim()}
         >
-          <Ionicons name="add" size={20} color="#FFFFFF" />
+          <Ionicons name="add" size={20} color={theme.colors.white} />
         </TouchableOpacity>
       </View>
     </View>

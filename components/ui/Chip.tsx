@@ -12,7 +12,7 @@ import {
 import { useTheme } from "../../context/ThemeContext";
 import { useAppHaptics } from "../../hooks/useAppHaptics";
 import { themeTokens } from "../../constants/themeTokens";
-import { Theme } from "../../styles/shared";
+import { getSharedStyles, Theme } from "../../styles/shared";
 
 export interface ChipProps {
   label: string;
@@ -70,32 +70,16 @@ export const Chip: React.FC<ChipProps> = ({
 };
 
 const getStyles = (theme: Theme, selected: boolean, size: "sm" | "md") => {
+  const shared = getSharedStyles(theme);
   const isSm = size === "sm";
   const paddingVertical = isSm ? theme.spacing.xs : theme.spacing.sm;
   const paddingHorizontal = isSm ? theme.spacing.sm : theme.spacing.md;
   const fontSize = isSm ? themeTokens.fonts.size.xs : themeTokens.fonts.size.sm;
 
-  const backgroundColor = selected
-    ? theme.colors.primary
-    : theme.glass.neutralFill;
-
-  const textColor = selected
-    ? theme.colors.white
-    : theme.colors.text;
-
-  const borderColor = selected
-    ? theme.colors.primary
-    : theme.glass.borderColor;
-
   return StyleSheet.create({
     chip: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor,
-      borderColor,
-      borderWidth: 1,
-      borderRadius: themeTokens.borderRadius.full,
+      ...shared.chip,
+      ...(selected ? shared.chipActive : {}),
       paddingVertical,
       paddingHorizontal,
       minHeight: isSm ? 28 : 36,
@@ -106,9 +90,9 @@ const getStyles = (theme: Theme, selected: boolean, size: "sm" | "md") => {
       marginRight: theme.spacing.xs,
     },
     text: {
-      color: textColor,
       fontSize,
       fontFamily: selected ? theme.fonts.bold : theme.fonts.medium,
+      color: selected ? theme.colors.white : theme.colors.text,
     },
     badge: {
       marginLeft: theme.spacing.xs,
@@ -120,7 +104,7 @@ const getStyles = (theme: Theme, selected: boolean, size: "sm" | "md") => {
     badgeText: {
       fontSize: 10,
       fontFamily: theme.fonts.bold,
-      color: textColor,
+      color: selected ? theme.colors.white : theme.colors.text,
     },
     pressed: {
       opacity: 0.8,

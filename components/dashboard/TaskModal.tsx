@@ -22,7 +22,7 @@ import {
   ViewStyle,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Theme } from "../../styles/shared";
+import { Theme, getSharedStyles, themeTokens } from "../../styles/shared";
 import { useTheme } from "../../context/ThemeContext";
 import * as Haptics from "../../utils/haptics";
 import {
@@ -330,7 +330,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 title="Save"
                 variant="primary"
                 size="sm"
-                icon={<Ionicons name="checkmark" size={16} color="#FFFFFF" />}
+                icon={<Ionicons name="checkmark" size={16} color={theme.colors.white} />}
                 onPress={closeAndSave}
               />
             </View>
@@ -359,7 +359,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                   color={taskColor}
                 />
                 <View style={[styles.heroEditPencilDot, { backgroundColor: theme.colors.primary }]}>
-                  <Ionicons name="pencil" size={9} color="#FFFFFF" />
+                  <Ionicons name="pencil" size={9} color={theme.colors.white} />
                 </View>
               </TouchableOpacity>
 
@@ -700,7 +700,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     title="Delete"
                     variant="destructive"
                     size="sm"
-                    icon={<Ionicons name="trash-outline" size={16} color="#FF453A" />}
+                    icon={<Ionicons name="trash-outline" size={16} color={themeTokens.colors.danger} />}
                     onPress={() => {
                       onDelete();
                       closeWithoutSave();
@@ -745,8 +745,9 @@ const getCachedStyles = (theme: Theme) => {
   return s;
 };
 
-const getStyles = (theme: Theme) =>
-  StyleSheet.create({
+const getStyles = (theme: Theme) => {
+  const shared = getSharedStyles(theme);
+  return StyleSheet.create({
     overlay: {
       flex: 1,
       justifyContent: "flex-end",
@@ -770,11 +771,8 @@ const getStyles = (theme: Theme) =>
       }),
     },
     handle: {
+      ...shared.modalHandle,
       width: 38,
-      height: 4,
-      borderRadius: 2,
-      backgroundColor: `${theme.colors.text}25`,
-      alignSelf: "center",
       marginBottom: 14,
     },
 
@@ -1042,13 +1040,10 @@ const getStyles = (theme: Theme) =>
       opacity: 0.85,
     },
     counterPill: {
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 10,
+      ...shared.badge,
     },
     counterPillText: {
-      fontSize: 11,
-      fontFamily: theme.fonts.bold,
+      ...shared.badgeText,
     },
 
     /* Subtask Rows */
@@ -1226,3 +1221,4 @@ const getStyles = (theme: Theme) =>
       textAlign: "center",
     },
   });
+};

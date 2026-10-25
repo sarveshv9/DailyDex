@@ -13,6 +13,8 @@ import { useTheme } from "../../context/ThemeContext";
 import { useAppHaptics } from "../../hooks/useAppHaptics";
 import { getRoutineIcon, ICON_GROUPS } from "../../utils/utils";
 
+import { getSharedStyles } from "../../styles/shared";
+
 export interface IconPickerModalProps {
   visible: boolean;
   onClose: () => void;
@@ -30,6 +32,7 @@ export const IconPickerModal: React.FC<IconPickerModalProps> = ({
 }) => {
   const { theme } = useTheme();
   const { selection } = useAppHaptics();
+  const shared = React.useMemo(() => getSharedStyles(theme), [theme]);
   const [activeCategoryIndex, setActiveCategoryIndex] = useState(0);
   const highlightColor = activeColor || theme.colors.primary;
 
@@ -43,21 +46,21 @@ export const IconPickerModal: React.FC<IconPickerModalProps> = ({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={[styles.card, { backgroundColor: theme.colors.card }]} onPress={(e) => e.stopPropagation()}>
-          <View style={styles.header}>
+      <Pressable style={shared.modalOverlay} onPress={onClose}>
+        <Pressable style={[shared.modalContent, styles.card]} onPress={(e) => e.stopPropagation()}>
+          <View style={shared.modalHeader}>
             <View>
-              <Text style={[styles.title, { color: theme.colors.text, fontFamily: theme.fonts.bold }]}>
+              <Text style={shared.modalTitle}>
                 Choose an Icon
               </Text>
-              <Text style={[styles.subtitle, { color: theme.colors.textSecondary, fontFamily: theme.fonts.regular }]}>
+              <Text style={shared.modalSubtitle}>
                 Pick an icon for this ritual
               </Text>
             </View>
             <Pressable
               onPress={onClose}
               hitSlop={10}
-              style={[styles.closeBtn, { backgroundColor: theme.glass.neutralFill }]}
+              style={shared.modalCloseButton}
             >
               <Ionicons name="close" size={20} color={theme.colors.textSecondary} />
             </Pressable>
@@ -88,7 +91,7 @@ export const IconPickerModal: React.FC<IconPickerModalProps> = ({
                       styles.tabText,
                       {
                         fontFamily: isActive ? theme.fonts.bold : theme.fonts.medium,
-                        color: isActive ? "#FFFFFF" : theme.colors.textSecondary,
+                        color: isActive ? theme.colors.white : theme.colors.textSecondary,
                       },
                     ]}
                   >
@@ -135,7 +138,7 @@ export const IconPickerModal: React.FC<IconPickerModalProps> = ({
                     <Ionicons
                       name={getRoutineIcon(item.key)}
                       size={24}
-                      color={isSelected ? "#FFFFFF" : highlightColor}
+                      color={isSelected ? theme.colors.white : highlightColor}
                     />
                   </View>
                   <Text

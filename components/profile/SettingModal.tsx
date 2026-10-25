@@ -2,7 +2,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import { Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { Theme } from "../../styles/shared";
+import { Theme, getSharedStyles } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
 import { ModalSheet } from "../ui/ModalSheet";
 
@@ -32,6 +32,7 @@ export const SettingModal = ({
   setUser,
   handleSaveProfile,
 }: SettingModalProps) => {
+  const shared = React.useMemo(() => getSharedStyles(theme), [theme]);
   const [name, setName] = useState(user.name);
   const [role, setRole] = useState(user.role);
   const [email, setEmail] = useState(user.email);
@@ -68,30 +69,18 @@ export const SettingModal = ({
     placeholder: string,
     multiline = false
   ) => (
-    <View style={{ marginBottom: theme.spacing.md }}>
-      <Text
-        style={{
-          fontSize: 12,
-          fontFamily: theme.fonts.bold,
-          color: theme.colors.textSecondary,
-          marginBottom: 8,
-          textTransform: "uppercase",
-          letterSpacing: 0.8,
-        }}
-      >
+    <View style={shared.inputContainer}>
+      <Text style={shared.inputLabel}>
         {label}
       </Text>
       <View
-        style={{
-          flexDirection: "row",
-          alignItems: multiline ? "flex-start" : "center",
-          backgroundColor: `${theme.colors.secondary}08`,
-          borderRadius: 18,
-          borderWidth: 1,
-          borderColor: `${theme.colors.secondary}15`,
-          paddingHorizontal: 16,
-          paddingVertical: multiline ? 12 : 2,
-        }}
+        style={[
+          shared.inputWrapper,
+          {
+            alignItems: multiline ? "flex-start" : "center",
+            paddingVertical: multiline ? 12 : 2,
+          },
+        ]}
       >
         <Ionicons
           name={iconName}
@@ -105,14 +94,13 @@ export const SettingModal = ({
           placeholder={placeholder}
           placeholderTextColor={`${theme.colors.textSecondary}70`}
           multiline={multiline}
-          style={{
-            flex: 1,
-            color: theme.colors.text,
-            fontFamily: theme.fonts.medium,
-            fontSize: 15,
-            minHeight: multiline ? 80 : 48,
-            textAlignVertical: multiline ? "top" : "center",
-          }}
+          style={[
+            shared.textInput,
+            {
+              minHeight: multiline ? 80 : 48,
+              textAlignVertical: multiline ? "top" : "center",
+            },
+          ]}
         />
       </View>
     </View>
@@ -192,28 +180,17 @@ export const SettingModal = ({
 
         <Pressable
           onPress={save}
-          style={({ pressed }) => ({
-            height: 56,
-            borderRadius: 22,
-            backgroundColor: theme.colors.primary,
-            marginTop: theme.spacing.lg,
-            opacity: pressed ? 0.88 : 1,
-            transform: [{ scale: pressed ? 0.98 : 1 }],
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-            ...theme.glows.primary,
-          })}
+          style={({ pressed }) => [
+            shared.primaryButton,
+            {
+              marginTop: theme.spacing.lg,
+              opacity: pressed ? 0.88 : 1,
+              transform: [{ scale: pressed ? 0.98 : 1 }],
+            },
+          ]}
         >
           <Ionicons name="checkmark-circle" size={20} color={theme.colors.white} />
-          <Text
-            style={{
-              color: theme.colors.white,
-              fontFamily: theme.fonts.bold,
-              fontSize: 16,
-            }}
-          >
+          <Text style={shared.primaryButtonText}>
             Save Changes
           </Text>
         </Pressable>

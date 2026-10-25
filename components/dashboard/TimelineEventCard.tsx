@@ -201,7 +201,7 @@ const TimelineEventCardComponent: React.FC<TimelineEventCardProps> = ({
             <Ionicons
               name={icon}
               size={21}
-              color={isWakeupSleep || effectiveChain !== 'none' ? '#FFFFFF' : primaryColor}
+              color={isWakeupSleep || effectiveChain !== 'none' ? theme.colors.white : primaryColor}
             />
           </View>
 

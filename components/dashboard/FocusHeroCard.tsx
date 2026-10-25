@@ -4,7 +4,7 @@ import React, { useMemo } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { ActiveTimerBadge } from "../common/ActiveTimerBadge";
-import { Theme } from "../../styles/shared";
+import { Theme, getSharedStyles } from "../../styles/shared";
 import { themeTokens } from "../../constants/themeTokens";
 import { RoutineItem } from "../../utils/utils";
 
@@ -184,6 +184,7 @@ const FocusHeroCardComponent: React.FC<FocusHeroCardProps> = ({
 export const FocusHeroCard = React.memo(FocusHeroCardComponent);
 
 const getStyles = (theme: Theme, isDarkMode: boolean) => {
+  const shared = getSharedStyles(theme);
   const tileBg = `${theme.colors.primary}${
     theme.glass?.iconTintAlpha ?? (isDarkMode ? "29" : "1C")
   }`;
@@ -197,11 +198,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       marginBottom: 10,
     },
     sectionLabel: {
-      fontSize: themeTokens.fonts.size.xs,
-      fontFamily: theme.fonts.bold,
-      color: theme.colors.textSecondary,
-      textTransform: "uppercase",
-      letterSpacing: 1.2,
+      ...shared.sectionLabel,
     },
     focusCard: {
       borderRadius: 28,
@@ -338,11 +335,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       borderRadius: 3,
     },
     primaryButton: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 8,
-      backgroundColor: theme.colors.primary,
+      ...shared.primaryButton,
       paddingVertical: 14,
       borderRadius: 18,
       ...Platform.select({
@@ -356,9 +349,8 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       }),
     },
     primaryButtonText: {
+      ...shared.primaryButtonText,
       fontSize: themeTokens.fonts.size.md,
-      fontFamily: theme.fonts.bold,
-      color: theme.colors.white,
     },
   });
 };

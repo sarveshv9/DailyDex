@@ -10,7 +10,7 @@ import {
     View,
 } from "react-native";
 import { SONG_LIST } from "../../constants/songs";
-import { Theme } from "../../styles/shared";
+import { Theme, getSharedStyles } from "../../styles/shared";
 import { ModalSheet } from "../ui/ModalSheet";
 
 type MusicSelectionModalProps = {
@@ -100,36 +100,37 @@ export function MusicSelectionModal({
     );
 }
 
-const getStyles = (theme: Theme) => StyleSheet.create({
-    scrollContent: {
-        paddingBottom: 24,
-    },
-    listContainer: {
-        backgroundColor: `${theme.colors.secondary}0D`,
-        borderRadius: theme.borderRadius.lg,
-        paddingHorizontal: theme.spacing.md,
-    },
-    songRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        paddingVertical: theme.spacing.md,
-        gap: theme.spacing.md,
-    },
-    iconBox: {
-        width: 40,
-        height: 40,
-        borderRadius: 12,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    songLabel: {
-        flex: 1,
-        fontSize: 16,
-        fontFamily: theme.fonts.medium,
-        color: theme.colors.text,
-    },
-    separator: {
-        height: StyleSheet.hairlineWidth,
-        backgroundColor: `${theme.colors.secondary}20`,
-    },
-});
+const getStyles = (theme: Theme) => {
+    const shared = getSharedStyles(theme);
+    return StyleSheet.create({
+        scrollContent: {
+            paddingBottom: 24,
+        },
+        listContainer: {
+            backgroundColor: `${theme.colors.secondary}0D`,
+            borderRadius: theme.borderRadius.lg,
+            paddingHorizontal: theme.spacing.md,
+        },
+        songRow: {
+            flexDirection: "row",
+            alignItems: "center",
+            paddingVertical: theme.spacing.md,
+            gap: theme.spacing.md,
+        },
+        iconBox: {
+            ...shared.iconTile,
+            width: 40,
+            height: 40,
+            borderRadius: 12,
+        },
+        songLabel: {
+            flex: 1,
+            fontSize: 16,
+            fontFamily: theme.fonts.medium,
+            color: theme.colors.text,
+        },
+        separator: {
+            ...shared.divider,
+        },
+    });
+};

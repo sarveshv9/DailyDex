@@ -12,7 +12,7 @@ import {
     View,
     Alert,
 } from "react-native";
-import { lightThemes, Theme } from "../../styles/shared";
+import { lightThemes, Theme, getSharedStyles } from "../../styles/shared";
 import { ModalSheet } from "../ui/ModalSheet";
 import { useTheme } from "../../context/ThemeContext";
 import { usePokemonQuery } from "../../api/pokemon";
@@ -175,8 +175,8 @@ export function ThemeSelectionModal({
                                 onToggleDarkMode(v);
                             }}
                             trackColor={{ false: `${currentTheme.colors.secondary}40`, true: currentTheme.colors.primary }}
-                            thumbColor="#FFFFFF"
-                            {...({ activeThumbColor: "#FFFFFF" } as Record<string, string>)}
+                            thumbColor={currentTheme.colors.white}
+                            {...({ activeThumbColor: currentTheme.colors.white } as Record<string, string>)}
                         />
                     </View>
 
@@ -194,8 +194,8 @@ export function ThemeSelectionModal({
                                 onToggleAutoTheme(v);
                             }}
                             trackColor={{ false: `${currentTheme.colors.secondary}40`, true: currentTheme.colors.primary }}
-                            thumbColor="#FFFFFF"
-                            {...({ activeThumbColor: "#FFFFFF" } as Record<string, string>)}
+                            thumbColor={currentTheme.colors.white}
+                            {...({ activeThumbColor: currentTheme.colors.white } as Record<string, string>)}
                         />
                     </View>
                 </View>
@@ -396,7 +396,9 @@ export function ThemeSelectionModal({
     );
 }
 
-const getStyles = (theme: Theme) => StyleSheet.create({
+const getStyles = (theme: Theme) => {
+    const shared = getSharedStyles(theme);
+    return StyleSheet.create({
     scrollContent: {
         paddingBottom: 24,
     },
@@ -407,10 +409,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         marginBottom: theme.spacing.lg,
     },
     toggleRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        paddingVertical: theme.spacing.md,
+        ...shared.toggleRow,
     },
     toggleLabelGroup: {
         flexDirection: "row",
@@ -423,14 +422,10 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         color: theme.colors.text,
     },
     separator: {
-        height: StyleSheet.hairlineWidth,
-        backgroundColor: `${theme.colors.secondary}20`,
+        ...shared.divider,
     },
     sectionTitle: {
-        fontFamily: theme.fonts.bold,
-        fontSize: 18,
-        color: theme.colors.text,
-        marginBottom: theme.spacing.md,
+        ...shared.sectionTitle,
         paddingHorizontal: 4,
     },
     listContainer: {
@@ -584,8 +579,8 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         elevation: 6,
     },
     customFormBtnTextSave: {
-        fontFamily: theme.fonts.bold,
-        fontSize: 16,
-        color: "#FFF",
+        ...shared.primaryButtonText,
+        color: theme.colors.white,
     },
-});
+  });
+};

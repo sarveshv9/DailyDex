@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import React from "react";
 import { Platform, Pressable, StyleSheet, Switch, Text, View } from "react-native";
 import { useSettings } from "../../context/SettingsContext";
-import { Theme } from "../../styles/shared";
+import { Theme, getSharedStyles, themeTokens } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
 
 interface SettingsSectionProps {
@@ -38,7 +38,8 @@ const SettingItem = React.memo<SettingItemProps>(
     isDestructive = false,
     rightBadge,
   }) => {
-    const iconColor = isDestructive ? "#FF453A" : theme.colors.primary;
+    const styles = React.useMemo(() => getStyles(theme), [theme]);
+    const iconColor = isDestructive ? themeTokens.colors.danger : theme.colors.primary;
 
     const handlePress = () => {
       Haptics.impactAsync(
@@ -72,7 +73,7 @@ const SettingItem = React.memo<SettingItemProps>(
               styles.iconContainer,
               {
                 backgroundColor: isDestructive
-                  ? "#FF453A18"
+                  ? `${themeTokens.colors.danger}18`
                   : `${theme.colors.primary}16`,
               },
             ]}
@@ -85,7 +86,7 @@ const SettingItem = React.memo<SettingItemProps>(
               style={[
                 styles.settingText,
                 {
-                  color: isDestructive ? "#FF453A" : theme.colors.text,
+                  color: isDestructive ? themeTokens.colors.danger : theme.colors.text,
                   fontFamily: theme.fonts.medium,
                 },
               ]}
@@ -162,6 +163,7 @@ const SettingSwitchItem: React.FC<SettingSwitchItemProps> = React.memo(
     onValueChange,
     isLast = false,
   }) => {
+    const styles = React.useMemo(() => getStyles(theme), [theme]);
     return (
       <View
         style={[
@@ -216,8 +218,8 @@ const SettingSwitchItem: React.FC<SettingSwitchItemProps> = React.memo(
             false: `${theme.colors.secondary}40`,
             true: theme.colors.primary,
           }}
-          thumbColor="#FFFFFF"
-          {...({ activeThumbColor: "#FFFFFF" } as any)}
+          thumbColor={theme.colors.white}
+          {...({ activeThumbColor: theme.colors.white } as any)}
         />
       </View>
     );
@@ -236,6 +238,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
 }) => {
   const router = useRouter();
   const { settings, toggleNotification, setHapticsEnabled } = useSettings();
+  const styles = React.useMemo(() => getStyles(theme), [theme]);
 
   return (
     <View style={styles.container}>
@@ -413,95 +416,86 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    paddingVertical: 4,
-  },
-  sectionTitle: {
-    fontSize: 12,
-    marginBottom: 8,
-    marginLeft: 4,
-    textTransform: "uppercase",
-    letterSpacing: 1.2,
-    opacity: 0.7,
-  },
-  settingsCard: {
-    borderRadius: 24,
-    overflow: "hidden",
-    borderWidth: 1,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-      },
-      android: { elevation: 3 },
-    }),
-  },
-  settingItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    minHeight: 56,
-  },
-  settingItemLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-    gap: 12,
-  },
-  textContainer: {
-    flex: 1,
-  },
-  iconContainer: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  settingText: {
-    fontSize: 15,
-    letterSpacing: -0.2,
-  },
-  settingSubtext: {
-    fontSize: 12,
-    marginTop: 2,
-    opacity: 0.7,
-  },
-  settingItemRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
-  },
-  badgeText: {
-    fontSize: 11,
-  },
-  versionFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    marginTop: 24,
-    marginBottom: 8,
-  },
-  versionIconCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  versionText: {
-    fontSize: 12,
-    letterSpacing: 0.2,
-  },
-});
+const getStyles = (theme: Theme) => {
+  const shared = getSharedStyles(theme);
+  return StyleSheet.create({
+    container: {
+      paddingVertical: 4,
+    },
+    sectionTitle: {
+      ...shared.sectionLabel,
+      marginBottom: 8,
+      marginLeft: 4,
+      opacity: 0.7,
+    },
+    settingsCard: {
+      borderRadius: 24,
+      overflow: "hidden",
+      borderWidth: 1,
+      ...Platform.select({
+        ios: {
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.05,
+          shadowRadius: 10,
+        },
+        android: { elevation: 3 },
+      }),
+    },
+    settingItem: {
+      ...shared.settingItem,
+    },
+    settingItemLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      flex: 1,
+      gap: 12,
+    },
+    textContainer: {
+      flex: 1,
+    },
+    iconContainer: {
+      ...shared.iconTile,
+      width: 38,
+      height: 38,
+      borderRadius: 12,
+    },
+    settingText: {
+      ...shared.settingItemText,
+    },
+    settingSubtext: {
+      ...shared.settingItemSubtext,
+      opacity: 0.7,
+    },
+    settingItemRight: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    badge: {
+      ...shared.badge,
+    },
+    badgeText: {
+      ...shared.badgeText,
+    },
+    versionFooter: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      marginTop: 24,
+      marginBottom: 8,
+    },
+    versionIconCircle: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    versionText: {
+      fontSize: 12,
+      letterSpacing: 0.2,
+    },
+  });
+};

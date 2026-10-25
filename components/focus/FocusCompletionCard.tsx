@@ -3,7 +3,7 @@ import { BlurView } from "expo-blur";
 import React, { useMemo } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { themeTokens } from "../../constants/themeTokens";
-import { Theme } from "../../styles/shared";
+import { getSharedStyles, Theme } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
 
 export interface FocusCompletionCardProps {
@@ -109,8 +109,9 @@ const FocusCompletionCardComponent: React.FC<FocusCompletionCardProps> = ({
 
 export const FocusCompletionCard = React.memo(FocusCompletionCardComponent);
 
-const getStyles = (theme: Theme, isDarkMode: boolean) =>
-  StyleSheet.create({
+const getStyles = (theme: Theme, isDarkMode: boolean) => {
+  const shared = getSharedStyles(theme);
+  return StyleSheet.create({
     completionSection: {
       width: "100%",
       alignItems: "center",
@@ -118,22 +119,19 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
       marginTop: 4,
     },
     completionCard: {
+      ...shared.glassCard,
       width: "100%",
       borderRadius: themeTokens.borderRadius.xl,
-      borderWidth: 1,
-      borderColor: theme.glass.borderColor,
-      backgroundColor: theme.glass.cardBg,
       overflow: "hidden",
       padding: themeTokens.spacing.xl,
       alignItems: "center",
     },
     completionIconCircle: {
+      ...shared.iconCircle,
       width: 64,
       height: 64,
       borderRadius: 32,
       backgroundColor: `${theme.colors.primary}18`,
-      alignItems: "center",
-      justifyContent: "center",
       marginBottom: themeTokens.spacing.md,
     },
     completionTitle: {
@@ -144,36 +142,32 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
       textAlign: "center",
     },
     completionMessage: {
-      fontFamily: theme.fonts.regular,
+      ...shared.bodyText,
       fontSize: themeTokens.fonts.size.xs,
-      color: theme.colors.textSecondary,
       textAlign: "center",
       lineHeight: 20,
       marginBottom: themeTokens.spacing.lg,
       maxWidth: 280,
     },
     completionPill: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 6,
+      ...shared.badge,
       paddingHorizontal: themeTokens.spacing.md,
       paddingVertical: 6,
       borderRadius: themeTokens.borderRadius.full,
       backgroundColor: `${theme.colors.primary}12`,
     },
     completionPillText: {
-      fontFamily: theme.fonts.bold,
+      ...shared.badgeText,
       fontSize: themeTokens.fonts.size.xs,
-      color: theme.colors.primary,
     },
     primaryActionButton: {
+      ...shared.primaryButton,
       width: "100%",
       height: 56,
       borderRadius: themeTokens.borderRadius.xl,
-      backgroundColor: theme.colors.primary,
+      paddingVertical: 0,
+      paddingHorizontal: 0,
       flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
       gap: themeTokens.spacing.sm,
       ...Platform.select({
         ios: {
@@ -186,23 +180,21 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
       }),
     },
     primaryActionButtonText: {
-      fontFamily: theme.fonts.bold,
+      ...shared.primaryButtonText,
       fontSize: themeTokens.fonts.size.md,
-      color: theme.colors.white,
     },
     secondaryActionButton: {
+      ...shared.secondaryButton,
       width: "100%",
       height: 56,
       borderRadius: themeTokens.borderRadius.xl,
-      borderWidth: 1,
-      borderColor: theme.glass.borderColor,
+      paddingVertical: 0,
+      paddingHorizontal: 0,
+      flexDirection: "row",
+      gap: themeTokens.spacing.sm,
       backgroundColor: isDarkMode
         ? "rgba(255, 255, 255, 0.05)"
         : "rgba(0, 0, 0, 0.03)",
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: themeTokens.spacing.sm,
     },
     secondaryActionButtonText: {
       fontFamily: theme.fonts.bold,
@@ -214,3 +206,4 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
       transform: [{ scale: 0.97 }],
     },
   });
+};

@@ -3,7 +3,7 @@ import { BlurView } from "expo-blur";
 import React, { useMemo } from "react";
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { themeTokens } from "../../constants/themeTokens";
-import { Theme } from "../../styles/shared";
+import { getSharedStyles, Theme } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
 
 export interface FocusConfirmModalProps {
@@ -25,6 +25,7 @@ const FocusConfirmModalComponent: React.FC<FocusConfirmModalProps> = ({
   theme,
   isDarkMode,
 }) => {
+  const shared = useMemo(() => getSharedStyles(theme), [theme]);
   const styles = useMemo(() => getStyles(theme, isDarkMode), [theme, isDarkMode]);
 
   return (
@@ -213,8 +214,9 @@ const FocusConfirmModalComponent: React.FC<FocusConfirmModalProps> = ({
 
 export const FocusConfirmModal = React.memo(FocusConfirmModalComponent);
 
-const getStyles = (theme: Theme, isDarkMode: boolean) =>
-  StyleSheet.create({
+const getStyles = (theme: Theme, isDarkMode: boolean) => {
+  const shared = getSharedStyles(theme);
+  return StyleSheet.create({
     modalOverlay: {
       flex: 1,
       justifyContent: "center",
@@ -241,12 +243,10 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
       }),
     },
     modalIconCircle: {
+      ...shared.iconCircle,
       width: 56,
       height: 56,
       borderRadius: 28,
-      backgroundColor: `${theme.colors.primary}15`,
-      alignItems: "center",
-      justifyContent: "center",
       marginBottom: themeTokens.spacing.md,
     },
     modalIconCircleDestructive: {
@@ -260,9 +260,8 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
       textAlign: "center",
     },
     modalDescription: {
-      fontFamily: theme.fonts.regular,
+      ...shared.bodyText,
       fontSize: themeTokens.fonts.size.xs,
-      color: theme.colors.textSecondary,
       textAlign: "center",
       lineHeight: 19,
       marginBottom: themeTokens.spacing.xl,
@@ -272,41 +271,29 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
       gap: themeTokens.spacing.sm,
     },
     modalPrimaryButton: {
+      ...shared.primaryButton,
       width: "100%",
       height: 56,
-      borderRadius: themeTokens.borderRadius.lg,
-      backgroundColor: theme.colors.primary,
+      paddingVertical: 0,
+      paddingHorizontal: 0,
       flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
       gap: themeTokens.spacing.sm,
-      ...Platform.select({
-        ios: {
-          shadowColor: theme.colors.primary,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: isDarkMode ? 0.4 : 0.25,
-          shadowRadius: 10,
-        },
-        android: { elevation: 4 },
-      }),
     },
     modalPrimaryButtonText: {
-      fontFamily: theme.fonts.bold,
+      ...shared.primaryButtonText,
       fontSize: themeTokens.fonts.size.md,
-      color: theme.colors.white,
     },
     modalDestructiveButton: {
+      ...shared.destructiveButton,
       width: "100%",
       height: 56,
-      borderRadius: themeTokens.borderRadius.lg,
-      borderWidth: 1,
+      paddingVertical: 0,
+      paddingHorizontal: 0,
+      flexDirection: "row",
       borderColor: "rgba(239, 68, 68, 0.35)",
       backgroundColor: isDarkMode
         ? "rgba(239, 68, 68, 0.12)"
         : "rgba(239, 68, 68, 0.08)",
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
       gap: themeTokens.spacing.sm,
     },
     modalDestructiveButtonText: {
@@ -330,3 +317,5 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
       transform: [{ scale: 0.97 }],
     },
   });
+};
+

@@ -13,7 +13,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { Theme } from "../../styles/shared";
+import { Theme, getSharedStyles } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
 import { scheduleRoutineNotifications } from "../../utils/notifications";
 import { RoutineItem } from "../../utils/utils";
@@ -201,26 +201,19 @@ export function RestoreModal({
   );
 }
 
-const getStyles = (theme: Theme) =>
-  StyleSheet.create({
+const getStyles = (theme: Theme) => {
+  const shared = getSharedStyles(theme);
+  return StyleSheet.create({
     overlay: {
-      flex: 1,
-      backgroundColor: "rgba(0,0,0,0.5)",
-      justifyContent: "center",
-      alignItems: "center",
+      ...shared.modalOverlay,
       padding: theme.spacing.lg,
     },
     backdrop: {
-      ...StyleSheet.absoluteFill,
+      ...shared.modalBackdrop,
     },
     card: {
-      width: "100%",
+      ...shared.modalContent,
       maxWidth: 480,
-      backgroundColor: theme.colors.card,
-      borderRadius: 28,
-      borderWidth: 1,
-      borderColor: theme.glass.borderColor,
-      padding: 24,
       gap: 16,
       ...Platform.select({
         ios: {
@@ -235,27 +228,22 @@ const getStyles = (theme: Theme) =>
       }),
     },
     header: {
-      flexDirection: "row",
-      alignItems: "center",
+      ...shared.modalHeader,
       gap: 12,
     },
     iconCircle: {
+      ...shared.iconCircle,
       width: 44,
       height: 44,
       borderRadius: 22,
-      backgroundColor: `${theme.colors.primary}18`,
-      alignItems: "center",
-      justifyContent: "center",
     },
     title: {
-      fontFamily: theme.fonts.bold,
+      ...shared.modalTitle,
       fontSize: 18,
-      color: theme.colors.text,
     },
     subtitle: {
-      fontFamily: theme.fonts.regular,
+      ...shared.modalSubtitle,
       fontSize: 13,
-      color: theme.colors.textSecondary,
       marginTop: 2,
     },
     textInput: {
@@ -276,35 +264,20 @@ const getStyles = (theme: Theme) =>
       marginTop: 8,
     },
     cancelButton: {
+      ...shared.secondaryButton,
       flex: 1,
-      height: 56,
-      borderRadius: 22,
-      backgroundColor: `${theme.colors.secondary}10`,
-      alignItems: "center",
-      justifyContent: "center",
-      borderWidth: 1,
-      borderColor: `${theme.colors.secondary}15`,
     },
     cancelText: {
-      fontFamily: theme.fonts.bold,
-      fontSize: 15,
-      color: theme.colors.textSecondary,
+      ...shared.secondaryButtonText,
     },
     restoreButton: {
+      ...shared.primaryButton,
       flex: 1.5,
-      height: 56,
-      borderRadius: 22,
-      backgroundColor: theme.colors.primary,
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 8,
-      ...theme.glows.primary,
     },
     restoreText: {
-      fontFamily: theme.fonts.bold,
+      ...shared.primaryButtonText,
       fontSize: 15,
-      color: theme.colors.white,
     },
   });
+};
 

@@ -19,7 +19,7 @@ import {
 } from "lucide-react-native";
 import { router } from "expo-router";
 import { useTheme } from "../../context/ThemeContext";
-import { darkThemes, lightThemes, Theme } from "../../styles/shared";
+import { darkThemes, lightThemes, Theme, getSharedStyles } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
 
 interface Props {
@@ -95,6 +95,7 @@ function ErrorFallbackView({ error, errorInfo, onReset }: ErrorFallbackProps) {
   }
 
   const { colors, fonts, spacing, glass, glows, borderRadius } = theme;
+  const shared = React.useMemo(() => getSharedStyles(theme), [theme]);
 
   const handleCopy = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -122,7 +123,7 @@ function ErrorFallbackView({ error, errorInfo, onReset }: ErrorFallbackProps) {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, shared.centeredContainer, { backgroundColor: colors.background }]}>
       {/* Ambient background glow ring */}
       <View
         pointerEvents="none"
@@ -137,10 +138,9 @@ function ErrorFallbackView({ error, errorInfo, onReset }: ErrorFallbackProps) {
 
       <View
         style={[
+          shared.glassCard,
           styles.card,
           {
-            backgroundColor: glass.cardBg,
-            borderColor: glass.borderColor,
             borderRadius: borderRadius.lg * 1.5,
             padding: spacing.xl,
             ...glows.card,
@@ -150,9 +150,9 @@ function ErrorFallbackView({ error, errorInfo, onReset }: ErrorFallbackProps) {
         {/* Glowing Icon Header */}
         <View
           style={[
+            shared.iconTile,
             styles.iconTile,
             {
-              backgroundColor: `${colors.primary}${glass.iconTintAlpha}`,
               borderRadius: borderRadius.lg,
               borderWidth: 1,
               borderColor: `${colors.primary}40`,
@@ -198,13 +198,12 @@ function ErrorFallbackView({ error, errorInfo, onReset }: ErrorFallbackProps) {
           <Pressable
             onPress={onReset}
             style={({ pressed }) => [
+              shared.primaryButton,
               styles.primaryBtn,
               {
-                backgroundColor: colors.primary,
                 borderRadius: borderRadius.lg,
                 opacity: pressed ? 0.9 : 1,
                 transform: [{ scale: pressed ? 0.98 : 1 }],
-                ...glows.primary,
               },
             ]}
             accessibilityRole="button"
@@ -213,8 +212,8 @@ function ErrorFallbackView({ error, errorInfo, onReset }: ErrorFallbackProps) {
             <RefreshCw size={18} color={colors.white} strokeWidth={2} />
             <Text
               style={[
+                shared.primaryButtonText,
                 styles.primaryBtnText,
-                { fontFamily: fonts.bold, color: colors.white },
               ]}
             >
               Try Again
@@ -224,10 +223,9 @@ function ErrorFallbackView({ error, errorInfo, onReset }: ErrorFallbackProps) {
           <Pressable
             onPress={handleGoHome}
             style={({ pressed }) => [
+              shared.secondaryButton,
               styles.secondaryBtn,
               {
-                backgroundColor: glass.neutralFill,
-                borderColor: glass.borderColor,
                 borderRadius: borderRadius.lg,
                 opacity: pressed ? 0.75 : 1,
               },
@@ -238,8 +236,9 @@ function ErrorFallbackView({ error, errorInfo, onReset }: ErrorFallbackProps) {
             <Home size={18} color={colors.text} strokeWidth={1.8} />
             <Text
               style={[
+                shared.secondaryButtonText,
                 styles.secondaryBtnText,
-                { fontFamily: fonts.medium, color: colors.text },
+                { color: colors.text },
               ]}
             >
               Return Home

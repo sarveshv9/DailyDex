@@ -48,7 +48,7 @@ export const DurationPicker: React.FC<DurationPickerProps> = ({
                 styles.chipText,
                 {
                   fontFamily: isActive ? theme.fonts.bold : theme.fonts.medium,
-                  color: isActive ? "#FFFFFF" : theme.colors.text,
+                  color: isActive ? theme.colors.white : theme.colors.text,
                 },
               ]}
             >

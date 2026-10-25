@@ -9,7 +9,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../context/ThemeContext";
 import { themeTokens } from "../../constants/themeTokens";
-import { Theme } from "../../styles/shared";
+import { getSharedStyles, Theme } from "../../styles/shared";
 import { Button } from "./Button";
 
 export interface EmptyStateProps {
@@ -32,6 +32,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   style,
 }) => {
   const { theme } = useTheme();
+  const shared = useMemo(() => getSharedStyles(theme), [theme]);
   const styles = useMemo(() => getStyles(theme), [theme]);
 
   return (
@@ -45,17 +46,17 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           />
         )}
       </View>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.description}>{description}</Text>
+      <Text style={[shared.sectionTitle, styles.title]}>{title}</Text>
+      <Text style={[shared.bodyText, styles.description]}>{description}</Text>
 
       {actionLabel && onAction && (
         <Button
           title={actionLabel}
-          icon={actionIcon ?? <Ionicons name="add" size={18} color="#FFFFFF" />}
+          icon={actionIcon ?? <Ionicons name="add" size={18} color={theme.colors.white} />}
           onPress={onAction}
           variant="primary"
           size="md"
-          style={{ marginTop: themeTokens.spacing.lg }}
+          style={styles.actionButton}
         />
       )}
     </View>
@@ -82,43 +83,16 @@ const getStyles = (theme: Theme) => {
       marginBottom: theme.spacing.md,
     },
     title: {
-      fontSize: 18,
-      fontFamily: theme.fonts.bold,
-      color: theme.colors.text,
       textAlign: "center",
       marginBottom: theme.spacing.xs,
     },
     description: {
-      fontSize: 14,
-      fontFamily: theme.fonts.regular,
-      color: theme.colors.textSecondary,
       textAlign: "center",
-      lineHeight: 20,
       maxWidth: 280,
       marginBottom: theme.spacing.lg,
     },
     actionButton: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: theme.colors.primary,
-      paddingVertical: theme.spacing.sm,
-      paddingHorizontal: theme.spacing.lg,
-      borderRadius: theme.borderRadius.lg,
-      minHeight: 44,
-      ...theme.glows.primary,
-    },
-    actionButtonPressed: {
-      opacity: 0.85,
-      transform: [{ scale: 0.98 }],
-    },
-    actionIcon: {
-      marginRight: theme.spacing.xs,
-    },
-    actionText: {
-      fontSize: 15,
-      fontFamily: theme.fonts.bold,
-      color: theme.colors.white,
+      marginTop: themeTokens.spacing.lg,
     },
   });
 };

@@ -4,7 +4,7 @@ import React, { useMemo } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { CrossPlatformSegmentedControl } from "../common/CrossPlatformSegmentedControl";
 import { themeTokens } from "../../constants/themeTokens";
-import { Theme } from "../../styles/shared";
+import { getSharedStyles, Theme } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
 
 export interface DurationOption {
@@ -195,8 +195,9 @@ const FocusSetupControlsComponent: React.FC<FocusSetupControlsProps> = ({
 
 export const FocusSetupControls = React.memo(FocusSetupControlsComponent);
 
-const getStyles = (theme: Theme, isDarkMode: boolean) =>
-  StyleSheet.create({
+const getStyles = (theme: Theme, isDarkMode: boolean) => {
+  const shared = getSharedStyles(theme);
+  return StyleSheet.create({
     setupSection: {
       width: "100%",
       alignItems: "center",
@@ -214,10 +215,8 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
       marginBottom: themeTokens.spacing.sm,
     },
     sectionLabel: {
-      fontFamily: theme.fonts.bold,
-      fontSize: themeTokens.fonts.size.xs,
+      ...shared.sectionLabel,
       color: theme.colors.secondary,
-      letterSpacing: 1.2,
     },
     durationPillsRow: {
       flexDirection: "row",
@@ -259,11 +258,8 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
       color: theme.colors.white,
     },
     pomodoroExplainerCard: {
+      ...shared.glassCard,
       width: "100%",
-      borderRadius: themeTokens.borderRadius.lg,
-      borderWidth: 1,
-      borderColor: theme.glass.borderColor,
-      backgroundColor: theme.glass.cardBg,
       overflow: "hidden",
       padding: themeTokens.spacing.lg,
       marginBottom: themeTokens.spacing.xl,
@@ -280,19 +276,18 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
       color: theme.colors.primary,
     },
     pomodoroExplainerDesc: {
-      fontFamily: theme.fonts.regular,
+      ...shared.bodyText,
       fontSize: themeTokens.fonts.size.xs,
-      color: theme.colors.textSecondary,
       lineHeight: 18,
     },
     primaryActionButton: {
+      ...shared.primaryButton,
       width: "100%",
       height: 56,
       borderRadius: themeTokens.borderRadius.xl,
-      backgroundColor: theme.colors.primary,
+      paddingVertical: 0,
+      paddingHorizontal: 0,
       flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
       gap: themeTokens.spacing.sm,
       ...Platform.select({
         ios: {
@@ -305,12 +300,12 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
       }),
     },
     primaryActionButtonText: {
-      fontFamily: theme.fonts.bold,
+      ...shared.primaryButtonText,
       fontSize: themeTokens.fonts.size.md,
-      color: theme.colors.white,
     },
     pressedScale: {
       opacity: 0.85,
       transform: [{ scale: 0.97 }],
     },
   });
+};

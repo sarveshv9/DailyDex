@@ -13,7 +13,7 @@ import {
 import { useTheme } from "../../context/ThemeContext";
 import { useAppHaptics } from "../../hooks/useAppHaptics";
 import { themeTokens } from "../../constants/themeTokens";
-import { Theme } from "../../styles/shared";
+import { getSharedStyles, Theme } from "../../styles/shared";
 
 export type ButtonVariant = "primary" | "secondary" | "destructive" | "ghost";
 export type ButtonSize = "sm" | "md" | "lg";
@@ -107,6 +107,8 @@ export const Button: React.FC<ButtonProps> = ({
 };
 
 const getStyles = (theme: Theme, variant: ButtonVariant, size: ButtonSize) => {
+  const shared = getSharedStyles(theme);
+
   // Height & padding by size
   let minHeight = 48;
   let paddingVertical = theme.spacing.md;
@@ -125,61 +127,28 @@ const getStyles = (theme: Theme, variant: ButtonVariant, size: ButtonSize) => {
     fontSize = themeTokens.fonts.size.lg;
   }
 
-  // Colors & backgrounds by variant
-  let backgroundColor = theme.colors.primary;
-  let textColor = theme.colors.white;
-  let borderColor: string | undefined = undefined;
-  let borderWidth = 0;
-  let shadowStyle = theme.glows.primary;
+  const baseSharedStyle =
+    variant === "secondary"
+      ? shared.secondaryButton
+      : variant === "destructive"
+      ? shared.destructiveButton
+      : variant === "ghost"
+      ? shared.ghostButton
+      : shared.primaryButton;
 
-  if (variant === "secondary") {
-    backgroundColor = theme.glass.neutralFill;
-    textColor = theme.colors.text;
-    borderColor = theme.glass.borderColor;
-    borderWidth = 1;
-    shadowStyle = {
-      shadowColor: "transparent",
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0,
-      shadowRadius: 0,
-      elevation: 0,
-    };
-  } else if (variant === "destructive") {
-    backgroundColor = `${theme.colors.primary}18`;
-    textColor = theme.colors.primary;
-    borderColor = `${theme.colors.primary}35`;
-    borderWidth = 1;
-    shadowStyle = {
-      shadowColor: "transparent",
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0,
-      shadowRadius: 0,
-      elevation: 0,
-    };
-  } else if (variant === "ghost") {
-    backgroundColor = "transparent";
-    textColor = theme.colors.primary;
-    shadowStyle = {
-      shadowColor: "transparent",
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0,
-      shadowRadius: 0,
-      elevation: 0,
-    };
-  }
+  const textColor =
+    variant === "secondary"
+      ? theme.colors.text
+      : variant === "destructive" || variant === "ghost"
+      ? theme.colors.primary
+      : theme.colors.white;
 
   return StyleSheet.create({
     button: {
-      backgroundColor,
+      ...baseSharedStyle,
       minHeight,
       paddingVertical,
       paddingHorizontal,
-      borderRadius: theme.borderRadius.lg,
-      borderWidth,
-      borderColor,
-      alignItems: "center",
-      justifyContent: "center",
-      ...shadowStyle,
     },
     fullWidth: {
       width: "100%",

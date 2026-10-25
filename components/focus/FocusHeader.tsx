@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { themeTokens } from "../../constants/themeTokens";
-import { Theme } from "../../styles/shared";
+import { Theme, getSharedStyles } from "../../styles/shared";
 
 export interface FocusHeaderProps {
   onBack: () => void;
@@ -64,8 +64,9 @@ const FocusHeaderComponent: React.FC<FocusHeaderProps> = ({
 
 export const FocusHeader = React.memo(FocusHeaderComponent);
 
-const getStyles = (theme: Theme, isDarkMode: boolean) =>
-  StyleSheet.create({
+const getStyles = (theme: Theme, isDarkMode: boolean) => {
+  const shared = getSharedStyles(theme);
+  return StyleSheet.create({
     header: {
       flexDirection: "row",
       alignItems: "center",
@@ -75,6 +76,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
       paddingBottom: themeTokens.spacing.md,
     },
     headerIconButton: {
+      ...shared.iconCircle,
       width: 44,
       height: 44,
       borderRadius: 22,
@@ -83,8 +85,6 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
         : "rgba(0, 0, 0, 0.04)",
       borderWidth: 1,
       borderColor: theme.glass.borderColor,
-      alignItems: "center",
-      justifyContent: "center",
     },
     headerIconButtonActive: {
       backgroundColor: theme.colors.primary,
@@ -112,3 +112,4 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
       transform: [{ scale: 0.97 }],
     },
   });
+};

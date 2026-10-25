@@ -3,7 +3,7 @@ import { BlurView } from "expo-blur";
 import React, { useCallback, useMemo } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import { Theme } from "../../styles/shared";
+import { Theme, getSharedStyles } from "../../styles/shared";
 import { themeTokens } from "../../constants/themeTokens";
 import { getRoutineIcon, RoutineItem } from "../../utils/utils";
 
@@ -184,6 +184,7 @@ const UpNextSectionComponent: React.FC<UpNextSectionProps> = ({
 export const UpNextSection = React.memo(UpNextSectionComponent);
 
 const getStyles = (theme: Theme, isDarkMode: boolean) => {
+  const shared = getSharedStyles(theme);
   const tileBg = `${theme.colors.primary}${
     theme.glass?.iconTintAlpha ?? (isDarkMode ? "29" : "1C")
   }`;
@@ -197,11 +198,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       marginBottom: 10,
     },
     sectionLabel: {
-      fontSize: themeTokens.fonts.size.xs,
-      fontFamily: theme.fonts.bold,
-      color: theme.colors.textSecondary,
-      textTransform: "uppercase",
-      letterSpacing: 1.2,
+      ...shared.sectionLabel,
     },
     upNextList: {
       gap: 10,
@@ -308,12 +305,11 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       gap: 12,
     },
     emptyIconCircle: {
+      ...shared.iconCircle,
       width: 52,
       height: 52,
       borderRadius: 26,
       backgroundColor: tileBg,
-      alignItems: "center",
-      justifyContent: "center",
     },
     emptyTitle: {
       fontSize: themeTokens.fonts.size.lg,

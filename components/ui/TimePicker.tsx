@@ -4,7 +4,7 @@ import { Clock } from "lucide-react-native";
 import { useTheme } from "../../context/ThemeContext";
 import { useAppHaptics } from "../../hooks/useAppHaptics";
 import { WebTimePicker } from "../common/WebTimePicker";
-import { Theme } from "../../styles/shared";
+import { getSharedStyles, Theme } from "../../styles/shared";
 
 export interface TimePickerProps {
   value: string;
@@ -19,6 +19,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
 }) => {
   const { theme } = useTheme();
   const { light, selection } = useAppHaptics();
+  const shared = useMemo(() => getSharedStyles(theme), [theme]);
   const styles = useMemo(() => getStyles(theme), [theme]);
 
   if (Platform.OS === "web") {
@@ -84,15 +85,15 @@ export const TimePicker: React.FC<TimePickerProps> = ({
       {/* Header Pill */}
       <View
         style={[
+          shared.badge,
           styles.previewBadge,
           {
-            backgroundColor: `${theme.colors.primary}15`,
             borderColor: `${theme.colors.primary}35`,
           },
         ]}
       >
         <Clock size={14} color={theme.colors.primary} strokeWidth={2} />
-        <Text style={[styles.previewText, { color: theme.colors.primary }]}>
+        <Text style={[shared.badgeText, styles.previewText]}>
           {value || "1:00 AM"}
         </Text>
       </View>
@@ -120,38 +121,42 @@ export const TimePicker: React.FC<TimePickerProps> = ({
           <Pressable
             onPress={setNow}
             style={({ pressed }) => [
+              shared.chip,
               styles.quickPill,
               pressed && styles.quickPillPressed,
             ]}
           >
-            <Text style={styles.quickPillText}>Now</Text>
+            <Text style={shared.chipText}>Now</Text>
           </Pressable>
           <Pressable
             onPress={() => addMinutes(15)}
             style={({ pressed }) => [
+              shared.chip,
               styles.quickPill,
               pressed && styles.quickPillPressed,
             ]}
           >
-            <Text style={styles.quickPillText}>+15m</Text>
+            <Text style={shared.chipText}>+15m</Text>
           </Pressable>
           <Pressable
             onPress={() => addMinutes(30)}
             style={({ pressed }) => [
+              shared.chip,
               styles.quickPill,
               pressed && styles.quickPillPressed,
             ]}
           >
-            <Text style={styles.quickPillText}>+30m</Text>
+            <Text style={shared.chipText}>+30m</Text>
           </Pressable>
           <Pressable
             onPress={() => addMinutes(60)}
             style={({ pressed }) => [
+              shared.chip,
               styles.quickPill,
               pressed && styles.quickPillPressed,
             ]}
           >
-            <Text style={styles.quickPillText}>+1h</Text>
+            <Text style={shared.chipText}>+1h</Text>
           </Pressable>
         </View>
       )}
@@ -167,9 +172,6 @@ const getStyles = (theme: Theme) => {
       paddingVertical: theme.spacing.sm,
     },
     previewBadge: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 6,
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 16,
@@ -178,7 +180,6 @@ const getStyles = (theme: Theme) => {
     },
     previewText: {
       fontSize: 15,
-      fontFamily: theme.fonts.bold,
       letterSpacing: 0.5,
     },
     pickerWrapper: {
@@ -201,19 +202,10 @@ const getStyles = (theme: Theme) => {
     quickPill: {
       paddingHorizontal: 12,
       paddingVertical: 6,
-      borderRadius: 14,
-      backgroundColor: theme.glass.neutralFill,
-      borderWidth: 1,
-      borderColor: theme.glass.borderColor,
     },
     quickPillPressed: {
       opacity: 0.6,
       transform: [{ scale: 0.96 }],
-    },
-    quickPillText: {
-      fontSize: 12,
-      fontFamily: theme.fonts.medium,
-      color: theme.colors.textSecondary,
     },
   });
 };
