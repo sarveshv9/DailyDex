@@ -89,7 +89,7 @@ android {
 
     namespace 'com.anonymous.Zenapp'
     defaultConfig {
-        applicationId 'com.anonymous.Zenapp'
+        applicationId 'com.dailydex.app'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

@@ -30,6 +30,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
     );
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const DateTimePicker = require("@react-native-community/datetimepicker").default;
 
   const getDateFromString = (timeStr: string) => {

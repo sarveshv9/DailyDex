@@ -25,7 +25,6 @@ const FocusConfirmModalComponent: React.FC<FocusConfirmModalProps> = ({
   theme,
   isDarkMode,
 }) => {
-  const shared = useMemo(() => getSharedStyles(theme), [theme]);
   const styles = useMemo(() => getStyles(theme, isDarkMode), [theme, isDarkMode]);
 
   return (

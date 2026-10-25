@@ -1,29 +1,34 @@
 {
   "expo": {
-    "name": "Zen-app",
-    "slug": "Zen-app",
+    "name": "DailyDex",
+    "slug": "dailydex",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "zenapp",
+    "scheme": "dailydex",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.Zen-app",
+      "bundleIdentifier": "com.dailydex.app",
       "infoPlist": {
-        "NSUserNotificationsUsageDescription": "Zen uses notifications to gently remind you of your daily routines."
+        "NSUserNotificationsUsageDescription": "DailyDex uses notifications to gently remind you of your daily routines and focus sessions."
       }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#E63946"
       },
-      "package": "com.anonymous.Zenapp",
+      "package": "com.dailydex.app",
       "permissions": [
+        "POST_NOTIFICATIONS",
         "SCHEDULE_EXACT_ALARM",
-        "RECEIVE_BOOT_COMPLETED"
+        "RECEIVE_BOOT_COMPLETED",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
       ]
     },
     "web": {
@@ -39,7 +44,7 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#E63946"
         }
       ],
       "expo-font",
@@ -52,6 +57,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "5a5ad378-7716-4ee5-b85b-5b678343ef3a"
+      }
+    },
+    "owner": "sarveshv9"
   }
 }

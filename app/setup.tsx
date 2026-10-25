@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState, useMemo } from "react";
+import Svg, { Circle, Defs, RadialGradient, Stop } from "react-native-svg";
 import {
     Alert,
     BackHandler,
@@ -183,47 +184,77 @@ function StepWelcome({
 
     useEffect(() => {
         pulseAnim.value = withRepeat(
-            withTiming(1.08, { duration: 2400, easing: Easing.inOut(Easing.ease) }),
+            withTiming(1.12, { duration: 2400, easing: Easing.inOut(Easing.ease) }),
             -1,
             true
         );
     }, [pulseAnim]);
 
-    const pulseAnimatedStyle = useAnimatedStyle(() => ({
+    const pulseAuraStyle = useAnimatedStyle(() => ({
         transform: [{ scale: pulseAnim.value }],
+        opacity: 0.85 + (pulseAnim.value - 1) * 1.25,
+    }));
+
+    const pulseRingStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: 1 + (pulseAnim.value - 1) * 0.6 }],
     }));
 
     return (
         <View style={styles.welcomeContainer}>
-            <View style={[styles.stepHeader, { paddingBottom: 0 }]}>
+            <View style={styles.stepHeader}>
                 <View style={styles.headerTop}>
                     <View style={{ flex: 1 }} />
                     <Pressable
                         onPress={onSkip}
-                        style={styles.skipBtn}
+                        style={({ pressed }) => [
+                            styles.welcomeSkipBtn,
+                            pressed && { opacity: 0.7 },
+                        ]}
                         hitSlop={10}
                         accessibilityRole="button"
                         accessibilityLabel="Skip setup and use defaults"
                     >
-                        <Text style={styles.skipText}>Skip All</Text>
+                        <Text style={styles.welcomeSkipText}>Skip All</Text>
                     </Pressable>
                 </View>
             </View>
 
             <View style={styles.welcomeCenter}>
+                {/* Glowing Aura Emblem */}
                 <View style={styles.welcomeAuraWrap}>
-                    <Animated.View
-                        style={[
-                            styles.welcomeAuraRing,
-                            pulseAnimatedStyle,
-                        ]}
-                    />
+                    {/* Atmospheric diffuse radial glow */}
+                    <Animated.View style={[styles.welcomeSvgGlow, pulseAuraStyle]} pointerEvents="none">
+                        <Svg width={240} height={240} viewBox="0 0 240 240">
+                            <Defs>
+                                <RadialGradient id="welcomeAuraGrad" cx="120" cy="120" r="120" gradientUnits="userSpaceOnUse">
+                                    <Stop offset="0" stopColor={theme.colors.primary} stopOpacity="0.45" />
+                                    <Stop offset="0.35" stopColor={theme.colors.primary} stopOpacity="0.22" />
+                                    <Stop offset="0.68" stopColor={theme.colors.primary} stopOpacity="0.07" />
+                                    <Stop offset="1" stopColor={theme.colors.primary} stopOpacity="0" />
+                                </RadialGradient>
+                            </Defs>
+                            <Circle cx="120" cy="120" r="120" fill="url(#welcomeAuraGrad)" />
+                        </Svg>
+                    </Animated.View>
+
+                    {/* Outer concentric soft aura ring */}
+                    <Animated.View style={[styles.welcomeAuraOuterRing, pulseRingStyle]} pointerEvents="none" />
+
+                    {/* Inner halo ring */}
+                    <View style={styles.welcomeAuraInnerRing} pointerEvents="none" />
+
+                    {/* Center Icon Card with glowing shadow */}
                     <View style={styles.welcomeIconCard}>
-                        <Ionicons name="sparkles-outline" size={48} color={theme.colors.primary} />
+                        <Ionicons name="sparkles" size={38} color={theme.colors.primary} />
                     </View>
                 </View>
 
-                <Text style={styles.welcomeBrand}>ZEN</Text>
+                {/* Brand Badge */}
+                <View style={styles.welcomeBrandBadge}>
+                    <Ionicons name="sparkles" size={10} color={theme.colors.primary} style={{ marginRight: 6 }} />
+                    <Text style={styles.welcomeBrand}>ZEN</Text>
+                </View>
+
                 <Text style={styles.welcomeHeadline}>
                     Design your days with calm, intentional momentum.
                 </Text>
@@ -234,28 +265,42 @@ function StepWelcome({
                 <View style={styles.welcomeHighlights}>
                     <View style={styles.welcomeHighlightItem}>
                         <View style={styles.welcomeHighlightIconCircle}>
-                            <Ionicons name="sunny-outline" size={15} color={theme.colors.primary} />
+                            <Ionicons name="sunny-outline" size={18} color={theme.colors.primary} />
                         </View>
-                        <Text style={styles.welcomeHighlightText}>Circadian rhythm anchors</Text>
+                        <View style={styles.welcomeHighlightContent}>
+                            <Text style={styles.welcomeHighlightTitle}>Circadian rhythm anchors</Text>
+                            <Text style={styles.welcomeHighlightDesc}>Sync wake & sleep times to your natural biological clock</Text>
+                        </View>
                     </View>
+
                     <View style={styles.welcomeHighlightItem}>
                         <View style={styles.welcomeHighlightIconCircle}>
-                            <Ionicons name="flash-outline" size={15} color={theme.colors.primary} />
+                            <Ionicons name="flash-outline" size={18} color={theme.colors.primary} />
                         </View>
-                        <Text style={styles.welcomeHighlightText}>Fluid daily rituals</Text>
+                        <View style={styles.welcomeHighlightContent}>
+                            <Text style={styles.welcomeHighlightTitle}>Fluid daily rituals</Text>
+                            <Text style={styles.welcomeHighlightDesc}>Friction-free routines that flow with your energy</Text>
+                        </View>
                     </View>
+
                     <View style={styles.welcomeHighlightItem}>
                         <View style={styles.welcomeHighlightIconCircle}>
-                            <Ionicons name="notifications-outline" size={15} color={theme.colors.primary} />
+                            <Ionicons name="notifications-outline" size={18} color={theme.colors.primary} />
                         </View>
-                        <Text style={styles.welcomeHighlightText}>Quiet, mindful reminders</Text>
+                        <View style={styles.welcomeHighlightContent}>
+                            <Text style={styles.welcomeHighlightTitle}>Quiet, mindful reminders</Text>
+                            <Text style={styles.welcomeHighlightDesc}>Gentle nudges when it’s time to transition</Text>
+                        </View>
                     </View>
                 </View>
             </View>
 
-            <View style={styles.bottomBar}>
+            <View style={styles.welcomeBottomBar}>
                 <Pressable
-                    style={styles.nextBtn}
+                    style={({ pressed }) => [
+                        styles.welcomeNextBtn,
+                        pressed && { opacity: 0.92, transform: [{ scale: 0.99 }] },
+                    ]}
                     onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         onStart();
@@ -263,7 +308,7 @@ function StepWelcome({
                     accessibilityRole="button"
                     accessibilityLabel="Begin interactive setup"
                 >
-                    <Text style={styles.nextBtnText}>Begin Setup</Text>
+                    <Text style={styles.welcomeNextBtnText}>Begin Setup</Text>
                     <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
                 </Pressable>
             </View>
@@ -523,7 +568,7 @@ function StepPick({
                                     </View>
                                     <View style={[styles.radioCircle, isSelected && styles.radioCircleSelected]}>
                                         {isSelected && (
-                                            <Ionicons name="checkmark-sharp" size={12} color={theme.colors.onPrimary} />
+                                            <Ionicons name="checkmark-sharp" size={12} color="#FFFFFF" />
                                         )}
                                     </View>
                                 </View>
@@ -599,7 +644,7 @@ function StepPick({
                                                 <Ionicons
                                                     name={getRoutineIcon(key)}
                                                     size={20}
-                                                    color={isIconChosen ? theme.colors.onPrimary : theme.colors.primary}
+                                                    color={isIconChosen ? "#FFFFFF" : theme.colors.primary}
                                                 />
                                             </Pressable>
                                         );
@@ -915,7 +960,7 @@ function StepTimes({
                                             accessibilityRole="button"
                                             accessibilityLabel={`Repeat every ${hours} hour${hours > 1 ? "s" : ""}`}
                                         >
-                                            <Text style={[styles.recurringOptionText, { color: theme.colors.onPrimary }]}>
+                                            <Text style={styles.recurringOptionText}>
                                                 Every {hours} hour{hours > 1 ? "s" : ""}
                                             </Text>
                                         </Pressable>
@@ -1222,20 +1267,22 @@ export default function SetupScreen() {
                 <SkyBackground progress={skyProgress} />
             )}
 
-            <Animated.View
-                style={[
-                    styles.progressBar,
-                    progressBarAnimatedStyle,
-                ]}
-            >
-                <View
+            {step > 0 && (
+                <Animated.View
                     style={[
-                        styles.progressFill,
-                        { width: `${(step / 4) * 100}%` },
-                        (step === 1 || step === 2) && { backgroundColor: themeTokens.colors.danger },
+                        styles.progressBar,
+                        progressBarAnimatedStyle,
                     ]}
-                />
-            </Animated.View>
+                >
+                    <View
+                        style={[
+                            styles.progressFill,
+                            { width: `${(step / 4) * 100}%` },
+                            (step === 1 || step === 2) && { backgroundColor: themeTokens.colors.danger },
+                        ]}
+                    />
+                </Animated.View>
+            )}
 
             {step === 0 && (
                 <StepWelcome
@@ -1332,94 +1379,174 @@ const getStyles = (theme: Theme) =>
         welcomeContainer: {
             flex: 1,
             justifyContent: "space-between",
+            backgroundColor: theme.colors.background,
+        },
+        welcomeSkipBtn: {
+            paddingHorizontal: 14,
+            paddingVertical: 6,
+            borderRadius: 14,
+            backgroundColor: theme.colors.surfaceMuted,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+        },
+        welcomeSkipText: {
+            fontSize: themeTokens.fonts.size.sm - 1,
+            fontFamily: theme.fonts.medium,
+            color: theme.colors.textSecondary,
         },
         welcomeCenter: {
             alignItems: "center",
-            paddingHorizontal: 20,
-            paddingTop: 8,
+            paddingHorizontal: 22,
+            paddingTop: 4,
         },
         welcomeAuraWrap: {
-            width: 110,
-            height: 110,
+            width: 140,
+            height: 140,
             alignItems: "center",
             justifyContent: "center",
-            marginBottom: 20,
+            marginBottom: 16,
         },
-        welcomeAuraRing: {
+        welcomeSvgGlow: {
             position: "absolute",
-            width: 110,
-            height: 110,
-            borderRadius: 55,
-            backgroundColor: theme.colors.primarySoft,
+            width: 240,
+            height: 240,
+            top: -50,
+            left: -50,
+            alignItems: "center",
+            justifyContent: "center",
+        },
+        welcomeAuraOuterRing: {
+            position: "absolute",
+            width: 124,
+            height: 124,
+            borderRadius: 62,
+            borderWidth: 1.5,
+            borderColor: "rgba(255, 90, 95, 0.22)",
+            backgroundColor: "rgba(255, 90, 95, 0.05)",
+        },
+        welcomeAuraInnerRing: {
+            position: "absolute",
+            width: 98,
+            height: 98,
+            borderRadius: 49,
+            borderWidth: 1,
+            borderColor: "rgba(255, 90, 95, 0.32)",
+            backgroundColor: "rgba(255, 90, 95, 0.09)",
         },
         welcomeIconCard: {
-            width: 82,
-            height: 82,
-            borderRadius: 26,
+            width: 76,
+            height: 76,
+            borderRadius: 38,
             backgroundColor: theme.colors.surface,
             alignItems: "center",
             justifyContent: "center",
             borderWidth: 1.5,
-            borderColor: theme.colors.border,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.06,
-            shadowRadius: 10,
-            elevation: 3,
+            borderColor: "rgba(255, 255, 255, 0.16)",
+            shadowColor: theme.colors.primary,
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.8,
+            shadowRadius: 20,
+            elevation: 8,
+        },
+        welcomeBrandBadge: {
+            flexDirection: "row",
+            alignItems: "center",
+            paddingHorizontal: 12,
+            paddingVertical: 4,
+            borderRadius: 16,
+            backgroundColor: "rgba(255, 90, 95, 0.10)",
+            borderWidth: 1,
+            borderColor: "rgba(255, 90, 95, 0.25)",
+            marginBottom: 12,
         },
         welcomeBrand: {
-            fontSize: themeTokens.fonts.size.xs,
+            fontSize: 11,
             fontFamily: theme.fonts.bold,
-            letterSpacing: 4,
+            letterSpacing: 3,
             color: theme.colors.primary,
-            marginBottom: 8,
         },
         welcomeHeadline: {
             fontSize: 27,
             fontFamily: theme.fonts.bold,
             color: theme.colors.text,
             textAlign: "center",
-            lineHeight: 33,
-            marginBottom: 10,
+            lineHeight: 34,
+            letterSpacing: -0.4,
+            marginBottom: 8,
         },
         welcomeSubtitle: {
             fontSize: themeTokens.fonts.size.sm,
             fontFamily: theme.fonts.regular,
             color: theme.colors.textSecondary,
             textAlign: "center",
-            lineHeight: 20,
-            marginBottom: 24,
+            lineHeight: 21,
+            marginBottom: 20,
             paddingHorizontal: 8,
         },
         welcomeHighlights: {
             width: "100%",
             gap: 10,
-            marginTop: 6,
-            paddingHorizontal: 8,
         },
         welcomeHighlightItem: {
             flexDirection: "row",
             alignItems: "center",
-            gap: 12,
+            gap: 14,
             backgroundColor: theme.colors.surfaceMuted,
             paddingHorizontal: 16,
             paddingVertical: 12,
-            borderRadius: 16,
+            borderRadius: 18,
             borderWidth: 1,
             borderColor: theme.colors.border,
         },
         welcomeHighlightIconCircle: {
-            width: 30,
-            height: 30,
-            borderRadius: 10,
-            backgroundColor: theme.colors.primarySoft,
+            width: 38,
+            height: 38,
+            borderRadius: 13,
+            backgroundColor: "rgba(255, 90, 95, 0.12)",
+            borderWidth: 1,
+            borderColor: "rgba(255, 90, 95, 0.22)",
             alignItems: "center",
             justifyContent: "center",
         },
-        welcomeHighlightText: {
-            fontSize: themeTokens.fonts.size.sm - 1,
-            fontFamily: theme.fonts.medium,
+        welcomeHighlightContent: {
+            flex: 1,
+            gap: 2,
+        },
+        welcomeHighlightTitle: {
+            fontSize: themeTokens.fonts.size.sm,
+            fontFamily: theme.fonts.bold,
             color: theme.colors.text,
+        },
+        welcomeHighlightDesc: {
+            fontSize: 12,
+            fontFamily: theme.fonts.regular,
+            color: theme.colors.textSecondary,
+            lineHeight: 16,
+        },
+        welcomeBottomBar: {
+            paddingHorizontal: 20,
+            paddingTop: 10,
+            paddingBottom: 16,
+            backgroundColor: theme.colors.background,
+        },
+        welcomeNextBtn: {
+            height: 56,
+            borderRadius: 22,
+            backgroundColor: theme.colors.primary,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 10,
+            shadowColor: theme.colors.primary,
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.35,
+            shadowRadius: 12,
+            elevation: 6,
+        },
+        welcomeNextBtnText: {
+            fontSize: 17,
+            fontFamily: theme.fonts.bold,
+            color: "#FFFFFF",
         },
 
         // ─── Common Step Header ──────────────────
@@ -1781,7 +1908,7 @@ const getStyles = (theme: Theme) =>
         customModalSubmitText: {
             fontSize: 14,
             fontFamily: theme.fonts.bold,
-            color: theme.colors.onPrimary,
+            color: "#FFFFFF",
         },
 
         // ─── Notification Primer Card (Step 4) ───
@@ -1945,7 +2072,7 @@ const getStyles = (theme: Theme) =>
             color: theme.colors.textSecondary,
         },
         durationPillTextActive: {
-            color: theme.colors.onPrimary,
+            color: "#FFFFFF",
         },
         notesInput: {
             backgroundColor: theme.colors.surfaceMuted,
@@ -2042,6 +2169,7 @@ const getStyles = (theme: Theme) =>
         recurringOptionText: {
             fontSize: 14,
             fontFamily: theme.fonts.bold,
+            color: "#FFFFFF",
         },
 
         // ─── Bottom Navigation Bar ───────────────
@@ -2080,16 +2208,16 @@ const getStyles = (theme: Theme) =>
             alignItems: "center",
             justifyContent: "center",
             gap: 8,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.15,
-            shadowRadius: 8,
-            elevation: 4,
+            shadowColor: theme.colors.primary,
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.35,
+            shadowRadius: 12,
+            elevation: 6,
         },
         nextBtnText: {
             fontSize: 17,
             fontFamily: theme.fonts.bold,
-            color: theme.colors.onPrimary,
+            color: "#FFFFFF",
         },
         saveBtn: {
             flex: 1,
@@ -2100,11 +2228,11 @@ const getStyles = (theme: Theme) =>
             alignItems: "center",
             justifyContent: "center",
             gap: 8,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.15,
-            shadowRadius: 8,
-            elevation: 4,
+            shadowColor: theme.colors.primary,
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.35,
+            shadowRadius: 12,
+            elevation: 6,
         },
         saveBtnDisabled: {
             opacity: 0.6,
@@ -2112,6 +2240,6 @@ const getStyles = (theme: Theme) =>
         saveBtnText: {
             fontSize: 17,
             fontFamily: theme.fonts.bold,
-            color: theme.colors.onPrimary,
+            color: "#FFFFFF",
         },
     });

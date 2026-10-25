@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Animated,
   Pressable,
@@ -31,7 +31,7 @@ export const AppSwitch: React.FC<AppSwitchProps> = ({
   style,
   accessibilityLabel,
 }) => {
-  const animatedValue = useRef(new Animated.Value(value ? 1 : 0)).current;
+  const [animatedValue] = useState(() => new Animated.Value(value ? 1 : 0));
 
   useEffect(() => {
     Animated.spring(animatedValue, {

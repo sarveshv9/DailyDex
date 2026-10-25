@@ -1,6 +1,5 @@
 import React, { useMemo } from "react";
 import {
-  Platform,
   Pressable,
   StyleProp,
   StyleSheet,
@@ -24,6 +23,8 @@ export interface ChipProps {
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
+  badgeStyle?: StyleProp<ViewStyle>;
+  badgeTextStyle?: StyleProp<TextStyle>;
 }
 
 export const Chip: React.FC<ChipProps> = ({
@@ -36,6 +37,8 @@ export const Chip: React.FC<ChipProps> = ({
   disabled = false,
   style,
   textStyle,
+  badgeStyle,
+  badgeTextStyle,
 }) => {
   const { theme } = useTheme();
   const { selection } = useAppHaptics();
@@ -61,8 +64,8 @@ export const Chip: React.FC<ChipProps> = ({
       {icon && <View style={styles.icon}>{icon}</View>}
       <Text style={[styles.text, textStyle]}>{label}</Text>
       {badgeCount !== undefined && badgeCount > 0 && (
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{badgeCount}</Text>
+        <View style={[styles.badge, badgeStyle]}>
+          <Text style={[styles.badgeText, badgeTextStyle]}>{badgeCount}</Text>
         </View>
       )}
     </Pressable>
@@ -95,7 +98,9 @@ const getStyles = (theme: Theme, selected: boolean, size: "sm" | "md") => {
     badge: {
       marginLeft: theme.spacing.xs,
       backgroundColor: selected
-        ? theme.colors.onPrimary
+        ? theme.isDarkMode
+          ? "rgba(255, 255, 255, 0.40)"
+          : "rgba(0, 0, 0, 0.16)"
         : theme.isDarkMode
         ? "rgba(255, 255, 255, 0.12)"
         : "rgba(0, 0, 0, 0.08)",
@@ -105,17 +110,19 @@ const getStyles = (theme: Theme, selected: boolean, size: "sm" | "md") => {
       minWidth: 20,
       alignItems: "center",
       justifyContent: "center",
-      borderWidth: selected ? 0 : 1,
-      borderColor: theme.isDarkMode
+      borderWidth: 1,
+      borderColor: selected
+        ? theme.isDarkMode
+          ? "rgba(255, 255, 255, 0.50)"
+          : "rgba(0, 0, 0, 0.22)"
+        : theme.isDarkMode
         ? "rgba(255, 255, 255, 0.16)"
         : "rgba(0, 0, 0, 0.12)",
     },
     badgeText: {
       fontSize: 10,
       fontFamily: theme.fonts.bold,
-      color: selected
-        ? (theme.colors.onPrimary === "#FFFFFF" ? "#121212" : "#FFFFFF")
-        : theme.colors.text,
+      color: selected ? "#000000" : theme.colors.text,
     },
     pressed: {
       opacity: 0.8,

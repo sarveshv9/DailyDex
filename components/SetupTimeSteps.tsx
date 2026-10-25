@@ -121,8 +121,8 @@ const HILLS = {
         mid: ["#1F1533", "#150F25"],
         front: ["#150F24", NIGHT_BG],
         tree: "#0C0817",
-        rim: "#FF5A5F",
-        rimOpacity: 0.3,
+        rim: "#FFFFFF",
+        rimOpacity: 0.2,
         cloud: "#26193A",
     },
 } as const;
@@ -133,10 +133,10 @@ const SKY_Y = 92;
 const SKY_R = 50;
 const RISE_DISTANCE = 105; // viewBox units the sun/moon travel behind the hills
 
-const RAYS = Array.from({ length: 13 }, (_, i) => {
-    const a = ((196 + i * 12) * Math.PI) / 180;
-    const r1 = SKY_R + 12;
-    const r2 = SKY_R + (i % 2 === 0 ? 34 : 22);
+const RAYS = Array.from({ length: 24 }, (_, i) => {
+    const a = (i * (360 / 24) * Math.PI) / 180;
+    const r1 = SKY_R + 10;
+    const r2 = SKY_R + (i % 2 === 0 ? 30 : 20);
     return {
         x1: SKY_X + Math.cos(a) * r1,
         y1: SKY_Y + Math.sin(a) * r1,
@@ -204,7 +204,7 @@ function Stars() {
             {[...STARS, ...EXTRA_STARS].map(([cx, cy, r, o], i) => (
                 <Circle key={i} cx={cx} cy={cy} r={r} fill="#FFFFFF" opacity={o} />
             ))}
-            <Circle cx={262} cy={36} r={1.4} fill="#FF6B6B" opacity={0.8} />
+            <Circle cx={262} cy={36} r={1.4} fill="#FFFFFF" opacity={0.8} />
         </LayerSvg>
     );
 }
@@ -245,14 +245,15 @@ function Moon() {
     return (
         <LayerSvg>
             <Defs>
-                <RadialGradient id="moonHalo" cx={SKY_X} cy={SKY_Y} r="115" gradientUnits="userSpaceOnUse">
-                    <Stop offset="0" stopColor="#FF4D55" stopOpacity="0.28" />
-                    <Stop offset="1" stopColor="#FF4D55" stopOpacity="0" />
+                <RadialGradient id="moonHalo" cx={SKY_X} cy={SKY_Y} r="125" gradientUnits="userSpaceOnUse">
+                    <Stop offset="0" stopColor="#FFFFFF" stopOpacity="0.35" />
+                    <Stop offset="0.45" stopColor="#E0E7FF" stopOpacity="0.14" />
+                    <Stop offset="1" stopColor="#FFFFFF" stopOpacity="0" />
                 </RadialGradient>
                 <LinearGradient id="moonBody" x1="0.15" y1="0.05" x2="0.85" y2="1">
-                    <Stop offset="0" stopColor="#E8545E" />
-                    <Stop offset="0.6" stopColor="#F27468" />
-                    <Stop offset="1" stopColor="#FFA37E" />
+                    <Stop offset="0" stopColor="#FFFFFF" />
+                    <Stop offset="0.5" stopColor="#F8FAFC" />
+                    <Stop offset="1" stopColor="#CBD5E1" />
                 </LinearGradient>
                 {/* Second circle is cut out of the first → crescent */}
                 <Mask id="crescent" x="0" y="0" width="390" height="200">
@@ -260,7 +261,7 @@ function Moon() {
                     <Circle cx={SKY_X + 24} cy={SKY_Y - 16} r={SKY_R - 6} fill="black" />
                 </Mask>
             </Defs>
-            <Circle cx={SKY_X} cy={SKY_Y} r={115} fill="url(#moonHalo)" />
+            <Circle cx={SKY_X} cy={SKY_Y} r={125} fill="url(#moonHalo)" />
             <Circle cx={SKY_X} cy={SKY_Y} r={SKY_R} fill="url(#moonBody)" mask="url(#crescent)" />
         </LayerSvg>
     );
@@ -744,7 +745,7 @@ export function StepTime({
                     {night && sleepInfo ? (
                         <View style={styles.insightNight}>
                             <View style={styles.insightIconNight}>
-                                <Ionicons name="sparkles-outline" size={26} color="#FF5A5F" />
+                                <Ionicons name="moon-outline" size={26} color="#FFFFFF" />
                             </View>
                             <View style={{ flex: 1 }}>
                                 <Text style={styles.insightTitleNight}>{sleepInfo.text} Sleep Window</Text>
@@ -968,7 +969,9 @@ const makeStyles = (fonts: Theme["fonts"]) =>
             width: 56,
             height: 56,
             borderRadius: 16,
-            backgroundColor: "#1C0F15",
+            backgroundColor: "#1B2234",
+            borderWidth: 1,
+            borderColor: "rgba(255, 255, 255, 0.12)",
             alignItems: "center",
             justifyContent: "center",
         },

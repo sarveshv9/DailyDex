@@ -9,7 +9,7 @@ import {
   THEME_STORAGE_KEY,
 } from "../constants/storageKeys";
 import { createTheme } from "../constants/themeGenerator";
-import { DEFAULT_THEME_NAME, THEME_ACCENTS, ThemeName } from "../constants/themeRegistry";
+import { DEFAULT_THEME_NAME, THEME_ACCENTS } from "../constants/themeRegistry";
 import { Theme } from "../styles/shared";
 
 export interface CustomThemeConfig {
