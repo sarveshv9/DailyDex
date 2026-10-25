@@ -3,10 +3,10 @@ import { BlurView } from "expo-blur";
 import React, { useMemo } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import { ActiveTimerBadge } from "../common/ActiveTimerBadge";
-import { Theme, getSharedStyles } from "../../styles/shared";
 import { themeTokens } from "../../constants/themeTokens";
+import { Theme, getSharedStyles } from "../../styles/shared";
 import { RoutineItem } from "../../utils/utils";
+import { ActiveTimerBadge } from "../common/ActiveTimerBadge";
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
@@ -165,8 +165,8 @@ const FocusHeroCardComponent: React.FC<FocusHeroCardProps> = ({
                 {hasActiveTask
                   ? "View Day Timeline"
                   : hasNextTask
-                  ? "Start My Day"
-                  : "View Day Timeline"}
+                    ? "Start My Day"
+                    : "View Day Timeline"}
               </Text>
               <Ionicons
                 name="arrow-forward"
@@ -262,10 +262,14 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       flexDirection: "row",
       alignItems: "center",
       gap: 4,
-      paddingHorizontal: 8,
+      paddingHorizontal: 9,
       paddingVertical: 4,
       borderRadius: 12,
-      backgroundColor: theme.colors.surfaceMuted,
+      backgroundColor: isDarkMode
+        ? "rgba(255, 255, 255, 0.08)"
+        : "rgba(0, 0, 0, 0.05)",
+      borderWidth: 1,
+      borderColor: theme.colors.border,
     },
     durationBadgeText: {
       fontSize: themeTokens.fonts.size.xs,
@@ -318,20 +322,31 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       fontVariant: ["tabular-nums"],
     },
     progressBarTrack: {
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: theme.colors.surfaceMuted,
+      height: 8,
+      borderRadius: 999,
+      backgroundColor: isDarkMode
+        ? "rgba(255, 255, 255, 0.16)"
+        : "rgba(0, 0, 0, 0.10)",
+      borderWidth: 1,
+      borderColor: isDarkMode
+        ? "rgba(255, 255, 255, 0.12)"
+        : "rgba(0, 0, 0, 0.08)",
       overflow: "hidden",
     },
     progressBarFill: {
       height: "100%",
       backgroundColor: theme.colors.primary,
-      borderRadius: 3,
+      borderRadius: 999,
     },
     primaryButton: {
       ...shared.primaryButton,
-      paddingVertical: 14,
-      borderRadius: 18,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      minHeight: 50,
+      paddingVertical: 10,
+      borderRadius: 999,
       ...Platform.select({
         ios: {
           shadowColor: "#000000",
@@ -344,7 +359,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     },
     primaryButtonText: {
       ...shared.primaryButtonText,
-      fontSize: themeTokens.fonts.size.md,
+      fontSize: themeTokens.fonts.size.sm,
     },
   });
 };

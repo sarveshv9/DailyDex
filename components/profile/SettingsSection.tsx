@@ -2,7 +2,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
-import { Platform, Pressable, StyleSheet, Switch, Text, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { AppSwitch } from "../ui/AppSwitch";
 import { useSettings } from "../../context/SettingsContext";
 import { Theme, getSharedStyles } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
@@ -211,15 +212,14 @@ const SettingSwitchItem: React.FC<SettingSwitchItemProps> = React.memo(
           </View>
         </View>
 
-        <Switch
+        <AppSwitch
           value={value}
           onValueChange={onValueChange}
           trackColor={{
-            false: theme.colors.border,
+            false: theme.isDarkMode ? "#3F3F46" : "#D4D4D8",
             true: theme.colors.primary,
           }}
-          thumbColor={theme.colors.onPrimary}
-          {...({ activeThumbColor: theme.colors.onPrimary } as any)}
+          thumbColor="#FFFFFF"
         />
       </View>
     );

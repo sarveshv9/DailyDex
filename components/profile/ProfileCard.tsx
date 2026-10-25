@@ -228,6 +228,8 @@ const getStyles = (theme: Theme, isDark: boolean) => {
   return StyleSheet.create({
     cardContainer: {
       ...shared.glassCard,
+      borderRadius: 24,
+      overflow: "hidden",
       ...Platform.select({
         ios: {
           shadowColor: "#000",
@@ -239,6 +241,8 @@ const getStyles = (theme: Theme, isDark: boolean) => {
       }),
     },
     blurWrapper: {
+      borderRadius: 24,
+      overflow: "hidden",
       paddingHorizontal: theme.spacing.lg,
       paddingTop: theme.spacing.xl,
       paddingBottom: theme.spacing.xl,
@@ -247,6 +251,7 @@ const getStyles = (theme: Theme, isDark: boolean) => {
     },
     glassOverlay: {
       ...StyleSheet.absoluteFill,
+      borderRadius: 24,
       backgroundColor: theme.glass.cardBg,
     },
     editButton: {
@@ -386,10 +391,18 @@ const getStyles = (theme: Theme, isDark: boolean) => {
     },
     saveButton: {
       ...shared.primaryButton,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      minHeight: 50,
+      paddingVertical: 10,
+      borderRadius: 999,
       marginTop: 10,
     },
     saveButtonText: {
       ...shared.primaryButtonText,
+      fontSize: 14,
     },
   });
 };

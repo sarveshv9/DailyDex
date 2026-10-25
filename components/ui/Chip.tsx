@@ -94,15 +94,28 @@ const getStyles = (theme: Theme, selected: boolean, size: "sm" | "md") => {
     },
     badge: {
       marginLeft: theme.spacing.xs,
-      backgroundColor: selected ? theme.colors.primarySoft : theme.colors.surfaceMuted,
+      backgroundColor: selected
+        ? theme.colors.onPrimary
+        : theme.isDarkMode
+        ? "rgba(255, 255, 255, 0.12)"
+        : "rgba(0, 0, 0, 0.08)",
       borderRadius: themeTokens.borderRadius.full,
-      paddingHorizontal: 6,
+      paddingHorizontal: 7,
       paddingVertical: 2,
+      minWidth: 20,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: selected ? 0 : 1,
+      borderColor: theme.isDarkMode
+        ? "rgba(255, 255, 255, 0.16)"
+        : "rgba(0, 0, 0, 0.12)",
     },
     badgeText: {
       fontSize: 10,
       fontFamily: theme.fonts.bold,
-      color: selected ? theme.colors.onPrimary : theme.colors.text,
+      color: selected
+        ? (theme.colors.onPrimary === "#FFFFFF" ? "#121212" : "#FFFFFF")
+        : theme.colors.text,
     },
     pressed: {
       opacity: 0.8,

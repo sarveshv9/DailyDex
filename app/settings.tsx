@@ -7,10 +7,10 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   View,
 } from "react-native";
+import { AppSwitch } from "../components/ui/AppSwitch";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../context/ThemeContext";
 import { useSettings } from "../context/SettingsContext";
@@ -79,15 +79,11 @@ export default function SettingsScreen() {
           </View>
           <Text style={styles.rowLabel}>{label}</Text>
         </View>
-        <Switch
+        <AppSwitch
           value={value}
-          onValueChange={(v) => {
-            if (settings.hapticsEnabled)
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            onValueChange(v);
-          }}
+          onValueChange={onValueChange}
           trackColor={{
-            false: theme.colors.border,
+            false: theme.isDarkMode ? "#3F3F46" : "#D4D4D8",
             true: theme.colors.primary,
           }}
           thumbColor="#FFFFFF"

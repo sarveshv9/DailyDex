@@ -6,12 +6,12 @@ import {
     Pressable,
     ScrollView,
     StyleSheet,
-    Switch,
     Text,
     TextInput,
     View,
     Alert,
 } from "react-native";
+import { AppSwitch } from "../ui/AppSwitch";
 import {
     createTheme,
     DEFAULT_THEME_NAME,
@@ -163,15 +163,16 @@ export function ThemeSelectionModal({
                             <Ionicons name="moon" size={20} color={currentTheme.colors.primaryText} />
                             <Text style={styles.toggleLabel}>Dark Mode</Text>
                         </View>
-                        <Switch
+                        <AppSwitch
                             value={isDarkMode}
                             onValueChange={(v) => {
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                 onToggleDarkMode(v);
                             }}
-                            trackColor={{ false: currentTheme.colors.border, true: currentTheme.colors.primary }}
-                            thumbColor={currentTheme.colors.onPrimary}
-                            {...({ activeThumbColor: currentTheme.colors.onPrimary } as Record<string, string>)}
+                            trackColor={{
+                                false: isDarkMode ? "#3F3F46" : "#D4D4D8",
+                                true: currentTheme.colors.primary,
+                            }}
+                            thumbColor="#FFFFFF"
                         />
                     </View>
 
@@ -182,15 +183,16 @@ export function ThemeSelectionModal({
                             <Ionicons name="sync" size={20} color={currentTheme.colors.primaryText} />
                             <Text style={styles.toggleLabel}>Auto Theme</Text>
                         </View>
-                        <Switch
+                        <AppSwitch
                             value={isAutoTheme}
                             onValueChange={(v) => {
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                 onToggleAutoTheme(v);
                             }}
-                            trackColor={{ false: currentTheme.colors.border, true: currentTheme.colors.primary }}
-                            thumbColor={currentTheme.colors.onPrimary}
-                            {...({ activeThumbColor: currentTheme.colors.onPrimary } as Record<string, string>)}
+                            trackColor={{
+                                false: isDarkMode ? "#3F3F46" : "#D4D4D8",
+                                true: currentTheme.colors.primary,
+                            }}
+                            thumbColor="#FFFFFF"
                         />
                     </View>
                 </View>

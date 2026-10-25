@@ -4,3 +4,4 @@ export * from "./Chip";
 export * from "./EmptyState";
 export * from "./ModalSheet";
 export * from "./TimePicker";
+export * from "./AppSwitch";

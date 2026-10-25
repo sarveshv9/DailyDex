@@ -182,14 +182,21 @@ export const SettingModal = ({
           style={({ pressed }) => [
             shared.primaryButton,
             {
+              minHeight: 50,
+              paddingVertical: 10,
+              borderRadius: 999,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
               marginTop: theme.spacing.lg,
               opacity: pressed ? 0.88 : 1,
               transform: [{ scale: pressed ? 0.98 : 1 }],
             },
           ]}
         >
-          <Ionicons name="checkmark-circle" size={20} color={theme.colors.onPrimary} />
-          <Text style={shared.primaryButtonText}>
+          <Ionicons name="checkmark-circle" size={18} color={theme.colors.onPrimary} />
+          <Text style={[shared.primaryButtonText, { fontSize: 14 }]}>
             Save Changes
           </Text>
         </Pressable>

@@ -1013,10 +1013,12 @@ const getStyles = (theme: Theme) =>
       zIndex: 20,
     },
     closeBar: {
-      width: 40,
+      width: 44,
       height: 5,
-      borderRadius: 2.5,
-      backgroundColor: theme.colors.divider,
+      borderRadius: 3,
+      backgroundColor: !theme.isDarkMode
+        ? "rgba(0, 0, 0, 0.28)"
+        : "rgba(255, 255, 255, 0.35)",
       marginBottom: themeTokens.spacing.sm,
     },
     listTitle: {
