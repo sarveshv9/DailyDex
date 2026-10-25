@@ -1,0 +1,20 @@
+appId: com.anonymous.Zenapp
+---
+# Flow 3: Todo & Task Management
+- launchApp
+- tapOn:
+    point: "50%,92%" # Center tab (Todo)
+- assertVisible:
+    text: ".*(Tasks|Todo|Inbox|All).*"
+- tapOn:
+    text: ".*(\\+|Add Task|New Task).*"
+    optional: true
+- tapOn:
+    id: "task-form-content"
+    optional: true
+- inputText: "Test Smoke Task"
+- tapOn:
+    id: "task-form-save-btn"
+    optional: true
+- assertVisible:
+    text: ".*(Tasks|Test Smoke Task|Todo).*"

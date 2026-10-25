@@ -1,0 +1,12 @@
+appId: com.anonymous.Zenapp
+---
+# Flow 2: Today Dashboard
+- launchApp
+- assertVisible:
+    text: ".*(Good morning|Good afternoon|Good evening|Today).*"
+- scroll
+- assertVisible:
+    text: ".*(Routine|Up Next|Timeline|Rituals).*"
+- tapOn:
+    text: ".*(Start my day|Check|Done).*"
+    optional: true

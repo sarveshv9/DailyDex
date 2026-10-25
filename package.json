@@ -8,7 +8,9 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "lint": "expo lint",
+    "lint": "eslint .",
+    "lint:ratchet": "node scripts/lint-ratchet.js",
+    "test": "jest",
     "build": "expo export"
   },
   "dependencies": {
@@ -47,11 +49,20 @@
   },
   "devDependencies": {
     "@babel/core": "^7.29.0",
+    "@types/jest": "29.5.14",
     "@types/react": "~19.2.4",
     "babel-plugin-add-react-displayname": "^0.0.5",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~57.0.2",
+    "jest": "~29.7.0",
+    "jest-expo": "~57.0.6",
     "typescript": "~6.0.3"
+  },
+  "jest": {
+    "preset": "jest-expo",
+    "transformIgnorePatterns": [
+      "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg)"
+    ]
   },
   "private": true
 }

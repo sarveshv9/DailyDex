@@ -1,0 +1,37 @@
+appId: com.anonymous.Zenapp
+---
+# Flow 8: Timer-in-Background Check (Clock Drift Prevention)
+- launchApp
+- tapOn:
+    text: ".*(Focus|Pomodoro|Start Timer|Timer).*"
+
+# Start 20s test timer (when EXPO_PUBLIC_E2E=1) or regular session
+- tapOn:
+    id: "focus-start-debug-20s-btn"
+    optional: true
+- tapOn:
+    id: "focus-start-timer-btn"
+    optional: true
+- tapOn:
+    id: "focus-play-pause-btn"
+    optional: true
+
+# Background app without killing process
+- pressKey: Home
+
+# INTENTIONAL DELAY WORKAROUND (DO NOT REMOVE OR "FIX"):
+# Maestro does not have a native `sleep` command. We simulate a 10-second background delay
+# by polling for a non-existent element with a 10000ms timeout against the active OS launcher hierarchy.
+# Because `optional: true` is specified, Maestro waits the full 10 seconds and continues without error.
+- extendedWaitUntil:
+    visible: "wait_10s_delay_anchor_nonexistent"
+    timeout: 10000
+    optional: true
+
+# Resume existing backgrounded process (do NOT kill or restart)
+- launchApp:
+    stopApp: false
+
+# Verify timer computed accurately against real clock (expected ~00:07-00:09 with tight tolerance: 00:05-00:09)
+- assertVisible:
+    text: ".*00:0[5-9].*"
