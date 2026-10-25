@@ -51,7 +51,7 @@ const FocusActiveControlsComponent: React.FC<FocusActiveControlsProps> = ({
           <Ionicons
             name={isActive ? "pause" : "play"}
             size={20}
-            color={isActive ? theme.colors.primary : theme.colors.white}
+            color={isActive ? theme.colors.primaryText : theme.colors.onPrimary}
           />
           <Text
             style={[
@@ -84,7 +84,7 @@ const FocusActiveControlsComponent: React.FC<FocusActiveControlsProps> = ({
           <Ionicons
             name="refresh-outline"
             size={19}
-            color={isResetEnabled ? theme.colors.primary : theme.colors.secondary}
+            color={isResetEnabled ? theme.colors.primaryText : theme.colors.textSecondary}
           />
           <Text
             style={[
@@ -121,7 +121,7 @@ const FocusActiveControlsComponent: React.FC<FocusActiveControlsProps> = ({
               }
               size={19}
               color={
-                isLastPomoPhase ? theme.colors.primary : theme.colors.secondary
+                isLastPomoPhase ? theme.colors.primaryText : theme.colors.textSecondary
               }
             />
             <Text
@@ -149,7 +149,7 @@ const FocusActiveControlsComponent: React.FC<FocusActiveControlsProps> = ({
         <Ionicons
           name="stop-circle-outline"
           size={18}
-          color={theme.colors.secondary}
+          color={theme.colors.textSecondary}
         />
         <Text style={styles.endSessionText}>End Session Early</Text>
       </Pressable>
@@ -183,47 +183,42 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       backgroundColor: theme.colors.primary,
     },
     actionPillPause: {
-      backgroundColor: isDarkMode
-        ? "rgba(255, 255, 255, 0.08)"
-        : "rgba(0, 0, 0, 0.05)",
+      backgroundColor: theme.colors.surfaceMuted,
       borderWidth: 1.5,
-      borderColor: `${theme.colors.primary}50`,
+      borderColor: theme.colors.border,
     },
     actionPillPrimaryText: {
       ...shared.primaryButtonText,
       fontSize: themeTokens.fonts.size.md,
+      color: theme.colors.onPrimary,
     },
     actionPillPauseText: {
-      color: theme.colors.primary,
+      color: theme.colors.primaryText,
     },
     actionPillSecondary: {
       ...shared.secondaryButton,
       flex: 1,
-      borderColor: theme.glass.borderColor,
-      backgroundColor: isDarkMode
-        ? "rgba(255, 255, 255, 0.06)"
-        : "rgba(0, 0, 0, 0.04)",
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.surfaceMuted,
       gap: 6,
     },
     actionPillSecondaryText: {
       ...shared.secondaryButtonText,
       fontSize: themeTokens.fonts.size.sm,
-      color: theme.colors.primary,
+      color: theme.colors.primaryText,
     },
     actionPillDisabled: {
       opacity: 0.35,
     },
     actionPillDisabledText: {
-      color: theme.colors.secondary,
+      color: theme.colors.textSecondary,
     },
     actionPillFinish: {
-      borderColor: `${theme.colors.primary}60`,
-      backgroundColor: isDarkMode
-        ? `${theme.colors.primary}18`
-        : `${theme.colors.primary}10`,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.primarySoft,
     },
     actionPillFinishText: {
-      color: theme.colors.primary,
+      color: theme.colors.primaryText,
     },
     endSessionButton: {
       flexDirection: "row",
@@ -236,7 +231,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     endSessionText: {
       fontFamily: theme.fonts.medium,
       fontSize: themeTokens.fonts.size.sm,
-      color: theme.colors.secondary,
+      color: theme.colors.textSecondary,
     },
     pressedScale: {
       opacity: 0.85,

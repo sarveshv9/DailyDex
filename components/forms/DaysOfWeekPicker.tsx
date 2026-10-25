@@ -47,7 +47,7 @@ export const DaysOfWeekPicker: React.FC<DaysOfWeekPickerProps> = ({
             key={day.value}
             style={[
               styles.dayBtn,
-              { borderColor: theme.glass.borderColor },
+              { borderColor: theme.colors.border },
               isActive && {
                 backgroundColor: highlightColor,
                 borderColor: highlightColor,
@@ -61,7 +61,7 @@ export const DaysOfWeekPicker: React.FC<DaysOfWeekPickerProps> = ({
                 styles.dayBtnText,
                 {
                   fontFamily: isActive ? theme.fonts.bold : theme.fonts.medium,
-                  color: isActive ? theme.colors.white : theme.colors.textSecondary,
+                  color: isActive ? theme.colors.onPrimary : theme.colors.textSecondary,
                 },
               ]}
             >

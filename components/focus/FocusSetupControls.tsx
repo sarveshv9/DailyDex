@@ -62,7 +62,7 @@ const FocusSetupControlsComponent: React.FC<FocusSetupControlsProps> = ({
           }}
           activeFontStyle={{
             fontFamily: theme.fonts.bold,
-            color: theme.colors.white,
+            color: theme.colors.onPrimary,
           }}
         />
       </View>
@@ -73,7 +73,7 @@ const FocusSetupControlsComponent: React.FC<FocusSetupControlsProps> = ({
             <Ionicons
               name="time-outline"
               size={16}
-              color={theme.colors.secondary}
+              color={theme.colors.textSecondary}
             />
             <Text style={styles.sectionLabel}>SELECT SESSION LENGTH</Text>
           </View>
@@ -124,7 +124,7 @@ const FocusSetupControlsComponent: React.FC<FocusSetupControlsProps> = ({
               pressed && styles.pressedScale,
             ]}
           >
-            <Ionicons name="play" size={20} color={theme.colors.white} />
+            <Ionicons name="play" size={20} color={theme.colors.onPrimary} />
             <Text style={styles.primaryActionButtonText}>
               Begin Focus Session ({Math.round(selectedDuration / 60)}m)
             </Text>
@@ -160,7 +160,7 @@ const FocusSetupControlsComponent: React.FC<FocusSetupControlsProps> = ({
               <Ionicons
                 name="sparkles-outline"
                 size={17}
-                color={theme.colors.primary}
+                color={theme.colors.primaryText}
               />
               <Text style={styles.pomodoroExplainerTitle}>
                 Tranquil Pomodoro Cycle
@@ -182,7 +182,7 @@ const FocusSetupControlsComponent: React.FC<FocusSetupControlsProps> = ({
               pressed && styles.pressedScale,
             ]}
           >
-            <Ionicons name="flame" size={20} color={theme.colors.white} />
+            <Ionicons name="flame" size={20} color={theme.colors.onPrimary} />
             <Text style={styles.primaryActionButtonText}>
               Begin Pomodoro Cycle
             </Text>
@@ -216,7 +216,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     },
     sectionLabel: {
       ...shared.sectionLabel,
-      color: theme.colors.secondary,
+      color: theme.colors.textSecondary,
     },
     durationPillsRow: {
       flexDirection: "row",
@@ -229,10 +229,8 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       height: 48,
       borderRadius: themeTokens.borderRadius.lg,
       borderWidth: 1,
-      borderColor: theme.glass.borderColor,
-      backgroundColor: isDarkMode
-        ? "rgba(255, 255, 255, 0.05)"
-        : "rgba(0, 0, 0, 0.04)",
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.surfaceMuted,
       alignItems: "center",
       justifyContent: "center",
     },
@@ -241,21 +239,21 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       borderColor: theme.colors.primary,
       ...Platform.select({
         ios: {
-          shadowColor: theme.colors.primary,
-          shadowOffset: { width: 0, height: 3 },
-          shadowOpacity: isDarkMode ? 0.35 : 0.2,
-          shadowRadius: 8,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: isDarkMode ? 0.25 : 0.1,
+          shadowRadius: 4,
         },
-        android: { elevation: 3 },
+        android: { elevation: 2 },
       }),
     },
     durationPillText: {
       fontFamily: theme.fonts.bold,
       fontSize: themeTokens.fonts.size.sm,
-      color: theme.colors.secondary,
+      color: theme.colors.textSecondary,
     },
     durationPillTextActive: {
-      color: theme.colors.white,
+      color: theme.colors.onPrimary,
     },
     pomodoroExplainerCard: {
       ...shared.glassCard,
@@ -273,7 +271,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     pomodoroExplainerTitle: {
       fontFamily: theme.fonts.bold,
       fontSize: themeTokens.fonts.size.sm,
-      color: theme.colors.primary,
+      color: theme.colors.primaryText,
     },
     pomodoroExplainerDesc: {
       ...shared.bodyText,

@@ -59,7 +59,7 @@ export default function SettingsScreen() {
           styles.row,
           isLast && { borderBottomWidth: 0 },
           pressed && {
-            backgroundColor: `${theme.colors.secondary}08`,
+            backgroundColor: theme.colors.surfaceMuted,
             opacity: 0.85,
           },
         ]}
@@ -72,7 +72,7 @@ export default function SettingsScreen() {
           <View
             style={[
               styles.iconContainer,
-              { backgroundColor: `${theme.colors.primary}15` },
+              { backgroundColor: theme.colors.primarySoft },
             ]}
           >
             <Ionicons name={icon} size={20} color={theme.colors.primary} />
@@ -87,7 +87,7 @@ export default function SettingsScreen() {
             onValueChange(v);
           }}
           trackColor={{
-            false: `${theme.colors.secondary}40`,
+            false: theme.colors.border,
             true: theme.colors.primary,
           }}
           thumbColor="#FFFFFF"
@@ -113,7 +113,7 @@ export default function SettingsScreen() {
         styles.row,
         isLast && { borderBottomWidth: 0 },
         pressed && {
-          backgroundColor: `${theme.colors.secondary}08`,
+          backgroundColor: theme.colors.surfaceMuted,
           opacity: 0.85,
         },
       ]}
@@ -125,7 +125,7 @@ export default function SettingsScreen() {
         <View
           style={[
             styles.iconContainer,
-            { backgroundColor: `${theme.colors.primary}15` },
+            { backgroundColor: theme.colors.primarySoft },
           ]}
         >
           <Ionicons name={icon} size={20} color={theme.colors.primary} />
@@ -252,7 +252,7 @@ const makeStyles = (theme: Theme) =>
       width: 36,
       height: 36,
       borderRadius: 18,
-      backgroundColor: `${theme.colors.secondary}15`,
+      backgroundColor: theme.colors.surfaceMuted,
       alignItems: "center",
       justifyContent: "center",
       marginLeft: 10,
@@ -275,12 +275,12 @@ const makeStyles = (theme: Theme) =>
       opacity: 0.6,
     },
     group: {
-      backgroundColor: theme.colors.card,
+      backgroundColor: theme.colors.surface,
       borderRadius: 24,
       overflow: "hidden",
       marginBottom: 32,
       borderWidth: 1,
-      borderColor: theme.colors.secondary + "15",
+      borderColor: theme.colors.border,
       shadowColor: "#000",
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.04,
@@ -294,7 +294,7 @@ const makeStyles = (theme: Theme) =>
       paddingVertical: 16,
       paddingHorizontal: 20,
       borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: theme.colors.secondary + "20",
+      borderBottomColor: theme.colors.divider,
     },
     rowLeft: {
       flexDirection: "row",

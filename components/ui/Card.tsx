@@ -85,39 +85,48 @@ const getStyles = (theme: Theme, variant: CardVariant, padding: CardPadding) => 
   let shadowStyle = {
     ...Platform.select({
       ios: {
-        shadowColor: theme.glows.card.shadowColor,
-        shadowOffset: theme.glows.card.shadowOffset,
-        shadowOpacity: theme.glows.card.shadowOpacity,
-        shadowRadius: theme.glows.card.shadowRadius,
+        shadowColor: "#000000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: theme.isDarkMode ? 0.20 : 0.04,
+        shadowRadius: 12,
       },
       android: {
-        elevation: theme.glows.card.elevation,
+        elevation: 2,
       },
       web: {
-        boxShadow: `0px ${theme.glows.card.shadowOffset.height}px ${theme.glows.card.shadowRadius}px rgba(0, 0, 0, ${theme.glows.card.shadowOpacity})`,
+        boxShadow: `0px 4px 12px rgba(0, 0, 0, ${theme.isDarkMode ? 0.20 : 0.04})`,
       },
     }),
   };
 
   if (variant === "solid") {
-    backgroundColor = theme.colors.card;
-    borderColor = theme.colors.card;
+    backgroundColor = theme.colors.surface;
+    borderColor = theme.colors.border;
+    borderWidth = 1;
+    shadowStyle = {
+      ...Platform.select({
+        ios: { shadowColor: "#000000", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0, shadowRadius: 0 },
+        android: { elevation: 0 },
+        web: { boxShadow: "none" },
+      }),
+    };
   } else if (variant === "elevated") {
-    backgroundColor = theme.colors.card;
-    borderColor = theme.glass.borderColor;
+    backgroundColor = theme.colors.surface;
+    borderColor = theme.colors.border;
+    borderWidth = 1;
     shadowStyle = {
       ...Platform.select({
         ios: {
-          shadowColor: theme.glows.card.shadowColor,
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: theme.glows.card.shadowOpacity * 1.5,
-          shadowRadius: 16,
+          shadowColor: "#000000",
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.1,
+          shadowRadius: 12,
         },
         android: {
-          elevation: theme.glows.card.elevation + 2,
+          elevation: 3,
         },
         web: {
-          boxShadow: `0px 6px 16px rgba(0, 0, 0, ${theme.glows.card.shadowOpacity * 1.5})`,
+          boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)",
         },
       }),
     };

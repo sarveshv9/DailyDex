@@ -53,7 +53,7 @@ export default function NotFoundScreen() {
               <Ionicons
                 name="home-outline"
                 size={20}
-                color={theme.colors.white}
+                color={theme.colors.onPrimary}
               />
               <Text style={styles.primaryCtaText}>Return Home</Text>
             </Pressable>
@@ -79,12 +79,12 @@ const makeStyles = (theme: Theme) =>
     card: {
       width: "100%",
       maxWidth: 380,
-      backgroundColor: theme.colors.card,
+      backgroundColor: theme.colors.surface,
       borderRadius: 28,
       padding: 28,
       alignItems: "center",
       borderWidth: 1,
-      borderColor: theme.glass.borderColor,
+      borderColor: theme.colors.border,
       shadowColor: "#000",
       shadowOffset: { width: 0, height: 8 },
       shadowOpacity: 0.08,
@@ -95,12 +95,12 @@ const makeStyles = (theme: Theme) =>
       width: 72,
       height: 72,
       borderRadius: 22,
-      backgroundColor: `${theme.colors.primary}18`,
+      backgroundColor: theme.colors.primarySoft,
       alignItems: "center",
       justifyContent: "center",
       marginBottom: 20,
       borderWidth: 1,
-      borderColor: `${theme.colors.primary}30`,
+      borderColor: theme.colors.border,
     },
     title: {
       fontSize: 22,
@@ -128,16 +128,16 @@ const makeStyles = (theme: Theme) =>
       alignItems: "center",
       justifyContent: "center",
       gap: 10,
-      shadowColor: theme.colors.primary,
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.35,
-      shadowRadius: 14,
-      elevation: 6,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 8,
+      elevation: 4,
     },
     primaryCtaText: {
       fontSize: 16,
       fontFamily: theme.fonts.bold,
-      color: theme.colors.white,
+      color: theme.colors.onPrimary,
       letterSpacing: -0.2,
     },
   });

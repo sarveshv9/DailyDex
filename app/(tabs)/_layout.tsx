@@ -149,7 +149,7 @@ function CustomTabBar({
           ) : (
             <BlurView
               intensity={100}
-              tint={theme.colors.background === '#FFFFFF' || theme.colors.background.startsWith('#F') ? 'systemMaterialLight' : 'systemMaterialDark'}
+              tint={theme.isDarkMode ? 'systemMaterialDark' : 'systemMaterialLight'}
               style={StyleSheet.absoluteFill}
               pointerEvents="none"
             />
@@ -172,7 +172,7 @@ function CustomTabBar({
                 <View style={styles.iconWrapper}>
                   {icon({
                     focused: false,
-                    color: theme.colors.secondary,
+                    color: theme.colors.textSecondary,
                   })}
                 </View>
               </View>
@@ -217,7 +217,7 @@ function CustomTabBar({
                   <View style={styles.iconWrapper}>
                     {icon({
                       focused: true,
-                      color: theme.colors.white,
+                      color: theme.colors.onPrimary,
                     })}
                   </View>
                 </Animated.View>

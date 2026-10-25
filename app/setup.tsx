@@ -398,12 +398,12 @@ function StepPick({
                                             <Ionicons
                                                 name={pack.icon}
                                                 size={18}
-                                                color={isAllSelected ? theme.colors.white : theme.colors.primary}
+                                                color={isAllSelected ? theme.colors.onPrimary : theme.colors.primary}
                                             />
                                         </View>
                                         {isAllSelected && (
                                             <View style={styles.kitCheckPill}>
-                                                <Ionicons name="checkmark" size={11} color={theme.colors.white} />
+                                                <Ionicons name="checkmark" size={11} color={theme.colors.onPrimary} />
                                             </View>
                                         )}
                                     </View>
@@ -430,7 +430,7 @@ function StepPick({
                     <TextInput
                         style={styles.searchTextInput}
                         placeholder="Search all habits…"
-                        placeholderTextColor={`${theme.colors.textSecondary}80`}
+                        placeholderTextColor={theme.colors.textSecondary}
                         value={searchQuery}
                         onChangeText={setSearchQuery}
                         returnKeyType="search"
@@ -523,7 +523,7 @@ function StepPick({
                                     </View>
                                     <View style={[styles.radioCircle, isSelected && styles.radioCircleSelected]}>
                                         {isSelected && (
-                                            <Ionicons name="checkmark-sharp" size={12} color={theme.colors.white} />
+                                            <Ionicons name="checkmark-sharp" size={12} color={theme.colors.onPrimary} />
                                         )}
                                     </View>
                                 </View>
@@ -573,7 +573,7 @@ function StepPick({
                                 <TextInput
                                     style={styles.customModalInput}
                                     placeholder="Habit name (e.g., Cold Plunge)"
-                                    placeholderTextColor={`${theme.colors.textSecondary}80`}
+                                    placeholderTextColor={theme.colors.textSecondary}
                                     value={customName}
                                     onChangeText={setCustomName}
                                     maxLength={28}
@@ -599,7 +599,7 @@ function StepPick({
                                                 <Ionicons
                                                     name={getRoutineIcon(key)}
                                                     size={20}
-                                                    color={isIconChosen ? theme.colors.white : theme.colors.primary}
+                                                    color={isIconChosen ? theme.colors.onPrimary : theme.colors.primary}
                                                 />
                                             </Pressable>
                                         );
@@ -786,7 +786,7 @@ function StepTimes({
                                             <Ionicons
                                                 name={isOpen ? "chevron-up" : "chevron-down"}
                                                 size={18}
-                                                color={`${theme.colors.text}60`}
+                                                color={theme.colors.textSecondary}
                                             />
                                         </View>
                                     </Pressable>
@@ -847,7 +847,7 @@ function StepTimes({
                                                 value={item.description}
                                                 onChangeText={(v) => onUpdateDesc(item.id, v)}
                                                 placeholder="Add intention or instructions…"
-                                                placeholderTextColor={`${theme.colors.textSecondary}80`}
+                                                placeholderTextColor={theme.colors.textSecondary}
                                                 multiline
                                                 accessibilityLabel={`Notes for ${item.task}`}
                                             />
@@ -915,7 +915,7 @@ function StepTimes({
                                             accessibilityRole="button"
                                             accessibilityLabel={`Repeat every ${hours} hour${hours > 1 ? "s" : ""}`}
                                         >
-                                            <Text style={[styles.recurringOptionText, { color: theme.colors.white }]}>
+                                            <Text style={[styles.recurringOptionText, { color: theme.colors.onPrimary }]}>
                                                 Every {hours} hour{hours > 1 ? "s" : ""}
                                             </Text>
                                         </Pressable>
@@ -1209,7 +1209,7 @@ export default function SetupScreen() {
             const bg = interpolateColor(skyProgress.value, [0.25, 0.75], ["#ECDCCE", "#1E212E"]);
             return { backgroundColor: bg };
         }
-        return { backgroundColor: `${theme.colors.primary}18` };
+        return { backgroundColor: theme.colors.primarySoft };
     });
 
     return (
@@ -1319,7 +1319,7 @@ const getStyles = (theme: Theme) =>
             marginTop: 8,
             marginBottom: 6,
             borderRadius: 2,
-            backgroundColor: `${theme.colors.primary}18`,
+            backgroundColor: theme.colors.primarySoft,
             overflow: "hidden",
         },
         progressFill: {
@@ -1350,18 +1350,22 @@ const getStyles = (theme: Theme) =>
             width: 110,
             height: 110,
             borderRadius: 55,
-            backgroundColor: `${theme.colors.primary}12`,
+            backgroundColor: theme.colors.primarySoft,
         },
         welcomeIconCard: {
             width: 82,
             height: 82,
             borderRadius: 26,
-            backgroundColor: theme.colors.card,
+            backgroundColor: theme.colors.surface,
             alignItems: "center",
             justifyContent: "center",
-            borderWidth: 2,
-            borderColor: `${theme.colors.primary}25`,
-            ...theme.glows.card,
+            borderWidth: 1.5,
+            borderColor: theme.colors.border,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.06,
+            shadowRadius: 10,
+            elevation: 3,
         },
         welcomeBrand: {
             fontSize: themeTokens.fonts.size.xs,
@@ -1397,18 +1401,18 @@ const getStyles = (theme: Theme) =>
             flexDirection: "row",
             alignItems: "center",
             gap: 12,
-            backgroundColor: `${theme.colors.primary}08`,
+            backgroundColor: theme.colors.surfaceMuted,
             paddingHorizontal: 16,
             paddingVertical: 12,
             borderRadius: 16,
             borderWidth: 1,
-            borderColor: `${theme.colors.primary}12`,
+            borderColor: theme.colors.border,
         },
         welcomeHighlightIconCircle: {
             width: 30,
             height: 30,
             borderRadius: 10,
-            backgroundColor: `${theme.colors.primary}12`,
+            backgroundColor: theme.colors.primarySoft,
             alignItems: "center",
             justifyContent: "center",
         },
@@ -1483,15 +1487,15 @@ const getStyles = (theme: Theme) =>
         },
         kitCard: {
             width: 154,
-            backgroundColor: theme.colors.card,
+            backgroundColor: theme.colors.surface,
             borderRadius: 16,
             padding: 12,
             borderWidth: 1.5,
-            borderColor: `${theme.colors.primary}15`,
+            borderColor: theme.colors.border,
         },
         kitCardSelected: {
             borderColor: theme.colors.primary,
-            backgroundColor: `${theme.colors.primary}0C`,
+            backgroundColor: theme.colors.primarySoft,
         },
         kitCardHeader: {
             flexDirection: "row",
@@ -1503,7 +1507,7 @@ const getStyles = (theme: Theme) =>
             width: 32,
             height: 32,
             borderRadius: 10,
-            backgroundColor: `${theme.colors.primary}12`,
+            backgroundColor: theme.colors.primarySoft,
             alignItems: "center",
             justifyContent: "center",
         },
@@ -1536,12 +1540,12 @@ const getStyles = (theme: Theme) =>
             alignItems: "center",
             marginHorizontal: 20,
             marginBottom: 12,
-            backgroundColor: theme.colors.card,
+            backgroundColor: theme.colors.surface,
             borderRadius: 14,
             paddingHorizontal: 12,
             paddingVertical: 9,
             borderWidth: 1.5,
-            borderColor: `${theme.colors.primary}15`,
+            borderColor: theme.colors.border,
         },
         searchTextInput: {
             flex: 1,
@@ -1563,12 +1567,12 @@ const getStyles = (theme: Theme) =>
             paddingHorizontal: 12,
             paddingVertical: 7,
             borderRadius: 16,
-            backgroundColor: theme.colors.card,
+            backgroundColor: theme.colors.surface,
             borderWidth: 1.5,
-            borderColor: `${theme.colors.primary}12`,
+            borderColor: theme.colors.border,
         },
         catPillActive: {
-            backgroundColor: `${theme.colors.primary}15`,
+            backgroundColor: theme.colors.primarySoft,
             borderColor: theme.colors.primary,
         },
         catPillLabel: {
@@ -1593,7 +1597,7 @@ const getStyles = (theme: Theme) =>
         catCountBadgeText: {
             fontSize: 10,
             fontFamily: theme.fonts.bold,
-            color: theme.colors.white,
+            color: theme.colors.onPrimary,
         },
 
         // 2-Column Habit Cards
@@ -1606,15 +1610,15 @@ const getStyles = (theme: Theme) =>
         },
         habitCard: {
             width: "48%",
-            backgroundColor: theme.colors.card,
+            backgroundColor: theme.colors.surface,
             borderRadius: 16,
             padding: 12,
             borderWidth: 1.5,
-            borderColor: `${theme.colors.primary}15`,
+            borderColor: theme.colors.border,
         },
         habitCardSelected: {
             borderColor: theme.colors.primary,
-            backgroundColor: `${theme.colors.primary}0C`,
+            backgroundColor: theme.colors.primarySoft,
         },
         habitCardTop: {
             flexDirection: "row",
@@ -1626,19 +1630,19 @@ const getStyles = (theme: Theme) =>
             width: 38,
             height: 38,
             borderRadius: 12,
-            backgroundColor: `${theme.colors.primary}10`,
+            backgroundColor: theme.colors.primarySoft,
             alignItems: "center",
             justifyContent: "center",
         },
         habitIconBoxSelected: {
-            backgroundColor: `${theme.colors.primary}20`,
+            backgroundColor: theme.colors.primarySoft,
         },
         radioCircle: {
             width: 20,
             height: 20,
             borderRadius: 10,
             borderWidth: 1.5,
-            borderColor: `${theme.colors.primary}35`,
+            borderColor: theme.colors.border,
             alignItems: "center",
             justifyContent: "center",
         },
@@ -1667,7 +1671,7 @@ const getStyles = (theme: Theme) =>
             borderRadius: 16,
             padding: 12,
             borderWidth: 1.5,
-            borderColor: `${theme.colors.primary}25`,
+            borderColor: theme.colors.border,
             borderStyle: "dashed",
             justifyContent: "center",
             alignItems: "center",
@@ -1677,7 +1681,7 @@ const getStyles = (theme: Theme) =>
             width: 36,
             height: 36,
             borderRadius: 12,
-            backgroundColor: `${theme.colors.primary}10`,
+            backgroundColor: theme.colors.primarySoft,
             alignItems: "center",
             justifyContent: "center",
             marginBottom: 6,
@@ -1698,12 +1702,16 @@ const getStyles = (theme: Theme) =>
         customModalCard: {
             width: "100%",
             maxWidth: 340,
-            backgroundColor: theme.colors.card,
+            backgroundColor: theme.colors.surface,
             borderRadius: 24,
             padding: 20,
             borderWidth: 1.5,
-            borderColor: `${theme.colors.primary}25`,
-            ...theme.glows.card,
+            borderColor: theme.colors.border,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.1,
+            shadowRadius: 12,
+            elevation: 4,
         },
         customModalTitle: {
             fontSize: 18,
@@ -1712,7 +1720,7 @@ const getStyles = (theme: Theme) =>
             marginBottom: 14,
         },
         customModalInput: {
-            backgroundColor: `${theme.colors.primary}08`,
+            backgroundColor: theme.colors.surfaceMuted,
             borderRadius: 12,
             paddingHorizontal: 14,
             paddingVertical: 10,
@@ -1720,7 +1728,7 @@ const getStyles = (theme: Theme) =>
             fontFamily: theme.fonts.medium,
             color: theme.colors.text,
             borderWidth: 1,
-            borderColor: `${theme.colors.primary}15`,
+            borderColor: theme.colors.border,
             marginBottom: 16,
         },
         customModalLabel: {
@@ -1739,11 +1747,11 @@ const getStyles = (theme: Theme) =>
             width: 40,
             height: 40,
             borderRadius: 12,
-            backgroundColor: `${theme.colors.primary}0A`,
+            backgroundColor: theme.colors.surfaceMuted,
             alignItems: "center",
             justifyContent: "center",
             borderWidth: 1,
-            borderColor: `${theme.colors.primary}15`,
+            borderColor: theme.colors.border,
         },
         iconChoiceItemSelected: {
             backgroundColor: theme.colors.primary,
@@ -1755,7 +1763,7 @@ const getStyles = (theme: Theme) =>
             borderRadius: 12,
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: `${theme.colors.primary}0D`,
+            backgroundColor: theme.colors.surfaceMuted,
         },
         customModalCancelText: {
             fontSize: 14,
@@ -1773,7 +1781,7 @@ const getStyles = (theme: Theme) =>
         customModalSubmitText: {
             fontSize: 14,
             fontFamily: theme.fonts.bold,
-            color: theme.colors.white,
+            color: theme.colors.onPrimary,
         },
 
         // ─── Notification Primer Card (Step 4) ───
@@ -1781,18 +1789,18 @@ const getStyles = (theme: Theme) =>
             flexDirection: "row",
             alignItems: "center",
             gap: 14,
-            backgroundColor: theme.colors.card,
+            backgroundColor: theme.colors.surface,
             padding: 16,
             borderRadius: 18,
             borderWidth: 1.5,
-            borderColor: `${theme.colors.primary}18`,
+            borderColor: theme.colors.border,
             marginBottom: 18,
         },
         notificationPrimerIconWrap: {
             width: 42,
             height: 42,
             borderRadius: 13,
-            backgroundColor: `${theme.colors.primary}12`,
+            backgroundColor: theme.colors.primarySoft,
             alignItems: "center",
             justifyContent: "center",
         },
@@ -1831,16 +1839,16 @@ const getStyles = (theme: Theme) =>
         timelineLine: {
             flex: 1,
             width: 2,
-            backgroundColor: `${theme.colors.primary}20`,
+            backgroundColor: theme.colors.primarySoft,
             marginTop: 4,
             minHeight: 40,
         },
         timelineCard: {
             flex: 1,
-            backgroundColor: theme.colors.card,
+            backgroundColor: theme.colors.surface,
             borderRadius: 18,
             borderWidth: 1.5,
-            borderColor: `${theme.colors.primary}15`,
+            borderColor: theme.colors.border,
             overflow: "hidden",
         },
         timelineCardOpen: {
@@ -1862,7 +1870,7 @@ const getStyles = (theme: Theme) =>
             width: 40,
             height: 40,
             borderRadius: 12,
-            backgroundColor: `${theme.colors.primary}0D`,
+            backgroundColor: theme.colors.primarySoft,
             alignItems: "center",
             justifyContent: "center",
         },
@@ -1879,12 +1887,12 @@ const getStyles = (theme: Theme) =>
         },
         timelineDurationDot: {
             fontSize: 12,
-            color: `${theme.colors.textSecondary}80`,
+            color: theme.colors.textSecondary,
         },
         timelineDurationText: {
             fontSize: 12,
             fontFamily: theme.fonts.medium,
-            color: theme.colors.primary,
+            color: theme.colors.primaryText,
         },
         timelineCardRight: {
             paddingLeft: 8,
@@ -1895,7 +1903,7 @@ const getStyles = (theme: Theme) =>
         },
         expandedDivider: {
             height: 1,
-            backgroundColor: `${theme.colors.primary}12`,
+            backgroundColor: theme.colors.divider,
             marginBottom: 12,
         },
         expandedLabel: {
@@ -1908,7 +1916,7 @@ const getStyles = (theme: Theme) =>
         },
         timePickerWrap: {
             alignItems: "center",
-            backgroundColor: `${theme.colors.primary}06`,
+            backgroundColor: theme.colors.surfaceMuted,
             borderRadius: 14,
             paddingVertical: 6,
         },
@@ -1921,11 +1929,11 @@ const getStyles = (theme: Theme) =>
             flex: 1,
             height: 36,
             borderRadius: 10,
-            backgroundColor: `${theme.colors.primary}0A`,
+            backgroundColor: theme.colors.surfaceMuted,
             alignItems: "center",
             justifyContent: "center",
             borderWidth: 1,
-            borderColor: `${theme.colors.primary}12`,
+            borderColor: theme.colors.border,
         },
         durationPillActive: {
             backgroundColor: theme.colors.primary,
@@ -1937,10 +1945,10 @@ const getStyles = (theme: Theme) =>
             color: theme.colors.textSecondary,
         },
         durationPillTextActive: {
-            color: theme.colors.white,
+            color: theme.colors.onPrimary,
         },
         notesInput: {
-            backgroundColor: `${theme.colors.primary}06`,
+            backgroundColor: theme.colors.surfaceMuted,
             borderRadius: 12,
             paddingHorizontal: 12,
             paddingVertical: 10,
@@ -1948,7 +1956,7 @@ const getStyles = (theme: Theme) =>
             fontFamily: theme.fonts.regular,
             color: theme.colors.text,
             borderWidth: 1,
-            borderColor: `${theme.colors.primary}12`,
+            borderColor: theme.colors.border,
             minHeight: 52,
         },
         actionBtnSecondary: {
@@ -1958,12 +1966,12 @@ const getStyles = (theme: Theme) =>
             gap: 6,
             height: 40,
             borderRadius: 12,
-            backgroundColor: `${theme.colors.primary}0D`,
+            backgroundColor: theme.colors.primarySoft,
         },
         actionBtnSecondaryText: {
             fontSize: 13,
             fontFamily: theme.fonts.bold,
-            color: theme.colors.primary,
+            color: theme.colors.primaryText,
         },
         actionBtnDestructive: {
             flexDirection: "row",
@@ -1972,12 +1980,12 @@ const getStyles = (theme: Theme) =>
             gap: 6,
             height: 40,
             borderRadius: 12,
-            backgroundColor: `${themeTokens.colors.danger}12`,
+            backgroundColor: theme.colors.dangerSoft,
         },
         actionBtnDestructiveText: {
             fontSize: themeTokens.fonts.size.sm - 1,
             fontFamily: theme.fonts.bold,
-            color: themeTokens.colors.danger,
+            color: theme.colors.danger,
         },
 
         // ─── Modal & Preview ─────────────────────
@@ -1991,13 +1999,17 @@ const getStyles = (theme: Theme) =>
         previewCard: {
             width: "100%",
             maxWidth: 340,
-            backgroundColor: theme.colors.card,
+            backgroundColor: theme.colors.surface,
             borderRadius: 24,
             padding: 24,
             alignItems: "center",
             borderWidth: 1.5,
-            borderColor: `${theme.colors.primary}20`,
-            ...theme.glows.card,
+            borderColor: theme.colors.border,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.1,
+            shadowRadius: 12,
+            elevation: 4,
         },
         previewTitle: {
             fontSize: 20,
@@ -2021,7 +2033,11 @@ const getStyles = (theme: Theme) =>
             backgroundColor: theme.colors.primary,
             alignItems: "center",
             justifyContent: "center",
-            ...theme.glows.primary,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.15,
+            shadowRadius: 8,
+            elevation: 3,
         },
         recurringOptionText: {
             fontSize: 14,
@@ -2042,9 +2058,9 @@ const getStyles = (theme: Theme) =>
             height: 56,
             paddingHorizontal: 24,
             borderRadius: 22,
-            backgroundColor: theme.colors.card,
+            backgroundColor: theme.colors.surface,
             borderWidth: 1,
-            borderColor: `${theme.colors.text}18`,
+            borderColor: theme.colors.border,
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "center",
@@ -2064,16 +2080,16 @@ const getStyles = (theme: Theme) =>
             alignItems: "center",
             justifyContent: "center",
             gap: 8,
-            shadowColor: theme.colors.primary,
-            shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: 0.35,
-            shadowRadius: 18,
-            elevation: 5,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.15,
+            shadowRadius: 8,
+            elevation: 4,
         },
         nextBtnText: {
             fontSize: 17,
             fontFamily: theme.fonts.bold,
-            color: "#FFFFFF",
+            color: theme.colors.onPrimary,
         },
         saveBtn: {
             flex: 1,
@@ -2084,11 +2100,11 @@ const getStyles = (theme: Theme) =>
             alignItems: "center",
             justifyContent: "center",
             gap: 8,
-            shadowColor: theme.colors.primary,
-            shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: 0.35,
-            shadowRadius: 18,
-            elevation: 5,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.15,
+            shadowRadius: 8,
+            elevation: 4,
         },
         saveBtnDisabled: {
             opacity: 0.6,
@@ -2096,6 +2112,6 @@ const getStyles = (theme: Theme) =>
         saveBtnText: {
             fontSize: 17,
             fontFamily: theme.fonts.bold,
-            color: "#FFFFFF",
+            color: theme.colors.onPrimary,
         },
     });

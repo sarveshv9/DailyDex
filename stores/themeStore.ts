@@ -8,41 +8,44 @@ import {
   STORAGE_KEYS,
   THEME_STORAGE_KEY,
 } from "../constants/storageKeys";
-import { darkThemes, lightThemes, Theme, ThemeName } from "../styles/shared";
+import { createTheme } from "../constants/themeGenerator";
+import { DEFAULT_THEME_NAME, THEME_ACCENTS, ThemeName } from "../constants/themeRegistry";
+import { Theme } from "../styles/shared";
 
 export interface CustomThemeConfig {
+  id?: string;
   pokemonId: string;
   primaryColor: string;
+  accentHex?: string;
   name: string;
 }
 
 export function computeTheme(
   themeName: string,
   isDarkMode: boolean,
-  customThemes: Record<string, CustomThemeConfig>
+  customThemes: Record<string, CustomThemeConfig> = {}
 ): Theme {
-  const activePalette = isDarkMode ? darkThemes : lightThemes;
+  const mode = isDarkMode ? "dark" : "light";
 
-  if (themeName.startsWith("custom_")) {
+  // 1. Custom user-created theme
+  if (themeName && themeName.startsWith("custom_")) {
     const customId = themeName.replace("custom_", "");
     const config = customThemes[customId];
     if (config) {
-      const baseObj = activePalette.pokeball || activePalette.default;
-      return {
-        ...baseObj,
-        colors: {
-          ...baseObj.colors,
-          primary: config.primaryColor,
-        },
-      };
+      const accent = config.accentHex || config.primaryColor || THEME_ACCENTS[DEFAULT_THEME_NAME].accent;
+      return createTheme(accent, mode);
     }
   }
 
-  return (
-    activePalette[themeName as ThemeName] ||
-    activePalette.pokeball ||
-    activePalette.default
-  );
+  // 2. Preset theme from registry
+  const preset = THEME_ACCENTS[themeName as keyof typeof THEME_ACCENTS];
+  if (preset) {
+    return createTheme(preset.accent, mode);
+  }
+
+  // 3. Fallback gracefully (e.g. pokeball accent), never undefined
+  const fallbackAccent = THEME_ACCENTS[DEFAULT_THEME_NAME]?.accent || "#FF3333";
+  return createTheme(fallbackAccent, mode);
 }
 
 export interface ThemeState {
@@ -61,12 +64,12 @@ export interface ThemeState {
   removeCustomTheme: (id: string) => Promise<void>;
 }
 
-const initialTheme = computeTheme("pokeball", false, {});
+const initialTheme = computeTheme(DEFAULT_THEME_NAME, false, {});
 
 let themeRevision = 0;
 
 export const useThemeStore = create<ThemeState>((set, get) => ({
-  themeName: "pokeball",
+  themeName: DEFAULT_THEME_NAME,
   isAutoTheme: false,
   isDarkMode: false,
   customThemes: {},
@@ -80,7 +83,7 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
     }
     const startRevision = themeRevision;
     try {
-      let localThemeName = "pokeball";
+      let localThemeName = DEFAULT_THEME_NAME;
       let localIsDarkMode = false;
       let localIsAutoTheme = false;
       let localCustomThemes: Record<string, CustomThemeConfig> = {};
@@ -89,10 +92,10 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
       if (savedTheme) {
         if (savedTheme.startsWith("light-")) {
           const stripped = savedTheme.replace("light-", "");
-          localThemeName = stripped === "default" ? "pokeball" : stripped;
+          localThemeName = stripped === "default" ? DEFAULT_THEME_NAME : stripped;
           localIsDarkMode = false;
         } else {
-          localThemeName = savedTheme === "default" ? "pokeball" : savedTheme;
+          localThemeName = savedTheme === "default" ? DEFAULT_THEME_NAME : savedTheme;
         }
       }
 
@@ -109,7 +112,22 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
       const customCfg = await AsyncStorage.getItem(CUSTOM_THEMES_STORAGE_KEY);
       if (customCfg) {
         try {
-          localCustomThemes = JSON.parse(customCfg);
+          const parsed = JSON.parse(customCfg);
+          if (parsed && typeof parsed === "object") {
+            // Normalize customThemes: ensure accentHex exists and strip any stored full theme palettes
+            for (const [id, cfg] of Object.entries(parsed as Record<string, any>)) {
+              if (cfg && typeof cfg === "object") {
+                const accent = cfg.accentHex || cfg.primaryColor || "#FF3333";
+                localCustomThemes[id] = {
+                  id: String(cfg.id || cfg.pokemonId || id),
+                  pokemonId: String(cfg.pokemonId || cfg.id || id),
+                  primaryColor: accent,
+                  accentHex: accent,
+                  name: String(cfg.name || "Custom"),
+                };
+              }
+            }
+          }
         } catch {}
       } else {
         const oldCustomCfg = await AsyncStorage.getItem(STORAGE_KEYS.LEGACY_CUSTOM_THEME);
@@ -117,7 +135,16 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
           try {
             const parsed = JSON.parse(oldCustomCfg);
             if (parsed && parsed.pokemonId) {
-              localCustomThemes = { [parsed.pokemonId]: parsed };
+              const accent = parsed.accentHex || parsed.primaryColor || "#FF3333";
+              localCustomThemes = {
+                [parsed.pokemonId]: {
+                  id: String(parsed.pokemonId),
+                  pokemonId: String(parsed.pokemonId),
+                  primaryColor: accent,
+                  accentHex: accent,
+                  name: String(parsed.name || "Custom"),
+                },
+              };
             }
           } catch {}
         }
@@ -125,7 +152,7 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
 
       const computed = computeTheme(localThemeName, localIsDarkMode, localCustomThemes);
 
-      set((state) => {
+      set(() => {
         if (themeRevision > startRevision) {
           return { isLoaded: true };
         }
@@ -182,7 +209,15 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
 
   addCustomTheme: async (id: string, config: CustomThemeConfig) => {
     themeRevision++;
-    const updated = { ...get().customThemes, [id]: config };
+    const accent = config.accentHex || config.primaryColor;
+    const normalizedConfig: CustomThemeConfig = {
+      id: String(id),
+      pokemonId: String(config.pokemonId || id),
+      primaryColor: accent,
+      accentHex: accent,
+      name: config.name,
+    };
+    const updated = { ...get().customThemes, [id]: normalizedConfig };
     if (Platform.OS !== "web") LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     const isDark = get().isDarkMode;
     set({
@@ -191,6 +226,7 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
       theme: computeTheme(`custom_${id}`, isDark, updated),
     });
     try {
+      // Store ONLY inputs: id, name, accentHex, pokemonId. NEVER the computed theme object!
       await AsyncStorage.setItem(CUSTOM_THEMES_STORAGE_KEY, JSON.stringify(updated));
       await AsyncStorage.setItem(THEME_STORAGE_KEY, `custom_${id}`);
     } catch (e) {
@@ -217,27 +253,14 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
 }));
 
 /* ---------------------- FINE-GRAINED SELECTORS ------------------------ */
-/** Selects only the active Theme object directly from the store (referentially stable) */
 export const useThemeOnly = (): Theme => useThemeStore((s) => s.theme);
-
-/** Selects isDarkMode (primitive boolean) */
 export const useIsDarkMode = (): boolean => useThemeStore((s) => s.isDarkMode);
-
-/** Selects active Theme and dark mode flag with cached referential stability */
 export const useAppTheme = (): { theme: Theme; isDarkMode: boolean } => {
   const theme = useThemeStore((s) => s.theme);
   const isDarkMode = useThemeStore((s) => s.isDarkMode);
   return { theme, isDarkMode };
 };
-
-/** Selects only custom themes dictionary (used exclusively by ThemeSelectionModal) */
 export const useCustomThemes = () => useThemeStore((s) => s.customThemes);
-
-/** Selects themeName */
 export const useThemeName = () => useThemeStore((s) => s.themeName);
-
-/** Selects isAutoTheme */
 export const useIsAutoTheme = () => useThemeStore((s) => s.isAutoTheme);
-
-/** Selects theme loading state */
 export const useThemeLoaded = () => useThemeStore((s) => s.isLoaded);

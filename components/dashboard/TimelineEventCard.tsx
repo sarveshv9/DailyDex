@@ -109,7 +109,7 @@ const TimelineEventCardComponent: React.FC<TimelineEventCardProps> = ({
   const icon: keyof typeof Ionicons.glyphMap =
     ICON_MAP[routineData.imageKey ?? ''] ?? 'checkmark-circle-outline';
   const primaryColor = theme.colors.primary;
-  const spineColor = isDarkMode ? `${primaryColor}40` : `${primaryColor}30`;
+  const spineColor = theme.colors.border;
 
   // Subtasks progress summary
   const subtasks = routineData.subtasks || [];
@@ -183,25 +183,25 @@ const TimelineEventCardComponent: React.FC<TimelineEventCardProps> = ({
                     borderWidth: 2,
                   }
                 : {
-                    backgroundColor: isDarkMode ? `${primaryColor}22` : `${primaryColor}14`,
-                    borderColor: `${primaryColor}40`,
+                    backgroundColor: theme.colors.primarySoft,
+                    borderColor: theme.colors.border,
                     borderWidth: 1.5,
                   },
               (isWakeupSleep || effectiveChain !== 'none') && Platform.select({
                 ios: {
-                  shadowColor: primaryColor,
+                  shadowColor: "#000000",
                   shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.35,
+                  shadowOpacity: 0.15,
                   shadowRadius: 4,
                 },
-                android: { elevation: 3 },
+                android: { elevation: 2 },
               }),
             ]}
           >
             <Ionicons
               name={icon}
               size={21}
-              color={isWakeupSleep || effectiveChain !== 'none' ? theme.colors.white : primaryColor}
+              color={isWakeupSleep || effectiveChain !== 'none' ? theme.colors.onPrimary : theme.colors.primaryText}
             />
           </View>
 
@@ -367,14 +367,14 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
 
     /* Minimalist Skeleton Styles */
     skeletonBox: {
-      backgroundColor: `${theme.colors.textSecondary}18`,
+      backgroundColor: theme.colors.surfaceMuted,
       borderRadius: 4,
     },
     skeletonCircle: {
       width: NODE_SIZE,
       height: NODE_SIZE,
       borderRadius: NODE_SIZE / 2,
-      backgroundColor: `${theme.colors.textSecondary}18`,
+      backgroundColor: theme.colors.surfaceMuted,
     },
   });
 };

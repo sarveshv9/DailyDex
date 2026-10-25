@@ -79,7 +79,7 @@ export const IconPickerModal: React.FC<IconPickerModalProps> = ({
                   key={grp.category}
                   style={[
                     styles.tab,
-                    { backgroundColor: isActive ? highlightColor : theme.glass.neutralFill },
+                    { backgroundColor: isActive ? highlightColor : theme.colors.surfaceMuted },
                   ]}
                   onPress={() => {
                     selection();
@@ -91,7 +91,7 @@ export const IconPickerModal: React.FC<IconPickerModalProps> = ({
                       styles.tabText,
                       {
                         fontFamily: isActive ? theme.fonts.bold : theme.fonts.medium,
-                        color: isActive ? theme.colors.white : theme.colors.textSecondary,
+                        color: isActive ? theme.colors.onPrimary : theme.colors.textSecondary,
                       },
                     ]}
                   >
@@ -130,15 +130,15 @@ export const IconPickerModal: React.FC<IconPickerModalProps> = ({
                     style={[
                       styles.iconCircle,
                       {
-                        backgroundColor: isSelected ? highlightColor : `${highlightColor}15`,
-                        borderColor: isSelected ? highlightColor : `${highlightColor}35`,
+                        backgroundColor: isSelected ? highlightColor : theme.colors.primarySoft,
+                        borderColor: isSelected ? highlightColor : theme.colors.border,
                       },
                     ]}
                   >
                     <Ionicons
                       name={getRoutineIcon(item.key)}
                       size={24}
-                      color={isSelected ? theme.colors.white : highlightColor}
+                      color={isSelected ? theme.colors.onPrimary : theme.colors.primaryText}
                     />
                   </View>
                   <Text

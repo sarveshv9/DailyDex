@@ -136,7 +136,7 @@ export function RestoreModal({
               <Ionicons
                 name="cloud-download-outline"
                 size={24}
-                color={theme.colors.primary}
+                color={theme.colors.primaryText}
               />
             </View>
             <View style={{ flex: 1 }}>
@@ -146,7 +146,7 @@ export function RestoreModal({
               </Text>
             </View>
             <Pressable onPress={onClose} hitSlop={10}>
-              <Ionicons name="close" size={24} color={theme.colors.secondary} />
+              <Ionicons name="close" size={24} color={theme.colors.textSecondary} />
             </Pressable>
           </View>
 
@@ -154,7 +154,7 @@ export function RestoreModal({
             style={styles.textInput}
             multiline
             placeholder='{"@zen_routine": "...", ...}'
-            placeholderTextColor={`${theme.colors.secondary}60`}
+            placeholderTextColor={theme.colors.textSecondary + "70"}
             value={jsonText}
             onChangeText={setJsonText}
             autoCapitalize="none"
@@ -182,13 +182,13 @@ export function RestoreModal({
               disabled={isRestoring}
             >
               {isRestoring ? (
-                <ActivityIndicator size="small" color={theme.colors.white} />
+                <ActivityIndicator size="small" color={theme.colors.onPrimary} />
               ) : (
                 <>
                   <Ionicons
                     name="checkmark-circle"
                     size={18}
-                    color={theme.colors.white}
+                    color={theme.colors.onPrimary}
                   />
                   <Text style={styles.restoreText}>Restore Data</Text>
                 </>
@@ -256,7 +256,7 @@ const getStyles = (theme: Theme) => {
       color: theme.colors.text,
       textAlignVertical: "top",
       borderWidth: 1,
-      borderColor: `${theme.colors.secondary}20`,
+      borderColor: theme.colors.border,
     },
     actions: {
       flexDirection: "row",

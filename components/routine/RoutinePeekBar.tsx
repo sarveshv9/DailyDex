@@ -49,9 +49,7 @@ const RoutinePeekBarComponent: React.FC<RoutinePeekBarProps> = ({
     onOpenList();
   };
 
-  const isLight =
-    theme.colors.background === "#FFFFFF" ||
-    theme.colors.background.toUpperCase().startsWith("#F");
+  const isLight = !theme.isDarkMode;
 
   return (
     <Animated.View
@@ -248,11 +246,11 @@ const getStyles = (theme: Theme) =>
       width: 30,
       height: 30,
       borderRadius: 15,
-      backgroundColor: `${theme.colors.text}08`,
+      backgroundColor: theme.colors.surfaceMuted,
       alignItems: "center",
       justifyContent: "center",
       marginLeft: themeTokens.spacing.sm,
       borderWidth: 1,
-      borderColor: `${theme.colors.text}10`,
+      borderColor: theme.colors.border,
     },
   });

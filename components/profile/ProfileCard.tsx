@@ -47,8 +47,8 @@ export function ProfileCard<T extends ProfileUserData = ProfileUserData>({
   const avatarInitial = userProfile.name?.trim()
     ? userProfile.name.trim().charAt(0).toUpperCase()
     : userProfile.avatar && !userProfile.avatar.startsWith("http")
-    ? userProfile.avatar.charAt(0).toUpperCase()
-    : "U";
+      ? userProfile.avatar.charAt(0).toUpperCase()
+      : "U";
 
   const handleToggleEdit = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -82,7 +82,7 @@ export function ProfileCard<T extends ProfileUserData = ProfileUserData>({
           <Ionicons
             name={isEditingProfile ? "checkmark" : "pencil-outline"}
             size={18}
-            color={theme.colors.primary}
+            color={theme.colors.primaryText}
           />
         </Pressable>
 
@@ -99,7 +99,7 @@ export function ProfileCard<T extends ProfileUserData = ProfileUserData>({
               ) : userProfile.name?.trim() ? (
                 <Text style={styles.avatarText}>{avatarInitial}</Text>
               ) : (
-                <Ionicons name="person-add-outline" size={28} color={theme.colors.primary} />
+                <Ionicons name="person-add-outline" size={28} color={theme.colors.onPrimary} />
               )}
             </View>
           </View>
@@ -174,7 +174,7 @@ export function ProfileCard<T extends ProfileUserData = ProfileUserData>({
               ]}
               onPress={handleSaveProfile}
             >
-              <Ionicons name="checkmark-circle-outline" size={20} color={theme.colors.white} />
+              <Ionicons name="checkmark-circle-outline" size={20} color={theme.colors.onPrimary} />
               <Text style={styles.saveButtonText}>Save Changes</Text>
             </Pressable>
           </View>
@@ -211,7 +211,7 @@ export function ProfileCard<T extends ProfileUserData = ProfileUserData>({
                 </Text>
 
                 <View style={styles.promptButton}>
-                  <Ionicons name="create-outline" size={15} color={theme.colors.primary} />
+                  <Ionicons name="create-outline" size={15} color={theme.colors.primaryText} />
                   <Text style={styles.promptButtonText}>Fill Profile Details</Text>
                 </View>
               </Pressable>
@@ -230,12 +230,12 @@ const getStyles = (theme: Theme, isDark: boolean) => {
       ...shared.glassCard,
       ...Platform.select({
         ios: {
-          shadowColor: theme.glows.card.shadowColor,
-          shadowOffset: theme.glows.card.shadowOffset,
-          shadowOpacity: theme.glows.card.shadowOpacity,
-          shadowRadius: theme.glows.card.shadowRadius,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: isDark ? 0.3 : 0.08,
+          shadowRadius: 12,
         },
-        android: { elevation: 6 },
+        android: { elevation: 4 },
       }),
     },
     blurWrapper: {
@@ -256,9 +256,9 @@ const getStyles = (theme: Theme, isDark: boolean) => {
       width: 38,
       height: 38,
       borderRadius: 19,
-      backgroundColor: `${theme.colors.primary}18`,
+      backgroundColor: theme.colors.primarySoft,
       borderWidth: 1,
-      borderColor: `${theme.colors.primary}30`,
+      borderColor: theme.colors.border,
       alignItems: "center",
       justifyContent: "center",
       zIndex: 10,
@@ -271,14 +271,9 @@ const getStyles = (theme: Theme, isDark: boolean) => {
     avatarGlowRing: {
       padding: 4,
       borderRadius: 36,
-      backgroundColor: `${theme.colors.primary}15`,
+      backgroundColor: theme.colors.primarySoft,
       borderWidth: 2,
-      borderColor: `${theme.colors.primary}45`,
-      shadowColor: theme.colors.primary,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: isDark ? 0.45 : 0.25,
-      shadowRadius: 14,
-      elevation: 6,
+      borderColor: theme.colors.primary,
     },
     avatar: {
       width: 88,
@@ -296,7 +291,7 @@ const getStyles = (theme: Theme, isDark: boolean) => {
     },
     avatarText: {
       fontSize: 38,
-      color: theme.colors.white,
+      color: theme.colors.onPrimary,
       fontFamily: theme.fonts.bold,
     },
     viewModeContainer: {
@@ -356,14 +351,14 @@ const getStyles = (theme: Theme, isDark: boolean) => {
       paddingHorizontal: 16,
       paddingVertical: 8,
       borderRadius: 999,
-      backgroundColor: `${theme.colors.primary}18`,
+      backgroundColor: theme.colors.primarySoft,
       borderWidth: 1,
-      borderColor: `${theme.colors.primary}35`,
+      borderColor: theme.colors.border,
     },
     promptButtonText: {
       fontFamily: theme.fonts.bold,
       fontSize: 13,
-      color: theme.colors.primary,
+      color: theme.colors.primaryText,
     },
     editModeContainer: {
       width: "100%",

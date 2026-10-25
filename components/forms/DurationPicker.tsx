@@ -33,8 +33,8 @@ export const DurationPicker: React.FC<DurationPickerProps> = ({
             style={[
               styles.chip,
               {
-                backgroundColor: isActive ? highlightColor : theme.glass.neutralFill,
-                borderColor: isActive ? highlightColor : theme.glass.borderColor,
+                backgroundColor: isActive ? highlightColor : theme.colors.surfaceMuted,
+                borderColor: isActive ? highlightColor : theme.colors.border,
               },
             ]}
             onPress={() => {
@@ -48,7 +48,7 @@ export const DurationPicker: React.FC<DurationPickerProps> = ({
                 styles.chipText,
                 {
                   fontFamily: isActive ? theme.fonts.bold : theme.fonts.medium,
-                  color: isActive ? theme.colors.white : theme.colors.text,
+                  color: isActive ? theme.colors.onPrimary : theme.colors.text,
                 },
               ]}
             >

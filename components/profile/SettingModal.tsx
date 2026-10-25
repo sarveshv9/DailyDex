@@ -85,7 +85,7 @@ export const SettingModal = ({
         <Ionicons
           name={iconName}
           size={18}
-          color={theme.colors.primary}
+          color={theme.colors.primaryText}
           style={{ marginRight: 12, marginTop: multiline ? 4 : 0 }}
         />
         <TextInput
@@ -120,10 +120,9 @@ export const SettingModal = ({
             style={{
               padding: 4,
               borderRadius: 28,
-              backgroundColor: `${theme.colors.primary}15`,
+              backgroundColor: theme.colors.primarySoft,
               borderWidth: 2,
-              borderColor: `${theme.colors.primary}45`,
-              ...theme.glows.primary,
+              borderColor: theme.colors.primary,
             }}
           >
             <View
@@ -140,7 +139,7 @@ export const SettingModal = ({
                 style={{
                   fontSize: 34,
                   fontFamily: theme.fonts.bold,
-                  color: theme.colors.white,
+                  color: theme.colors.onPrimary,
                 }}
               >
                 {previewInitial}
@@ -189,7 +188,7 @@ export const SettingModal = ({
             },
           ]}
         >
-          <Ionicons name="checkmark-circle" size={20} color={theme.colors.white} />
+          <Ionicons name="checkmark-circle" size={20} color={theme.colors.onPrimary} />
           <Text style={shared.primaryButtonText}>
             Save Changes
           </Text>

@@ -298,7 +298,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
             <View
               style={[
                 StyleSheet.absoluteFill,
-                { backgroundColor: isDarkMode ? theme.colors.card : theme.colors.background },
+                { backgroundColor: isDarkMode ? theme.colors.surface : theme.colors.background },
               ]}
             />
           )}
@@ -330,7 +330,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 title="Save"
                 variant="primary"
                 size="sm"
-                icon={<Ionicons name="checkmark" size={16} color={theme.colors.white} />}
+                icon={<Ionicons name="checkmark" size={16} color={theme.colors.onPrimary} />}
                 onPress={closeAndSave}
               />
             </View>
@@ -359,7 +359,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                   color={taskColor}
                 />
                 <View style={[styles.heroEditPencilDot, { backgroundColor: theme.colors.primary }]}>
-                  <Ionicons name="pencil" size={9} color={theme.colors.white} />
+                  <Ionicons name="pencil" size={9} color={theme.colors.onPrimary} />
                 </View>
               </TouchableOpacity>
 
@@ -669,7 +669,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
             >
               {onChainNextTask && (
                 <TouchableOpacity
-                  style={[styles.chainPillBtn, { backgroundColor: `${theme.colors.primary}18` }]}
+                  style={[styles.chainPillBtn, { backgroundColor: theme.colors.primarySoft }]}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     const dur = editedTask?.duration || 30;
@@ -682,10 +682,10 @@ const TaskModal: React.FC<TaskModalProps> = ({
                   <Ionicons
                     name="add-circle-outline"
                     size={18}
-                    color={theme.colors.primary}
+                    color={theme.colors.primaryText}
                     style={{ marginRight: 6 }}
                   />
-                  <Text style={[styles.chainText, { color: theme.colors.primary }]}>
+                  <Text style={[styles.chainText, { color: theme.colors.primaryText }]}>
                     Add Ritual After
                   </Text>
                 </TouchableOpacity>
@@ -736,7 +736,7 @@ export default React.memo(TaskModal);
 
 const stylesCache = new Map<string, ReturnType<typeof getStyles>>();
 const getCachedStyles = (theme: Theme) => {
-  const key = `${theme.colors.background}-${theme.colors.primary}-${theme.colors.card}`;
+  const key = `${theme.colors.background}-${theme.colors.primary}-${theme.colors.surface}`;
   let s = stylesCache.get(key);
   if (!s) {
     s = getStyles(theme);
@@ -759,12 +759,13 @@ const getStyles = (theme: Theme) => {
       maxHeight: SCREEN_HEIGHT * 0.94,
       overflow: "hidden",
       borderWidth: 1,
-      borderColor: theme.glass.borderColor,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.surface,
       ...Platform.select({
         ios: {
           shadowColor: "#000",
           shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 0.2,
+          shadowOpacity: 0.15,
           shadowRadius: 24,
         },
         android: { elevation: 22 },
@@ -782,7 +783,7 @@ const getStyles = (theme: Theme) => {
       paddingTop: 10,
       paddingBottom: 14,
       borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: `${theme.colors.text}10`,
+      borderBottomColor: theme.colors.divider,
     },
     topActionsRow: {
       flexDirection: "row",
@@ -794,7 +795,7 @@ const getStyles = (theme: Theme) => {
       width: 36,
       height: 36,
       borderRadius: 18,
-      backgroundColor: `${theme.colors.text}0E`,
+      backgroundColor: theme.colors.surfaceMuted,
       justifyContent: "center",
       alignItems: "center",
     },
@@ -804,7 +805,7 @@ const getStyles = (theme: Theme) => {
       paddingVertical: 5,
       paddingHorizontal: 12,
       borderRadius: 16,
-      backgroundColor: `${theme.colors.text}08`,
+      backgroundColor: theme.colors.surfaceMuted,
     },
     timeRangeText: {
       fontSize: 12,
@@ -820,7 +821,7 @@ const getStyles = (theme: Theme) => {
       borderRadius: 18,
     },
     saveActionText: {
-      color: "#FFFFFF",
+      color: theme.colors.onPrimary,
       fontSize: 13,
       fontFamily: theme.fonts.bold,
     },
@@ -851,7 +852,7 @@ const getStyles = (theme: Theme) => {
       alignItems: "center",
       justifyContent: "center",
       borderWidth: 1.5,
-      borderColor: theme.colors.card,
+      borderColor: theme.colors.surface,
     },
     heroTitleWrap: {
       flex: 1,
@@ -883,9 +884,9 @@ const getStyles = (theme: Theme) => {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: `${theme.colors.text}08`,
+      backgroundColor: theme.colors.surfaceMuted,
       borderWidth: 1,
-      borderColor: `${theme.colors.text}10`,
+      borderColor: theme.colors.border,
       paddingVertical: 7,
       paddingHorizontal: 4,
       borderRadius: 13,
@@ -919,7 +920,7 @@ const getStyles = (theme: Theme) => {
       paddingTop: 12,
       marginTop: 10,
       borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: `${theme.colors.text}10`,
+      borderTopColor: theme.colors.divider,
     },
     stepperRow: {
       flexDirection: "row",
@@ -932,7 +933,7 @@ const getStyles = (theme: Theme) => {
       width: 36,
       height: 36,
       borderRadius: 18,
-      backgroundColor: `${theme.colors.text}0E`,
+      backgroundColor: theme.colors.surfaceMuted,
       alignItems: "center",
       justifyContent: "center",
     },
@@ -955,7 +956,7 @@ const getStyles = (theme: Theme) => {
       paddingVertical: 6,
       paddingHorizontal: 12,
       borderRadius: 14,
-      backgroundColor: `${theme.colors.text}08`,
+      backgroundColor: theme.colors.surfaceMuted,
       borderWidth: 1,
       borderColor: "transparent",
     },
@@ -976,7 +977,7 @@ const getStyles = (theme: Theme) => {
       height: 36,
       borderRadius: 18,
       borderWidth: 1,
-      borderColor: `${theme.colors.textSecondary}30`,
+      borderColor: theme.colors.border,
       alignItems: "center",
       justifyContent: "center",
     },
@@ -994,7 +995,7 @@ const getStyles = (theme: Theme) => {
       paddingVertical: 5,
       paddingHorizontal: 12,
       borderRadius: 14,
-      backgroundColor: `${theme.colors.text}08`,
+      backgroundColor: theme.colors.surfaceMuted,
       borderWidth: 1,
       borderColor: "transparent",
     },
@@ -1014,10 +1015,10 @@ const getStyles = (theme: Theme) => {
       gap: 14,
     },
     card: {
-      backgroundColor: `${theme.colors.text}08`,
+      backgroundColor: theme.colors.surface,
       borderRadius: 20,
       borderWidth: 1,
-      borderColor: `${theme.colors.text}0E`,
+      borderColor: theme.colors.border,
       padding: 14,
     },
     cardHeaderRow: {
@@ -1071,7 +1072,7 @@ const getStyles = (theme: Theme) => {
       paddingTop: 10,
       marginTop: 4,
       borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: `${theme.colors.text}10`,
+      borderTopColor: theme.colors.divider,
     },
     subtaskAddBtn: {
       width: 26,
@@ -1100,7 +1101,7 @@ const getStyles = (theme: Theme) => {
       paddingTop: 14,
       paddingHorizontal: 18,
       borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: `${theme.colors.text}10`,
+      borderTopColor: theme.colors.divider,
     },
     chainPillBtn: {
       flex: 1,
@@ -1121,11 +1122,11 @@ const getStyles = (theme: Theme) => {
       justifyContent: "center",
       paddingVertical: 13,
       paddingHorizontal: 16,
-      backgroundColor: "rgba(255, 69, 58, 0.12)",
+      backgroundColor: theme.colors.dangerSoft,
       borderRadius: 22,
     },
     deleteText: {
-      color: "#FF453A",
+      color: theme.colors.danger,
       fontSize: 14,
       fontFamily: theme.fonts.bold,
     },
@@ -1133,7 +1134,7 @@ const getStyles = (theme: Theme) => {
     /* ── Icon Picker Modal Styles ── */
     iconModalOverlay: {
       flex: 1,
-      backgroundColor: "rgba(0,0,0,0.55)",
+      backgroundColor: theme.colors.scrim,
       justifyContent: "center",
       alignItems: "center",
       padding: 20,
@@ -1141,15 +1142,17 @@ const getStyles = (theme: Theme) => {
     iconModalCard: {
       width: "100%",
       maxWidth: 360,
-      backgroundColor: theme.colors.card,
+      backgroundColor: theme.colors.surface,
       borderRadius: 24,
       padding: 18,
       maxHeight: SCREEN_HEIGHT * 0.65,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
       ...Platform.select({
         ios: {
           shadowColor: "#000",
           shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.25,
+          shadowOpacity: 0.15,
           shadowRadius: 20,
         },
         android: { elevation: 12 },
@@ -1183,7 +1186,7 @@ const getStyles = (theme: Theme) => {
       paddingVertical: 6,
       paddingHorizontal: 12,
       borderRadius: 16,
-      backgroundColor: `${theme.colors.text}0A`,
+      backgroundColor: theme.colors.surfaceMuted,
     },
     iconCatTabActive: {
       backgroundColor: theme.colors.primary,

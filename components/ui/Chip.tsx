@@ -83,8 +83,6 @@ const getStyles = (theme: Theme, selected: boolean, size: "sm" | "md") => {
       paddingVertical,
       paddingHorizontal,
       minHeight: isSm ? 28 : 36,
-      ...(selected && Platform.OS === "ios" ? theme.glows.primary : {}),
-      ...(selected && Platform.OS === "android" ? { elevation: 2 } : {}),
     },
     icon: {
       marginRight: theme.spacing.xs,
@@ -92,11 +90,11 @@ const getStyles = (theme: Theme, selected: boolean, size: "sm" | "md") => {
     text: {
       fontSize,
       fontFamily: selected ? theme.fonts.bold : theme.fonts.medium,
-      color: selected ? theme.colors.white : theme.colors.text,
+      color: selected ? theme.colors.onPrimary : theme.colors.text,
     },
     badge: {
       marginLeft: theme.spacing.xs,
-      backgroundColor: selected ? `${theme.colors.white}30` : theme.glass.neutralFill,
+      backgroundColor: selected ? theme.colors.primarySoft : theme.colors.surfaceMuted,
       borderRadius: themeTokens.borderRadius.full,
       paddingHorizontal: 6,
       paddingVertical: 2,
@@ -104,7 +102,7 @@ const getStyles = (theme: Theme, selected: boolean, size: "sm" | "md") => {
     badgeText: {
       fontSize: 10,
       fontFamily: theme.fonts.bold,
-      color: selected ? theme.colors.white : theme.colors.text,
+      color: selected ? theme.colors.onPrimary : theme.colors.text,
     },
     pressed: {
       opacity: 0.8,

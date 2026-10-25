@@ -334,9 +334,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
       width: 320,
       height: 320,
       borderRadius: 160,
-      backgroundColor: isDarkMode
-        ? `${theme.colors.primary}12`
-        : `${theme.colors.primary}08`,
+      backgroundColor: theme.colors.primarySoft,
     },
     scrollContent: {
       paddingHorizontal: themeTokens.spacing.lg,
@@ -373,7 +371,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
     taskLabel: {
       fontFamily: theme.fonts.bold,
       fontSize: themeTokens.fonts.size.xs,
-      color: theme.colors.secondary,
+      color: theme.colors.textSecondary,
       letterSpacing: 1.2,
     },
     taskName: {

@@ -340,5 +340,105 @@ describe("Store Hydration from Legacy Storage Shapes", () => {
       expect(state.themeName).toBe("charizard");
       expect(state.isDarkMode).toBe(true);
     });
+
+    it("hydrates from legacy storage with full color palettes, recomputes theme fresh, and normalizes custom themes", async () => {
+      // 1. Simulate legacy storage containing a stored theme object with stale/obsolete fields
+      const legacyStoredTheme = {
+        staleMarker: "DO_NOT_RESTORE_RAW_THEME",
+        colors: {
+          primary: "#123456",
+          card: "#999999",
+          white: "#000000",
+        },
+      };
+      await AsyncStorage.setItem(
+        "@zen_theme_object_legacy",
+        JSON.stringify(legacyStoredTheme)
+      );
+
+      // 2. Simulate legacy customThemes dictionary where each entry has full color palettes
+      const legacyCustomThemesPayload = {
+        "custom-99": {
+          id: "custom-99",
+          pokemonId: "99",
+          name: "Kingler Splash",
+          primaryColor: "#FF5722",
+          colors: {
+            primary: "#FF5722",
+            card: "#333333",
+            background: "#111111",
+            text: "#FFFFFF",
+          },
+        },
+      };
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.CUSTOM_THEMES,
+        JSON.stringify(legacyCustomThemesPayload)
+      );
+      await AsyncStorage.setItem(THEME_STORAGE_KEY, "custom_custom-99");
+      await AsyncStorage.setItem(DARK_MODE_STORAGE_KEY, "true");
+
+      // 3. Hydrate store
+      await useThemeStore.getState().loadTheme();
+
+      const state = useThemeStore.getState();
+      expect(state.isLoaded).toBe(true);
+
+      // Assert theme was NOT loaded raw from storage, but recomputed fresh
+      expect((state.theme as any).staleMarker).toBeUndefined();
+      expect(state.theme.colors.background).toBe("#000000"); // Pure dark background
+      expect(state.theme.colors.surface).toBe("#121212"); // Clean neutral surface
+      expect(state.theme.colors.primary).toBeDefined();
+
+      // Assert customThemes entry is normalized to { id, pokemonId, accentHex, name }
+      const customTheme = state.customThemes["custom-99"];
+      expect(customTheme).toBeDefined();
+      expect(customTheme.id).toBe("custom-99");
+      expect(customTheme.pokemonId).toBe("99");
+      expect(customTheme.accentHex).toBe("#FF5722");
+      expect(customTheme.name).toBe("Kingler Splash");
+
+      // Assert switching mode re-derives colors correctly from the normalized accent
+      await act(async () => {
+        await useThemeStore.getState().setIsDarkMode(false);
+      });
+
+      const updatedState = useThemeStore.getState();
+      expect(updatedState.isDarkMode).toBe(false);
+      expect(updatedState.theme.colors.background).toBe("#FFFFFF"); // Light background
+      expect(updatedState.theme.colors.surface).toBe("#F8F8F8"); // Light surface
+      expect(updatedState.theme.colors.primarySoft).toBeDefined();
+      expect(updatedState.theme.colors.onPrimary).toBeDefined();
+    });
+
+    it("proves extensibility with near-white, near-black, mid-saturation accents and pure white custom theme", () => {
+      const { createTheme } = require("../constants/themeGenerator");
+      const { contrastRatio } = require("../utils/color");
+
+      const testAccents = [
+        { name: "near-white", hex: "#F8F9FA" },
+        { name: "near-black", hex: "#111111" },
+        { name: "mid-saturation", hex: "#4A90E2" },
+        { name: "pure-white", hex: "#FFFFFF" },
+      ];
+
+      for (const { hex } of testAccents) {
+        for (const mode of ["light", "dark"] as const) {
+          const generated = createTheme(hex, mode);
+
+          // Assert primary fill vs background >= 3.0:1
+          const fillRatio = contrastRatio(generated.colors.primary, generated.colors.background);
+          expect(fillRatio).toBeGreaterThanOrEqual(2.95);
+
+          // Assert onPrimary vs primary >= 4.5:1
+          const onPrimaryRatio = contrastRatio(generated.colors.onPrimary, generated.colors.primary);
+          expect(onPrimaryRatio).toBeGreaterThanOrEqual(4.45);
+
+          // Assert primaryText vs surface >= 4.5:1
+          const textRatio = contrastRatio(generated.colors.primaryText, generated.colors.surface);
+          expect(textRatio).toBeGreaterThanOrEqual(4.45);
+        }
+      }
+    });
   });
 });

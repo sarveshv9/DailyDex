@@ -42,7 +42,7 @@ const SetupPromptCardComponent: React.FC<SetupPromptCardProps> = ({
               <Ionicons
                 name="leaf-outline"
                 size={40}
-                color={theme.colors.primary}
+                color={theme.colors.primaryText}
               />
             </View>
 
@@ -69,7 +69,7 @@ const SetupPromptCardComponent: React.FC<SetupPromptCardProps> = ({
               <Ionicons
                 name="sparkles-outline"
                 size={20}
-                color={theme.colors.white}
+                color={theme.colors.onPrimary}
               />
               <Text style={styles.primaryButtonText}>Create Routine</Text>
             </Pressable>
@@ -94,10 +94,10 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       borderRadius: 32,
       ...Platform.select({
         ios: {
-          shadowColor: theme.glows.card.shadowColor,
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: isDarkMode ? 0.4 : 0.12,
-          shadowRadius: 24,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: isDarkMode ? 0.3 : 0.08,
+          shadowRadius: 16,
         },
         android: { elevation: 4 },
       }),
@@ -122,9 +122,9 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       width: 80,
       height: 80,
       borderRadius: 40,
-      backgroundColor: `${theme.colors.primary}${
-        theme.glass?.iconTintAlpha ?? (isDarkMode ? "29" : "1C")
-      }`,
+      backgroundColor: theme.colors.primarySoft,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
       alignItems: "center",
       justifyContent: "center",
       marginBottom: 8,

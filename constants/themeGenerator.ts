@@ -1,0 +1,204 @@
+/**
+ * constants/themeGenerator.ts
+ *
+ * Theme GENERATOR:
+ * Given an accent hex and a mode ('light' | 'dark'), produces a complete,
+ * contrast-guaranteed, readably flat Theme object.
+ *
+ * CRITICAL: Zero imports from react-native, expo, or stores.
+ * Must run cleanly in plain Node.js / tsx environments.
+ */
+
+import { themeTokens } from "./themeTokens";
+import {
+  blendOpaque,
+  clampForContrast,
+  deriveOnPrimary,
+  derivePrimaryText,
+  normalizeHex,
+} from "../utils/color";
+
+export interface ThemeColors {
+  // New primary / accent tokens
+  primary: string;
+  onPrimary: string;
+  primarySoft: string;
+  primaryText: string;
+
+  // Theme-independent neutrals per mode
+  background: string;
+  surface: string;
+  surfaceMuted: string;
+  border: string;
+  divider: string;
+  text: string;
+  textSecondary: string;
+  scrim: string;
+
+  // Semantic status
+  danger: string;
+  dangerSoft: string;
+}
+
+export interface ThemeGlass {
+  cardBg: string;
+  borderColor: string;
+  shadowOpacity: number;
+  iconTintAlpha: string;
+  neutralFill: string;
+}
+
+export interface GeneratedTheme {
+  isDarkMode: boolean;
+  accentInput: string;
+  wasAdjusted: boolean;
+  colors: ThemeColors;
+  glass: ThemeGlass;
+  fonts: {
+    regular: string;
+    medium: string;
+    bold: string;
+  };
+  spacing: {
+    xs: number;
+    sm: number;
+    md: number;
+    lg: number;
+    xl: number;
+  };
+  borderRadius: {
+    sm: number;
+    md: number;
+    lg: number;
+  };
+  icons: {
+    stroke: number;
+    sm: number;
+    md: number;
+    lg: number;
+  };
+}
+
+// Global memoization cache: `${accentHex}|${mode}` -> GeneratedTheme
+const themeCache = new Map<string, GeneratedTheme>();
+
+// Track warned accents to warn only once in development
+const warnedAccents = new Set<string>();
+
+export function createTheme(
+  rawAccentHex: string,
+  mode: "light" | "dark"
+): GeneratedTheme {
+  const normAccent = normalizeHex(rawAccentHex);
+  const cacheKey = `${normAccent}|${mode}`;
+
+  const cached = themeCache.get(cacheKey);
+  if (cached) return cached;
+
+  const isDark = mode === "dark";
+
+  // 1. NEUTRALS: Independent of theme per mode
+  const background = isDark ? themeTokens.colors.black : themeTokens.colors.white;
+  const surface = isDark ? themeTokens.colors.gray[950] : themeTokens.colors.gray[50];
+  const surfaceMuted = isDark ? themeTokens.colors.gray[850] : themeTokens.colors.gray[200];
+  const border = isDark ? themeTokens.colors.gray[800] : themeTokens.colors.gray[300];
+  const divider = isDark ? themeTokens.colors.gray[850] : themeTokens.colors.gray[200];
+  const text = isDark ? themeTokens.colors.gray[100] : themeTokens.colors.gray[900];
+  const textSecondary = isDark ? themeTokens.colors.gray[500] : themeTokens.colors.gray[600];
+  const scrim = isDark ? "rgba(0, 0, 0, 0.65)" : "rgba(0, 0, 0, 0.45)";
+
+  const danger = isDark ? themeTokens.colors.danger : themeTokens.colors.dangerDark;
+  const dangerSoft = isDark ? "#3B1414" : "#FEE2E2";
+
+  // 2. ACCENT DERIVATION
+  // Primary fill: guaranteed >= 3.0:1 contrast vs background
+  const clamped = clampForContrast(normAccent, background, 3.0, mode);
+  const primary = clamped.hex;
+  const wasAdjusted = clamped.wasAdjusted;
+
+  if (
+    wasAdjusted &&
+    typeof __DEV__ !== "undefined" &&
+    __DEV__ &&
+    !warnedAccents.has(cacheKey)
+  ) {
+    warnedAccents.add(cacheKey);
+    console.warn(
+      `[ZenThemeGenerator] Accent ${normAccent} adjusted to ${primary} in ${mode} mode for WCAG readability.`
+    );
+  }
+
+  // onPrimary: high contrast text on primary fill (>= 4.5:1)
+  const onPrimary = deriveOnPrimary(primary);
+
+  // primarySoft: Opaque blend over surface (12% light, 18% dark)
+  const primarySoft = blendOpaque(primary, surface, isDark ? 0.18 : 0.12);
+
+  // primaryText: Accent used as text/icons (>= 4.5:1 on surface, primarySoft, background)
+  const primaryText = derivePrimaryText(primary, surface, primarySoft, background, mode);
+
+  // 3. GLASS CONFIG
+  const glassTokens = isDark ? themeTokens.glass.dark : themeTokens.glass.light;
+  const glass: ThemeGlass = {
+    cardBg: glassTokens.cardBg,
+    borderColor: glassTokens.borderColor,
+    shadowOpacity: glassTokens.shadowOpacity,
+    iconTintAlpha: glassTokens.iconTintAlpha,
+    neutralFill: surfaceMuted,
+  };
+
+  const theme: GeneratedTheme = {
+    isDarkMode: isDark,
+    accentInput: normAccent,
+    wasAdjusted,
+    colors: {
+      primary,
+      onPrimary,
+      primarySoft,
+      primaryText,
+      background,
+      surface,
+      surfaceMuted,
+      border,
+      divider,
+      text,
+      textSecondary,
+      scrim,
+      danger,
+      dangerSoft,
+    },
+    glass,
+    fonts: {
+      regular: themeTokens.fonts.family.regular,
+      medium: themeTokens.fonts.family.medium,
+      bold: themeTokens.fonts.family.bold,
+    },
+    spacing: {
+      xs: themeTokens.spacing.xs,
+      sm: themeTokens.spacing.sm,
+      md: themeTokens.spacing.md,
+      lg: themeTokens.spacing.lg,
+      xl: themeTokens.spacing.xl,
+    },
+    borderRadius: {
+      sm: themeTokens.borderRadius.sm,
+      md: themeTokens.borderRadius.md,
+      lg: themeTokens.borderRadius.lg,
+    },
+    icons: {
+      stroke: themeTokens.icons.stroke,
+      sm: themeTokens.icons.sm,
+      md: themeTokens.icons.md,
+      lg: themeTokens.icons.lg,
+    },
+  };
+
+  themeCache.set(cacheKey, theme);
+  return theme;
+}
+
+/** Clear generator cache (e.g. for testing) */
+export function _clearThemeCache(): void {
+  themeCache.clear();
+  warnedAccents.clear();
+}

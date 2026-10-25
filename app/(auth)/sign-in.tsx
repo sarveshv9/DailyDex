@@ -31,8 +31,8 @@ export default function SignInScreen() {
       <StatusBar style={isDarkMode ? 'light' : 'dark'} />
       <View style={styles.content}>
         <View style={styles.headerContainer}>
-          <View style={[styles.iconBadge, { backgroundColor: theme.colors.card }]}>
-            <Ionicons name="sparkles" size={36} color={theme.colors.primary} />
+          <View style={[styles.iconBadge, { backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border }]}>
+            <Ionicons name="sparkles" size={36} color={theme.colors.primaryText} />
           </View>
           <Text style={[styles.title, { color: theme.colors.text }]}>Welcome to Zen</Text>
           <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
@@ -48,8 +48,8 @@ export default function SignInScreen() {
             accessibilityRole="button"
             accessibilityLabel="Get Started with Zen"
           >
-            <Text style={styles.buttonText}>Get Started</Text>
-            <Ionicons name="arrow-forward" size={20} color="#FFFFFF" style={{ marginLeft: 8 }} />
+            <Text style={[styles.buttonText, { color: theme.colors.onPrimary }]}>Get Started</Text>
+            <Ionicons name="arrow-forward" size={20} color={theme.colors.onPrimary} style={{ marginLeft: 8 }} />
           </TouchableOpacity>
 
           <View style={styles.legalLinksRow}>

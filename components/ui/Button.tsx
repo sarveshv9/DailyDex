@@ -83,7 +83,13 @@ export const Button: React.FC<ButtonProps> = ({
       {loading ? (
         <ActivityIndicator
           size="small"
-          color={variant === "primary" ? theme.colors.white : theme.colors.primary}
+          color={
+            variant === "primary"
+              ? theme.colors.onPrimary
+              : variant === "destructive"
+              ? theme.colors.danger
+              : theme.colors.primaryText
+          }
         />
       ) : (
         <View style={styles.content}>
@@ -139,9 +145,11 @@ const getStyles = (theme: Theme, variant: ButtonVariant, size: ButtonSize) => {
   const textColor =
     variant === "secondary"
       ? theme.colors.text
-      : variant === "destructive" || variant === "ghost"
-      ? theme.colors.primary
-      : theme.colors.white;
+      : variant === "destructive"
+      ? theme.colors.danger
+      : variant === "ghost"
+      ? theme.colors.primaryText
+      : theme.colors.onPrimary;
 
   return StyleSheet.create({
     button: {

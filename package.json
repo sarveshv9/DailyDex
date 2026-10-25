@@ -10,6 +10,7 @@
     "web": "expo start --web",
     "lint": "eslint .",
     "lint:ratchet": "node scripts/lint-ratchet.js",
+    "check:themes": "npx -y tsx scripts/check-theme-contrast.ts",
     "test": "jest",
     "build": "expo export"
   },

@@ -61,7 +61,7 @@ const UpNextRowComponent = ({ task, onPress, theme, isDarkMode }: UpNextRowProps
         <Ionicons
           name={toOutline(getRoutineIcon(task.imageKey))}
           size={22}
-          color={theme.colors.primary}
+          color={theme.colors.primaryText}
         />
       </View>
       <View style={styles.upNextInfo}>
@@ -83,7 +83,7 @@ const UpNextRowComponent = ({ task, onPress, theme, isDarkMode }: UpNextRowProps
       </View>
 
       <View style={styles.timeBadge}>
-        <Ionicons name="time-outline" size={12} color={theme.colors.primary} />
+        <Ionicons name="time-outline" size={12} color={theme.colors.primaryText} />
         <Text style={styles.timeBadgeText}>{formatTaskTime(task.time)}</Text>
       </View>
     </Pressable>
@@ -151,7 +151,7 @@ const UpNextSectionComponent: React.FC<UpNextSectionProps> = ({
                 <Ionicons
                   name="sparkles-outline"
                   size={26}
-                  color={theme.colors.primary}
+                  color={theme.colors.primaryText}
                 />
               </View>
               <Text style={styles.emptyTitle}>All Caught Up For Today</Text>
@@ -169,7 +169,7 @@ const UpNextSectionComponent: React.FC<UpNextSectionProps> = ({
                 <Ionicons
                   name="calendar-outline"
                   size={16}
-                  color={theme.colors.primary}
+                  color={theme.colors.primaryText}
                 />
                 <Text style={styles.emptyActionText}>View Full Timeline</Text>
               </Pressable>
@@ -185,9 +185,7 @@ export const UpNextSection = React.memo(UpNextSectionComponent);
 
 const getStyles = (theme: Theme, isDarkMode: boolean) => {
   const shared = getSharedStyles(theme);
-  const tileBg = `${theme.colors.primary}${
-    theme.glass?.iconTintAlpha ?? (isDarkMode ? "29" : "1C")
-  }`;
+  const tileBg = theme.colors.primarySoft;
 
   return StyleSheet.create({
     sectionContainer: {
@@ -206,21 +204,12 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     upNextCard: {
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: theme.glass.cardBg,
+      backgroundColor: theme.colors.surface,
       borderWidth: 1,
-      borderColor: theme.glass.borderColor,
+      borderColor: theme.colors.border,
       borderRadius: 20,
       padding: 14,
       gap: 12,
-      ...Platform.select({
-        ios: {
-          shadowColor: theme.glows.card.shadowColor,
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: isDarkMode ? 0.25 : 0.05,
-          shadowRadius: 8,
-        },
-        android: { elevation: 2 },
-      }),
     },
     upNextIconSquircle: {
       width: 44,
@@ -252,9 +241,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       paddingHorizontal: 6,
       paddingVertical: 2,
       borderRadius: 8,
-      backgroundColor: isDarkMode
-        ? "rgba(255,255,255,0.08)"
-        : "rgba(0,0,0,0.05)",
+      backgroundColor: theme.colors.surfaceMuted,
     },
     upNextDurationText: {
       fontSize: themeTokens.fonts.size.xs,
@@ -269,19 +256,19 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       paddingHorizontal: 10,
       paddingVertical: 6,
       borderRadius: 12,
-      backgroundColor: `${theme.colors.primary}15`,
+      backgroundColor: theme.colors.primarySoft,
     },
     timeBadgeText: {
       fontSize: themeTokens.fonts.size.xs,
       fontFamily: theme.fonts.bold,
-      color: theme.colors.primary,
+      color: theme.colors.primaryText,
       fontVariant: ["tabular-nums"],
     },
     emptyCardContainer: {
       borderRadius: 24,
       ...Platform.select({
         ios: {
-          shadowColor: theme.glows.card.shadowColor,
+          shadowColor: "#000000",
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: isDarkMode ? 0.25 : 0.06,
           shadowRadius: 12,
@@ -331,15 +318,15 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       paddingHorizontal: 16,
       paddingVertical: 10,
       borderRadius: 14,
-      backgroundColor: `${theme.colors.primary}18`,
+      backgroundColor: theme.colors.primarySoft,
       borderWidth: 1,
-      borderColor: `${theme.colors.primary}30`,
+      borderColor: theme.colors.border,
       marginTop: 4,
     },
     emptyActionText: {
       fontSize: themeTokens.fonts.size.xs,
       fontFamily: theme.fonts.bold,
-      color: theme.colors.primary,
+      color: theme.colors.primaryText,
     },
   });
 };

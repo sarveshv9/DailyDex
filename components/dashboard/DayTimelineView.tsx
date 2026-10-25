@@ -399,7 +399,7 @@ const TimelinePage = memo<{
                                 ]}>
                                     {isSelected ? (
                                         <LinearGradient
-                                            colors={[theme.colors.primary, `${theme.colors.primary}E6`]}
+                                            colors={[theme.colors.primary, theme.colors.primary]}
                                             style={styles.dateBadgeGradient}
                                             start={{ x: 0.2, y: 0 }}
                                             end={{ x: 0.8, y: 1 }}
@@ -1259,7 +1259,7 @@ DayTimelineView.displayName = "DayTimelineView";
 
 const stylesCache = new Map<string, ReturnType<typeof getStyles>>();
 const getCachedStyles = (theme: Theme) => {
-    const key = `${theme.colors.background}-${theme.colors.primary}-${theme.colors.card}`;
+    const key = `${theme.colors.background}-${theme.colors.primary}-${theme.colors.surface}`;
     let s = stylesCache.get(key);
     if (!s) {
         s = getStyles(theme);
@@ -1340,7 +1340,7 @@ const getStyles = (theme: Theme) =>
             width: 22,
             height: 22,
             borderRadius: 11,
-            backgroundColor: `${theme.colors.primary}12`,
+            backgroundColor: theme.colors.primarySoft,
             alignItems: 'center',
             justifyContent: 'center',
             marginRight: 10,
@@ -1403,10 +1403,10 @@ const getStyles = (theme: Theme) =>
             backgroundColor: theme.colors.primary,
             ...Platform.select({
                 ios: {
-                    shadowColor: theme.colors.primary,
+                    shadowColor: "#000",
                     shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.35,
-                    shadowRadius: 5,
+                    shadowOpacity: 0.15,
+                    shadowRadius: 4,
                 },
                 android: { elevation: 3 },
             }),
@@ -1420,8 +1420,8 @@ const getStyles = (theme: Theme) =>
         },
         dateBadgeToday: {
             borderWidth: 1.5,
-            borderColor: `${theme.colors.primary}60`,
-            backgroundColor: `${theme.colors.primary}10`,
+            borderColor: theme.colors.border,
+            backgroundColor: theme.colors.primarySoft,
         },
         dateNum: {
             fontSize: 18,
@@ -1430,12 +1430,12 @@ const getStyles = (theme: Theme) =>
             letterSpacing: -0.2,
         },
         dateNumToday: {
-            color: theme.colors.primary,
+            color: theme.colors.primaryText,
         },
         dateNumSelected: {
             fontSize: 18,
             fontFamily: theme.fonts.bold,
-            color: '#FFFFFF',
+            color: theme.colors.onPrimary,
             letterSpacing: -0.2,
         },
         taskBadgesRow: {
@@ -1489,7 +1489,7 @@ const getStyles = (theme: Theme) =>
         },
         peekDivider: {
             height: StyleSheet.hairlineWidth,
-            backgroundColor: `${theme.colors.text}10`,
+            backgroundColor: theme.colors.divider,
             marginBottom: 12,
             marginHorizontal: 4,
         },
@@ -1498,10 +1498,10 @@ const getStyles = (theme: Theme) =>
             alignItems: 'center',
             paddingHorizontal: 16,
             paddingVertical: 12,
-            backgroundColor: theme.colors.card,
+            backgroundColor: theme.colors.surface,
             borderRadius: 20,
             borderWidth: 1,
-            borderColor: `${theme.colors.text}0E`,
+            borderColor: theme.colors.border,
             overflow: 'hidden',
             ...Platform.select({
                 ios: {

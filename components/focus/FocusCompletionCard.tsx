@@ -40,7 +40,7 @@ const FocusCompletionCardComponent: React.FC<FocusCompletionCardProps> = ({
           <Ionicons
             name="checkmark-circle"
             size={36}
-            color={theme.colors.primary}
+            color={theme.colors.primaryText}
           />
         </View>
         <Text style={styles.completionTitle}>Session Accomplished</Text>
@@ -53,7 +53,7 @@ const FocusCompletionCardComponent: React.FC<FocusCompletionCardProps> = ({
           <Ionicons
             name="time-outline"
             size={15}
-            color={theme.colors.primary}
+            color={theme.colors.primaryText}
           />
           <Text style={styles.completionPillText}>
             {durationMinutes} minutes logged to your journey
@@ -74,7 +74,7 @@ const FocusCompletionCardComponent: React.FC<FocusCompletionCardProps> = ({
         <Ionicons
           name="checkmark-done-circle-outline"
           size={22}
-          color={theme.colors.white}
+          color={theme.colors.onPrimary}
         />
         <Text style={styles.primaryActionButtonText}>
           Complete & Return to Tasks
@@ -97,7 +97,7 @@ const FocusCompletionCardComponent: React.FC<FocusCompletionCardProps> = ({
         <Ionicons
           name="refresh-outline"
           size={18}
-          color={theme.colors.primary}
+          color={theme.colors.primaryText}
         />
         <Text style={styles.secondaryActionButtonText}>
           Start Another Session
@@ -131,13 +131,15 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       width: 64,
       height: 64,
       borderRadius: 32,
-      backgroundColor: `${theme.colors.primary}18`,
+      backgroundColor: theme.colors.primarySoft,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
       marginBottom: themeTokens.spacing.md,
     },
     completionTitle: {
       fontFamily: theme.fonts.bold,
       fontSize: themeTokens.fonts.size.xl,
-      color: theme.colors.primary,
+      color: theme.colors.primaryText,
       marginBottom: themeTokens.spacing.xs,
       textAlign: "center",
     },
@@ -154,7 +156,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       paddingHorizontal: themeTokens.spacing.md,
       paddingVertical: 6,
       borderRadius: themeTokens.borderRadius.full,
-      backgroundColor: `${theme.colors.primary}12`,
+      backgroundColor: theme.colors.primarySoft,
     },
     completionPillText: {
       ...shared.badgeText,

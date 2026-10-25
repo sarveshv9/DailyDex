@@ -77,13 +77,13 @@ const PomodoroCycleCardComponent: React.FC<PomodoroCycleCardProps> = ({
                 <Ionicons
                   name="checkmark"
                   size={14}
-                  color={theme.colors.white}
+                  color={theme.colors.onPrimary}
                 />
               ) : isSessionActive ? (
                 <Ionicons
                   name="flame"
                   size={13}
-                  color={theme.colors.white}
+                  color={theme.colors.primaryText}
                 />
               ) : (
                 <Text style={styles.pomoDotText}>{s}</Text>
@@ -104,8 +104,8 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
       width: "100%",
       borderRadius: themeTokens.borderRadius.lg,
       borderWidth: 1,
-      borderColor: theme.glass.borderColor,
-      backgroundColor: theme.glass.cardBg,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.surface,
       overflow: "hidden",
       paddingHorizontal: themeTokens.spacing.lg,
       paddingVertical: themeTokens.spacing.md,
@@ -125,18 +125,16 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
     pomoCycleTitle: {
       fontFamily: theme.fonts.bold,
       fontSize: themeTokens.fonts.size.xs,
-      color: theme.colors.primary,
+      color: theme.colors.primaryText,
     },
     pomoCyclePhaseTag: {
       fontFamily: theme.fonts.bold,
       fontSize: themeTokens.fonts.size.xs,
-      color: theme.colors.secondary,
+      color: theme.colors.textSecondary,
       paddingHorizontal: themeTokens.spacing.sm,
       paddingVertical: 2,
       borderRadius: themeTokens.borderRadius.sm,
-      backgroundColor: isDarkMode
-        ? "rgba(255,255,255,0.06)"
-        : "rgba(0,0,0,0.04)",
+      backgroundColor: theme.colors.surfaceMuted,
     },
     pomoDotsRow: {
       flexDirection: "row",
@@ -148,10 +146,8 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
       height: 32,
       borderRadius: themeTokens.borderRadius.md,
       borderWidth: 1,
-      borderColor: theme.glass.borderColor,
-      backgroundColor: isDarkMode
-        ? "rgba(255, 255, 255, 0.05)"
-        : "rgba(0, 0, 0, 0.04)",
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.surfaceMuted,
       alignItems: "center",
       justifyContent: "center",
     },
@@ -160,13 +156,13 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
       borderColor: theme.colors.primary,
     },
     pomoDotPillActive: {
-      backgroundColor: theme.colors.secondary,
+      backgroundColor: theme.colors.primarySoft,
       borderColor: theme.colors.primary,
       borderWidth: 1.5,
     },
     pomoDotText: {
       fontFamily: theme.fonts.bold,
       fontSize: themeTokens.fonts.size.xs,
-      color: theme.colors.secondary,
+      color: theme.colors.textSecondary,
     },
   });

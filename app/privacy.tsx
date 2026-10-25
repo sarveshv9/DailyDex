@@ -83,17 +83,17 @@ const makeStyles = (theme: Theme) => StyleSheet.create({
         paddingHorizontal: theme.spacing.lg,
         paddingVertical: theme.spacing.md,
         borderBottomWidth: StyleSheet.hairlineWidth, 
-        borderBottomColor: theme.colors.secondary + '20' 
+        borderBottomColor: theme.colors.divider 
     },
     backBtn: { 
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: theme.colors.card,
+        backgroundColor: theme.colors.surface,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
-        borderColor: theme.colors.secondary + '15',
+        borderColor: theme.colors.border,
     },
     title: { 
         fontSize: 18, 

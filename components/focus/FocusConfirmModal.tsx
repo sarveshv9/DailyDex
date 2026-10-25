@@ -114,7 +114,7 @@ const FocusConfirmModalComponent: React.FC<FocusConfirmModalProps> = ({
                   <Ionicons
                     name="contract-outline"
                     size={18}
-                    color={theme.colors.white}
+                    color={theme.colors.onPrimary}
                   />
                   <Text style={styles.modalPrimaryButtonText}>
                     Minimize (Keep Running)
@@ -139,7 +139,7 @@ const FocusConfirmModalComponent: React.FC<FocusConfirmModalProps> = ({
                   <Ionicons
                     name="stop-circle-outline"
                     size={18}
-                    color={themeTokens.colors.danger}
+                    color={theme.colors.danger}
                   />
                   <Text style={styles.modalDestructiveButtonText}>
                     End Session & Leave
@@ -175,7 +175,7 @@ const FocusConfirmModalComponent: React.FC<FocusConfirmModalProps> = ({
                     onClose();
                   }}
                 >
-                  <Ionicons name="play" size={18} color={theme.colors.white} />
+                  <Ionicons name="play" size={18} color={theme.colors.onPrimary} />
                   <Text style={styles.modalPrimaryButtonText}>Keep Focusing</Text>
                 </Pressable>
 
@@ -250,12 +250,12 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       marginBottom: themeTokens.spacing.md,
     },
     modalIconCircleDestructive: {
-      backgroundColor: "rgba(239, 68, 68, 0.12)",
+      backgroundColor: theme.colors.dangerSoft,
     },
     modalTitle: {
       fontFamily: theme.fonts.bold,
       fontSize: themeTokens.fonts.size.lg,
-      color: theme.colors.primary,
+      color: theme.colors.primaryText,
       marginBottom: themeTokens.spacing.sm,
       textAlign: "center",
     },
@@ -290,16 +290,14 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       paddingVertical: 0,
       paddingHorizontal: 0,
       flexDirection: "row",
-      borderColor: "rgba(239, 68, 68, 0.35)",
-      backgroundColor: isDarkMode
-        ? "rgba(239, 68, 68, 0.12)"
-        : "rgba(239, 68, 68, 0.08)",
+      borderColor: theme.colors.danger,
+      backgroundColor: theme.colors.dangerSoft,
       gap: themeTokens.spacing.sm,
     },
     modalDestructiveButtonText: {
       fontFamily: theme.fonts.bold,
       fontSize: themeTokens.fonts.size.md,
-      color: themeTokens.colors.danger,
+      color: theme.colors.danger,
     },
     modalCancelButton: {
       width: "100%",
@@ -310,7 +308,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     modalCancelButtonText: {
       fontFamily: theme.fonts.medium,
       fontSize: themeTokens.fonts.size.sm,
-      color: theme.colors.secondary,
+      color: theme.colors.textSecondary,
     },
     pressedScale: {
       opacity: 0.85,

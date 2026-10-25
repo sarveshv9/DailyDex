@@ -12,7 +12,14 @@ import {
     View,
     Alert,
 } from "react-native";
-import { lightThemes, Theme, getSharedStyles } from "../../styles/shared";
+import {
+    createTheme,
+    DEFAULT_THEME_NAME,
+    getSharedStyles,
+    THEME_ACCENTS,
+    Theme,
+    themeNames,
+} from "../../styles/shared";
 import { ModalSheet } from "../ui/ModalSheet";
 import { useTheme } from "../../context/ThemeContext";
 import { usePokemonQuery } from "../../api/pokemon";
@@ -29,28 +36,6 @@ type ThemeSelectionModalProps = {
     onSelectTheme: (themeName: string) => void;
 };
 
-const POKEMON_IDS: Record<string, number> = {
-    pokeball: 100, pikachu: 25, bulbasaur: 1, squirtle: 7, jigglypuff: 39,
-    meowth: 52, psyduck: 54, slowpoke: 79, gengar: 94,
-    snorlax: 143, charizard: 6, dragonite: 149, mew: 151,
-};
-
-const THEME_META: Record<string, { label: string; description: string }> = {
-    pokeball: { label: "Classic", description: "Iconic Red & White" },
-    pikachu: { label: "Pikachu", description: "Electric energy" },
-    bulbasaur: { label: "Bulbasaur", description: "Fresh & natural" },
-    squirtle: { label: "Squirtle", description: "Cool blue vibes" },
-    jigglypuff: { label: "Jigglypuff", description: "Soft & dreamy" },
-    meowth: { label: "Meowth", description: "That's right!" },
-    psyduck: { label: "Psyduck", description: "Permanently confused" },
-    slowpoke: { label: "Slowpoke", description: "Take it slow" },
-    gengar: { label: "Gengar", description: "Spooky vibes" },
-    snorlax: { label: "Snorlax", description: "Comfy & cozy" },
-    charizard: { label: "Charizard", description: "Fire & power" },
-    dragonite: { label: "Dragonite", description: "Majestic & rare" },
-    mew: { label: "Mew", description: "Mysterious" },
-};
-
 // Maps PokeAPI species colors to exact hex matching the theme vibe
 const SPECIES_COLORS: Record<string, string> = {
     black:  "#333333",
@@ -61,14 +46,14 @@ const SPECIES_COLORS: Record<string, string> = {
     pink:   "#FF2D55",
     purple: "#AF52DE",
     red:    "#FF3B30",
-    white:  "#9CA3AF", // Use a soft gray for white to ensure visibility against light backgrounds
+    white:  "#9CA3AF",
     yellow: "#FFCC00",
 };
 
 /**
- * Theme Selection
- * Previously a massive full-screen modal with custom sidebar styling.
- * Now refactored to use the consistent BottomSheet pattern.
+ * Theme Selection Modal
+ * Refactored to use the central theme generator, theme registry,
+ * and contrast-guaranteed preview for custom colors.
  */
 export function ThemeSelectionModal({
     visible, onClose, currentTheme,
@@ -77,12 +62,11 @@ export function ThemeSelectionModal({
 }: ThemeSelectionModalProps) {
     const { customThemes, addCustomTheme, removeCustomTheme } = useTheme();
     const baseActiveTheme = activeThemeName.replace("light-", "").replace("dark-", "");
-    const themeList = Object.keys(lightThemes);
     const styles = useMemo(() => getStyles(currentTheme), [currentTheme]);
 
     const [showCustomForm, setShowCustomForm] = React.useState(false);
     const [cPokemonName, setCPokemonName] = React.useState("");
-    const [cColor, setCColor] = React.useState(SPECIES_COLORS.red); // Default fallback
+    const [cColor, setCColor] = React.useState(SPECIES_COLORS.red);
     const [cCustomHex, setCCustomHex] = React.useState("");
     const [debouncedQuery, setDebouncedQuery] = React.useState("");
     const [lastAutoColorId, setLastAutoColorId] = React.useState<string | null>(null);
@@ -130,13 +114,24 @@ export function ThemeSelectionModal({
 
     const resolvedColor = cCustomHex.match(/^#[0-9A-Fa-f]{6}$/) ? cCustomHex : cColor;
 
+    // Run the picked color through the theme generator to get contrast-guaranteed preview
+    const previewTheme = useMemo(
+        () => createTheme(resolvedColor, isDarkMode ? "dark" : "light"),
+        [resolvedColor, isDarkMode]
+    );
+
     const handleSaveCustom = () => {
         if (!previewId || !previewName) {
             Alert.alert("No Pokémon Found", "Type a valid Pokémon name and wait for the preview to load.");
             return;
         }
 
-        addCustomTheme(previewId, { pokemonId: previewId, primaryColor: resolvedColor, name: previewName });
+        addCustomTheme(previewId, {
+            pokemonId: previewId,
+            primaryColor: previewTheme.colors.primary,
+            accentHex: previewTheme.colors.primary,
+            name: previewName,
+        });
         onSelectTheme(`custom_${previewId}`);
         if (isAutoTheme) onToggleAutoTheme(false);
         closeCustomForm();
@@ -148,7 +143,7 @@ export function ThemeSelectionModal({
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         removeCustomTheme(id);
         if (isCurrentlyActive) {
-            onSelectTheme('pokeball');
+            onSelectTheme(DEFAULT_THEME_NAME);
         }
     };
 
@@ -165,7 +160,7 @@ export function ThemeSelectionModal({
                 <View style={styles.togglesContainer}>
                     <View style={styles.toggleRow}>
                         <View style={styles.toggleLabelGroup}>
-                            <Ionicons name="moon" size={20} color={currentTheme.colors.primary} />
+                            <Ionicons name="moon" size={20} color={currentTheme.colors.primaryText} />
                             <Text style={styles.toggleLabel}>Dark Mode</Text>
                         </View>
                         <Switch
@@ -174,9 +169,9 @@ export function ThemeSelectionModal({
                                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                 onToggleDarkMode(v);
                             }}
-                            trackColor={{ false: `${currentTheme.colors.secondary}40`, true: currentTheme.colors.primary }}
-                            thumbColor={currentTheme.colors.white}
-                            {...({ activeThumbColor: currentTheme.colors.white } as Record<string, string>)}
+                            trackColor={{ false: currentTheme.colors.border, true: currentTheme.colors.primary }}
+                            thumbColor={currentTheme.colors.onPrimary}
+                            {...({ activeThumbColor: currentTheme.colors.onPrimary } as Record<string, string>)}
                         />
                     </View>
 
@@ -184,7 +179,7 @@ export function ThemeSelectionModal({
 
                     <View style={styles.toggleRow}>
                         <View style={styles.toggleLabelGroup}>
-                            <Ionicons name="sync" size={20} color={currentTheme.colors.primary} />
+                            <Ionicons name="sync" size={20} color={currentTheme.colors.primaryText} />
                             <Text style={styles.toggleLabel}>Auto Theme</Text>
                         </View>
                         <Switch
@@ -193,26 +188,21 @@ export function ThemeSelectionModal({
                                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                 onToggleAutoTheme(v);
                             }}
-                            trackColor={{ false: `${currentTheme.colors.secondary}40`, true: currentTheme.colors.primary }}
-                            thumbColor={currentTheme.colors.white}
-                            {...({ activeThumbColor: currentTheme.colors.white } as Record<string, string>)}
+                            trackColor={{ false: currentTheme.colors.border, true: currentTheme.colors.primary }}
+                            thumbColor={currentTheme.colors.onPrimary}
+                            {...({ activeThumbColor: currentTheme.colors.onPrimary } as Record<string, string>)}
                         />
                     </View>
                 </View>
 
-                {/* Theme List */}
+                {/* Theme List from Central Registry */}
                 <Text style={styles.sectionTitle}>Themes</Text>
                 <View style={styles.listContainer}>
-                    {themeList.map((tName, index) => {
-                        const tColors = lightThemes[tName].colors;
+                    {themeNames.map((tName, index) => {
+                        const preset = THEME_ACCENTS[tName];
                         const isApplied = baseActiveTheme === tName;
-                        const tmeta = THEME_META[tName] ?? {
-                            label: tName.charAt(0).toUpperCase() + tName.slice(1),
-                            description: ""
-                        };
-                        const pid = POKEMON_IDS[tName];
-                        const thumb = pid
-                            ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pid}.png`
+                        const thumb = preset?.pokemonId
+                            ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${preset.pokemonId}.png`
                             : null;
 
                         return (
@@ -230,33 +220,34 @@ export function ThemeSelectionModal({
                                         pressed && { opacity: 0.7 },
                                     ]}
                                 >
-                                    <View style={[styles.dot, { backgroundColor: tColors.primary }]}>
+                                    <View style={[styles.dot, { backgroundColor: preset.accent }]}>
                                         {thumb && (
                                             <Image source={{ uri: thumb }} style={styles.dotSprite} resizeMode="contain" />
                                         )}
                                     </View>
                                     
                                     <View style={styles.themeInfo}>
-                                        <Text style={[styles.themeLabel, isApplied && { color: currentTheme.colors.primary, fontFamily: currentTheme.fonts.bold }]}>
-                                            {tmeta.label}
+                                        <Text style={[styles.themeLabel, isApplied && { color: currentTheme.colors.primaryText, fontFamily: currentTheme.fonts.bold }]}>
+                                            {preset.label}
                                         </Text>
-                                        {tmeta.description ? (
-                                            <Text style={styles.themeDesc}>{tmeta.description}</Text>
+                                        {preset.description ? (
+                                            <Text style={styles.themeDesc}>{preset.description}</Text>
                                         ) : null}
                                     </View>
 
                                     {isApplied && (
-                                        <Ionicons name="checkmark-circle" size={24} color={currentTheme.colors.primary} />
+                                        <Ionicons name="checkmark-circle" size={24} color={currentTheme.colors.primaryText} />
                                     )}
                                 </Pressable>
-                                {index < themeList.length - 1 && <View style={styles.separator} />}
+                                {index < themeNames.length - 1 && <View style={styles.separator} />}
                             </View>
                         );
                     })}
                     
-                    {/* Custom Theme Rendering in List */}
+                    {/* Custom Themes in List */}
                     {Object.entries(customThemes).map(([id, config]) => {
                         const isApplied = baseActiveTheme === `custom_${id}`;
+                        const accent = config.accentHex || config.primaryColor;
                         return (
                             <View key={`custom-${id}`}>
                                 <View style={styles.separator} />
@@ -275,7 +266,7 @@ export function ThemeSelectionModal({
                                             pressed && { opacity: 0.7 },
                                         ]}
                                     >
-                                        <View style={[styles.dot, { backgroundColor: config.primaryColor }]}>
+                                        <View style={[styles.dot, { backgroundColor: accent }]}>
                                             <Image 
                                                 source={{ uri: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${config.pokemonId}.png` }} 
                                                 style={styles.dotSprite} resizeMode="contain" 
@@ -283,14 +274,14 @@ export function ThemeSelectionModal({
                                         </View>
                                         
                                         <View style={styles.themeInfo}>
-                                            <Text style={[styles.themeLabel, isApplied && { color: currentTheme.colors.primary, fontFamily: currentTheme.fonts.bold }]}>
+                                            <Text style={[styles.themeLabel, isApplied && { color: currentTheme.colors.primaryText, fontFamily: currentTheme.fonts.bold }]}>
                                                 {config.name || "Custom"}
                                             </Text>
                                             <Text style={styles.themeDesc}>Your personalized theme</Text>
                                         </View>
 
                                         {isApplied && (
-                                            <Ionicons name="checkmark-circle" size={24} color={currentTheme.colors.primary} />
+                                            <Ionicons name="checkmark-circle" size={24} color={currentTheme.colors.primaryText} />
                                         )}
                                     </Pressable>
 
@@ -302,7 +293,7 @@ export function ThemeSelectionModal({
                                         ]}
                                         hitSlop={8}
                                     >
-                                        <Ionicons name="trash-outline" size={18} color="#FF3B30" />
+                                        <Ionicons name="trash-outline" size={18} color={currentTheme.colors.danger} />
                                     </Pressable>
                                 </View>
                             </View>
@@ -319,10 +310,10 @@ export function ThemeSelectionModal({
                                 setShowCustomForm(true);
                             }}
                         >
-                            <View style={[styles.dot, { backgroundColor: `${currentTheme.colors.primary}1A` }]}>
-                                <Ionicons name="add" size={24} color={currentTheme.colors.primary} />
+                            <View style={[styles.dot, { backgroundColor: currentTheme.colors.primarySoft }]}>
+                                <Ionicons name="add" size={24} color={currentTheme.colors.primaryText} />
                             </View>
-                            <Text style={[styles.themeLabel, { color: currentTheme.colors.primary, marginLeft: 12, fontFamily: currentTheme.fonts.bold }]}>Create Custom Theme</Text>
+                            <Text style={[styles.themeLabel, { color: currentTheme.colors.primaryText, marginLeft: 12, fontFamily: currentTheme.fonts.bold }]}>Create Custom Theme</Text>
                         </Pressable>
                     ) : (
                         <View style={styles.customForm}>
@@ -333,9 +324,9 @@ export function ThemeSelectionModal({
                                 </Pressable>
                             </View>
 
-                            {/* Live Preview Card */}
-                            <View style={[styles.previewCard, { borderColor: resolvedColor + '40', backgroundColor: resolvedColor + '08' }]}>
-                                <View style={[styles.previewAvatar, { backgroundColor: resolvedColor + '20' }]}>
+                            {/* Live Preview Card with Guaranteed Contrast */}
+                            <View style={[styles.previewCard, { borderColor: previewTheme.colors.border, backgroundColor: previewTheme.colors.surface }]}>
+                                <View style={[styles.previewAvatar, { backgroundColor: previewTheme.colors.primarySoft }]}>
                                     {previewSprite ? (
                                         <Image source={{ uri: previewSprite }} style={styles.previewSprite} resizeMode="contain" />
                                     ) : (
@@ -343,34 +334,41 @@ export function ThemeSelectionModal({
                                     )}
                                 </View>
                                 <View style={{ flex: 1 }}>
-                                    <Text style={[styles.previewName, { color: previewName ? resolvedColor : currentTheme.colors.textSecondary }]}>
-                                        {previewName || "Type a name below..."}
-                                    </Text>
+                                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                                        <Text style={[styles.previewName, { color: previewName ? previewTheme.colors.primaryText : currentTheme.colors.textSecondary }]}>
+                                            {previewName || "Type a name below..."}
+                                        </Text>
+                                        {previewTheme.wasAdjusted && (
+                                            <View style={styles.adjustedBadge}>
+                                                <Text style={styles.adjustedBadgeText}>Adjusted for readability</Text>
+                                            </View>
+                                        )}
+                                    </View>
                                     <Text style={styles.previewHint}>
                                         {previewError ? "Not found — try another name" : previewId ? `#${previewId}` : "Your Pokémon mascot"}
                                     </Text>
                                 </View>
                             </View>
 
-                             {/* Search Input */}
-                             <Text style={styles.inputLabel}>Search Pokémon</Text>
-                             <View style={styles.searchRow}>
-                                 <Ionicons name="search-outline" size={18} color={currentTheme.colors.textSecondary} />
-                                 <TextInput
-                                     style={styles.searchInput}
-                                     placeholder="e.g. Lucario, Eevee, Greninja..."
-                                     placeholderTextColor={currentTheme.colors.textSecondary}
-                                     value={cPokemonName}
-                                     onChangeText={setCPokemonName}
-                                     autoCapitalize="none"
-                                     autoCorrect={false}
-                                 />
-                             </View>
-                             
-                             {/* Custom Hex */}
-                             <Text style={[styles.inputLabel, { marginTop: currentTheme.spacing.md }]}>Custom Hex Color (Optional)</Text>
-                             <TextInput
-                                style={[styles.input, cCustomHex.match(/^#[0-9A-Fa-f]{6}$/) && { borderColor: cCustomHex, borderWidth: 2 }]}
+                            {/* Search Input */}
+                            <Text style={styles.inputLabel}>Search Pokémon</Text>
+                            <View style={styles.searchRow}>
+                                <Ionicons name="search-outline" size={18} color={currentTheme.colors.textSecondary} />
+                                <TextInput
+                                    style={styles.searchInput}
+                                    placeholder="e.g. Lucario, Eevee, Greninja..."
+                                    placeholderTextColor={currentTheme.colors.textSecondary}
+                                    value={cPokemonName}
+                                    onChangeText={setCPokemonName}
+                                    autoCapitalize="none"
+                                    autoCorrect={false}
+                                />
+                            </View>
+                            
+                            {/* Custom Hex */}
+                            <Text style={[styles.inputLabel, { marginTop: currentTheme.spacing.md }]}>Custom Hex Color (Optional)</Text>
+                            <TextInput
+                                style={[styles.input, cCustomHex.match(/^#[0-9A-Fa-f]{6}$/) && { borderColor: previewTheme.colors.primary, borderWidth: 2 }]}
                                 placeholder="#C084FC"
                                 placeholderTextColor={currentTheme.colors.textSecondary}
                                 value={cCustomHex}
@@ -380,12 +378,12 @@ export function ThemeSelectionModal({
 
                             <View style={styles.customFormActions}>
                                 <Pressable 
-                                    style={[styles.customFormBtnSave, { backgroundColor: resolvedColor }, !previewId && { opacity: 0.4 }]} 
+                                    style={[styles.customFormBtnSave, { backgroundColor: previewTheme.colors.primary }, !previewId && { opacity: 0.4 }]} 
                                     onPress={handleSaveCustom}
                                     disabled={!previewId}
                                 >
-                                    <Ionicons name="checkmark-circle-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
-                                    <Text style={styles.customFormBtnTextSave}>Save & Apply Theme</Text>
+                                    <Ionicons name="checkmark-circle-outline" size={20} color={previewTheme.colors.onPrimary} style={{ marginRight: 8 }} />
+                                    <Text style={[styles.customFormBtnTextSave, { color: previewTheme.colors.onPrimary }]}>Save & Apply Theme</Text>
                                 </Pressable>
                             </View>
                         </View>
@@ -403,10 +401,12 @@ const getStyles = (theme: Theme) => {
         paddingBottom: 24,
     },
     togglesContainer: {
-        backgroundColor: `${theme.colors.secondary}0D`,
+        backgroundColor: theme.colors.surfaceMuted,
         borderRadius: theme.borderRadius.lg,
         paddingHorizontal: theme.spacing.md,
         marginBottom: theme.spacing.lg,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
     },
     toggleRow: {
         ...shared.toggleRow,
@@ -427,11 +427,14 @@ const getStyles = (theme: Theme) => {
     sectionTitle: {
         ...shared.sectionTitle,
         paddingHorizontal: 4,
+        marginBottom: theme.spacing.sm,
     },
     listContainer: {
-        backgroundColor: `${theme.colors.secondary}0D`,
+        backgroundColor: theme.colors.surfaceMuted,
         borderRadius: theme.borderRadius.lg,
         paddingHorizontal: theme.spacing.md,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
     },
     themeRow: {
         flexDirection: "row",
@@ -481,8 +484,10 @@ const getStyles = (theme: Theme) => {
     customForm: {
         marginTop: theme.spacing.sm,
         padding: theme.spacing.lg,
-        backgroundColor: `${theme.colors.secondary}0A`,
+        backgroundColor: theme.colors.surface,
         borderRadius: 24,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
     },
     customFormHeader: {
         flexDirection: "row",
@@ -502,7 +507,7 @@ const getStyles = (theme: Theme) => {
         borderRadius: 20,
         padding: theme.spacing.md,
         marginBottom: theme.spacing.lg,
-        backgroundColor: theme.colors.card,
+        borderWidth: 1,
     },
     previewAvatar: {
         width: 60, height: 60, borderRadius: 16,
@@ -521,6 +526,19 @@ const getStyles = (theme: Theme) => {
         color: theme.colors.textSecondary,
         marginTop: 2,
     },
+    adjustedBadge: {
+        backgroundColor: theme.colors.surfaceMuted,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+    },
+    adjustedBadgeText: {
+        fontSize: 10,
+        fontFamily: theme.fonts.medium,
+        color: theme.colors.textSecondary,
+    },
     /* Search */
     inputLabel: {
         fontSize: 13,
@@ -531,8 +549,10 @@ const getStyles = (theme: Theme) => {
     searchRow: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: `${theme.colors.secondary}0A`,
+        backgroundColor: theme.colors.surfaceMuted,
         borderRadius: 16,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
         paddingHorizontal: theme.spacing.md,
         gap: theme.spacing.sm,
     },
@@ -543,8 +563,10 @@ const getStyles = (theme: Theme) => {
         fontFamily: theme.fonts.medium,
     },
     input: {
-        backgroundColor: `${theme.colors.secondary}0A`,
+        backgroundColor: theme.colors.surfaceMuted,
         borderRadius: 16,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
         paddingHorizontal: theme.spacing.md,
         paddingVertical: theme.spacing.sm,
         color: theme.colors.text,
@@ -557,30 +579,17 @@ const getStyles = (theme: Theme) => {
         gap: theme.spacing.md,
         marginTop: theme.spacing.lg,
     },
-    customFormBtnCancel: {
-        paddingVertical: theme.spacing.sm,
-        paddingHorizontal: theme.spacing.md,
-    },
-    customFormBtnTextCancel: {
-        fontFamily: theme.fonts.medium,
-        color: theme.colors.textSecondary,
-    },
     customFormBtnSave: {
-        height: 56,
-        borderRadius: 22,
+        height: 52,
+        borderRadius: 18,
         width: "100%",
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 10,
-        elevation: 6,
     },
     customFormBtnTextSave: {
-        ...shared.primaryButtonText,
-        color: theme.colors.white,
+        fontFamily: theme.fonts.bold,
+        fontSize: 16,
     },
   });
 };

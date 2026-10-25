@@ -42,7 +42,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           <Ionicons
             name="sparkles-outline"
             size={36}
-            color={theme.colors.primary}
+            color={theme.colors.primaryText}
           />
         )}
       </View>
@@ -52,7 +52,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       {actionLabel && onAction && (
         <Button
           title={actionLabel}
-          icon={actionIcon ?? <Ionicons name="add" size={18} color={theme.colors.white} />}
+          icon={actionIcon ?? <Ionicons name="add" size={18} color={theme.colors.onPrimary} />}
           onPress={onAction}
           variant="primary"
           size="md"
@@ -75,9 +75,9 @@ const getStyles = (theme: Theme) => {
       width: 72,
       height: 72,
       borderRadius: 36,
-      backgroundColor: `${theme.colors.primary}15`,
+      backgroundColor: theme.colors.primarySoft,
       borderWidth: 1,
-      borderColor: `${theme.colors.primary}30`,
+      borderColor: theme.colors.border,
       alignItems: "center",
       justifyContent: "center",
       marginBottom: theme.spacing.md,

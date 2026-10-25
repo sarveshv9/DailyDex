@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import React from "react";
 import { Platform, Pressable, StyleSheet, Switch, Text, View } from "react-native";
 import { useSettings } from "../../context/SettingsContext";
-import { Theme, getSharedStyles, themeTokens } from "../../styles/shared";
+import { Theme, getSharedStyles } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
 
 interface SettingsSectionProps {
@@ -39,7 +39,7 @@ const SettingItem = React.memo<SettingItemProps>(
     rightBadge,
   }) => {
     const styles = React.useMemo(() => getStyles(theme), [theme]);
-    const iconColor = isDestructive ? themeTokens.colors.danger : theme.colors.primary;
+    const iconColor = isDestructive ? theme.colors.danger : theme.colors.primaryText;
 
     const handlePress = () => {
       Haptics.impactAsync(
@@ -56,10 +56,10 @@ const SettingItem = React.memo<SettingItemProps>(
           styles.settingItem,
           !isLast && {
             borderBottomWidth: StyleSheet.hairlineWidth,
-            borderBottomColor: `${theme.colors.secondary}18`,
+            borderBottomColor: theme.colors.divider,
           },
           pressed && {
-            backgroundColor: `${theme.colors.secondary}08`,
+            backgroundColor: theme.colors.surfaceMuted,
             opacity: 0.85,
           },
         ]}
@@ -73,8 +73,8 @@ const SettingItem = React.memo<SettingItemProps>(
               styles.iconContainer,
               {
                 backgroundColor: isDestructive
-                  ? `${themeTokens.colors.danger}18`
-                  : `${theme.colors.primary}16`,
+                  ? theme.colors.dangerSoft
+                  : theme.colors.primarySoft,
               },
             ]}
           >
@@ -86,7 +86,7 @@ const SettingItem = React.memo<SettingItemProps>(
               style={[
                 styles.settingText,
                 {
-                  color: isDestructive ? themeTokens.colors.danger : theme.colors.text,
+                  color: isDestructive ? theme.colors.danger : theme.colors.text,
                   fontFamily: theme.fonts.medium,
                 },
               ]}
@@ -116,13 +116,13 @@ const SettingItem = React.memo<SettingItemProps>(
             <View
               style={[
                 styles.badge,
-                { backgroundColor: `${theme.colors.primary}18` },
+                { backgroundColor: theme.colors.primarySoft },
               ]}
             >
               <Text
                 style={[
                   styles.badgeText,
-                  { color: theme.colors.primary, fontFamily: theme.fonts.bold },
+                  { color: theme.colors.primaryText, fontFamily: theme.fonts.bold },
                 ]}
               >
                 {rightBadge}
@@ -132,7 +132,7 @@ const SettingItem = React.memo<SettingItemProps>(
             <Ionicons
               name="chevron-forward"
               size={18}
-              color={`${theme.colors.textSecondary}80`}
+              color={theme.colors.textSecondary}
             />
           )}
         </View>
@@ -170,7 +170,7 @@ const SettingSwitchItem: React.FC<SettingSwitchItemProps> = React.memo(
           styles.settingItem,
           !isLast && {
             borderBottomWidth: StyleSheet.hairlineWidth,
-            borderBottomColor: `${theme.colors.secondary}18`,
+            borderBottomColor: theme.colors.divider,
           },
         ]}
       >
@@ -178,10 +178,10 @@ const SettingSwitchItem: React.FC<SettingSwitchItemProps> = React.memo(
           <View
             style={[
               styles.iconContainer,
-              { backgroundColor: `${theme.colors.primary}16` },
+              { backgroundColor: theme.colors.primarySoft },
             ]}
           >
-            <Ionicons name={iconName} size={20} color={theme.colors.primary} />
+            <Ionicons name={iconName} size={20} color={theme.colors.primaryText} />
           </View>
 
           <View style={styles.textContainer}>
@@ -215,11 +215,11 @@ const SettingSwitchItem: React.FC<SettingSwitchItemProps> = React.memo(
           value={value}
           onValueChange={onValueChange}
           trackColor={{
-            false: `${theme.colors.secondary}40`,
+            false: theme.colors.border,
             true: theme.colors.primary,
           }}
-          thumbColor={theme.colors.white}
-          {...({ activeThumbColor: theme.colors.white } as any)}
+          thumbColor={theme.colors.onPrimary}
+          {...({ activeThumbColor: theme.colors.onPrimary } as any)}
         />
       </View>
     );
@@ -256,8 +256,8 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
         style={[
           styles.settingsCard,
           {
-            backgroundColor: theme.colors.card,
-            borderColor: theme.glass.borderColor,
+            backgroundColor: theme.colors.surface,
+            borderColor: theme.colors.border,
           },
         ]}
       >
@@ -324,8 +324,8 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
         style={[
           styles.settingsCard,
           {
-            backgroundColor: theme.colors.card,
-            borderColor: theme.glass.borderColor,
+            backgroundColor: theme.colors.surface,
+            borderColor: theme.colors.border,
           },
         ]}
       >
@@ -374,8 +374,8 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
         style={[
           styles.settingsCard,
           {
-            backgroundColor: theme.colors.card,
-            borderColor: theme.glass.borderColor,
+            backgroundColor: theme.colors.surface,
+            borderColor: theme.colors.border,
           },
         ]}
       >
@@ -405,8 +405,8 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
 
       {/* Version Card Footnote */}
       <View style={styles.versionFooter}>
-        <View style={[styles.versionIconCircle, { backgroundColor: `${theme.colors.primary}12` }]}>
-          <Ionicons name="sparkles-outline" size={14} color={theme.colors.primary} />
+        <View style={[styles.versionIconCircle, { backgroundColor: theme.colors.primarySoft }]}>
+          <Ionicons name="sparkles-outline" size={14} color={theme.colors.primaryText} />
         </View>
         <Text style={[styles.versionText, { color: theme.colors.textSecondary, fontFamily: theme.fonts.medium }]}>
           Zen App • Mindful Productivity

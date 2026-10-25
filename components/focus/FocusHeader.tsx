@@ -55,7 +55,7 @@ const FocusHeaderComponent: React.FC<FocusHeaderProps> = ({
         <Ionicons
           name={isPlayingAudio ? "musical-notes" : "musical-note-outline"}
           size={20}
-          color={isPlayingAudio ? theme.colors.white : theme.colors.primary}
+          color={isPlayingAudio ? theme.colors.onPrimary : theme.colors.primaryText}
         />
       </Pressable>
     </View>
@@ -80,11 +80,9 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       width: 44,
       height: 44,
       borderRadius: 22,
-      backgroundColor: isDarkMode
-        ? "rgba(255, 255, 255, 0.06)"
-        : "rgba(0, 0, 0, 0.04)",
+      backgroundColor: theme.colors.surfaceMuted,
       borderWidth: 1,
-      borderColor: theme.glass.borderColor,
+      borderColor: theme.colors.border,
     },
     headerIconButtonActive: {
       backgroundColor: theme.colors.primary,
@@ -97,14 +95,12 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       paddingHorizontal: 14,
       paddingVertical: 6,
       borderRadius: 18,
-      backgroundColor: isDarkMode
-        ? "rgba(255, 255, 255, 0.04)"
-        : "rgba(0, 0, 0, 0.03)",
+      backgroundColor: theme.colors.surfaceMuted,
     },
     headerTitle: {
       fontFamily: theme.fonts.bold,
       fontSize: themeTokens.fonts.size.sm,
-      color: theme.colors.primary,
+      color: theme.colors.primaryText,
       letterSpacing: 0.5,
     },
     pressedScale: {

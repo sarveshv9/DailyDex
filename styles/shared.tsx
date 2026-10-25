@@ -1,7 +1,4 @@
 // styles/shared.tsx
-import React, { useMemo } from "react";
-import { Platform, Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import {
   ArrowRight,
   ClipboardList,
@@ -12,156 +9,47 @@ import {
   User,
   type LucideIcon,
 } from "lucide-react-native";
+import React, { useMemo } from "react";
+import { Platform, Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { themeTokens } from "../constants/themeTokens";
+import {
+  createTheme,
+  GeneratedTheme,
+  ThemeColors,
+  ThemeGlass,
+} from "../constants/themeGenerator";
+import {
+  DEFAULT_THEME_NAME,
+  THEME_ACCENTS,
+  ThemeName,
+  themeNames,
+} from "../constants/themeRegistry";
 
-export { themeTokens };
+export { themeTokens, createTheme, THEME_ACCENTS, themeNames, DEFAULT_THEME_NAME };
+export type { ThemeName };
 
-export interface Theme {
-  colors: {
-    primary: string;
-    secondary: string;
-    background: string;
-    card: string;          // Cards and modal backgrounds
-    text: string;          // Main text (formerly used primary/secondary interchangeably)
-    textSecondary: string; // Subtext
-    white: string;         // Pure white for absolute contrast (e.g. primary buttons)
-  };
-  glows: {
-    primary: {
-      shadowColor: string;
-      shadowOffset: { width: number; height: number };
-      shadowOpacity: number;
-      shadowRadius: number;
-      elevation: number;
-    };
-    card: {
-      shadowColor: string;
-      shadowOffset: { width: number; height: number };
-      shadowOpacity: number;
-      shadowRadius: number;
-      elevation: number;
-    };
-  };
-  glass: {
-    cardBg: string;        // Semi-transparent card background
-    borderColor: string;   // Subtle glass border
-    shadowOpacity: number; // Soft shadow for floaty feel
-    iconTintAlpha: string; // Hex alpha appended to primary for icon tiles / active tab (e.g. "1C")
-    neutralFill: string;   // Quiet fill for chips and inactive icon tiles
-  };
-  fonts: {
-    regular: string;
-    medium: string;
-    bold: string;
-  };
-  spacing: {
-    xs: number;
-    sm: number;
-    md: number;
-    lg: number;
-    xl: number;
-  };
-  borderRadius: {
-    sm: number;
-    md: number;
-    lg: number;
-  };
-  icons: {
-    stroke: number; // one stroke weight for every icon in the app
-    sm: number;
-    md: number;
-    lg: number;
-  };
-}
+export type Theme = GeneratedTheme;
+export type { ThemeColors, ThemeGlass };
 
-const baseTheme = {
-  fonts: {
-    regular: themeTokens.fonts.family.regular,
-    medium: themeTokens.fonts.family.medium,
-    bold: themeTokens.fonts.family.bold,
-  },
-  spacing: {
-    xs: themeTokens.spacing.xs,
-    sm: themeTokens.spacing.sm,
-    md: themeTokens.spacing.md,
-    lg: themeTokens.spacing.lg,
-    xl: themeTokens.spacing.xl,
-  },
-  borderRadius: {
-    sm: themeTokens.borderRadius.sm,
-    md: themeTokens.borderRadius.md,
-    lg: themeTokens.borderRadius.lg,
-  },
-  icons: {
-    stroke: themeTokens.icons.stroke,
-    sm: themeTokens.icons.sm,
-    md: themeTokens.icons.md,
-    lg: themeTokens.icons.lg,
-  },
-};
+// --- LIGHT & DARK THEME PRESET REGISTRIES (Dynamic from THEME_ACCENTS) ---
+export const lightThemes: Record<string, Theme> = Object.fromEntries(
+  Object.entries(THEME_ACCENTS).map(([key, config]) => [
+    key,
+    createTheme(config.accent, "light"),
+  ])
+);
 
-const lightGlass = {
-  cardBg: themeTokens.glass.light.cardBg,
-  borderColor: themeTokens.glass.light.borderColor,
-  shadowOpacity: themeTokens.glass.light.shadowOpacity,
-  iconTintAlpha: themeTokens.glass.light.iconTintAlpha,
-  neutralFill: themeTokens.glass.light.neutralFill,
-};
+export const darkThemes: Record<string, Theme> = Object.fromEntries(
+  Object.entries(THEME_ACCENTS).map(([key, config]) => [
+    key,
+    createTheme(config.accent, "dark"),
+  ])
+);
 
-const darkGlass = {
-  cardBg: themeTokens.glass.dark.cardBg,
-  borderColor: themeTokens.glass.dark.borderColor,
-  shadowOpacity: themeTokens.glass.dark.shadowOpacity,
-  iconTintAlpha: themeTokens.glass.dark.iconTintAlpha,
-  neutralFill: themeTokens.glass.dark.neutralFill,
-};
-
-// --- GLOW UTILS ---
-const createGlows = (primaryColor: string, isDark: boolean) => ({
-  primary: {
-    shadowColor: primaryColor,
-    shadowOffset: { width: 0, height: isDark ? 4 : 4 },
-    shadowOpacity: isDark ? 0.6 : 0.4,
-    shadowRadius: isDark ? 16 : 8,
-    elevation: isDark ? 16 : 8,
-  },
-  card: {
-    shadowColor: isDark ? primaryColor : "#000000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: isDark ? 0.15 : 0.08,
-    shadowRadius: isDark ? 12 : 12,
-    elevation: isDark ? 4 : 4,
-  }
-});
-
-// --- LIGHT VARIATIONS ---
-// Light versions use pure white backgrounds, subtle tinted cards, and strict Pokemon brand accent colors.
-export const lightThemes: Record<string, Theme> = {
-  pokeball: { ...baseTheme, glass: lightGlass, glows: createGlows("#FF3333", false), colors: { primary: "#FF3333", secondary: "#1A1A1A", background: "#FFFFFF", card: "#F8F8F8", text: "#1A1A1A", textSecondary: "#666666", white: "#FFFFFF" } },
-  pikachu: { ...baseTheme, glass: lightGlass, glows: createGlows("#EAB308", false), colors: { primary: "#EAB308", secondary: "#A16207", background: "#FFFFFF", card: "#F8F8F8", text: "#1A1A1A", textSecondary: "#666666", white: "#FFFFFF" } },
-  squirtle: { ...baseTheme, glass: lightGlass, glows: createGlows("#0EA5E9", false), colors: { primary: "#0EA5E9", secondary: "#0369A1", background: "#FFFFFF", card: "#F8F8F8", text: "#1A1A1A", textSecondary: "#666666", white: "#FFFFFF" } },
-  bulbasaur: { ...baseTheme, glass: lightGlass, glows: createGlows("#10B981", false), colors: { primary: "#10B981", secondary: "#047857", background: "#FFFFFF", card: "#F8F8F8", text: "#1A1A1A", textSecondary: "#666666", white: "#FFFFFF" } },
-  gengar: { ...baseTheme, glass: lightGlass, glows: createGlows("#A855F7", false), colors: { primary: "#A855F7", secondary: "#7E22CE", background: "#FFFFFF", card: "#F8F8F8", text: "#1A1A1A", textSecondary: "#666666", white: "#FFFFFF" } },
-  charizard: { ...baseTheme, glass: lightGlass, glows: createGlows("#F97316", false), colors: { primary: "#F97316", secondary: "#C2410C", background: "#FFFFFF", card: "#F8F8F8", text: "#1A1A1A", textSecondary: "#666666", white: "#FFFFFF" } },
-};
-
-// --- DARK VARIATIONS ---
-// Dark versions use deep black backgrounds, subtle dark card overlays, bright popped primary accents,
-// and off-white text.
-export const darkThemes: Record<string, Theme> = {
-  pokeball: { ...baseTheme, glass: darkGlass, glows: createGlows("#FF3333", true), colors: { primary: "#FF3333", secondary: "#F2F2F2", background: "#000000", card: "#121212", text: "#F2F2F2", textSecondary: "#A0A0A0", white: "#FFFFFF" } },
-  pikachu: { ...baseTheme, glass: darkGlass, glows: createGlows("#FDE047", true), colors: { primary: "#FDE047", secondary: "#F59E0B", background: "#000000", card: "#121212", text: "#F2F2F2", textSecondary: "#A0A0A0", white: "#000000" } },
-  squirtle: { ...baseTheme, glass: darkGlass, glows: createGlows("#7DD3FC", true), colors: { primary: "#7DD3FC", secondary: "#0EA5E9", background: "#000000", card: "#121212", text: "#F2F2F2", textSecondary: "#A0A0A0", white: "#FFFFFF" } },
-  bulbasaur: { ...baseTheme, glass: darkGlass, glows: createGlows("#6EE7B7", true), colors: { primary: "#6EE7B7", secondary: "#10B981", background: "#000000", card: "#121212", text: "#F2F2F2", textSecondary: "#A0A0A0", white: "#064E3B" } },
-  gengar: { ...baseTheme, glass: darkGlass, glows: createGlows("#D8B4FE", true), colors: { primary: "#D8B4FE", secondary: "#A855F7", background: "#000000", card: "#121212", text: "#F2F2F2", textSecondary: "#A0A0A0", white: "#FFFFFF" } },
-  charizard: { ...baseTheme, glass: darkGlass, glows: createGlows("#FDBA74", true), colors: { primary: "#FDBA74", secondary: "#F97316", background: "#000000", card: "#121212", text: "#F2F2F2", textSecondary: "#A0A0A0", white: "#FFFFFF" } },
-};
-
-// Aliasing themes for backward compatibility, although they should be avoided going forward.
-export const themes = { ...lightThemes };
-
-export type ThemeName = string;
+// Backward-compatibility alias
+export const themes: Record<string, Theme> = { ...lightThemes };
 
 export const getSharedStyles = (theme: Theme) => {
   return StyleSheet.create({
@@ -179,14 +67,47 @@ export const getSharedStyles = (theme: Theme) => {
     },
     headerTitle: { fontSize: 22, fontFamily: theme.fonts.bold, color: theme.colors.text },
     statsRow: { flexDirection: "row", justifyContent: "space-around", paddingHorizontal: theme.spacing.lg, marginTop: theme.spacing.md },
-    primaryButton: { backgroundColor: theme.colors.primary, paddingVertical: theme.spacing.md, paddingHorizontal: theme.spacing.xl, borderRadius: theme.borderRadius.lg, alignItems: "center", justifyContent: "center", minHeight: 48, ...theme.glows.primary },
-    primaryButtonText: { color: theme.colors.white, fontSize: 16, fontFamily: theme.fonts.bold, textAlign: "center" },
-    secondaryButton: { backgroundColor: theme.glass.neutralFill, paddingVertical: theme.spacing.md, paddingHorizontal: theme.spacing.xl, borderRadius: theme.borderRadius.lg, alignItems: "center", justifyContent: "center", minHeight: 48, borderWidth: 1, borderColor: theme.glass.borderColor },
+    primaryButton: {
+      backgroundColor: theme.colors.primary,
+      paddingVertical: theme.spacing.md,
+      paddingHorizontal: theme.spacing.xl,
+      borderRadius: theme.borderRadius.lg,
+      alignItems: "center",
+      justifyContent: "center",
+      minHeight: 48,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.12,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    primaryButtonText: { color: theme.colors.onPrimary, fontSize: 16, fontFamily: theme.fonts.bold, textAlign: "center" },
+    secondaryButton: {
+      backgroundColor: theme.colors.surfaceMuted,
+      paddingVertical: theme.spacing.md,
+      paddingHorizontal: theme.spacing.xl,
+      borderRadius: theme.borderRadius.lg,
+      alignItems: "center",
+      justifyContent: "center",
+      minHeight: 48,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
     secondaryButtonText: { color: theme.colors.text, fontSize: 16, fontFamily: theme.fonts.medium, textAlign: "center" },
     ghostButton: { backgroundColor: "transparent", paddingVertical: theme.spacing.sm, paddingHorizontal: theme.spacing.md, alignItems: "center", justifyContent: "center", minHeight: 44 },
-    ghostButtonText: { color: theme.colors.primary, fontSize: 14, fontFamily: theme.fonts.medium, textAlign: "center" },
-    destructiveButton: { backgroundColor: `${theme.colors.primary}15`, paddingVertical: theme.spacing.md, paddingHorizontal: theme.spacing.xl, borderRadius: theme.borderRadius.lg, alignItems: "center", justifyContent: "center", minHeight: 48, borderWidth: 1, borderColor: `${theme.colors.primary}30` },
-    destructiveButtonText: { color: theme.colors.primary, fontSize: 16, fontFamily: theme.fonts.bold, textAlign: "center" },
+    ghostButtonText: { color: theme.colors.primaryText, fontSize: 14, fontFamily: theme.fonts.medium, textAlign: "center" },
+    destructiveButton: {
+      backgroundColor: theme.colors.dangerSoft,
+      paddingVertical: theme.spacing.md,
+      paddingHorizontal: theme.spacing.xl,
+      borderRadius: theme.borderRadius.lg,
+      alignItems: "center",
+      justifyContent: "center",
+      minHeight: 48,
+      borderWidth: 1,
+      borderColor: theme.colors.danger,
+    },
+    destructiveButtonText: { color: theme.colors.danger, fontSize: 16, fontFamily: theme.fonts.bold, textAlign: "center" },
     glassCard: {
       backgroundColor: theme.glass.cardBg,
       borderWidth: 1,
@@ -194,50 +115,50 @@ export const getSharedStyles = (theme: Theme) => {
       borderRadius: theme.borderRadius.lg,
       ...Platform.select({
         ios: {
-          shadowColor: theme.glows.card.shadowColor,
-          shadowOffset: theme.glows.card.shadowOffset,
-          shadowOpacity: theme.glows.card.shadowOpacity,
-          shadowRadius: theme.glows.card.shadowRadius,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: theme.isDarkMode ? 0.2 : 0.06,
+          shadowRadius: 8,
         },
         android: {
-          elevation: theme.glows.card.elevation,
+          elevation: 2,
         },
         web: {
-          boxShadow: `0px ${theme.glows.card.shadowOffset.height}px ${theme.glows.card.shadowRadius}px rgba(0, 0, 0, ${theme.glows.card.shadowOpacity})`,
+          boxShadow: `0px 2px 8px rgba(0, 0, 0, ${theme.isDarkMode ? 0.2 : 0.06})`,
         },
       }),
     },
     modalOverlay: {
       flex: 1,
-      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      backgroundColor: theme.colors.scrim,
       justifyContent: "center",
       alignItems: "center",
       padding: theme.spacing.lg,
     },
     modalBackdrop: {
       ...StyleSheet.absoluteFill,
-      backgroundColor: "rgba(0, 0, 0, 0.45)",
+      backgroundColor: theme.colors.scrim,
     },
     modalContent: {
       width: "100%",
       maxWidth: 480,
-      backgroundColor: theme.colors.card,
+      backgroundColor: theme.colors.surface,
       borderRadius: theme.borderRadius.lg + 8,
       borderWidth: 1,
-      borderColor: theme.glass.borderColor,
+      borderColor: theme.colors.border,
       padding: theme.spacing.xl,
       ...Platform.select({
         ios: {
           shadowColor: "#000000",
           shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: theme.glows.card.shadowOpacity * 1.5,
+          shadowOpacity: 0.15,
           shadowRadius: 20,
         },
         android: {
           elevation: 10,
         },
         web: {
-          boxShadow: `0px 8px 24px rgba(0, 0, 0, ${theme.glows.card.shadowOpacity * 1.5})`,
+          boxShadow: "0px 8px 24px rgba(0, 0, 0, 0.15)",
         },
       }),
     },
@@ -263,7 +184,7 @@ export const getSharedStyles = (theme: Theme) => {
       width: 36,
       height: 36,
       borderRadius: 18,
-      backgroundColor: theme.glass.neutralFill,
+      backgroundColor: theme.colors.surfaceMuted,
       alignItems: "center",
       justifyContent: "center",
     },
@@ -271,7 +192,7 @@ export const getSharedStyles = (theme: Theme) => {
       width: 40,
       height: 4,
       borderRadius: 2,
-      backgroundColor: `${theme.colors.textSecondary}40`,
+      backgroundColor: theme.colors.border,
       alignSelf: "center",
       marginBottom: theme.spacing.sm,
     },
@@ -290,10 +211,10 @@ export const getSharedStyles = (theme: Theme) => {
     inputWrapper: {
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: `${theme.colors.secondary}0A`,
+      backgroundColor: theme.colors.surfaceMuted,
       borderRadius: 18,
       borderWidth: 1,
-      borderColor: `${theme.colors.secondary}15`,
+      borderColor: theme.colors.border,
       paddingHorizontal: 16,
     },
     textInput: {
@@ -334,9 +255,9 @@ export const getSharedStyles = (theme: Theme) => {
       paddingVertical: theme.spacing.xs,
       paddingHorizontal: theme.spacing.sm,
       borderRadius: 999,
-      backgroundColor: theme.glass.neutralFill,
+      backgroundColor: theme.colors.surfaceMuted,
       borderWidth: 1,
-      borderColor: theme.glass.borderColor,
+      borderColor: theme.colors.border,
     },
     chipText: {
       fontSize: 12,
@@ -348,7 +269,7 @@ export const getSharedStyles = (theme: Theme) => {
       borderColor: theme.colors.primary,
     },
     chipTextActive: {
-      color: theme.colors.white,
+      color: theme.colors.onPrimary,
       fontFamily: theme.fonts.bold,
     },
     badge: {
@@ -358,18 +279,18 @@ export const getSharedStyles = (theme: Theme) => {
       paddingHorizontal: 8,
       paddingVertical: 4,
       borderRadius: 12,
-      backgroundColor: `${theme.colors.primary}15`,
+      backgroundColor: theme.colors.primarySoft,
     },
     badgeText: {
       fontSize: 12,
       fontFamily: theme.fonts.bold,
-      color: theme.colors.primary,
+      color: theme.colors.primaryText,
     },
     iconCircle: {
       width: 44,
       height: 44,
       borderRadius: 22,
-      backgroundColor: `${theme.colors.primary}15`,
+      backgroundColor: theme.colors.primarySoft,
       alignItems: "center",
       justifyContent: "center",
     },
@@ -377,13 +298,13 @@ export const getSharedStyles = (theme: Theme) => {
       width: 40,
       height: 40,
       borderRadius: 12,
-      backgroundColor: `${theme.colors.primary}${theme.glass.iconTintAlpha}`,
+      backgroundColor: theme.colors.primarySoft,
       alignItems: "center",
       justifyContent: "center",
     },
     divider: {
       height: StyleSheet.hairlineWidth,
-      backgroundColor: `${theme.colors.secondary}20`,
+      backgroundColor: theme.colors.divider,
       width: "100%",
     },
     bodyText: {
@@ -428,17 +349,14 @@ export const getSharedStyles = (theme: Theme) => {
 
 /* ------------------------------------------------------------------ */
 /*  ICON SYSTEM + HOME SCREEN COMPONENTS                               */
-/*  Every component takes `theme` as a prop so this file doesn't      */
-/*  depend on how your app provides themes. Swap in your own hook     */
-/*  if you prefer: const theme = useAppTheme();                       */
 /* ------------------------------------------------------------------ */
 
 type ThemeProps = { theme: Theme };
 
-/** Primary color at a given hex alpha. Works because all primaries are 6-digit hex. */
-const tint = (theme: Theme) => `${theme.colors.primary}${theme.glass.iconTintAlpha}`;
+/** Opaque soft primary color for icon tiles and pills */
+const tint = (theme: Theme) => theme.colors.primarySoft;
 
-/** The only container used for icons: rounded square, tinted primary fill. */
+/** The container used for icons: rounded square, tinted primary soft fill. */
 export function IconTile({
   theme,
   icon: Icon,
@@ -453,13 +371,13 @@ export function IconTile({
         borderRadius: size * 0.3,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: active ? tint(theme) : theme.glass.neutralFill,
+        backgroundColor: active ? tint(theme) : theme.colors.surfaceMuted,
       }}
     >
       <Icon
         size={theme.icons.lg}
         strokeWidth={theme.icons.stroke}
-        color={active ? theme.colors.primary : theme.colors.textSecondary}
+        color={active ? theme.colors.primaryText : theme.colors.textSecondary}
       />
     </View>
   );
@@ -475,7 +393,7 @@ export function Chip({ theme, label, withClock }: ThemeProps & { label: string; 
         paddingHorizontal: 8,
         paddingVertical: 3,
         borderRadius: 999,
-        backgroundColor: theme.glass.neutralFill,
+        backgroundColor: theme.colors.surfaceMuted,
       }}
     >
       {withClock && (
@@ -528,11 +446,11 @@ export function FocusCard({
         <Text style={{ fontSize: 11, letterSpacing: 0.6, textTransform: "uppercase", fontFamily: fonts.medium, color: colors.textSecondary }}>
           Progress
         </Text>
-        <Text style={{ fontSize: 11, fontFamily: fonts.bold, color: colors.primary }}>
+        <Text style={{ fontSize: 11, fontFamily: fonts.bold, color: colors.primaryText }}>
           {Math.round(progress * 100)}%
         </Text>
       </View>
-      <View style={{ height: 6, borderRadius: 3, overflow: "hidden", backgroundColor: theme.glass.neutralFill }}>
+      <View style={{ height: 6, borderRadius: 3, overflow: "hidden", backgroundColor: colors.surfaceMuted }}>
         <View style={{ width: `${progress * 100}%`, height: "100%", borderRadius: 3, backgroundColor: colors.primary }} />
       </View>
 
@@ -542,11 +460,11 @@ export function FocusCard({
         style={[shared.primaryButton, { marginTop: spacing.lg, borderRadius: 999, flexDirection: "row", gap: spacing.sm }]}
       >
         <Text style={shared.primaryButtonText}>{buttonText}</Text>
-        <ArrowRight size={theme.icons.md} strokeWidth={theme.icons.stroke} color={colors.white} />
+        <ArrowRight size={theme.icons.md} strokeWidth={theme.icons.stroke} color={colors.onPrimary} />
       </Pressable>
 
       <Pressable onPress={onTimeline} style={{ marginTop: spacing.md, alignItems: "center" }}>
-        <Text style={{ fontSize: 13, fontFamily: fonts.bold, color: colors.primary }}>
+        <Text style={{ fontSize: 13, fontFamily: fonts.bold, color: colors.primaryText }}>
           View full day timeline
         </Text>
       </Pressable>
@@ -603,13 +521,13 @@ export function UpNextRow({
           paddingHorizontal: 10,
           paddingVertical: 5,
           borderRadius: 999,
-          backgroundColor: theme.glass.neutralFill,
+          backgroundColor: theme.colors.surfaceMuted,
           borderWidth: 1,
-          borderColor: theme.glass.borderColor,
+          borderColor: theme.colors.border,
         }}
       >
-        <Clock size={12} strokeWidth={theme.icons.stroke} color={colors.primary} />
-        <Text style={{ fontSize: 12, fontFamily: fonts.bold, color: colors.primary }}>
+        <Clock size={12} strokeWidth={theme.icons.stroke} color={colors.primaryText} />
+        <Text style={{ fontSize: 12, fontFamily: fonts.bold, color: colors.primaryText }}>
           {time}
         </Text>
       </View>
@@ -658,7 +576,7 @@ export function BottomNav({
             <Icon
               size={theme.icons.lg}
               strokeWidth={theme.icons.stroke}
-              color={on ? theme.colors.primary : theme.colors.textSecondary}
+              color={on ? theme.colors.primaryText : theme.colors.textSecondary}
             />
           </Pressable>
         );
@@ -692,7 +610,6 @@ export function HomeScreen({ theme, isDark }: ThemeProps & { isDark: boolean }) 
             Tuesday, October 20 · 6:57 PM
           </Text>
         </View>
-        {/* Plain glyph, no tile: decoration, not an action */}
         <MoonStar size={theme.icons.md} strokeWidth={theme.icons.stroke} color={colors.textSecondary} />
       </View>
 
@@ -703,12 +620,12 @@ export function HomeScreen({ theme, isDark }: ThemeProps & { isDark: boolean }) 
         startsAt="10:30 PM"
         duration="30m"
         progress={0}
-        onStart={() => {}}
-        onTimeline={() => {}}
+        onStart={() => { }}
+        onTimeline={() => { }}
       />
 
       <Text style={label}>Up next</Text>
-      <UpNextRow theme={theme} title="Sleep" time="10:30 PM" duration="30m" onPlay={() => {}} />
+      <UpNextRow theme={theme} title="Sleep" time="10:30 PM" duration="30m" onPlay={() => { }} />
 
       <View style={{ flex: 1 }} />
       <BottomNav theme={theme} active={tab} onChange={setTab} />

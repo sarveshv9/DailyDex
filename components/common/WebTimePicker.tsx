@@ -334,9 +334,9 @@ export const WebDurationPicker: React.FC<WebDurationPickerProps> = ({
       </View>
 
       {/* Summary Badge */}
-      <View style={[styles.summaryBadge, { backgroundColor: `${theme.colors.primary}18`, borderColor: `${theme.colors.primary}35` }]}>
-        <Clock size={12} color={theme.colors.primary} strokeWidth={2} />
-        <Text style={[styles.summaryText, { color: theme.colors.primary }]}>
+      <View style={[styles.summaryBadge, { backgroundColor: theme.colors.primarySoft, borderColor: theme.colors.border }]}>
+        <Clock size={12} color={theme.colors.primaryText} strokeWidth={2} />
+        <Text style={[styles.summaryText, { color: theme.colors.primaryText }]}>
           Total: {formattedSummary}
         </Text>
       </View>
@@ -431,11 +431,11 @@ const getStyles = (theme: Theme) => {
       minWidth: 58,
       height: 52,
       borderRadius: theme.borderRadius.md,
-      backgroundColor: theme.colors.card,
+      backgroundColor: theme.colors.surface,
       alignItems: "center",
       justifyContent: "center",
       borderWidth: 1,
-      borderColor: theme.glass.borderColor,
+      borderColor: theme.colors.border,
       paddingHorizontal: 6,
     },
     digitText: {
@@ -468,9 +468,9 @@ const getStyles = (theme: Theme) => {
       paddingHorizontal: 12,
       paddingVertical: 7,
       borderRadius: theme.borderRadius.sm,
-      backgroundColor: theme.glass.neutralFill,
+      backgroundColor: theme.colors.surfaceMuted,
       borderWidth: 1,
-      borderColor: theme.glass.borderColor,
+      borderColor: theme.colors.border,
       alignItems: "center",
       justifyContent: "center",
     },
@@ -478,13 +478,13 @@ const getStyles = (theme: Theme) => {
       borderWidth: 0,
       ...Platform.select({
         ios: {
-          shadowColor: theme.colors.primary,
+          shadowColor: "#000000",
           shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.4,
+          shadowOpacity: 0.15,
           shadowRadius: 4,
         },
         web: {
-          boxShadow: `0 2px 8px ${theme.colors.primary}50`,
+          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
         },
       }),
     },
@@ -494,7 +494,7 @@ const getStyles = (theme: Theme) => {
       color: theme.colors.textSecondary,
     },
     ampmTextActive: {
-      color: theme.colors.white,
+      color: theme.colors.onPrimary,
     },
     quickRow: {
       flexDirection: "row",
@@ -510,9 +510,9 @@ const getStyles = (theme: Theme) => {
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 999,
-      backgroundColor: theme.glass.neutralFill,
+      backgroundColor: theme.colors.surfaceMuted,
       borderWidth: 1,
-      borderColor: theme.glass.borderColor,
+      borderColor: theme.colors.border,
     },
     quickChipPressed: {
       opacity: 0.6,
@@ -546,20 +546,20 @@ const getStyles = (theme: Theme) => {
       paddingHorizontal: 10,
       paddingVertical: 6,
       borderRadius: theme.borderRadius.sm,
-      backgroundColor: theme.glass.neutralFill,
+      backgroundColor: theme.colors.surfaceMuted,
       borderWidth: 1,
-      borderColor: theme.glass.borderColor,
+      borderColor: theme.colors.border,
     },
     presetChipActive: {
       ...Platform.select({
         ios: {
-          shadowColor: theme.colors.primary,
+          shadowColor: "#000000",
           shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.35,
+          shadowOpacity: 0.15,
           shadowRadius: 4,
         },
         web: {
-          boxShadow: `0 2px 8px ${theme.colors.primary}45`,
+          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
         },
       }),
     },
@@ -569,7 +569,7 @@ const getStyles = (theme: Theme) => {
       color: theme.colors.textSecondary,
     },
     presetChipTextActive: {
-      color: theme.colors.white,
+      color: theme.colors.onPrimary,
       fontFamily: theme.fonts.bold,
     },
   });

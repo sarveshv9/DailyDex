@@ -361,7 +361,7 @@ const TaskFormInner: React.FC<TaskFormProps> = ({
             <View
               style={[
                 StyleSheet.absoluteFill,
-                { backgroundColor: isDark ? theme.colors.card : theme.colors.background },
+                { backgroundColor: isDark ? theme.colors.surface : theme.colors.background },
               ]}
             />
           ) : (
@@ -466,10 +466,10 @@ const TaskFormInner: React.FC<TaskFormProps> = ({
                     <Ionicons
                       name={getRoutineIcon(formData.imageKey) || "pencil-outline"}
                       size={20}
-                      color={theme.colors.primary}
+                      color={theme.colors.primaryText}
                     />
                     <View style={styles.iconEditPencilDot}>
-                      <Ionicons name="pencil" size={8} color={theme.colors.white} />
+                      <Ionicons name="pencil" size={8} color={theme.colors.onPrimary} />
                     </View>
                   </Pressable>
 
@@ -501,12 +501,12 @@ const TaskFormInner: React.FC<TaskFormProps> = ({
                     <Ionicons
                       name="time-outline"
                       size={15}
-                      color={editActivePicker === "time" ? theme.colors.white : theme.colors.primary}
+                      color={editActivePicker === "time" ? theme.colors.onPrimary : theme.colors.primaryText}
                     />
                     <Text
                       style={[
                         styles.controlPillText,
-                        editActivePicker === "time" && { color: theme.colors.white },
+                        editActivePicker === "time" && { color: theme.colors.onPrimary },
                       ]}
                     >
                       {formData.time || "Set time"}
@@ -514,7 +514,7 @@ const TaskFormInner: React.FC<TaskFormProps> = ({
                     <Ionicons
                       name={editActivePicker === "time" ? "chevron-up" : "chevron-down"}
                       size={12}
-                      color={editActivePicker === "time" ? theme.colors.white : theme.colors.textSecondary}
+                      color={editActivePicker === "time" ? theme.colors.onPrimary : theme.colors.textSecondary}
                     />
                   </Pressable>
 
@@ -531,12 +531,12 @@ const TaskFormInner: React.FC<TaskFormProps> = ({
                     <Ionicons
                       name="hourglass-outline"
                       size={15}
-                      color={editActivePicker === "duration" ? theme.colors.white : theme.colors.primary}
+                      color={editActivePicker === "duration" ? theme.colors.onPrimary : theme.colors.primaryText}
                     />
                     <Text
                       style={[
                         styles.controlPillText,
-                        editActivePicker === "duration" && { color: theme.colors.white },
+                        editActivePicker === "duration" && { color: theme.colors.onPrimary },
                       ]}
                     >
                       {formData.duration || 30}m
@@ -544,7 +544,7 @@ const TaskFormInner: React.FC<TaskFormProps> = ({
                     <Ionicons
                       name={editActivePicker === "duration" ? "chevron-up" : "chevron-down"}
                       size={12}
-                      color={editActivePicker === "duration" ? theme.colors.white : theme.colors.textSecondary}
+                      color={editActivePicker === "duration" ? theme.colors.onPrimary : theme.colors.textSecondary}
                     />
                   </Pressable>
                 </View>
@@ -641,10 +641,10 @@ const TaskFormInner: React.FC<TaskFormProps> = ({
                           <Ionicons
                             name={getRoutineIcon(item.imageKey)}
                             size={20}
-                            color={theme.colors.primary}
+                            color={theme.colors.primaryText}
                           />
                           <View style={styles.iconEditPencilDot}>
-                            <Ionicons name="pencil" size={8} color={theme.colors.white} />
+                            <Ionicons name="pencil" size={8} color={theme.colors.onPrimary} />
                           </View>
                         </Pressable>
 
@@ -695,12 +695,12 @@ const TaskFormInner: React.FC<TaskFormProps> = ({
                           <Ionicons
                             name="time-outline"
                             size={14}
-                            color={item.activePicker === "time" ? theme.colors.white : theme.colors.primary}
+                            color={item.activePicker === "time" ? theme.colors.onPrimary : theme.colors.primaryText}
                           />
                           <Text
                             style={[
                               styles.controlPillText,
-                              item.activePicker === "time" && { color: theme.colors.white },
+                              item.activePicker === "time" && { color: theme.colors.onPrimary },
                             ]}
                           >
                             {item.time}
@@ -708,7 +708,7 @@ const TaskFormInner: React.FC<TaskFormProps> = ({
                           <Ionicons
                             name={item.activePicker === "time" ? "chevron-up" : "chevron-down"}
                             size={12}
-                            color={item.activePicker === "time" ? theme.colors.white : theme.colors.textSecondary}
+                            color={item.activePicker === "time" ? theme.colors.onPrimary : theme.colors.textSecondary}
                           />
                         </Pressable>
 
@@ -728,12 +728,12 @@ const TaskFormInner: React.FC<TaskFormProps> = ({
                           <Ionicons
                             name="hourglass-outline"
                             size={14}
-                            color={item.activePicker === "duration" ? theme.colors.white : theme.colors.primary}
+                            color={item.activePicker === "duration" ? theme.colors.onPrimary : theme.colors.primaryText}
                           />
                           <Text
                             style={[
                               styles.controlPillText,
-                              item.activePicker === "duration" && { color: theme.colors.white },
+                              item.activePicker === "duration" && { color: theme.colors.onPrimary },
                             ]}
                           >
                             {item.duration}m
@@ -741,7 +741,7 @@ const TaskFormInner: React.FC<TaskFormProps> = ({
                           <Ionicons
                             name={item.activePicker === "duration" ? "chevron-up" : "chevron-down"}
                             size={12}
-                            color={item.activePicker === "duration" ? theme.colors.white : theme.colors.textSecondary}
+                            color={item.activePicker === "duration" ? theme.colors.onPrimary : theme.colors.textSecondary}
                           />
                         </Pressable>
 
@@ -761,12 +761,12 @@ const TaskFormInner: React.FC<TaskFormProps> = ({
                           <Ionicons
                             name="repeat-outline"
                             size={14}
-                            color={item.activePicker === "repeat" ? theme.colors.white : theme.colors.primary}
+                            color={item.activePicker === "repeat" ? theme.colors.onPrimary : theme.colors.primaryText}
                           />
                           <Text
                             style={[
                               styles.controlPillText,
-                              item.activePicker === "repeat" && { color: theme.colors.white },
+                              item.activePicker === "repeat" && { color: theme.colors.onPrimary },
                             ]}
                           >
                             {(item.daysOfWeek ?? []).length === 7
@@ -782,7 +782,7 @@ const TaskFormInner: React.FC<TaskFormProps> = ({
                           <Ionicons
                             name={item.activePicker === "repeat" ? "chevron-up" : "chevron-down"}
                             size={12}
-                            color={item.activePicker === "repeat" ? theme.colors.white : theme.colors.textSecondary}
+                            color={item.activePicker === "repeat" ? theme.colors.onPrimary : theme.colors.textSecondary}
                           />
                         </Pressable>
                       </View>
@@ -819,7 +819,7 @@ const TaskFormInner: React.FC<TaskFormProps> = ({
                                 <Text
                                   style={[
                                     styles.durChipText,
-                                    item.duration === mins && { color: theme.colors.white },
+                                    item.duration === mins && { color: theme.colors.onPrimary },
                                   ]}
                                 >
                                   {mins}m
@@ -855,7 +855,7 @@ const TaskFormInner: React.FC<TaskFormProps> = ({
                                   <Text
                                     style={[
                                       styles.dayCircleText,
-                                      active && { color: theme.colors.white },
+                                      active && { color: theme.colors.onPrimary },
                                     ]}
                                   >
                                     {day.label}
@@ -1009,7 +1009,7 @@ const getStyles = (theme: Theme) => {
     saveText: {
       fontSize: 14,
       fontFamily: theme.fonts.bold,
-      color: theme.colors.white,
+      color: theme.colors.onPrimary,
     },
     scroll: {
       flex: 1,
@@ -1052,7 +1052,7 @@ const getStyles = (theme: Theme) => {
     sequenceSummaryBar: {
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: `${theme.colors.primary}12`,
+      backgroundColor: theme.colors.primarySoft,
       paddingVertical: 7,
       paddingHorizontal: 12,
       borderRadius: 14,
@@ -1062,16 +1062,16 @@ const getStyles = (theme: Theme) => {
     sequenceSummaryText: {
       fontSize: 12,
       fontFamily: theme.fonts.bold,
-      color: theme.colors.primary,
+      color: theme.colors.primaryText,
       flex: 1,
     },
 
     /* ── Minimalist Task Card ── */
     taskCard: {
-      backgroundColor: `${theme.colors.text}08`,
+      backgroundColor: theme.colors.surfaceMuted,
       borderRadius: 22,
       borderWidth: 1,
-      borderColor: `${theme.colors.text}0E`,
+      borderColor: theme.colors.border,
       padding: 14,
       gap: 12,
     },
@@ -1084,7 +1084,7 @@ const getStyles = (theme: Theme) => {
       width: 38,
       height: 38,
       borderRadius: 19,
-      backgroundColor: `${theme.colors.primary}15`,
+      backgroundColor: theme.colors.primarySoft,
       alignItems: "center",
       justifyContent: "center",
       flexShrink: 0,
@@ -1101,7 +1101,7 @@ const getStyles = (theme: Theme) => {
       alignItems: "center",
       justifyContent: "center",
       borderWidth: 1.5,
-      borderColor: theme.colors.card,
+      borderColor: theme.colors.surface,
     },
     taskTitleInput: {
       flex: 1,
@@ -1193,13 +1193,13 @@ const getStyles = (theme: Theme) => {
       paddingVertical: 5,
       paddingHorizontal: 12,
       borderRadius: 14,
-      backgroundColor: `${theme.colors.text}08`,
+      backgroundColor: theme.colors.surfaceMuted,
       borderWidth: 1,
       borderColor: "transparent",
     },
     repeatPresetChipActive: {
-      backgroundColor: `${theme.colors.primary}18`,
-      borderColor: `${theme.colors.primary}40`,
+      backgroundColor: theme.colors.primarySoft,
+      borderColor: theme.colors.border,
     },
     repeatPresetText: {
       fontSize: 12,
@@ -1213,7 +1213,7 @@ const getStyles = (theme: Theme) => {
       fontFamily: theme.fonts.regular,
       color: theme.colors.text,
       padding: 8,
-      backgroundColor: `${theme.colors.text}05`,
+      backgroundColor: theme.colors.surfaceMuted,
       borderRadius: 12,
       minHeight: 50,
       textAlignVertical: "top",
@@ -1238,17 +1238,17 @@ const getStyles = (theme: Theme) => {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: `${theme.colors.text}05`,
+      backgroundColor: theme.colors.surfaceMuted,
       borderWidth: 1,
       borderStyle: "dashed",
-      borderColor: `${theme.colors.primary}50`,
+      borderColor: theme.colors.border,
       paddingVertical: 14,
       borderRadius: 20,
     },
     addAnotherCardText: {
       fontSize: 14,
       fontFamily: theme.fonts.bold,
-      color: theme.colors.primary,
+      color: theme.colors.primaryText,
     },
 
     /* ── Icon Picker Modal ── */
@@ -1262,7 +1262,7 @@ const getStyles = (theme: Theme) => {
     iconModalCard: {
       width: "100%",
       maxWidth: 360,
-      backgroundColor: theme.colors.card,
+      backgroundColor: theme.colors.surface,
       borderRadius: 24,
       padding: 18,
       maxHeight: SCREEN_HEIGHT * 0.65,
@@ -1304,7 +1304,7 @@ const getStyles = (theme: Theme) => {
       paddingVertical: 6,
       paddingHorizontal: 12,
       borderRadius: 16,
-      backgroundColor: `${theme.colors.text}0A`,
+      backgroundColor: theme.colors.surfaceMuted,
     },
     iconCatTabActive: {
       backgroundColor: theme.colors.primary,
@@ -1332,7 +1332,7 @@ const getStyles = (theme: Theme) => {
       width: 44,
       height: 44,
       borderRadius: 22,
-      backgroundColor: `${theme.colors.primary}14`,
+      backgroundColor: theme.colors.primarySoft,
       alignItems: "center",
       justifyContent: "center",
     },

@@ -67,7 +67,7 @@ const FocusHeroCardComponent: React.FC<FocusHeroCardProps> = ({
                 <Ionicons
                   name={taskIcon}
                   size={26}
-                  color={theme.colors.primary}
+                  color={theme.colors.primaryText}
                 />
               </View>
               <View style={styles.focusTextCol}>
@@ -102,7 +102,7 @@ const FocusHeroCardComponent: React.FC<FocusHeroCardProps> = ({
                   <ActiveTimerBadge
                     taskId={currentTaskItem.id}
                     onOpenFocus={onOpenFocus}
-                    primaryColor={theme.colors.primary}
+                    primaryColor={theme.colors.primaryText}
                     badgeStyle={styles.activeTimerBadge}
                     textStyle={styles.activeTimerText}
                     fallback={
@@ -115,7 +115,7 @@ const FocusHeroCardComponent: React.FC<FocusHeroCardProps> = ({
                         <Ionicons
                           name="timer-outline"
                           size={18}
-                          color={theme.colors.primary}
+                          color={theme.colors.primaryText}
                         />
                       </Pressable>
                     }
@@ -171,7 +171,7 @@ const FocusHeroCardComponent: React.FC<FocusHeroCardProps> = ({
               <Ionicons
                 name="arrow-forward"
                 size={20}
-                color={theme.colors.white}
+                color={theme.colors.onPrimary}
               />
             </Pressable>
           </View>
@@ -185,9 +185,7 @@ export const FocusHeroCard = React.memo(FocusHeroCardComponent);
 
 const getStyles = (theme: Theme, isDarkMode: boolean) => {
   const shared = getSharedStyles(theme);
-  const tileBg = `${theme.colors.primary}${
-    theme.glass?.iconTintAlpha ?? (isDarkMode ? "29" : "1C")
-  }`;
+  const tileBg = theme.colors.primarySoft;
 
   return StyleSheet.create({
     sectionContainer: {
@@ -204,9 +202,9 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       borderRadius: 28,
       ...Platform.select({
         ios: {
-          shadowColor: theme.glows.card.shadowColor,
+          shadowColor: "#000000",
           shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: isDarkMode ? 0.35 : 0.08,
+          shadowOpacity: isDarkMode ? 0.3 : 0.08,
           shadowRadius: 16,
         },
         android: { elevation: 3 },
@@ -267,9 +265,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       paddingHorizontal: 8,
       paddingVertical: 4,
       borderRadius: 12,
-      backgroundColor: isDarkMode
-        ? "rgba(255,255,255,0.08)"
-        : "rgba(0,0,0,0.05)",
+      backgroundColor: theme.colors.surfaceMuted,
     },
     durationBadgeText: {
       fontSize: themeTokens.fonts.size.xs,
@@ -284,14 +280,14 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       paddingHorizontal: 10,
       paddingVertical: 5,
       borderRadius: 12,
-      backgroundColor: `${theme.colors.primary}18`,
+      backgroundColor: theme.colors.primarySoft,
       borderWidth: 1,
-      borderColor: `${theme.colors.primary}30`,
+      borderColor: theme.colors.border,
     },
     activeTimerText: {
       fontSize: themeTokens.fonts.size.xs,
       fontFamily: theme.fonts.bold,
-      color: theme.colors.primary,
+      color: theme.colors.primaryText,
       fontVariant: ["tabular-nums"],
     },
     focusTimerIconButton: {
@@ -318,15 +314,13 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     progressPercent: {
       fontSize: themeTokens.fonts.size.xs,
       fontFamily: theme.fonts.bold,
-      color: theme.colors.primary,
+      color: theme.colors.primaryText,
       fontVariant: ["tabular-nums"],
     },
     progressBarTrack: {
       height: 6,
       borderRadius: 3,
-      backgroundColor: isDarkMode
-        ? "rgba(255,255,255,0.08)"
-        : "rgba(0,0,0,0.06)",
+      backgroundColor: theme.colors.surfaceMuted,
       overflow: "hidden",
     },
     progressBarFill: {
@@ -340,10 +334,10 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       borderRadius: 18,
       ...Platform.select({
         ios: {
-          shadowColor: theme.colors.primary,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.3,
-          shadowRadius: 8,
+          shadowColor: "#000000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.15,
+          shadowRadius: 4,
         },
         android: { elevation: 2 },
       }),

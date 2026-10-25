@@ -106,7 +106,7 @@ const getStyles = (theme: Theme) => {
       justifyContent: "flex-end",
     },
     sheet: {
-      backgroundColor: theme.colors.card,
+      backgroundColor: theme.colors.surface,
       borderTopLeftRadius: theme.borderRadius.lg + 8,
       borderTopRightRadius: theme.borderRadius.lg + 8,
       paddingHorizontal: theme.spacing.lg,
@@ -114,7 +114,7 @@ const getStyles = (theme: Theme) => {
       paddingTop: theme.spacing.sm,
       maxHeight: "90%",
       borderTopWidth: 1,
-      borderColor: theme.glass.borderColor,
+      borderColor: theme.colors.border,
       ...Platform.select({
         ios: {
           shadowColor: "#000",

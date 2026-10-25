@@ -1,12 +1,7 @@
+import type { CustomThemeConfig } from "../stores/themeStore";
 import type { Theme, ThemeName } from "../styles/shared";
 
-export type { Theme, ThemeName };
-
-export interface CustomThemeConfig {
-  pokemonId: string;
-  primaryColor: string;
-  name: string;
-}
+export type { Theme, ThemeName, CustomThemeConfig };
 
 export interface GlowConfig {
   shadowColor: string;

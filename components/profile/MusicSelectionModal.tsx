@@ -49,10 +49,10 @@ export function MusicSelectionModal({
                             pressed && { opacity: 0.7 },
                         ]}
                     >
-                         <View style={[styles.iconBox, { backgroundColor: `${currentTheme.colors.secondary}15` }]}>
-                            <Ionicons name="volume-mute-outline" size={20} color={currentTheme.colors.secondary} />
+                         <View style={[styles.iconBox, { backgroundColor: currentTheme.colors.surfaceMuted }]}>
+                            <Ionicons name="volume-mute-outline" size={20} color={currentTheme.colors.textSecondary} />
                         </View>
-                        <Text style={[styles.songLabel, activeSongId === 0 && { color: currentTheme.colors.primary, fontFamily: currentTheme.fonts.bold }]}>
+                        <Text style={[styles.songLabel, activeSongId === 0 && { color: currentTheme.colors.primaryText, fontFamily: currentTheme.fonts.bold }]}>
                             None
                         </Text>
                         {activeSongId === 0 && (
@@ -78,11 +78,11 @@ export function MusicSelectionModal({
                                         pressed && { opacity: 0.7 },
                                     ]}
                                 >
-                                    <View style={[styles.iconBox, { backgroundColor: `${currentTheme.colors.primary}15` }]}>
-                                        <Ionicons name="musical-notes-outline" size={20} color={currentTheme.colors.primary} />
+                                    <View style={[styles.iconBox, { backgroundColor: currentTheme.colors.primarySoft }]}>
+                                        <Ionicons name="musical-notes-outline" size={20} color={currentTheme.colors.primaryText} />
                                     </View>
                                     
-                                    <Text style={[styles.songLabel, isApplied && { color: currentTheme.colors.primary, fontFamily: currentTheme.fonts.bold }]}>
+                                    <Text style={[styles.songLabel, isApplied && { color: currentTheme.colors.primaryText, fontFamily: currentTheme.fonts.bold }]}>
                                         {song.title}
                                     </Text>
 
@@ -107,7 +107,9 @@ const getStyles = (theme: Theme) => {
             paddingBottom: 24,
         },
         listContainer: {
-            backgroundColor: `${theme.colors.secondary}0D`,
+            backgroundColor: theme.colors.surfaceMuted,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
             borderRadius: theme.borderRadius.lg,
             paddingHorizontal: theme.spacing.md,
         },

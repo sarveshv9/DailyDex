@@ -82,8 +82,8 @@ function DayDetail({ date, items, theme }: DayDetailProps) {
             style={[
                 detail.container,
                 {
-                    backgroundColor: theme.colors.card,
-                    borderColor: theme.glass.borderColor,
+                    backgroundColor: theme.colors.surface,
+                    borderColor: theme.colors.border,
                 },
             ]}
         >
@@ -94,7 +94,7 @@ function DayDetail({ date, items, theme }: DayDetailProps) {
                         {DAY_FULL[date.getDay()].toUpperCase()}
                     </Text>
                     <View style={detail.dateLine}>
-                        <Text style={[detail.dateNum, { color: isToday ? theme.colors.primary : theme.colors.text, fontFamily: theme.fonts.bold }]}>
+                        <Text style={[detail.dateNum, { color: isToday ? theme.colors.primaryText : theme.colors.text, fontFamily: theme.fonts.bold }]}>
                             {date.getDate()}
                         </Text>
                         <Text style={[detail.monthYear, { color: theme.colors.textSecondary, fontFamily: theme.fonts.medium }]}>
@@ -102,15 +102,15 @@ function DayDetail({ date, items, theme }: DayDetailProps) {
                         </Text>
                     </View>
                 </View>
-                <View style={[detail.badge, { backgroundColor: isToday ? `${theme.colors.primary}18` : `${theme.colors.textSecondary}15` }]}>
-                    <Text style={[detail.badgeText, { color: isToday ? theme.colors.primary : theme.colors.textSecondary, fontFamily: theme.fonts.bold }]}>
+                <View style={[detail.badge, { backgroundColor: isToday ? theme.colors.primarySoft : theme.colors.surfaceMuted }]}>
+                    <Text style={[detail.badgeText, { color: isToday ? theme.colors.primaryText : theme.colors.textSecondary, fontFamily: theme.fonts.bold }]}>
                         {items.length} {items.length === 1 ? 'task' : 'tasks'}
                     </Text>
                 </View>
             </View>
 
             {/* Divider */}
-            <View style={[detail.divider, { backgroundColor: theme.glass.borderColor }]} />
+            <View style={[detail.divider, { backgroundColor: theme.colors.divider }]} />
 
             {/* Task list */}
             {items.length === 0 ? (

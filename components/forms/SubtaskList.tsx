@@ -66,7 +66,7 @@ export const SubtaskList: React.FC<SubtaskListProps> = ({
           <TouchableOpacity
             style={[
               styles.checkbox,
-              { borderColor: theme.glass.borderColor },
+              { borderColor: theme.colors.border },
               st.completed && {
                 backgroundColor: highlightColor,
                 borderColor: highlightColor,
@@ -76,7 +76,7 @@ export const SubtaskList: React.FC<SubtaskListProps> = ({
             hitSlop={8}
           >
             {st.completed && (
-              <Ionicons name="checkmark" size={14} color={theme.colors.white} />
+              <Ionicons name="checkmark" size={14} color={theme.colors.onPrimary} />
             )}
           </TouchableOpacity>
 
@@ -117,8 +117,8 @@ export const SubtaskList: React.FC<SubtaskListProps> = ({
             styles.input,
             {
               color: theme.colors.text,
-              backgroundColor: theme.glass.neutralFill,
-              borderColor: theme.glass.borderColor,
+              backgroundColor: theme.colors.surfaceMuted,
+              borderColor: theme.colors.border,
               fontFamily: theme.fonts.regular,
             },
           ]}
@@ -138,7 +138,7 @@ export const SubtaskList: React.FC<SubtaskListProps> = ({
           onPress={handleAdd}
           disabled={!newSubtaskTitle.trim()}
         >
-          <Ionicons name="add" size={20} color={theme.colors.white} />
+          <Ionicons name="add" size={20} color={theme.colors.onPrimary} />
         </TouchableOpacity>
       </View>
     </View>

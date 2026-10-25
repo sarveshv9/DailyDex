@@ -132,7 +132,7 @@ export const CrossPlatformSegmentedControl: React.FC<
                   strokeWidth={theme.icons.stroke}
                   color={
                     isSelected
-                      ? activeFontStyle?.color || theme.colors.white
+                      ? activeFontStyle?.color || theme.colors.onPrimary
                       : fontStyle?.color || theme.colors.textSecondary
                   }
                 />
@@ -222,7 +222,7 @@ const getStyles = (theme: Theme) => {
       textAlign: "center",
     },
     segmentTextActive: {
-      color: theme.colors.white,
+      color: theme.colors.onPrimary,
       fontFamily: theme.fonts.bold,
     },
   });

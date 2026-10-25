@@ -233,7 +233,7 @@ export const RoutineDayList = React.memo(RoutineDayListComponent);
 
 const stylesCache = new Map<string, ReturnType<typeof getStyles>>();
 const getCachedStyles = (theme: Theme) => {
-  const key = `${theme.colors.background}-${theme.colors.primary}-${theme.colors.card}`;
+  const key = `${theme.colors.background}-${theme.colors.primary}-${theme.colors.surface}`;
   let s = stylesCache.get(key);
   if (!s) {
     s = getStyles(theme);

@@ -847,7 +847,7 @@ export default function RoutineScreen() {
         pointerEvents={listOpen ? "auto" : "none"}
       >
         <LinearGradient
-          colors={[`${theme.colors.primary}3A`, `${theme.colors.primary}1A`, "transparent"]}
+          colors={[theme.colors.primarySoft, "transparent"]}
           style={styles.gradientTop}
           pointerEvents="none"
         />
@@ -916,7 +916,7 @@ export default function RoutineScreen() {
               accessibilityLabel="Add new ritual"
               testID="routine-fab"
             >
-              <Ionicons name="add" size={32} color={theme.colors.white} />
+              <Ionicons name="add" size={32} color={theme.colors.onPrimary} />
             </Pressable>
           </View>
         )}
@@ -961,7 +961,7 @@ export default function RoutineScreen() {
 /* -------------------- Styles -------------------- */
 const stylesCache = new Map<string, ReturnType<typeof getStyles>>();
 const getCachedStyles = (theme: Theme) => {
-  const key = `${theme.colors.background}-${theme.colors.primary}-${theme.colors.card}`;
+  const key = `${theme.colors.background}-${theme.colors.primary}-${theme.colors.surface}`;
   let s = stylesCache.get(key);
   if (!s) {
     s = getStyles(theme);
@@ -985,7 +985,7 @@ const getStyles = (theme: Theme) =>
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: theme.colors.card,
+      backgroundColor: theme.colors.surface,
       borderTopLeftRadius: themeTokens.borderRadius.xl * 2,
       borderTopRightRadius: themeTokens.borderRadius.xl * 2,
       shadowColor: "#000",
@@ -998,7 +998,7 @@ const getStyles = (theme: Theme) =>
     listHeader: {
       alignItems: "center",
       paddingVertical: themeTokens.spacing.md,
-      backgroundColor: theme.colors.card,
+      backgroundColor: theme.colors.surface,
       borderTopLeftRadius: themeTokens.borderRadius.xl * 2,
       borderTopRightRadius: themeTokens.borderRadius.xl * 2,
     },
@@ -1016,7 +1016,7 @@ const getStyles = (theme: Theme) =>
       width: 40,
       height: 5,
       borderRadius: 2.5,
-      backgroundColor: `${theme.colors.text}35`,
+      backgroundColor: theme.colors.divider,
       marginBottom: themeTokens.spacing.sm,
     },
     listTitle: {

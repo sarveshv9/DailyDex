@@ -88,11 +88,11 @@ export const TimePicker: React.FC<TimePickerProps> = ({
           shared.badge,
           styles.previewBadge,
           {
-            borderColor: `${theme.colors.primary}35`,
+            borderColor: theme.colors.border,
           },
         ]}
       >
-        <Clock size={14} color={theme.colors.primary} strokeWidth={2} />
+        <Clock size={14} color={theme.colors.primaryText} strokeWidth={2} />
         <Text style={[shared.badgeText, styles.previewText]}>
           {value || "1:00 AM"}
         </Text>
@@ -111,7 +111,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
             alignSelf: "center",
             width: Platform.OS === "ios" ? 320 : "100%",
           }}
-          themeVariant={theme.colors.background === "#000000" ? "dark" : "light"}
+          themeVariant={theme.isDarkMode ? "dark" : "light"}
         />
       </View>
 
@@ -188,7 +188,7 @@ const getStyles = (theme: Theme) => {
       justifyContent: "center",
       overflow: "hidden",
       borderRadius: theme.borderRadius.lg,
-      backgroundColor: theme.glass.neutralFill,
+      backgroundColor: theme.colors.surfaceMuted,
       paddingVertical: theme.spacing.xs,
     },
     quickRow: {

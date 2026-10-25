@@ -235,7 +235,7 @@ const TaskItemComponent = ({
             style={[styles.checkboxFill, animatedCheckboxFillStyle]}
           />
           <Animated.View style={checkAnimatedStyle}>
-            <Ionicons name="checkmark" size={13} color={theme.colors.white} />
+            <Ionicons name="checkmark" size={13} color={theme.colors.onPrimary} />
           </Animated.View>
         </View>
       </Pressable>
@@ -550,7 +550,7 @@ const TaskModalInner = ({
               <Ionicons
                 name={task ? "checkmark-circle-outline" : "add-circle-outline"}
                 size={20}
-                color={theme.colors.white}
+                color={theme.colors.onPrimary}
               />
               <Text style={styles.modalSaveButtonText}>
                 {task ? "Update Task" : "Save Task"}
@@ -828,7 +828,7 @@ const TodoHeaderComponent = ({
             accessibilityRole="button"
             accessibilityLabel="Add task"
           >
-            <Ionicons name="arrow-up" size={18} color={theme.colors.white} />
+            <Ionicons name="arrow-up" size={18} color={theme.colors.onPrimary} />
           </Pressable>
         )}
       </View>
@@ -1267,7 +1267,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       borderRadius: 999,
       backgroundColor: activeTint,
       borderWidth: 1,
-      borderColor: `${theme.colors.primary}20`,
+      borderColor: theme.colors.border,
       marginTop: 2,
     },
     clearDoneBtnText: {
@@ -1297,7 +1297,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     },
     filterTabButtonActive: {
       backgroundColor: activeTint,
-      borderColor: `${theme.colors.primary}40`,
+      borderColor: theme.colors.primary,
     },
     filterTabLabel: {
       fontFamily: theme.fonts.medium,
@@ -1325,7 +1325,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       color: theme.colors.textSecondary,
     },
     filterTabBadgeTextActive: {
-      color: theme.colors.white,
+      color: theme.colors.onPrimary,
     },
 
     /* Quick-Add Bar */
@@ -1380,7 +1380,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       paddingHorizontal: 14,
       ...Platform.select({
         ios: {
-          shadowColor: theme.glows.card.shadowColor,
+          shadowColor: "#000",
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: isDarkMode ? 0.2 : 0.05,
           shadowRadius: 8,
@@ -1486,7 +1486,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       gap: 5,
       backgroundColor: activeTint,
       borderWidth: 1,
-      borderColor: `${theme.colors.primary}30`,
+      borderColor: theme.colors.border,
       paddingHorizontal: 8,
       paddingVertical: 5,
       borderRadius: 14,
@@ -1551,7 +1551,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     emptyCtaButtonText: {
       fontFamily: theme.fonts.bold,
       fontSize: themeTokens.fonts.size.md,
-      color: theme.colors.white,
+      color: theme.colors.onPrimary,
     },
 
     /* Modal Styling */
@@ -1568,12 +1568,12 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       justifyContent: "flex-end",
     },
     modalCard: {
-      backgroundColor: theme.colors.card,
+      backgroundColor: theme.colors.surface,
       borderTopLeftRadius: 32,
       borderTopRightRadius: 32,
       borderWidth: 1,
       borderBottomWidth: 0,
-      borderColor: theme.glass.borderColor,
+      borderColor: theme.colors.border,
       paddingHorizontal: 22,
       paddingTop: 12,
       paddingBottom: Platform.OS === "ios" ? 36 : 24,
@@ -1703,7 +1703,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     modalSaveButtonText: {
       fontFamily: theme.fonts.bold,
       fontSize: themeTokens.fonts.size.md,
-      color: theme.colors.white,
+      color: theme.colors.onPrimary,
     },
 
     /* Confirm Dialog */
@@ -1717,9 +1717,9 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       width: "100%",
       maxWidth: 360,
       borderRadius: 26,
-      backgroundColor: theme.colors.card,
+      backgroundColor: theme.colors.surface,
       borderWidth: 1,
-      borderColor: theme.glass.borderColor,
+      borderColor: theme.colors.border,
       padding: 22,
       alignItems: "center",
       ...Platform.select({
@@ -1771,7 +1771,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     confirmCancelBtn: {
       backgroundColor: neutralFill,
       borderWidth: 1,
-      borderColor: theme.glass.borderColor,
+      borderColor: theme.colors.border,
     },
     confirmCancelText: {
       fontFamily: theme.fonts.bold,
@@ -1784,7 +1784,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     confirmActionText: {
       fontFamily: theme.fonts.bold,
       fontSize: themeTokens.fonts.size.md,
-      color: theme.colors.white,
+      color: theme.colors.onPrimary,
     },
   });
 };

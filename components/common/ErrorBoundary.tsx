@@ -94,7 +94,7 @@ function ErrorFallbackView({ error, errorInfo, onReset }: ErrorFallbackProps) {
     theme = colorScheme === "dark" ? darkThemes.pokeball : lightThemes.pokeball;
   }
 
-  const { colors, fonts, spacing, glass, glows, borderRadius } = theme;
+  const { colors, fonts, spacing, glass, borderRadius } = theme;
   const shared = React.useMemo(() => getSharedStyles(theme), [theme]);
 
   const handleCopy = () => {
@@ -143,7 +143,6 @@ function ErrorFallbackView({ error, errorInfo, onReset }: ErrorFallbackProps) {
           {
             borderRadius: borderRadius.lg * 1.5,
             padding: spacing.xl,
-            ...glows.card,
           },
         ]}
       >
@@ -155,13 +154,13 @@ function ErrorFallbackView({ error, errorInfo, onReset }: ErrorFallbackProps) {
             {
               borderRadius: borderRadius.lg,
               borderWidth: 1,
-              borderColor: `${colors.primary}40`,
+              borderColor: colors.border,
             },
           ]}
         >
           <AlertTriangle
             size={36}
-            color={colors.primary}
+            color={colors.primaryText}
             strokeWidth={1.8}
           />
         </View>
@@ -209,7 +208,7 @@ function ErrorFallbackView({ error, errorInfo, onReset }: ErrorFallbackProps) {
             accessibilityRole="button"
             accessibilityLabel="Try Again"
           >
-            <RefreshCw size={18} color={colors.white} strokeWidth={2} />
+            <RefreshCw size={18} color={colors.onPrimary} strokeWidth={2} />
             <Text
               style={[
                 shared.primaryButtonText,
