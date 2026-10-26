@@ -477,7 +477,7 @@ const TaskModalInner = ({
                 multiline={false}
                 numberOfLines={1}
                 returnKeyType="done"
-                onSubmitEditing={handleSubmit}
+                onSubmitEditing={handleSave}
                 autoFocus
                 maxLength={240}
                 selectionColor={theme.colors.primary}
