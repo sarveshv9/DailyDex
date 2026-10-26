@@ -768,7 +768,7 @@ const getStyles = (theme: Theme) => {
           shadowOpacity: 0.15,
           shadowRadius: 24,
         },
-        android: { elevation: 22 },
+        android: { elevation: 0 },
       }),
     },
     handle: {
@@ -1155,7 +1155,7 @@ const getStyles = (theme: Theme) => {
           shadowOpacity: 0.15,
           shadowRadius: 20,
         },
-        android: { elevation: 12 },
+        android: { elevation: 0 },
       }),
     },
     iconModalHeader: {

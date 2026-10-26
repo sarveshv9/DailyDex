@@ -81,7 +81,7 @@ export const getSharedStyles = (theme: Theme) => {
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.12,
       shadowRadius: 4,
-      elevation: 2,
+      elevation: 0,
     },
     primaryButtonText: { color: theme.colors.onPrimary, fontSize: 14, fontFamily: theme.fonts.bold, textAlign: "center" },
     secondaryButton: {
@@ -123,7 +123,7 @@ export const getSharedStyles = (theme: Theme) => {
           shadowRadius: 8,
         },
         android: {
-          elevation: 2,
+          elevation: 0,
         },
         web: {
           boxShadow: `0px 2px 8px rgba(0, 0, 0, ${theme.isDarkMode ? 0.2 : 0.06})`,

@@ -40,13 +40,12 @@ export const CircularTimerDial: React.FC<CircularTimerDialProps> = ({
   const remainingSeconds = useTimerRemainingSeconds();
 
   const isPaused =
-    isCurrentTimer &&
     !isActive &&
     !isCompleted &&
     pausedTimeRemaining !== null &&
     pausedTimeRemaining > 0;
   const isSessionInProgress =
-    isCurrentTimer && !isCompleted && (isActive || targetEndTime !== null || isPaused);
+    !isCompleted && (isActive || targetEndTime !== null || isPaused);
 
   const showDurationPicker = !isSessionInProgress && !isCompleted;
 
@@ -133,7 +132,7 @@ export const CircularTimerDial: React.FC<CircularTimerDialProps> = ({
             shadowOffset: { width: 0, height: 12 },
             shadowOpacity: isDarkMode ? 0.35 : 0.18,
             shadowRadius: 28,
-            elevation: 10,
+            elevation: 0,
           },
         ]}
       >

@@ -91,7 +91,7 @@ const getStyles = (theme: Theme, variant: CardVariant, padding: CardPadding) => 
         shadowRadius: 12,
       },
       android: {
-        elevation: 2,
+        elevation: 0,
       },
       web: {
         boxShadow: `0px 4px 12px rgba(0, 0, 0, ${theme.isDarkMode ? 0.20 : 0.04})`,

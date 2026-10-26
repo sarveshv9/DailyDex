@@ -207,7 +207,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
           shadowOpacity: isDarkMode ? 0.3 : 0.08,
           shadowRadius: 16,
         },
-        android: { elevation: 3 },
+        android: { elevation: 0 },
       }),
     },
     blurWrapper: {
@@ -354,7 +354,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
           shadowOpacity: 0.15,
           shadowRadius: 4,
         },
-        android: { elevation: 2 },
+        android: { elevation: 0 },
       }),
     },
     primaryButtonText: {

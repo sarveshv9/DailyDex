@@ -273,7 +273,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
           shadowOpacity: isDarkMode ? 0.25 : 0.06,
           shadowRadius: 12,
         },
-        android: { elevation: 2 },
+        android: { elevation: 0 },
       }),
     },
     blurWrapper: {

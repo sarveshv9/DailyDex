@@ -1,34 +1,43 @@
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { useTimerStore } from "../stores/timerStore";
 import { calculateRemainingSeconds } from "../utils/timeMath";
 
-/**
- * Local hook that computes countdown seconds for display.
- * Driven by an internal 1-second interval against `targetEndTime`
- * without triggering any global state changes in timerStore.
- */
-export function useTimerRemainingSeconds(): number {
-  const targetEndTime = useTimerStore((s) => s.targetEndTime);
-  const isActive = useTimerStore((s) => s.isActive);
-  const pausedTimeRemaining = useTimerStore((s) => s.pausedTimeRemaining);
-  const isCompleted = useTimerStore((s) => s.isCompleted);
-  const duration = useTimerStore((s) => s.duration);
+function subscribe(callback: () => void) {
+  // Subscribe to Zustand timer store mutations (start, pause, resume, stop)
+  const unsubscribeStore = useTimerStore.subscribe(() => {
+    callback();
+  });
 
-  const [, setTick] = useState(0);
+  // High-frequency 500ms ticker for real-time second updates during active countdown
+  const interval = setInterval(() => {
+    const { isActive, targetEndTime } = useTimerStore.getState();
+    if (isActive && targetEndTime) {
+      callback();
+    }
+  }, 500);
 
-  useEffect(() => {
-    if (!isActive || !targetEndTime) return;
+  return () => {
+    unsubscribeStore();
+    clearInterval(interval);
+  };
+}
 
-    const interval = setInterval(() => {
-      setTick((t) => t + 1);
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isActive, targetEndTime]);
+function getSnapshot(): number {
+  const { targetEndTime, isActive, pausedTimeRemaining, isCompleted, duration } =
+    useTimerStore.getState();
 
   if (isCompleted) return 0;
   if (isActive && targetEndTime) {
     return calculateRemainingSeconds(targetEndTime);
   }
   return pausedTimeRemaining ?? duration ?? 0;
+}
+
+/**
+ * High-performance hook that computes countdown seconds for display in real-time.
+ * Uses React 18/19 useSyncExternalStore to avoid setState-in-effect and guarantee
+ * exact, lag-free countdown updates across all platforms.
+ */
+export function useTimerRemainingSeconds(): number {
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }

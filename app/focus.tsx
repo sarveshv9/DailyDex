@@ -68,16 +68,17 @@ export default function FocusScreen() {
   const musicPreference = useMusicPreference();
   const [audioModalVisible, setAudioModalVisible] = useState(false);
 
-  // Context timer match
-  const isCurrentTimer = storeTaskId === paramTaskId;
+  // Context timer match - seamlessly tracks active session
+  const isCurrentTimer = storeTaskId
+    ? (!params.taskId || storeTaskId === paramTaskId)
+    : true;
   const isPaused =
-    isCurrentTimer &&
     !isActive &&
     !isCompleted &&
     pausedTimeRemaining !== null &&
     pausedTimeRemaining > 0;
   const isSessionInProgress =
-    isCurrentTimer && !isCompleted && (isActive || targetEndTime !== null || isPaused);
+    !isCompleted && (isActive || targetEndTime !== null || isPaused);
 
   // Available duration options
   const durationOptions = useMemo(() => {
@@ -369,7 +370,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
           shadowOpacity: isDarkMode ? 0.3 : 0.05,
           shadowRadius: 10,
         },
-        android: { elevation: 2 },
+        android: { elevation: 0 },
       }),
     },
     taskBadge: {

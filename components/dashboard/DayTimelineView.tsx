@@ -727,7 +727,7 @@ const TimelinePage = memo<{
                                                                         shadowOpacity: 0.4,
                                                                         shadowRadius: 6,
                                                                     },
-                                                                    android: { elevation: 4 },
+                                                                    android: { elevation: 0 },
                                                                 }),
                                                             ]}
                                                         >
@@ -782,7 +782,7 @@ const TimelinePage = memo<{
                                                                         shadowOpacity: 0.35,
                                                                         shadowRadius: 6,
                                                                     },
-                                                                    android: { elevation: 4 },
+                                                                    android: { elevation: 0 },
                                                                 }),
                                                             ]}
                                                         >
@@ -845,7 +845,7 @@ const TimelinePage = memo<{
                                                                                 shadowOpacity: isDarkMode ? 0.35 : 0.15,
                                                                                 shadowRadius: 4,
                                                                             },
-                                                                            android: { elevation: 3 },
+                                                                            android: { elevation: 0 },
                                                                         }),
                                                                     ]}
                                                                 >
@@ -1408,7 +1408,7 @@ const getStyles = (theme: Theme) =>
                     shadowOpacity: 0.15,
                     shadowRadius: 4,
                 },
-                android: { elevation: 3 },
+                android: { elevation: 0 },
             }),
         },
         dateBadgeGradient: {
@@ -1510,7 +1510,7 @@ const getStyles = (theme: Theme) =>
                     shadowOpacity: 0.08,
                     shadowRadius: 6,
                 },
-                android: { elevation: 3 },
+                android: { elevation: 0 },
             }),
         },
         peekAccentBar: {

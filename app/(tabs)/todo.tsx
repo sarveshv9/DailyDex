@@ -253,7 +253,8 @@ const TaskItemComponent = ({
               onLayout={(e) => {
                 textWidth.value = e.nativeEvent.layout.width;
               }}
-              numberOfLines={8}
+              numberOfLines={1}
+              ellipsizeMode="tail"
             >
               {task.text}
             </Text>
@@ -473,7 +474,10 @@ const TaskModalInner = ({
                 placeholderTextColor={theme.colors.textSecondary}
                 value={taskText}
                 onChangeText={setTaskText}
-                multiline
+                multiline={false}
+                numberOfLines={1}
+                returnKeyType="done"
+                onSubmitEditing={handleSubmit}
                 autoFocus
                 maxLength={240}
                 selectionColor={theme.colors.primary}
@@ -1451,7 +1455,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
           shadowOpacity: isDarkMode ? 0.2 : 0.05,
           shadowRadius: 8,
         },
-        android: { elevation: 2 },
+        android: { elevation: 0 },
       }),
     },
     checkboxTouchTarget: {
@@ -1611,7 +1615,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
           shadowOpacity: isDarkMode ? 0.45 : 0.3,
           shadowRadius: 12,
         },
-        android: { elevation: 5 },
+        android: { elevation: 0 },
       }),
     },
     emptyCtaButtonText: {
@@ -1650,7 +1654,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
           shadowOpacity: 0.2,
           shadowRadius: 20,
         },
-        android: { elevation: 12 },
+        android: { elevation: 0 },
       }),
     },
     sheetHandle: {
@@ -1704,8 +1708,8 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       fontFamily: theme.fonts.regular,
       fontSize: themeTokens.fonts.size.md,
       color: theme.colors.text,
-      minHeight: 80,
-      textAlignVertical: "top",
+      minHeight: 44,
+      paddingVertical: 10,
     },
 
     modalSectionLabel: {
@@ -1763,7 +1767,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
           shadowOpacity: isDarkMode ? 0.45 : 0.35,
           shadowRadius: 14,
         },
-        android: { elevation: 6 },
+        android: { elevation: 0 },
       }),
     },
     modalInputClearBtn: {
@@ -1818,7 +1822,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
           shadowOpacity: 0.2,
           shadowRadius: 20,
         },
-        android: { elevation: 8 },
+        android: { elevation: 0 },
       }),
     },
     confirmIconWrap: {
