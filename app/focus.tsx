@@ -49,6 +49,7 @@ export default function FocusScreen() {
   const isActive = useTimerStore((s) => s.isActive);
   const isCompleted = useTimerStore((s) => s.isCompleted);
   const targetEndTime = useTimerStore((s) => s.targetEndTime);
+  const pausedTimeRemaining = useTimerStore((s) => s.pausedTimeRemaining);
   const duration = useTimerStore((s) => s.duration);
   const pomodoroMode = useTimerStore((s) => s.pomodoroMode);
   const pomodoroPhase = useTimerStore((s) => s.pomodoroPhase);
@@ -69,8 +70,14 @@ export default function FocusScreen() {
 
   // Context timer match
   const isCurrentTimer = storeTaskId === paramTaskId;
+  const isPaused =
+    isCurrentTimer &&
+    !isActive &&
+    !isCompleted &&
+    pausedTimeRemaining !== null &&
+    pausedTimeRemaining > 0;
   const isSessionInProgress =
-    isCurrentTimer && (isActive || targetEndTime !== null) && !isCompleted;
+    isCurrentTimer && !isCompleted && (isActive || targetEndTime !== null || isPaused);
 
   // Available duration options
   const durationOptions = useMemo(() => {
@@ -109,8 +116,12 @@ export default function FocusScreen() {
 
   // Handle ambient audio start upon timer activation
   const handleStartAudio = useCallback(() => {
-    if (musicPreference > 0 && selectedSong === 0) {
-      setSelectedSong(musicPreference);
+    try {
+      if (musicPreference > 0 && selectedSong === 0) {
+        setSelectedSong(musicPreference);
+      }
+    } catch (e) {
+      console.warn("Audio playback error:", e);
     }
   }, [musicPreference, selectedSong, setSelectedSong]);
 
@@ -191,9 +202,8 @@ export default function FocusScreen() {
   }, [router]);
 
   // Determine state
-  const showDurationPicker =
-    !isCurrentTimer || (!targetEndTime && !isCompleted);
-  const isResetEnabled = !isActive && !showDurationPicker && !isCompleted;
+  const showDurationPicker = !isSessionInProgress && !isCompleted;
+  const isResetEnabled = isPaused;
   const isLastPomoPhase =
     Boolean(pomodoroMode && pomodoroSession >= 4 && pomodoroPhase !== "work");
 

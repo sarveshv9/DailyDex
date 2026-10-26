@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { Clock } from "lucide-react-native";
 import { useTheme } from "../../context/ThemeContext";
@@ -21,6 +21,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
   const { light, selection } = useAppHaptics();
   const shared = useMemo(() => getSharedStyles(theme), [theme]);
   const styles = useMemo(() => getStyles(theme), [theme]);
+  const [showAndroidPicker, setShowAndroidPicker] = useState(false);
 
   if (Platform.OS === "web") {
     return (
@@ -50,7 +51,13 @@ export const TimePicker: React.FC<TimePickerProps> = ({
 
   const currentDate = getDateFromString(value);
 
-  const handleChange = (_event: any, selectedDate?: Date) => {
+  const handleChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === "android") {
+      setShowAndroidPicker(false);
+    }
+    if (event?.type === "dismissed") {
+      return;
+    }
     if (selectedDate) {
       selection();
       let h = selectedDate.getHours();
@@ -83,38 +90,72 @@ export const TimePicker: React.FC<TimePickerProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* Header Pill */}
-      <View
-        style={[
-          shared.badge,
-          styles.previewBadge,
-          {
-            borderColor: theme.colors.border,
-          },
-        ]}
-      >
-        <Clock size={14} color={theme.colors.primaryText} strokeWidth={2} />
-        <Text style={[shared.badgeText, styles.previewText]}>
-          {value || "1:00 AM"}
-        </Text>
-      </View>
+      {/* Time Display Header */}
+      {Platform.OS === "android" ? (
+        <Pressable
+          onPress={() => {
+            light();
+            setShowAndroidPicker(true);
+          }}
+          style={({ pressed }) => [
+            styles.androidTimeButton,
+            pressed && styles.androidTimeButtonPressed,
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel={`Change time, current time is ${value || "1:00 AM"}`}
+        >
+          <View style={styles.androidTimeContent}>
+            <Clock size={18} color={theme.colors.primary} strokeWidth={2} />
+            <Text style={styles.androidTimeText}>{value || "1:00 AM"}</Text>
+          </View>
+          <Text style={styles.androidTimeHint}>Tap to change clock</Text>
+        </Pressable>
+      ) : (
+        <View
+          style={[
+            shared.badge,
+            styles.previewBadge,
+            {
+              borderColor: theme.colors.border,
+            },
+          ]}
+        >
+          <Clock size={14} color={theme.colors.primaryText} strokeWidth={2} />
+          <Text style={[shared.badgeText, styles.previewText]}>
+            {value || "1:00 AM"}
+          </Text>
+        </View>
+      )}
 
       {/* Native Picker */}
-      <View style={styles.pickerWrapper}>
-        <DateTimePicker
-          value={currentDate}
-          mode="time"
-          display={Platform.OS === "ios" ? "spinner" : "default"}
-          onChange={handleChange}
-          textColor={theme.colors.text}
-          style={{
-            height: 160,
-            alignSelf: "center",
-            width: Platform.OS === "ios" ? 320 : "100%",
-          }}
-          themeVariant={theme.isDarkMode ? "dark" : "light"}
-        />
-      </View>
+      {Platform.OS === "android" ? (
+        showAndroidPicker && (
+          <DateTimePicker
+            value={currentDate}
+            mode="time"
+            display="default"
+            onChange={handleChange}
+            textColor={theme.colors.text}
+            themeVariant={theme.isDarkMode ? "dark" : "light"}
+          />
+        )
+      ) : (
+        <View style={styles.pickerWrapper}>
+          <DateTimePicker
+            value={currentDate}
+            mode="time"
+            display="spinner"
+            onChange={handleChange}
+            textColor={theme.colors.text}
+            style={{
+              height: 160,
+              alignSelf: "center",
+              width: 320,
+            }}
+            themeVariant={theme.isDarkMode ? "dark" : "light"}
+          />
+        </View>
+      )}
 
       {/* Quick Adjust Pills */}
       {showQuickChips && (
@@ -171,6 +212,39 @@ const getStyles = (theme: Theme) => {
       alignItems: "center",
       width: "100%",
       paddingVertical: theme.spacing.sm,
+    },
+    androidTimeButton: {
+      width: "100%",
+      paddingVertical: 14,
+      paddingHorizontal: 18,
+      borderRadius: theme.borderRadius.lg,
+      backgroundColor: theme.colors.surfaceMuted,
+      borderWidth: 1.5,
+      borderColor: `${theme.colors.primary}30`,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      marginBottom: theme.spacing.sm,
+    },
+    androidTimeButtonPressed: {
+      opacity: 0.75,
+      transform: [{ scale: 0.98 }],
+    },
+    androidTimeContent: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+    androidTimeText: {
+      fontSize: 22,
+      fontFamily: theme.fonts.bold,
+      color: theme.colors.text,
+      letterSpacing: 0.5,
+    },
+    androidTimeHint: {
+      fontSize: 12,
+      fontFamily: theme.fonts.regular,
+      color: theme.colors.textSecondary,
     },
     previewBadge: {
       paddingHorizontal: 12,

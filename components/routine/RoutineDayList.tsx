@@ -1,8 +1,7 @@
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useRef } from "react";
 import {
   NativeScrollEvent,
   NativeSyntheticEvent,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   View,
@@ -30,9 +29,10 @@ export interface RoutineDayListProps {
   pageItems: RoutineTimelineEntry[];
   isLoading: boolean;
   isCenterPage: boolean;
-  refreshing: boolean;
+  refreshing?: boolean;
   onRefresh?: () => void;
   onScroll?: (e: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  onPullDownToClose?: () => void;
   onPressTask?: (item: RoutineItem) => void;
   onToggleComplete?: (item: RoutineItem) => void;
   onAddRitual?: () => void;
@@ -44,9 +44,10 @@ const RoutineDayListComponent: React.FC<RoutineDayListProps> = ({
   pageItems,
   isLoading,
   isCenterPage,
-  refreshing,
+  refreshing = false,
   onRefresh,
   onScroll,
+  onPullDownToClose,
   onPressTask,
   onToggleComplete,
   onAddRitual,
@@ -104,24 +105,63 @@ const RoutineDayListComponent: React.FC<RoutineDayListProps> = ({
     [width, height]
   );
 
+  const scrollOffsetY = useRef(0);
+  const touchStartY = useRef<number | null>(null);
+
+  const handleInternalScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const y = e.nativeEvent.contentOffset.y;
+      scrollOffsetY.current = y;
+      if (onScroll) onScroll(e);
+      if (y < -30 && onPullDownToClose) {
+        onPullDownToClose();
+      }
+    },
+    [onScroll, onPullDownToClose]
+  );
+
+  const handleTouchStart = useCallback(
+    (e: any) => {
+      if (isCenterPage) {
+        touchStartY.current = e.nativeEvent.pageY;
+      }
+    },
+    [isCenterPage]
+  );
+
+  const handleTouchMove = useCallback(
+    (e: any) => {
+      if (
+        isCenterPage &&
+        touchStartY.current !== null &&
+        scrollOffsetY.current <= 2
+      ) {
+        const deltaY = e.nativeEvent.pageY - touchStartY.current;
+        if (deltaY > 40 && onPullDownToClose) {
+          touchStartY.current = null;
+          onPullDownToClose();
+        }
+      }
+    },
+    [isCenterPage, onPullDownToClose]
+  );
+
+  const handleTouchEnd = useCallback(() => {
+    touchStartY.current = null;
+  }, []);
+
   return (
     <ScrollView
       style={containerStyle}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
-      onScroll={isCenterPage ? onScroll : undefined}
+      onScroll={isCenterPage ? handleInternalScroll : undefined}
+      onTouchStart={isCenterPage ? handleTouchStart : undefined}
+      onTouchMove={isCenterPage ? handleTouchMove : undefined}
+      onTouchEnd={isCenterPage ? handleTouchEnd : undefined}
+      onTouchCancel={isCenterPage ? handleTouchEnd : undefined}
       scrollEventThrottle={16}
-      bounces={false}
-      refreshControl={
-        isCenterPage && onRefresh ? (
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={theme.colors.primary}
-            colors={[theme.colors.primary]}
-          />
-        ) : undefined
-      }
+      bounces={true}
     >
       <View style={styles.cardList}>
         {isLoading ? (

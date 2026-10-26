@@ -1383,11 +1383,13 @@ const getStyles = (theme: Theme) =>
         },
         welcomeSkipBtn: {
             paddingHorizontal: 14,
-            paddingVertical: 6,
-            borderRadius: 14,
+            paddingVertical: 7,
+            borderRadius: 16,
             backgroundColor: theme.colors.surfaceMuted,
             borderWidth: 1,
             borderColor: theme.colors.border,
+            alignItems: "center",
+            justifyContent: "center",
         },
         welcomeSkipText: {
             fontSize: themeTokens.fonts.size.sm - 1,
@@ -1552,14 +1554,14 @@ const getStyles = (theme: Theme) =>
         // ─── Common Step Header ──────────────────
         stepHeader: {
             paddingHorizontal: 22,
-            paddingTop: 14,
+            paddingTop: Platform.OS === "android" ? 16 : 14,
             paddingBottom: 8,
         },
         headerTop: {
             flexDirection: "row",
             justifyContent: "space-between",
             alignItems: "center",
-            height: 24,
+            minHeight: 34,
             marginBottom: 10,
         },
         stepEyebrow: {

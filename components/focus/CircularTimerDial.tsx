@@ -39,8 +39,16 @@ export const CircularTimerDial: React.FC<CircularTimerDialProps> = ({
   // High-performance 1Hz countdown hook (computes seconds during render)
   const remainingSeconds = useTimerRemainingSeconds();
 
-  const showDurationPicker =
-    !isCurrentTimer || (!targetEndTime && !isCompleted);
+  const isPaused =
+    isCurrentTimer &&
+    !isActive &&
+    !isCompleted &&
+    pausedTimeRemaining !== null &&
+    pausedTimeRemaining > 0;
+  const isSessionInProgress =
+    isCurrentTimer && !isCompleted && (isActive || targetEndTime !== null || isPaused);
+
+  const showDurationPicker = !isSessionInProgress && !isCompleted;
 
   const displayTime = showDurationPicker
     ? selectedMode === "Pomodoro"
@@ -99,9 +107,16 @@ export const CircularTimerDial: React.FC<CircularTimerDialProps> = ({
         color: theme.colors.primary,
       };
     }
+    if (isPaused) {
+      return {
+        label: "PAUSED",
+        icon: "pause" as const,
+        color: theme.colors.textSecondary,
+      };
+    }
     return {
-      label: "PAUSED",
-      icon: "pause" as const,
+      label: "READY",
+      icon: "radio-button-on" as const,
       color: theme.colors.textSecondary,
     };
   };

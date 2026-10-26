@@ -13,6 +13,7 @@ import {
   Platform,
   Pressable,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -252,7 +253,7 @@ const TaskItemComponent = ({
               onLayout={(e) => {
                 textWidth.value = e.nativeEvent.layout.width;
               }}
-              numberOfLines={2}
+              numberOfLines={8}
             >
               {task.text}
             </Text>
@@ -363,6 +364,7 @@ interface TaskModalProps {
   task: Task | null;
   defaultCategory: TaskCategory;
   onSave: (text: string, category: TaskCategory) => void;
+  onDeleteTask?: (id: string) => void;
   onClose: () => void;
   theme: Theme;
   isDarkMode: boolean;
@@ -372,6 +374,7 @@ const TaskModalInner = ({
   task,
   defaultCategory,
   onSave,
+  onDeleteTask,
   onClose,
   theme,
   isDarkMode,
@@ -419,7 +422,7 @@ const TaskModalInner = ({
       )}
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.modalKeyboardAvoid}
       >
         <Pressable style={styles.modalOverlayDismiss} onPress={onClose}>
@@ -427,6 +430,12 @@ const TaskModalInner = ({
             style={styles.modalCard}
             onPress={(e) => e.stopPropagation()}
           >
+            <ScrollView
+              bounces={false}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 16 }}
+            >
             {/* Top Handle */}
             <View style={styles.sheetHandle} />
 
@@ -469,6 +478,17 @@ const TaskModalInner = ({
                 maxLength={240}
                 selectionColor={theme.colors.primary}
               />
+              {taskText.length > 0 && (
+                <Pressable
+                  style={styles.modalInputClearBtn}
+                  onPress={() => setTaskText("")}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear task text"
+                >
+                  <Ionicons name="close-circle" size={18} color={theme.colors.textSecondary} />
+                </Pressable>
+              )}
             </View>
 
             {/* Category Chips */}
@@ -556,6 +576,28 @@ const TaskModalInner = ({
                 {task ? "Update Task" : "Save Task"}
               </Text>
             </Pressable>
+
+            {/* Delete Task Button if editing an existing task */}
+            {task && onDeleteTask && (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.modalDeleteButton,
+                  pressed && { opacity: 0.8 },
+                ]}
+                onPress={() => {
+                  onClose();
+                  onDeleteTask(task.id);
+                }}
+              >
+                <Ionicons
+                  name="trash-outline"
+                  size={18}
+                  color={theme.colors.primary}
+                />
+                <Text style={styles.modalDeleteButtonText}>Delete Task</Text>
+              </Pressable>
+            )}
+            </ScrollView>
           </Pressable>
         </Pressable>
       </KeyboardAvoidingView>
@@ -568,6 +610,7 @@ const TaskModal = ({
   task,
   defaultCategory,
   onSave,
+  onDeleteTask,
   onClose,
   theme,
   isDarkMode,
@@ -586,6 +629,7 @@ const TaskModal = ({
         task={task}
         defaultCategory={defaultCategory}
         onSave={onSave}
+        onDeleteTask={onDeleteTask}
         onClose={onClose}
         theme={theme}
         isDarkMode={isDarkMode}
@@ -820,6 +864,17 @@ const TodoHeaderComponent = ({
           returnKeyType="done"
           maxLength={240}
         />
+        {quickInputText.length > 0 && (
+          <Pressable
+            style={styles.quickAddClearBtn}
+            onPress={() => setQuickInputText("")}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Clear input"
+          >
+            <Ionicons name="close-circle" size={18} color={theme.colors.textSecondary} />
+          </Pressable>
+        )}
         {quickInputText.trim().length > 0 && (
           <Pressable
             style={styles.quickAddSubmitBtn}
@@ -1162,24 +1217,29 @@ export default function TodoScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-      <FlashList
-        data={displayedTasks}
-        renderItem={renderTaskItem}
-        keyExtractor={keyExtractor}
-        ItemSeparatorComponent={renderItemSeparator}
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={renderEmptyState}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={theme.colors.primary}
-            colors={[theme.colors.primary]}
-          />
-        }
-      />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={{ flex: 1 }}
+      >
+        <FlashList
+          data={displayedTasks}
+          renderItem={renderTaskItem}
+          keyExtractor={keyExtractor}
+          ItemSeparatorComponent={renderItemSeparator}
+          ListHeaderComponent={renderHeader}
+          ListEmptyComponent={renderEmptyState}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={theme.colors.primary}
+              colors={[theme.colors.primary]}
+            />
+          }
+        />
+      </KeyboardAvoidingView>
 
       {/* ── 3. Add / Edit Task Modal ── */}
       <TaskModal
@@ -1187,6 +1247,7 @@ export default function TodoScreen() {
         task={editingTask}
         defaultCategory={activeFilter === "later" ? "later" : "today"}
         onSave={handleSaveTask}
+        onDeleteTask={handleDeleteTask}
         onClose={handleCloseModal}
         theme={theme}
         isDarkMode={isDarkMode}
@@ -1346,6 +1407,11 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       fontSize: themeTokens.fonts.size.sm,
       color: theme.colors.text,
       paddingVertical: 0,
+    },
+    quickAddClearBtn: {
+      padding: 6,
+      justifyContent: "center",
+      alignItems: "center",
     },
     quickAddSubmitBtn: {
       width: 32,
@@ -1700,10 +1766,33 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
         android: { elevation: 6 },
       }),
     },
+    modalInputClearBtn: {
+      position: "absolute",
+      right: 12,
+      top: 12,
+      padding: 4,
+    },
     modalSaveButtonText: {
       fontFamily: theme.fonts.bold,
       fontSize: themeTokens.fonts.size.md,
       color: theme.colors.onPrimary,
+    },
+    modalDeleteButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      paddingVertical: 14,
+      marginTop: 12,
+      borderRadius: 20,
+      backgroundColor: isDarkMode ? "rgba(255, 77, 79, 0.12)" : "rgba(255, 77, 79, 0.08)",
+      borderWidth: 1,
+      borderColor: isDarkMode ? "rgba(255, 77, 79, 0.25)" : "rgba(255, 77, 79, 0.18)",
+    },
+    modalDeleteButtonText: {
+      fontFamily: theme.fonts.bold,
+      fontSize: themeTokens.fonts.size.sm,
+      color: theme.colors.primary,
     },
 
     /* Confirm Dialog */

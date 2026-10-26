@@ -351,15 +351,9 @@ export default function RoutineScreen() {
     [scrollY, listOpen, closeList]
   );
 
-  const [refreshing, setRefreshing] = useState(false);
-
   /* -------------------- Data Fetching -------------------- */
-  const loadData = useCallback(async (isRefresh = false) => {
+  const loadData = useCallback(async () => {
     try {
-      if (isRefresh) {
-        setRefreshing(true);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
       let finalRoutines: RoutineItem[] | null = null;
       let localRoutines: RoutineItem[] | null = null;
 
@@ -392,9 +386,6 @@ export default function RoutineScreen() {
       console.error("Failed to load routines.", e);
     } finally {
       setIsLoading(false);
-      if (isRefresh) {
-        setRefreshing(false);
-      }
     }
   }, []);
 
@@ -403,10 +394,6 @@ export default function RoutineScreen() {
       loadData();
     }, [loadData])
   );
-
-  const onRefresh = useCallback(() => {
-    loadData(true);
-  }, [loadData]);
 
   const saveRoutines = useCallback(async (newItems: RoutineItem[]) => {
     try {
@@ -889,9 +876,8 @@ export default function RoutineScreen() {
                   pageItems={pageItems}
                   isLoading={isLoading}
                   isCenterPage={idx === 1}
-                  refreshing={refreshing}
-                  onRefresh={idx === 1 ? onRefresh : undefined}
                   onScroll={idx === 1 ? handleScroll : undefined}
+                  onPullDownToClose={idx === 1 ? handleCloseBarPress : undefined}
                   onPressTask={handleDayListTaskPress}
                   onToggleComplete={handleToggleComplete}
                   onAddRitual={handleFabPress}

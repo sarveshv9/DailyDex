@@ -80,6 +80,20 @@ jest.mock("expo-audio", () => ({
   setAudioModeAsync: jest.fn().mockResolvedValue(undefined),
 }));
 
+jest.mock("react-native-safe-area-context", () => {
+  const actual = jest.requireActual("react-native-safe-area-context/jest/mock").default;
+  const mockReact = jest.requireActual("react");
+  const mockRN = jest.requireActual("react-native");
+  return {
+    ...actual,
+    SafeAreaProvider: ({ children }: any) =>
+      mockReact.createElement(mockRN.View, null, children),
+    SafeAreaView: ({ children, style }: any) =>
+      mockReact.createElement(mockRN.View, { style }, children),
+    useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+  };
+});
+
 describe("Store Hydration from Legacy Storage Shapes", () => {
   beforeEach(async () => {
     await AsyncStorage.clear();

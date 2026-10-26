@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
     Dimensions,
+    Platform,
     Pressable,
     ScrollView,
     StyleProp,
@@ -786,12 +787,12 @@ const makeStyles = (fonts: Theme["fonts"]) =>
         scrollContent: { flexGrow: 1, paddingBottom: 12 },
 
         // Header
-        header: { paddingHorizontal: 22, paddingTop: 14 },
+        header: { paddingHorizontal: 22, paddingTop: Platform.OS === "android" ? 16 : 14 },
         headerTop: {
             flexDirection: "row",
             justifyContent: "space-between",
             alignItems: "center",
-            height: 24,
+            minHeight: 34,
             marginBottom: 10,
         },
         eyebrow: {
