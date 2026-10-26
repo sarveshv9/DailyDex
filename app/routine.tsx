@@ -46,8 +46,6 @@ import {
 
 /* -------------------- Assets & Constants -------------------- */
 
-const { width: INITIAL_SCREEN_WIDTH } = Dimensions.get("window");
-
 /* Initial routine preserved */
 const INITIAL_ROUTINE: RoutineItem[] = [
   { id: "1", time: "6:00 AM", task: "Wake Up", description: "Start your day with a clear mind.", imageKey: "wakeup", insertionOrder: 1, duration: 45 },
@@ -172,8 +170,8 @@ export default function RoutineScreen() {
     setListOpen(true);
     Animated.spring(listAnim, {
       toValue: 1,
-      useNativeDriver: false,
-      tension: 60,
+      useNativeDriver: true,
+      tension: 65,
       friction: 12,
     }).start();
   }, [listAnim]);
@@ -181,7 +179,7 @@ export default function RoutineScreen() {
   const closeList = useCallback(() => {
     Animated.spring(listAnim, {
       toValue: 0,
-      useNativeDriver: false,
+      useNativeDriver: true,
       tension: 80,
       friction: 14,
     }).start(() => setListOpen(false));
@@ -196,8 +194,12 @@ export default function RoutineScreen() {
   // Horizontal pager offset — starts at 0 (center panel)
   const [pagerX] = useState(() => new Animated.Value(0));
   const pagerTranslateX = useMemo(
-    () => Animated.add(pagerX, new Animated.Value(-INITIAL_SCREEN_WIDTH)),
-    [pagerX]
+    () =>
+      pagerX.interpolate({
+        inputRange: [-SCREEN_WIDTH, 0, SCREEN_WIDTH],
+        outputRange: [-2 * SCREEN_WIDTH, -SCREEN_WIDTH, 0],
+      }),
+    [pagerX, SCREEN_WIDTH]
   );
 
   const shiftDate = useCallback((delta: number) => {
@@ -252,14 +254,14 @@ export default function RoutineScreen() {
                 Animated.timing(pagerX, {
                   toValue: target,
                   duration: 220,
-                  useNativeDriver: false,
+                  useNativeDriver: true,
                 }).start(() => {
                   shiftDate(LEFT ? 1 : -1);
                 });
               } else {
                 Animated.spring(pagerX, {
                   toValue: 0,
-                  useNativeDriver: false,
+                  useNativeDriver: true,
                   tension: 80,
                   friction: 12,
                 }).start();
@@ -267,7 +269,7 @@ export default function RoutineScreen() {
             },
           }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    [isAdjacentPagesLoaded, shiftDate]
   );
 
   const listHeaderPanResponder = useMemo(
@@ -338,6 +340,23 @@ export default function RoutineScreen() {
     ].sort((a, b) => a.minutes - b.minutes);
     return all;
   }, [allRoutines]);
+
+  const centerPageItems = useMemo(() => {
+    return getItemsForDate(pageDates[1]);
+  }, [getItemsForDate, pageDates]);
+
+  const prevPageItems = useMemo(() => {
+    return isAdjacentPagesLoaded ? getItemsForDate(pageDates[0]) : [];
+  }, [getItemsForDate, pageDates, isAdjacentPagesLoaded]);
+
+  const nextPageItems = useMemo(() => {
+    return isAdjacentPagesLoaded ? getItemsForDate(pageDates[2]) : [];
+  }, [getItemsForDate, pageDates, isAdjacentPagesLoaded]);
+
+  const allPageItems = useMemo(
+    () => [prevPageItems, centerPageItems, nextPageItems] as const,
+    [prevPageItems, centerPageItems, nextPageItems]
+  );
 
   const handleScroll = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -867,9 +886,7 @@ export default function RoutineScreen() {
             ]}
           >
             {([0, 1, 2] as const).map(idx => {
-              const date = pageDates[idx];
-              const shouldRender = idx === 1 || isAdjacentPagesLoaded;
-              const pageItems = shouldRender ? getItemsForDate(date) : [];
+              const pageItems = allPageItems[idx];
               return (
                 <RoutineDayList
                   key={idx}

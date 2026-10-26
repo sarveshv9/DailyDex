@@ -142,6 +142,381 @@ const TimeAxisItem = memo<{
 ));
 TimeAxisItem.displayName = "TimeAxisItem";
 
+/* ───────────────────────────── TimelineColumn ─────────────────────────── */
+
+type ElementEntry =
+    | { type: 'wakeup_sleep'; item: RoutineItem; top: number; bottom: number; height: number }
+    | { type: 'single'; item: RoutineItem; top: number; bottom: number; height: number }
+    | {
+        type: 'chain';
+        items: RoutineItem[];
+        top: number;
+        bottom: number;
+        pillHeight: number;
+        stepY: number;
+        overlap: number;
+    };
+
+interface TimelineColumnProps {
+    isSelected: boolean;
+    colItems: RoutineItem[];
+    circleSize: number;
+    dynamicBodyHeight: number;
+    cumY: number[];
+    totalMinutes: number;
+    startHour: number;
+    theme: Theme;
+    isDarkMode: boolean;
+    styles: ReturnType<typeof getStyles>;
+    onPressTask?: (item: RoutineItem) => void;
+}
+
+const TimelineColumn = memo<TimelineColumnProps>(({
+    isSelected,
+    colItems,
+    circleSize,
+    dynamicBodyHeight,
+    cumY,
+    totalMinutes,
+    startHour,
+    theme,
+    isDarkMode,
+    styles,
+    onPressTask,
+}) => {
+    const { elements, spineSegments } = useMemo(() => {
+        const getCumY = (m: number) => {
+            if (m <= 0) return cumY[0];
+            if (m >= totalMinutes) return cumY[totalMinutes];
+            return cumY[Math.floor(m)] || 0;
+        };
+
+        const rawElements: ElementEntry[] = [];
+        const chainableItems: RoutineItem[] = [];
+
+        colItems.forEach(item => {
+            const start = getTimelineMinute(item.time, startHour);
+            const topY = getCumY(start);
+
+            if (isWakeupOrSleep(item)) {
+                rawElements.push({
+                    type: 'wakeup_sleep',
+                    item,
+                    top: topY,
+                    bottom: topY + circleSize,
+                    height: circleSize,
+                });
+            } else {
+                chainableItems.push(item);
+            }
+        });
+
+        type Cluster = { items: RoutineItem[]; startMin: number; endMin: number };
+        const clusters: Cluster[] = [];
+
+        chainableItems.forEach(item => {
+            const start = getTimelineMinute(item.time, startHour);
+            const dur = item.duration ?? DEFAULT_DURATION;
+            const end = start + dur;
+
+            if (clusters.length === 0) {
+                clusters.push({ items: [item], startMin: start, endMin: end });
+            } else {
+                const last = clusters[clusters.length - 1];
+                if (start < last.endMin) {
+                    last.items.push(item);
+                    last.endMin = Math.max(last.endMin, end);
+                } else {
+                    clusters.push({ items: [item], startMin: start, endMin: end });
+                }
+            }
+        });
+
+        clusters.forEach(cluster => {
+            if (cluster.items.length === 1) {
+                const item = cluster.items[0];
+                const start = getTimelineMinute(item.time, startHour);
+                const dur = item.duration ?? DEFAULT_DURATION;
+                const topY = getCumY(start);
+                const rawH = getCumY(start + dur) - topY;
+                const pillHeight = Math.max(circleSize, Math.min(circleSize * 2.2, rawH));
+                rawElements.push({
+                    type: 'single',
+                    item,
+                    top: topY,
+                    bottom: topY + pillHeight,
+                    height: pillHeight,
+                });
+            } else {
+                const N = cluster.items.length;
+                const topY0 = getCumY(cluster.startMin);
+                const endY0 = getCumY(cluster.endMin);
+                const totalSlotH = Math.max(circleSize * 1.8 * N, endY0 - topY0);
+                const overlap = circleSize >= 40 ? 12 : 8;
+                const pillHeight = Math.max(
+                    circleSize * 1.6,
+                    Math.min(circleSize * 2.2, (totalSlotH + (N - 1) * overlap) / N)
+                );
+                const stepY = pillHeight - overlap;
+                const totalChainH = (N - 1) * stepY + pillHeight;
+
+                rawElements.push({
+                    type: 'chain',
+                    items: cluster.items,
+                    top: topY0,
+                    bottom: topY0 + totalChainH,
+                    pillHeight,
+                    stepY,
+                    overlap,
+                });
+            }
+        });
+
+        rawElements.sort((a, b) => a.top - b.top);
+
+        let currentBottom = -1;
+        const elementsList = rawElements.map(el => {
+            let { top, bottom } = el;
+            if (top < currentBottom + 6) {
+                const shift = currentBottom + 6 - top;
+                top += shift;
+                bottom += shift;
+            }
+            currentBottom = bottom;
+            return { ...el, top, bottom };
+        });
+
+        const spineList: { key: string; top: number; height: number }[] = [];
+        if (elementsList.length >= 2) {
+            for (let k = 0; k < elementsList.length - 1; k++) {
+                const segTop = elementsList[k].bottom;
+                const segHeight = elementsList[k + 1].top - segTop;
+                if (segHeight > 0) {
+                    spineList.push({
+                        key: `spine-seg-${k}`,
+                        top: segTop,
+                        height: segHeight,
+                    });
+                }
+            }
+        }
+
+        return { elements: elementsList, spineSegments: spineList };
+    }, [colItems, circleSize, cumY, totalMinutes, startHour]);
+
+    const primaryColor = theme.colors.primary;
+    const spineColor = isSelected ? primaryColor : (isDarkMode ? '#2C2C2E' : '#D0D0D0');
+
+    return (
+        <View style={[styles.column, { flex: 1, opacity: isSelected ? 1 : 0.45, height: dynamicBodyHeight }]}>
+            {/* Segmented spine lines */}
+            {spineSegments.map(seg => (
+                <View
+                    key={seg.key}
+                    style={{
+                        position: 'absolute',
+                        top: seg.top,
+                        height: seg.height,
+                        left: 0,
+                        right: 0,
+                        alignItems: 'center',
+                        pointerEvents: 'none',
+                    }}
+                >
+                    <View
+                        style={{
+                            width: isSelected ? 2 : 1.5,
+                            height: '100%',
+                            backgroundColor: spineColor,
+                            borderRadius: 1,
+                        }}
+                    />
+                </View>
+            ))}
+
+            {/* Visual elements */}
+            {elements.map((el, elIdx) => {
+                if (el.type === 'wakeup_sleep') {
+                    const { item, top } = el;
+                    const iconSize = Math.round(circleSize * 0.46);
+
+                    return (
+                        <View
+                            key={`ws-${item.id}`}
+                            style={{
+                                position: 'absolute',
+                                top,
+                                left: 0,
+                                right: 0,
+                                alignItems: 'center',
+                                zIndex: 10,
+                            }}
+                        >
+                            <Pressable
+                                onPress={() => {
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                    onPressTask?.(item);
+                                }}
+                                style={({ pressed }) => [
+                                    {
+                                        width: circleSize,
+                                        height: circleSize,
+                                        borderRadius: circleSize / 2,
+                                        backgroundColor: isSelected ? primaryColor : (isDarkMode ? '#242426' : '#E8E8E8'),
+                                        borderWidth: isSelected ? 1.5 : 1,
+                                        borderColor: isSelected ? `${primaryColor}CC` : 'transparent',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                    },
+                                    pressed && { opacity: 0.82, transform: [{ scale: 0.94 }] },
+                                    isSelected && Platform.select({
+                                        ios: {
+                                            shadowColor: primaryColor,
+                                            shadowOffset: { width: 0, height: 3 },
+                                            shadowOpacity: 0.4,
+                                            shadowRadius: 6,
+                                        },
+                                        android: { elevation: 0 },
+                                    }),
+                                ]}
+                            >
+                                <Ionicons
+                                    name={ICON_MAP[item.imageKey ?? ''] ?? 'alarm-outline'}
+                                    size={iconSize}
+                                    color={isSelected ? '#FFFFFF' : primaryColor}
+                                />
+                            </Pressable>
+                        </View>
+                    );
+                }
+
+                if (el.type === 'single') {
+                    const { item, top, height } = el;
+                    const iconSize = Math.round(circleSize * 0.46);
+
+                    return (
+                        <View
+                            key={`single-${item.id}`}
+                            style={{
+                                position: 'absolute',
+                                top,
+                                left: 0,
+                                right: 0,
+                                alignItems: 'center',
+                                zIndex: 10,
+                            }}
+                        >
+                            <Pressable
+                                onPress={() => {
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                    onPressTask?.(item);
+                                }}
+                                style={({ pressed }) => [
+                                    {
+                                        width: circleSize,
+                                        height,
+                                        borderRadius: circleSize / 2,
+                                        backgroundColor: TASK_COLORS[item.imageKey ?? ''] ?? (isDarkMode ? '#2C2C2E' : '#E0E0E0'),
+                                        borderWidth: 1.5,
+                                        borderColor: theme.colors.background,
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        overflow: 'hidden',
+                                    },
+                                    pressed && { opacity: 0.82, transform: [{ scale: 0.94 }] },
+                                    Platform.select({
+                                        ios: {
+                                            shadowColor: '#000000',
+                                            shadowOffset: { width: 0, height: 2 },
+                                            shadowOpacity: isDarkMode ? 0.35 : 0.15,
+                                            shadowRadius: 4,
+                                        },
+                                        android: { elevation: 0 },
+                                    }),
+                                ]}
+                            >
+                                <Ionicons
+                                    name={ICON_MAP[item.imageKey ?? ''] ?? 'ellipse-outline'}
+                                    size={iconSize}
+                                    color="#FFFFFF"
+                                />
+                            </Pressable>
+                        </View>
+                    );
+                }
+
+                if (el.type === 'chain') {
+                    const { items: chainItems, top, pillHeight, stepY } = el;
+                    const iconSize = Math.round(circleSize * 0.44);
+
+                    return (
+                        <React.Fragment key={`chain-${elIdx}-${chainItems[0]?.id}`}>
+                            {chainItems.map((item, cIdx) => {
+                                const pillTop = top + cIdx * stepY;
+                                const pillBg = TASK_COLORS[item.imageKey ?? ''] ?? (isDarkMode ? '#2C2C2E' : '#E0E0E0');
+                                const iconColor = '#FFFFFF';
+
+                                return (
+                                    <View
+                                        key={`chain-item-${item.id}-${cIdx}`}
+                                        style={{
+                                            position: 'absolute',
+                                            top: pillTop,
+                                            left: 0,
+                                            right: 0,
+                                            alignItems: 'center',
+                                            zIndex: 10 + cIdx,
+                                        }}
+                                    >
+                                        <Pressable
+                                            onPress={() => {
+                                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                                onPressTask?.(item);
+                                            }}
+                                            style={({ pressed }) => [
+                                                {
+                                                    width: circleSize,
+                                                    height: pillHeight,
+                                                    borderRadius: circleSize / 2,
+                                                    backgroundColor: pillBg,
+                                                    borderWidth: 1.5,
+                                                    borderColor: theme.colors.background,
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    overflow: 'hidden',
+                                                },
+                                                pressed && { opacity: 0.82, transform: [{ scale: 0.94 }] },
+                                                Platform.select({
+                                                    ios: {
+                                                        shadowColor: '#000000',
+                                                        shadowOffset: { width: 0, height: 2 },
+                                                        shadowOpacity: isDarkMode ? 0.35 : 0.15,
+                                                        shadowRadius: 4,
+                                                    },
+                                                    android: { elevation: 0 },
+                                                }),
+                                            ]}
+                                        >
+                                            <Ionicons
+                                                name={ICON_MAP[item.imageKey ?? ''] ?? 'ellipse-outline'}
+                                                size={iconSize}
+                                                color={iconColor}
+                                            />
+                                        </Pressable>
+                                    </View>
+                                );
+                            })}
+                        </React.Fragment>
+                    );
+                }
+
+                return null;
+            })}
+        </View>
+    );
+});
+TimelineColumn.displayName = "TimelineColumn";
+
 /* ───────────────────────────── TimelinePage ─────────────────────────── */
 
 const TimelinePage = memo<{
@@ -172,15 +547,6 @@ const TimelinePage = memo<{
         return listAnim.interpolate({
             inputRange: [0, 0.35, 1],
             outputRange: [0, 0, 1],
-            extrapolate: 'clamp',
-        });
-    }, [listAnim]);
-
-    const badgesHeight = useMemo(() => {
-        if (!listAnim) return new Animated.Value(0);
-        return listAnim.interpolate({
-            inputRange: [0, 1],
-            outputRange: [0, 16],
             extrapolate: 'clamp',
         });
     }, [listAnim]);
@@ -426,7 +792,7 @@ const TimelinePage = memo<{
                                         styles.taskBadgesRow,
                                         {
                                             opacity: badgesOpacity,
-                                            height: badgesHeight,
+                                            height: 16,
                                             overflow: 'hidden',
                                         },
                                     ]}
@@ -452,7 +818,7 @@ const TimelinePage = memo<{
                                     })}
                                 </Animated.View>
                             ) : (
-                                <Animated.View style={[styles.taskBadgesPlaceholder, { height: badgesHeight }]} />
+                                <View style={[styles.taskBadgesPlaceholder, { height: 16 }]} />
                             )}
                         </Pressable>
                     );
@@ -508,363 +874,20 @@ const TimelinePage = memo<{
                     const circleSize = isSelected ? circleSel : circleOther;
 
                     return (
-                        <View
+                        <TimelineColumn
                             key={key}
-                            style={[styles.column, { flex: 1, opacity: isSelected ? 1 : 0.45, height: dynamicBodyHeight }]}
-                        >
-                            {/* Segmented spine line and elements (never cuts through circles or pills) */}
-                            {(() => {
-                                const getCumY = (m: number) => {
-                                    if (m <= 0) return cumY[0];
-                                    if (m >= totalMinutes) return cumY[totalMinutes];
-                                    return cumY[Math.floor(m)] || 0;
-                                };
-
-                                // Separate wakeup & sleep tasks from other routine tasks
-                                type ElementEntry =
-                                    | { type: 'wakeup_sleep'; item: RoutineItem; top: number; bottom: number; height: number }
-                                    | { type: 'single'; item: RoutineItem; top: number; bottom: number; height: number }
-                                    | {
-                                        type: 'chain';
-                                        items: RoutineItem[];
-                                        top: number;
-                                        bottom: number;
-                                        pillHeight: number;
-                                        stepY: number;
-                                        overlap: number;
-                                    };
-
-                                const rawElements: ElementEntry[] = [];
-
-                                // 1. Partition colItems into wakeup/sleep vs chainable items
-                                const chainableItems: RoutineItem[] = [];
-
-                                colItems.forEach(item => {
-                                    const start = getTimelineMinute(item.time, startHour);
-                                    const topY = getCumY(start);
-
-                                    if (isWakeupOrSleep(item)) {
-                                        // Standalone circle node — never merged into a chain
-                                        rawElements.push({
-                                            type: 'wakeup_sleep',
-                                            item,
-                                            top: topY,
-                                            bottom: topY + circleSize,
-                                            height: circleSize,
-                                        });
-                                    } else {
-                                        chainableItems.push(item);
-                                    }
-                                });
-
-                                // 2. Group chainable items into overlapping clusters
-                                type Cluster = { items: RoutineItem[]; startMin: number; endMin: number };
-                                const clusters: Cluster[] = [];
-
-                                chainableItems.forEach(item => {
-                                    const start = getTimelineMinute(item.time, startHour);
-                                    const dur = item.duration ?? DEFAULT_DURATION;
-                                    const end = start + dur;
-
-                                    if (clusters.length === 0) {
-                                        clusters.push({ items: [item], startMin: start, endMin: end });
-                                    } else {
-                                        const last = clusters[clusters.length - 1];
-                                        if (start < last.endMin) {
-                                            last.items.push(item);
-                                            last.endMin = Math.max(last.endMin, end);
-                                        } else {
-                                            clusters.push({ items: [item], startMin: start, endMin: end });
-                                        }
-                                    }
-                                });
-
-                                // 3. Build single or chain elements from clusters
-                                clusters.forEach(cluster => {
-                                    if (cluster.items.length === 1) {
-                                        const item = cluster.items[0];
-                                        const start = getTimelineMinute(item.time, startHour);
-                                        const dur = item.duration ?? DEFAULT_DURATION;
-                                        const topY = getCumY(start);
-                                        const rawH = getCumY(start + dur) - topY;
-                                        const pillHeight = Math.max(circleSize, Math.min(circleSize * 2.2, rawH));
-                                        rawElements.push({
-                                            type: 'single',
-                                            item,
-                                            top: topY,
-                                            bottom: topY + pillHeight,
-                                            height: pillHeight,
-                                        });
-                                    } else {
-                                        const N = cluster.items.length;
-                                        const topY0 = getCumY(cluster.startMin);
-                                        const endY0 = getCumY(cluster.endMin);
-                                        const totalSlotH = Math.max(circleSize * 1.8 * N, endY0 - topY0);
-                                        const overlap = circleSize >= 40 ? 12 : 8;
-                                        const pillHeight = Math.max(
-                                            circleSize * 1.6,
-                                            Math.min(circleSize * 2.2, (totalSlotH + (N - 1) * overlap) / N)
-                                        );
-                                        const stepY = pillHeight - overlap;
-                                        const totalChainH = (N - 1) * stepY + pillHeight;
-
-                                        rawElements.push({
-                                            type: 'chain',
-                                            items: cluster.items,
-                                            top: topY0,
-                                            bottom: topY0 + totalChainH,
-                                            pillHeight,
-                                            stepY,
-                                            overlap,
-                                        });
-                                    }
-                                });
-
-                                // Sort elements chronologically by topY
-                                rawElements.sort((a, b) => a.top - b.top);
-
-                                // Ensure minimum 6px gap between adjacent elements to avoid accidental overlap
-                                let currentBottom = -1;
-                                const elements = rawElements.map(el => {
-                                    let { top, bottom } = el;
-                                    if (top < currentBottom + 6) {
-                                        const shift = currentBottom + 6 - top;
-                                        top += shift;
-                                        bottom += shift;
-                                    }
-                                    currentBottom = bottom;
-                                    return { ...el, top, bottom };
-                                });
-
-                                // 4. Build SEGMENTED CONNECTOR LINES between elements
-                                // Line strictly starts from the first pill and ends at the last pill on that day.
-                                // Never extends above the first pill, and never extends below the last pill.
-                                const spineSegments: { key: string; top: number; height: number }[] = [];
-                                if (elements.length >= 2) {
-                                    // Connectors between adjacent elements only
-                                    for (let k = 0; k < elements.length - 1; k++) {
-                                        const segTop = elements[k].bottom;
-                                        const segHeight = elements[k + 1].top - segTop;
-                                        if (segHeight > 0) {
-                                            spineSegments.push({
-                                                key: `spine-seg-${k}`,
-                                                top: segTop,
-                                                height: segHeight,
-                                            });
-                                        }
-                                    }
-                                }
-
-                                const primaryColor = theme.colors.primary;
-                                const spineColor = isSelected ? primaryColor : (isDarkMode ? '#2C2C2E' : '#D0D0D0');
-
-                                return (
-                                    <>
-                                        {/* Segmented spine lines */}
-                                        {spineSegments.map(seg => (
-                                            <View
-                                                key={seg.key}
-                                                style={{
-                                                    position: 'absolute',
-                                                    top: seg.top,
-                                                    height: seg.height,
-                                                    left: 0,
-                                                    right: 0,
-                                                    alignItems: 'center',
-                                                    pointerEvents: 'none',
-                                                }}
-                                            >
-                                                <View
-                                                    style={{
-                                                        width: isSelected ? 2 : 1.5,
-                                                        height: '100%',
-                                                        backgroundColor: spineColor,
-                                                        borderRadius: 1,
-                                                    }}
-                                                />
-                                            </View>
-                                        ))}
-
-                                        {/* Visual elements */}
-                                        {elements.map((el, elIdx) => {
-                                            if (el.type === 'wakeup_sleep') {
-                                                const { item, top } = el;
-                                                const iconSize = Math.round(circleSize * 0.46);
-
-                                                return (
-                                                    <View
-                                                        key={`ws-${item.id}`}
-                                                        style={{
-                                                            position: 'absolute',
-                                                            top,
-                                                            left: 0,
-                                                            right: 0,
-                                                            alignItems: 'center',
-                                                            zIndex: 10,
-                                                        }}
-                                                    >
-                                                        <Pressable
-                                                            onPress={() => {
-                                                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                                                onPressTask?.(item);
-                                                            }}
-                                                            style={({ pressed }) => [
-                                                                {
-                                                                    width: circleSize,
-                                                                    height: circleSize,
-                                                                    borderRadius: circleSize / 2,
-                                                                    backgroundColor: isSelected ? primaryColor : (isDarkMode ? '#242426' : '#E8E8E8'),
-                                                                    borderWidth: isSelected ? 1.5 : 1,
-                                                                    borderColor: isSelected ? `${primaryColor}CC` : 'transparent',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'center',
-                                                                },
-                                                                pressed && { opacity: 0.82, transform: [{ scale: 0.94 }] },
-                                                                isSelected && Platform.select({
-                                                                    ios: {
-                                                                        shadowColor: primaryColor,
-                                                                        shadowOffset: { width: 0, height: 3 },
-                                                                        shadowOpacity: 0.4,
-                                                                        shadowRadius: 6,
-                                                                    },
-                                                                    android: { elevation: 0 },
-                                                                }),
-                                                            ]}
-                                                        >
-                                                            <Ionicons
-                                                                name={ICON_MAP[item.imageKey ?? ''] ?? 'alarm-outline'}
-                                                                size={iconSize}
-                                                                color={isSelected ? '#FFFFFF' : primaryColor}
-                                                            />
-                                                        </Pressable>
-                                                    </View>
-                                                );
-                                            }
-
-                                            if (el.type === 'single') {
-                                                const { item, top, height } = el;
-                                                const iconSize = Math.round(circleSize * 0.46);
-
-                                                return (
-                                                    <View
-                                                        key={`single-${item.id}`}
-                                                        style={{
-                                                            position: 'absolute',
-                                                            top,
-                                                            left: 0,
-                                                            right: 0,
-                                                            alignItems: 'center',
-                                                            zIndex: 10,
-                                                        }}
-                                                    >
-                                                        <Pressable
-                                                            onPress={() => {
-                                                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                                                onPressTask?.(item);
-                                                            }}
-                                                            style={({ pressed }) => [
-                                                                {
-                                                                    width: circleSize,
-                                                                    height,
-                                                                    borderRadius: circleSize / 2,
-                                                                    backgroundColor: isSelected ? primaryColor : (isDarkMode ? '#242426' : '#E8E8E8'),
-                                                                    borderWidth: isSelected ? 1.5 : 1,
-                                                                    borderColor: isSelected ? `${primaryColor}CC` : 'transparent',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'center',
-                                                                    overflow: 'hidden',
-                                                                },
-                                                                pressed && { opacity: 0.82, transform: [{ scale: 0.94 }] },
-                                                                isSelected && Platform.select({
-                                                                    ios: {
-                                                                        shadowColor: primaryColor,
-                                                                        shadowOffset: { width: 0, height: 3 },
-                                                                        shadowOpacity: 0.35,
-                                                                        shadowRadius: 6,
-                                                                    },
-                                                                    android: { elevation: 0 },
-                                                                }),
-                                                            ]}
-                                                        >
-                                                            <Ionicons
-                                                                name={ICON_MAP[item.imageKey ?? ''] ?? 'ellipse-outline'}
-                                                                size={iconSize}
-                                                                color={isSelected ? '#FFFFFF' : primaryColor}
-                                                            />
-                                                        </Pressable>
-                                                    </View>
-                                                );
-                                            }
-
-                                            // el.type === 'chain' (Directly overlapping pills, no cutouts)
-                                            const { items, top: chainTop, pillHeight, stepY } = el;
-                                            const chainBg = isSelected ? primaryColor : (isDarkMode ? '#242426' : '#E8E8E8');
-                                            const iconColor = isSelected ? '#FFFFFF' : primaryColor;
-
-                                            return (
-                                                <React.Fragment key={`chain-${elIdx}-${chainTop}`}>
-                                                    {/* Directly overlapping stadium pills */}
-                                                    {items.map((item, i) => {
-                                                        const pillTop = chainTop + i * stepY;
-                                                        const iconSize = Math.round(circleSize * 0.46);
-
-                                                        return (
-                                                            <View
-                                                                key={`chain-pill-${item.id}`}
-                                                                style={{
-                                                                    position: 'absolute',
-                                                                    top: pillTop,
-                                                                    left: 0,
-                                                                    right: 0,
-                                                                    alignItems: 'center',
-                                                                    zIndex: 10 + i,
-                                                                }}
-                                                            >
-                                                                <Pressable
-                                                                    onPress={() => {
-                                                                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                                                        onPressTask?.(item);
-                                                                    }}
-                                                                    style={({ pressed }) => [
-                                                                        {
-                                                                            width: circleSize,
-                                                                            height: pillHeight,
-                                                                            borderRadius: circleSize / 2,
-                                                                            backgroundColor: chainBg,
-                                                                            borderWidth: 2,
-                                                                            borderColor: theme.colors.background,
-                                                                            alignItems: 'center',
-                                                                            justifyContent: 'center',
-                                                                            overflow: 'hidden',
-                                                                        },
-                                                                        pressed && { opacity: 0.82, transform: [{ scale: 0.94 }] },
-                                                                        Platform.select({
-                                                                            ios: {
-                                                                                shadowColor: '#000000',
-                                                                                shadowOffset: { width: 0, height: 2 },
-                                                                                shadowOpacity: isDarkMode ? 0.35 : 0.15,
-                                                                                shadowRadius: 4,
-                                                                            },
-                                                                            android: { elevation: 0 },
-                                                                        }),
-                                                                    ]}
-                                                                >
-                                                                    <Ionicons
-                                                                        name={ICON_MAP[item.imageKey ?? ''] ?? 'ellipse-outline'}
-                                                                        size={iconSize}
-                                                                        color={iconColor}
-                                                                    />
-                                                                </Pressable>
-                                                            </View>
-                                                        );
-                                                    })}
-                                                </React.Fragment>
-                                            );
-                                        })}
-                                    </>
-                                );
-                            })()}
-                        </View>
+                            isSelected={isSelected}
+                            colItems={colItems}
+                            circleSize={circleSize}
+                            dynamicBodyHeight={dynamicBodyHeight}
+                            cumY={cumY}
+                            totalMinutes={totalMinutes}
+                            startHour={startHour}
+                            theme={theme}
+                            isDarkMode={isDarkMode}
+                            styles={styles}
+                            onPressTask={onPressTask}
+                        />
                     );
                 })}
                 {/* Right spacer for symmetry */}
@@ -874,6 +897,27 @@ const TimelinePage = memo<{
             </Animated.View>
         </View>
     );
+}, (prev, next) => {
+    if (prev.allRoutines !== next.allRoutines ||
+        prev.theme !== next.theme ||
+        prev.listAnim !== next.listAnim ||
+        prev.screenWidth !== next.screenWidth ||
+        prev.startHour !== next.startHour ||
+        prev.totalMinutes !== next.totalMinutes ||
+        prev.circleSel !== next.circleSel ||
+        prev.circleOther !== next.circleOther ||
+        prev.COL_WIDTH !== next.COL_WIDTH) {
+        return false;
+    }
+    const prevKeyInPage = prev.pageDates.some(d => formatDateKey(d) === prev.selectedKey);
+    const nextKeyInPage = next.pageDates.some(d => formatDateKey(d) === next.selectedKey);
+    if (!prevKeyInPage && !nextKeyInPage) {
+        return true;
+    }
+    if (prev.selectedKey === next.selectedKey) {
+        return true;
+    }
+    return false;
 });
 TimelinePage.displayName = "TimelinePage";
 
@@ -1228,10 +1272,11 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                                 index: idx,
                             })}
                             // Performance optimizations
+                            initialNumToRender={3}
                             windowSize={Platform.OS === 'web' ? 7 : 3}
                             maxToRenderPerBatch={2}
                             updateCellsBatchingPeriod={50}
-                            removeClippedSubviews={Platform.OS === 'android'}
+                            removeClippedSubviews={Platform.OS !== 'web'}
                             onScrollToIndexFailed={info => {
                                 const targetOffset = info.index * SCREEN_WIDTH;
                                 setTimeout(() => {

@@ -1,6 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
@@ -54,44 +53,43 @@ interface TaskModalProps {
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-const TaskModal: React.FC<TaskModalProps> = ({
-  visible,
+const cloneTask = (t: RoutineItem): RoutineItem => ({
+  ...t,
+  daysOfWeek: t.daysOfWeek ? [...t.daysOfWeek] : [],
+  subtasks: t.subtasks ? t.subtasks.map((s) => ({ ...s })) : [],
+});
+
+interface TaskModalInnerProps {
+  task: RoutineItem;
+  theme: Theme;
+  styles: ReturnType<typeof getStyles>;
+  insets: ReturnType<typeof useSafeAreaInsets>;
+  onDelete: () => void;
+  onChainNextTask?: (endTime: string) => void;
+  closeAndSave: (taskToSave?: RoutineItem) => void;
+  closeWithoutSave: () => void;
+  headerPanResponder: any;
+  handleScroll: (e: NativeSyntheticEvent<NativeScrollEvent>) => void;
+}
+
+const TaskModalInner: React.FC<TaskModalInnerProps> = React.memo(({
   task,
-  onClose,
-  onSaveTask,
+  theme,
+  styles,
+  insets,
   onDelete,
   onChainNextTask,
+  closeAndSave,
+  closeWithoutSave,
+  headerPanResponder,
+  handleScroll,
 }) => {
-  const { theme, isDarkMode } = useTheme();
-  const styles = useMemo(() => getCachedStyles(theme), [theme]);
-  const insets = useSafeAreaInsets();
-  const [slideAnim] = useState(() => new Animated.Value(SCREEN_HEIGHT));
-
-  const cloneTask = (t: RoutineItem): RoutineItem => ({
-    ...t,
-    daysOfWeek: t.daysOfWeek ? [...t.daysOfWeek] : [],
-    subtasks: t.subtasks ? t.subtasks.map((s) => ({ ...s })) : [],
-  });
-
-  const [currentTaskId, setCurrentTaskId] = useState<string | null>(task?.id ?? null);
-  const [editedTask, setEditedTask] = useState<RoutineItem | null>(() => (task ? cloneTask(task) : null));
+  const [editedTask, setEditedTask] = useState<RoutineItem>(() => cloneTask(task));
   const [activeAccordion, setActiveAccordion] = useState<"none" | "time" | "duration" | "repeat">("none");
   const [showIconPicker, setShowIconPicker] = useState(false);
 
-  // Synchronously sync state during render when a new task is received or modal becomes visible
-  if (visible && task && (task.id !== currentTaskId || !editedTask)) {
-    setCurrentTaskId(task.id);
-    setEditedTask(cloneTask(task));
-    setActiveAccordion("none");
-    setShowIconPicker(false);
-  }
-
-  const scrollOffset = useRef(0);
-  const handleSaveRef = useRef<(() => void) | null>(null);
-
   /* ── Harmonious Theme Accent Color ── */
   const taskColor = useMemo(() => {
-    if (!editedTask) return theme.colors.primary;
     if (editedTask.imageKey && TASK_COLORS[editedTask.imageKey]) {
       return TASK_COLORS[editedTask.imageKey];
     }
@@ -102,126 +100,12 @@ const TaskModal: React.FC<TaskModalProps> = ({
     }
     const idx = Math.abs(hash) % FALLBACK_COLORS.length;
     return FALLBACK_COLORS[idx];
-  }, [editedTask, theme.colors.primary]);
-
-  /* ── Save and Close ── */
-  const closeAndSave = () => {
-    Animated.timing(slideAnim, {
-      toValue: SCREEN_HEIGHT,
-      duration: 220,
-      useNativeDriver: true,
-    }).start(() => {
-      handleSaveRef.current?.();
-    });
-  };
-
-  const closeWithoutSave = () => {
-    Animated.timing(slideAnim, {
-      toValue: SCREEN_HEIGHT,
-      duration: 220,
-      useNativeDriver: true,
-    }).start(() => {
-      onClose();
-    });
-  };
-
-  /* ── Pan Gesture for Smooth Pull-Down Dismiss ── */
-  const handlePanResponderMove = (_: GestureResponderEvent, gestureState: PanResponderGestureState) => {
-    if (gestureState.dy > 0) {
-      slideAnim.setValue(gestureState.dy);
-    }
-  };
-
-  const handlePanResponderRelease = (_: GestureResponderEvent, gestureState: PanResponderGestureState) => {
-    if (gestureState.dy > 90 || gestureState.vy > 0.9) {
-      closeAndSave();
-    } else {
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        tension: 85,
-        friction: 11,
-        useNativeDriver: true,
-      }).start();
-    }
-  };
-
-   const headerPanResponder = useMemo(
-    () =>
-      Platform.OS === "web"
-        ? { panHandlers: {} }
-        // eslint-disable-next-line react-hooks/refs
-        : PanResponder.create({
-            onStartShouldSetPanResponder: () => true,
-            onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dy) > 10,
-            onPanResponderMove: handlePanResponderMove,
-            onPanResponderRelease: handlePanResponderRelease,
-          }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [slideAnim]
-  );
-
-   const bodyPanResponder = useMemo(
-    () =>
-      Platform.OS === "web"
-        ? { panHandlers: {} }
-        // eslint-disable-next-line react-hooks/refs
-        : PanResponder.create({
-            onStartShouldSetPanResponder: () => false,
-            onMoveShouldSetPanResponderCapture: (_, gestureState) => {
-              return gestureState.dy > 15 && scrollOffset.current <= 1;
-            },
-            onMoveShouldSetPanResponder: (_, gestureState) => {
-              return gestureState.dy > 15 && scrollOffset.current <= 1;
-            },
-            onPanResponderMove: handlePanResponderMove,
-            onPanResponderRelease: handlePanResponderRelease,
-          }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [slideAnim]
-  );
-
-  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    scrollOffset.current = e.nativeEvent.contentOffset.y;
-    if (scrollOffset.current < -60) {
-      closeAndSave();
-    }
-  };
-
-  useEffect(() => {
-    if (visible) {
-      slideAnim.setValue(SCREEN_HEIGHT);
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        tension: 85,
-        friction: 11,
-        useNativeDriver: true,
-      }).start();
-    } else {
-      Animated.timing(slideAnim, {
-        toValue: SCREEN_HEIGHT,
-        duration: 220,
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [visible, slideAnim]);
-
-  const handleSave = () => {
-    if (onSaveTask && editedTask) {
-      onSaveTask(editedTask);
-    }
-    onClose();
-  };
-
-  useEffect(() => {
-    handleSaveRef.current = handleSave;
-  });
-
-  if (!task || !editedTask) return null;
+  }, [editedTask.imageKey, editedTask.task]);
 
   /* ── Time Calculations ── */
   const getDisplayTime = () => {
-    const startStr = editedTask?.time || "1:00 AM";
-    const dur = editedTask?.duration || 30;
+    const startStr = editedTask.time || "1:00 AM";
+    const dur = editedTask.duration || 30;
     const endStr = addMinutesToTime(startStr, dur);
     return `${startStr} – ${endStr}`;
   };
@@ -238,7 +122,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
   const adjustDuration = (delta: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setEditedTask((prev) => {
-      if (!prev) return prev;
       const cur = prev.duration || 30;
       return { ...prev, duration: Math.max(5, Math.min(240, cur + delta)) };
     });
@@ -248,62 +131,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
   const completedSubtasksCount = subtasksList.filter((s) => s.completed).length;
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="none"
-      statusBarTranslucent
-      onRequestClose={closeAndSave}
-    >
-      <Animated.View
-        style={[
-          StyleSheet.absoluteFill,
-          {
-            opacity: slideAnim.interpolate({
-              inputRange: [0, SCREEN_HEIGHT],
-              outputRange: [1, 0],
-              extrapolate: "clamp",
-            }),
-          },
-        ]}
-      >
-        {Platform.OS === "ios" ? (
-          <BlurView
-            style={StyleSheet.absoluteFill}
-            intensity={25}
-            tint={isDarkMode ? "dark" : "light"}
-          />
-        ) : (
-          <View
-            style={[
-              StyleSheet.absoluteFill,
-              { backgroundColor: isDarkMode ? "rgba(0,0,0,0.65)" : "rgba(0,0,0,0.4)" },
-            ]}
-          />
-        )}
-        <Pressable style={StyleSheet.absoluteFill} onPress={closeAndSave} />
-      </Animated.View>
-
-      <View style={styles.overlay} pointerEvents="box-none">
-        <Animated.View
-          style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}
-        >
-          {Platform.OS === "ios" ? (
-            <BlurView
-              style={StyleSheet.absoluteFill}
-              intensity={70}
-              tint={isDarkMode ? "dark" : "light"}
-            />
-          ) : (
-            <View
-              style={[
-                StyleSheet.absoluteFill,
-                { backgroundColor: isDarkMode ? theme.colors.surface : theme.colors.background },
-              ]}
-            />
-          )}
-
-          {/* ── Draggable Header Zone ── */}
+    <>
+      {/* ── Draggable Header Zone ── */}
           <View {...headerPanResponder.panHandlers} style={styles.headerSection}>
             <View style={styles.handle} />
 
@@ -331,7 +160,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 variant="primary"
                 size="sm"
                 icon={<Ionicons name="checkmark" size={16} color={theme.colors.onPrimary} />}
-                onPress={closeAndSave}
+                onPress={() => closeAndSave(editedTask)}
               />
             </View>
 
@@ -371,7 +200,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
                   onChangeText={(t) => {
                     const autoKey = guessRoutineIconKey(t);
                     setEditedTask((prev) => {
-                      if (!prev) return null;
                       const isDefault = !prev.imageKey || prev.imageKey === "breathe";
                       return {
                         ...prev,
@@ -510,7 +338,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
               <View style={styles.accordionContainer}>
                 <TimePicker
                   value={editedTask.time || "8:00 AM"}
-                  onChange={(t) => setEditedTask((prev) => (prev ? { ...prev, time: t } : null))}
+                  onChange={(t) => setEditedTask((prev) => ({ ...prev, time: t }))}
                 />
               </View>
             )}
@@ -544,7 +372,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 {/* Preset Chips */}
                 <DurationPicker
                   selectedDuration={editedTask.duration || 30}
-                  onChange={(dur) => setEditedTask((prev) => (prev ? { ...prev, duration: dur } : null))}
+                  onChange={(dur) => setEditedTask((prev) => ({ ...prev, duration: dur }))}
                   activeColor={taskColor}
                 />
               </View>
@@ -555,7 +383,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
               <View style={styles.accordionContainer}>
                 <DaysOfWeekPicker
                   selectedDays={editedTask.daysOfWeek || []}
-                  onChange={(days) => setEditedTask((prev) => (prev ? { ...prev, daysOfWeek: days } : null))}
+                  onChange={(days) => setEditedTask((prev) => ({ ...prev, daysOfWeek: days }))}
                   activeColor={taskColor}
                 />
 
@@ -582,7 +410,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                         ]}
                         onPress={() => {
                           Haptics.selectionAsync();
-                          setEditedTask((prev) => (prev ? { ...prev, daysOfWeek: p.days } : null));
+                          setEditedTask((prev) => ({ ...prev, daysOfWeek: p.days }));
                         }}
                       >
                         <Text
@@ -602,7 +430,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
           </View>
 
           {/* ── Scrollable Body Section ── */}
-          <View {...bodyPanResponder.panHandlers} style={{ flex: 1 }}>
+          <View style={{ flex: 1 }}>
             <ScrollView
               style={styles.bodyScroll}
               contentContainerStyle={styles.bodyScrollContent}
@@ -630,7 +458,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 <SubtaskList
                   subtasks={subtasksList}
                   onChange={(updated) =>
-                    setEditedTask((prev) => (prev ? { ...prev, subtasks: updated } : null))
+                    setEditedTask((prev) => ({ ...prev, subtasks: updated }))
                   }
                   activeColor={taskColor}
                 />
@@ -651,7 +479,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                   multiline
                   value={editedTask.description}
                   onChangeText={(t) =>
-                    setEditedTask((prev) => (prev ? { ...prev, description: t } : null))
+                    setEditedTask((prev) => ({ ...prev, description: t }))
                   }
                   textAlignVertical="top"
                 />
@@ -721,16 +549,165 @@ const TaskModal: React.FC<TaskModalProps> = ({
               activeColor={taskColor}
               currentIconKey={editedTask?.imageKey}
               onSelectIcon={(iconKey) => {
-                setEditedTask((prev) => (prev ? { ...prev, imageKey: iconKey } : null));
+                setEditedTask((prev) => ({ ...prev, imageKey: iconKey }));
                 setShowIconPicker(false);
               }}
             />
           )}
+        
+    </>
+  );
+});
+TaskModalInner.displayName = "TaskModalInner";
+
+const TaskModal: React.FC<TaskModalProps> = ({
+  visible,
+  task,
+  onClose,
+  onSaveTask,
+  onDelete,
+  onChainNextTask,
+}) => {
+  const { theme, isDarkMode } = useTheme();
+  const styles = useMemo(() => getCachedStyles(theme), [theme]);
+  const insets = useSafeAreaInsets();
+  const [slideAnim] = useState(() => new Animated.Value(SCREEN_HEIGHT));
+  const latestTaskToSaveRef = useRef<RoutineItem | null>(null);
+
+  const closeAndSave = useCallback((taskToSave?: RoutineItem) => {
+    if (taskToSave) {
+      latestTaskToSaveRef.current = taskToSave;
+    }
+    Animated.timing(slideAnim, {
+      toValue: SCREEN_HEIGHT,
+      duration: 180,
+      useNativeDriver: true,
+    }).start(() => {
+      if (latestTaskToSaveRef.current && onSaveTask) {
+        onSaveTask(latestTaskToSaveRef.current);
+      }
+      onClose();
+    });
+  }, [slideAnim, onSaveTask, onClose]);
+
+  const closeWithoutSave = useCallback(() => {
+    Animated.timing(slideAnim, {
+      toValue: SCREEN_HEIGHT,
+      duration: 180,
+      useNativeDriver: true,
+    }).start(() => {
+      onClose();
+    });
+  }, [slideAnim, onClose]);
+
+  /* ── Pan Gesture for Smooth Pull-Down Dismiss ── */
+  const handlePanResponderMove = useCallback((_: GestureResponderEvent, gestureState: PanResponderGestureState) => {
+    if (gestureState.dy > 0) {
+      slideAnim.setValue(gestureState.dy);
+    }
+  }, [slideAnim]);
+
+  const handlePanResponderRelease = useCallback((_: GestureResponderEvent, gestureState: PanResponderGestureState) => {
+    if (gestureState.dy > 90 || gestureState.vy > 0.9) {
+      closeAndSave();
+    } else {
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        tension: 90,
+        friction: 12,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [closeAndSave, slideAnim]);
+
+  const headerPanResponder = useMemo(
+    () =>
+      Platform.OS === "web"
+        ? { panHandlers: {} }
+        // eslint-disable-next-line react-hooks/refs
+        : PanResponder.create({
+            onStartShouldSetPanResponder: () => true,
+            onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dy) > 10,
+            onPanResponderMove: handlePanResponderMove,
+            onPanResponderRelease: handlePanResponderRelease,
+          }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [slideAnim, closeAndSave]
+  );
+
+  const handleScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (e.nativeEvent.contentOffset.y < -60) {
+      closeAndSave();
+    }
+  }, [closeAndSave]);
+
+  useEffect(() => {
+    if (visible) {
+      slideAnim.setValue(SCREEN_HEIGHT);
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        tension: 90,
+        friction: 12,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(slideAnim, {
+        toValue: SCREEN_HEIGHT,
+        duration: 180,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [visible, slideAnim]);
+
+  if (!task) return null;
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="none"
+      statusBarTranslucent
+      onRequestClose={() => closeAndSave()}
+    >
+      <Animated.View
+        style={[
+          StyleSheet.absoluteFill,
+          {
+            backgroundColor: isDarkMode ? "rgba(0,0,0,0.65)" : "rgba(0,0,0,0.4)",
+            opacity: slideAnim.interpolate({
+              inputRange: [0, SCREEN_HEIGHT],
+              outputRange: [1, 0],
+              extrapolate: "clamp",
+            }),
+          },
+        ]}
+      >
+        <Pressable style={StyleSheet.absoluteFill} onPress={() => closeAndSave()} />
+      </Animated.View>
+
+      <View style={styles.overlay} pointerEvents="box-none">
+        <Animated.View
+          style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}
+        >
+          <TaskModalInner
+            key={task.id}
+            task={task}
+            theme={theme}
+            styles={styles}
+            insets={insets}
+            onDelete={onDelete}
+            onChainNextTask={onChainNextTask}
+            closeAndSave={closeAndSave}
+            closeWithoutSave={closeWithoutSave}
+            headerPanResponder={headerPanResponder}
+            handleScroll={handleScroll}
+          />
         </Animated.View>
       </View>
     </Modal>
   );
 };
+
 
 export default React.memo(TaskModal);
 

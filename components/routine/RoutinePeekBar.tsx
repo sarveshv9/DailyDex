@@ -42,7 +42,7 @@ const RoutinePeekBarComponent: React.FC<RoutinePeekBarProps> = ({
   panHandlers,
 }) => {
   const { theme } = useTheme();
-  const styles = useMemo(() => getStyles(theme), [theme]);
+  const styles = useMemo(() => getCachedStyles(theme), [theme]);
 
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -167,6 +167,17 @@ const RoutinePeekBarComponent: React.FC<RoutinePeekBarProps> = ({
 };
 
 export const RoutinePeekBar = React.memo(RoutinePeekBarComponent);
+
+const stylesCache = new Map<string, ReturnType<typeof getStyles>>();
+const getCachedStyles = (theme: Theme) => {
+  const key = `${theme.colors.background}-${theme.colors.primary}-${theme.colors.surface}`;
+  let s = stylesCache.get(key);
+  if (!s) {
+    s = getStyles(theme);
+    stylesCache.set(key, s);
+  }
+  return s;
+};
 
 const getStyles = (theme: Theme) =>
   StyleSheet.create({

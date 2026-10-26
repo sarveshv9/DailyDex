@@ -74,7 +74,7 @@ interface DayDetailProps {
     theme: Theme;
 }
 
-function DayDetail({ date, items, theme }: DayDetailProps) {
+function DayDetailComponent({ date, items, theme }: DayDetailProps) {
     const isToday = fmtDateKey(date) === fmtDateKey(new Date());
 
     return (
@@ -150,6 +150,8 @@ function DayDetail({ date, items, theme }: DayDetailProps) {
         </View>
     );
 }
+
+const DayDetail = React.memo(DayDetailComponent);
 
 interface CalendarCellProps {
     date: Date | null;
@@ -263,14 +265,17 @@ function MonthCalendarViewComponent({ currentDate, routineItems, onSelectDate, t
     const todayStr = fmtDateKey(new Date());
     const selectedStr = fmtDateKey(selectedDate);
 
-    const prevMonth = () => {
+    const prevMonth = useCallback(() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         if (month === 0) { setYear(y => y - 1); setMonth(11); }
         else setMonth(m => m - 1);
-    };
-    const nextMonth = () => {
+    }, [month]);
+
+    const nextMonth = useCallback(() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         if (month === 11) { setYear(y => y + 1); setMonth(0); }
         else setMonth(m => m + 1);
-    };
+    }, [month]);
 
     // Build the 6-row grid (42 cells), padded with nulls for leading/trailing days
     const gridCells = useMemo(() => {
@@ -282,6 +287,14 @@ function MonthCalendarViewComponent({ currentDate, routineItems, onSelectDate, t
         while (cells.length % 7 !== 0) cells.push(null);
         return cells;
     }, [year, month]);
+
+    const weeks = useMemo(() => {
+        const result: (Date | null)[][] = [];
+        for (let i = 0; i < gridCells.length; i += 7) {
+            result.push(gridCells.slice(i, i + 7));
+        }
+        return result;
+    }, [gridCells]);
 
     // Pre-calculate dot colors and total counts for the entire month once
     const monthDotsMap = useMemo(() => {
@@ -304,21 +317,31 @@ function MonthCalendarViewComponent({ currentDate, routineItems, onSelectDate, t
 
     const selectedItems = useMemo(() => getDayItems(selectedDate), [selectedDate, getDayItems]);
 
+    const selectedDateRef = React.useRef(selectedDate);
+    const onSelectDateRef = React.useRef(onSelectDate);
+
+    React.useEffect(() => {
+        selectedDateRef.current = selectedDate;
+        onSelectDateRef.current = onSelectDate;
+    });
+
     const handleDetailCardPress = useCallback(() => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        onSelectDate(selectedDate);
-    }, [onSelectDate, selectedDate]);
+        onSelectDateRef.current(selectedDateRef.current);
+    }, []);
 
     // Tapping a grid cell selects it; tapping the already selected date confirms and navigates
+    // Note: handleCellPress is completely stable across renders via refs so CalendarCell memo is preserved
     const handleCellPress = useCallback((date: Date) => {
         const dateStr = fmtDateKey(date);
-        if (dateStr === selectedStr) {
+        const currentSelectedStr = fmtDateKey(selectedDateRef.current);
+        if (dateStr === currentSelectedStr) {
             handleDetailCardPress();
             return;
         }
         Haptics.selectionAsync();
         setSelectedDate(date);
-    }, [selectedStr, handleDetailCardPress]);
+    }, [handleDetailCardPress]);
 
     return (
         <ScrollView
@@ -381,9 +404,9 @@ function MonthCalendarViewComponent({ currentDate, routineItems, onSelectDate, t
 
             {/* ── Calendar Grid ── */}
             <View style={[grid.gridContainer, { paddingHorizontal: 16 }]}>
-                {Array.from({ length: gridCells.length / 7 }, (_, weekIdx) => (
+                {weeks.map((week, weekIdx) => (
                     <View key={weekIdx} style={grid.weekRow}>
-                        {gridCells.slice(weekIdx * 7, weekIdx * 7 + 7).map((date, cellIdx) => {
+                        {week.map((date, cellIdx) => {
                             if (!date) {
                                 return <View key={cellIdx} style={grid.cell} />;
                             }
