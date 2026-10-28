@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
@@ -93,8 +92,7 @@ const TaskFormInner: React.FC<TaskFormProps> = ({
   onClose,
   selectedDate,
 }) => {
-  const { theme, isDarkMode } = useTheme();
-  const isDark = isDarkMode;
+  const { theme } = useTheme();
   const styles = useMemo(() => getStyles(theme), [theme]);
 
   const [slideAnim] = useState(() => new Animated.Value(SCREEN_HEIGHT));
@@ -334,21 +332,12 @@ const TaskFormInner: React.FC<TaskFormProps> = ({
           },
         ]}
       >
-        {Platform.OS === "web" ? (
-          <View
-            style={[
-              StyleSheet.absoluteFill,
-              { backgroundColor: isDark ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.35)" },
-            ]}
-          />
-        ) : (
-          <BlurView
-            style={StyleSheet.absoluteFill}
-            intensity={Platform.OS === "ios" ? 25 : 45}
-            tint={isDark ? "dark" : "light"}
-            experimentalBlurMethod="dimezisBlurView"
-          />
-        )}
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: theme.colors.scrim },
+          ]}
+        />
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       </Animated.View>
 
@@ -357,22 +346,6 @@ const TaskFormInner: React.FC<TaskFormProps> = ({
           style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}
           testID="task-form-content"
         >
-          {Platform.OS === "web" ? (
-            <View
-              style={[
-                StyleSheet.absoluteFill,
-                { backgroundColor: isDark ? theme.colors.surface : theme.colors.background },
-              ]}
-            />
-          ) : (
-            <BlurView
-              style={StyleSheet.absoluteFill}
-              intensity={Platform.OS === "ios" ? 70 : 100}
-              tint={isDark ? "dark" : "light"}
-              experimentalBlurMethod="dimezisBlurView"
-            />
-          )}
-
           {/* ── Drag Handle ── */}
           <View style={styles.handle} />
 
@@ -951,7 +924,9 @@ const getStyles = (theme: Theme) => {
       justifyContent: "flex-end",
     },
     sheet: {
-      backgroundColor: theme.glass.cardBg,
+      backgroundColor: theme.colors.surface,
+      borderTopWidth: 1,
+      borderColor: theme.colors.border,
       borderTopLeftRadius: 32,
       borderTopRightRadius: 32,
       paddingTop: 10,
@@ -959,15 +934,7 @@ const getStyles = (theme: Theme) => {
       height: SCREEN_HEIGHT * 0.85,
       maxHeight: SCREEN_HEIGHT * 0.92,
       overflow: "hidden",
-      ...Platform.select({
-        ios: {
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 0.16,
-          shadowRadius: 18,
-        },
-        android: { elevation: 0 },
-      }),
+      elevation: 0,
     },
     handle: {
       ...shared.modalHandle,

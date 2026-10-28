@@ -1,11 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BackHandler,
   Dimensions,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -109,7 +107,7 @@ export default function FocusScreen() {
   const [selectedDuration, setSelectedDuration] = useState(initialDuration);
   const [selectedMode, setSelectedMode] = useState<"Free" | "Pomodoro">("Free");
 
-  // Custom Glassmorphic Confirmation Modal
+  // Custom Flat Confirmation Modal
   const [confirmModalVisible, setConfirmModalVisible] = useState(false);
   const [confirmModalType, setConfirmModalType] = useState<"end" | "minimize">(
     "end"
@@ -161,7 +159,7 @@ export default function FocusScreen() {
   }, [isSessionInProgress, router]);
 
   /**
-   * Dedicated End Session action that opens custom glassmorphic modal
+   * Dedicated End Session action that opens custom flat modal
    */
   const handleEndSessionPress = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -229,16 +227,6 @@ export default function FocusScreen() {
       >
         {/* Currently Focusing Task Card */}
         <View style={styles.taskCard}>
-          <BlurView
-            intensity={isDarkMode ? 25 : 45}
-            tint={
-              isDarkMode
-                ? "systemThickMaterialDark"
-                : "systemThickMaterialLight"
-            }
-            style={StyleSheet.absoluteFill}
-            pointerEvents="none"
-          />
           <View style={styles.taskBadge}>
             <Ionicons
               name="disc-outline"
@@ -356,22 +344,14 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
       width: "100%",
       borderRadius: themeTokens.borderRadius.lg,
       borderWidth: 1,
-      borderColor: theme.glass.borderColor,
-      backgroundColor: theme.glass.cardBg,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.surface,
       overflow: "hidden",
       paddingHorizontal: themeTokens.spacing.lg,
       paddingVertical: 14,
       alignItems: "center",
       marginBottom: themeTokens.spacing.lg,
-      ...Platform.select({
-        ios: {
-          shadowColor: themeTokens.colors.black,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: isDarkMode ? 0.3 : 0.05,
-          shadowRadius: 10,
-        },
-        android: { elevation: 0 },
-      }),
+      elevation: 0,
     },
     taskBadge: {
       flexDirection: "row",

@@ -1,10 +1,8 @@
 // components/profile/ProfileCard.tsx
 import { Ionicons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
 import React, { useMemo } from "react";
 import {
   Image,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -61,14 +59,7 @@ export function ProfileCard<T extends ProfileUserData = ProfileUserData>({
 
   return (
     <View style={styles.cardContainer}>
-      <BlurView
-        intensity={Platform.OS === "ios" ? 40 : 80}
-        tint={isDarkMode ? "dark" : "light"}
-        style={styles.blurWrapper}
-      >
-        <View style={styles.glassOverlay} />
-
-        {/* Top Action Affordance */}
+      {/* Top Action Affordance */}
         <Pressable
           style={({ pressed }) => [
             styles.editButton,
@@ -218,29 +209,17 @@ export function ProfileCard<T extends ProfileUserData = ProfileUserData>({
             )}
           </View>
         )}
-      </BlurView>
-    </View>
-  );
+      </View>
+    );
 };
 
 const getStyles = (theme: Theme, isDark: boolean) => {
   const shared = getSharedStyles(theme);
   return StyleSheet.create({
     cardContainer: {
-      ...shared.glassCard,
-      borderRadius: 24,
-      overflow: "hidden",
-      ...Platform.select({
-        ios: {
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: isDark ? 0.3 : 0.08,
-          shadowRadius: 12,
-        },
-        android: { elevation: 4 },
-      }),
-    },
-    blurWrapper: {
+      backgroundColor: theme.colors.surface,
+      borderColor: theme.colors.border,
+      borderWidth: 1,
       borderRadius: 24,
       overflow: "hidden",
       paddingHorizontal: theme.spacing.lg,
@@ -248,11 +227,7 @@ const getStyles = (theme: Theme, isDark: boolean) => {
       paddingBottom: theme.spacing.xl,
       alignItems: "center",
       position: "relative",
-    },
-    glassOverlay: {
-      ...StyleSheet.absoluteFill,
-      borderRadius: 24,
-      backgroundColor: theme.glass.cardBg,
+      elevation: 0,
     },
     editButton: {
       position: "absolute",

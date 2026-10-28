@@ -105,15 +105,15 @@ export function createTheme(
 
   const isDark = mode === "dark";
 
-  // 1. NEUTRALS: Independent of theme per mode
-  const background = isDark ? themeTokens.colors.ink : themeTokens.colors.white;
-  const surface = isDark ? themeTokens.colors.gray[950] : themeTokens.colors.gray[50];
-  const surfaceMuted = isDark ? themeTokens.colors.gray[850] : themeTokens.colors.gray[200];
-  const border = isDark ? themeTokens.colors.gray[800] : themeTokens.colors.gray[300];
-  const divider = isDark ? themeTokens.colors.gray[850] : themeTokens.colors.gray[200];
-  const text = isDark ? themeTokens.colors.gray[100] : themeTokens.colors.gray[900];
-  const textSecondary = isDark ? themeTokens.colors.gray[500] : themeTokens.colors.gray[600];
-  const scrim = isDark ? "rgba(0, 0, 0, 0.65)" : "rgba(0, 0, 0, 0.45)";
+  // 1. NEUTRALS: Independent of theme per mode (OLED Black seamless dark theme)
+  const background = isDark ? themeTokens.colors.black : themeTokens.colors.white;
+  const surface = isDark ? themeTokens.colors.black : themeTokens.colors.gray[50];
+  const surfaceMuted = isDark ? "#0A0A0D" : themeTokens.colors.gray[200];
+  const border = isDark ? "#1C1C22" : themeTokens.colors.gray[300];
+  const divider = isDark ? "#16161B" : themeTokens.colors.gray[200];
+  const text = isDark ? "#FFFFFF" : themeTokens.colors.gray[900];
+  const textSecondary = isDark ? "#8E8E98" : themeTokens.colors.gray[600];
+  const scrim = isDark ? "rgba(0, 0, 0, 0.75)" : "rgba(0, 0, 0, 0.45)";
 
   const danger = isDark ? themeTokens.colors.danger : themeTokens.colors.dangerDark;
   const dangerSoft = isDark ? themeTokens.colors.dangerSoftDark : themeTokens.colors.dangerSoftLight;
@@ -160,12 +160,12 @@ export function createTheme(
   // primaryText: Accent used as text/icons (>= 4.5:1 on surface, primarySoft, background)
   const primaryText = derivePrimaryText(primary, surface, primarySoft, background, mode);
 
-  // 3. GLASS CONFIG
+  // 3. FLAT SURFACE CONFIG (maintained as glass interface for backwards compatibility)
   const glassTokens = isDark ? themeTokens.glass.dark : themeTokens.glass.light;
   const glass: ThemeGlass = {
-    cardBg: glassTokens.cardBg,
-    borderColor: glassTokens.borderColor,
-    shadowOpacity: glassTokens.shadowOpacity,
+    cardBg: surface,
+    borderColor: border,
+    shadowOpacity: 0,
     iconTintAlpha: glassTokens.iconTintAlpha,
     neutralFill: surfaceMuted,
   };

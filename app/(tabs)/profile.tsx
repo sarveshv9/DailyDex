@@ -46,7 +46,7 @@ import { RoutineItem } from "../../utils/utils";
  *
  * - Focused strictly on user personalization, cloud sync, and app preferences.
  * - Free of gamification, streaks, and analytical clutter.
- * - Elegant glassmorphic aesthetics, standardized buttons (56px, borderRadius: 22).
+ * - Elegant clean flat aesthetics, standardized buttons (56px, borderRadius: 22).
  */
 
 export default function ProfileScreen() {

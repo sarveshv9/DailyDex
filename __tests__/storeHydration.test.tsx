@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 import React from "react";
 import { View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -400,8 +401,8 @@ describe("Store Hydration from Legacy Storage Shapes", () => {
 
       // Assert theme was NOT loaded raw from storage, but recomputed fresh
       expect((state.theme as any).staleMarker).toBeUndefined();
-      expect(state.theme.colors.background).toBe("#0B0B0E"); // Calmed dark ink background
-      expect(state.theme.colors.surface).toBe("#151519"); // Clean neutral surface
+      expect(state.theme.colors.background).toBe("#000000"); // Seamless OLED black background
+      expect(state.theme.colors.surface).toBe("#000000"); // Seamless OLED black surface
       expect(state.theme.colors.primary).toBeDefined();
 
       // Assert customThemes entry is normalized to { id, pokemonId, accentHex, name }

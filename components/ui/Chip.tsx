@@ -98,12 +98,8 @@ const getStyles = (theme: Theme, selected: boolean, size: "sm" | "md") => {
     badge: {
       marginLeft: theme.spacing.xs,
       backgroundColor: selected
-        ? theme.isDarkMode
-          ? "rgba(255, 255, 255, 0.40)"
-          : "rgba(0, 0, 0, 0.16)"
-        : theme.isDarkMode
-        ? "rgba(255, 255, 255, 0.12)"
-        : "rgba(0, 0, 0, 0.08)",
+        ? (theme.isDarkMode ? "rgba(255, 255, 255, 0.25)" : "rgba(0, 0, 0, 0.16)")
+        : theme.colors.surfaceMuted,
       borderRadius: themeTokens.borderRadius.full,
       paddingHorizontal: 7,
       paddingVertical: 2,
@@ -112,12 +108,8 @@ const getStyles = (theme: Theme, selected: boolean, size: "sm" | "md") => {
       justifyContent: "center",
       borderWidth: 1,
       borderColor: selected
-        ? theme.isDarkMode
-          ? "rgba(255, 255, 255, 0.50)"
-          : "rgba(0, 0, 0, 0.22)"
-        : theme.isDarkMode
-        ? "rgba(255, 255, 255, 0.16)"
-        : "rgba(0, 0, 0, 0.12)",
+        ? (theme.isDarkMode ? "rgba(255, 255, 255, 0.35)" : "rgba(0, 0, 0, 0.22)")
+        : theme.colors.border,
     },
     badgeText: {
       fontSize: 10,

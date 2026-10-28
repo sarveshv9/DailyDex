@@ -1,6 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { BlurView } from "expo-blur";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -403,24 +402,12 @@ const TaskModalInner = ({
 
   return (
     <View style={styles.modalBackdrop}>
-      {Platform.OS === "web" ? (
-        <View
-          style={[
-            StyleSheet.absoluteFill,
-            {
-              backgroundColor: isDarkMode
-                ? "rgba(0,0,0,0.7)"
-                : "rgba(0,0,0,0.35)",
-            },
-          ]}
-        />
-      ) : (
-        <BlurView
-          style={StyleSheet.absoluteFill}
-          intensity={isDarkMode ? 35 : 25}
-          tint={isDarkMode ? "dark" : "light"}
-        />
-      )}
+      <View
+        style={[
+          StyleSheet.absoluteFill,
+          { backgroundColor: theme.colors.scrim },
+        ]}
+      />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -675,24 +662,12 @@ const ConfirmModal = ({
       onRequestClose={onCancel}
     >
       <View style={styles.modalBackdrop}>
-        {Platform.OS === "web" ? (
-          <View
-            style={[
-              StyleSheet.absoluteFill,
-              {
-                backgroundColor: isDarkMode
-                  ? "rgba(0,0,0,0.7)"
-                  : "rgba(0,0,0,0.35)",
-              },
-            ]}
-          />
-        ) : (
-          <BlurView
-            style={StyleSheet.absoluteFill}
-            intensity={isDarkMode ? 35 : 25}
-            tint={isDarkMode ? "dark" : "light"}
-          />
-        )}
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: theme.colors.scrim },
+          ]}
+        />
         <View style={styles.confirmCenterWrapper}>
           <View style={styles.confirmCard}>
             <View style={styles.confirmIconWrap}>
@@ -1356,9 +1331,9 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       paddingVertical: 10,
       paddingHorizontal: 12,
       borderRadius: 16,
-      backgroundColor: neutralFill,
+      backgroundColor: theme.colors.surfaceMuted,
       borderWidth: 1,
-      borderColor: theme.glass.borderColor,
+      borderColor: theme.colors.border,
     },
     filterTabButtonActive: {
       backgroundColor: activeTint,
@@ -1377,9 +1352,9 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       paddingHorizontal: 6,
       paddingVertical: 1,
       borderRadius: 10,
-      backgroundColor: isDarkMode
-        ? "rgba(255,255,255,0.12)"
-        : "rgba(0,0,0,0.08)",
+      backgroundColor: theme.colors.surfaceMuted,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
     },
     filterTabBadgeActive: {
       backgroundColor: theme.colors.primary,
@@ -1397,9 +1372,9 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     quickAddBar: {
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: theme.glass.cardBg,
+      backgroundColor: theme.colors.surface,
       borderWidth: 1,
-      borderColor: theme.glass.borderColor,
+      borderColor: theme.colors.border,
       borderRadius: 22,
       paddingHorizontal: 14,
       height: 52,
@@ -1442,21 +1417,13 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     taskCard: {
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: theme.glass.cardBg,
+      backgroundColor: theme.colors.surface,
       borderWidth: 1,
-      borderColor: theme.glass.borderColor,
+      borderColor: theme.colors.border,
       borderRadius: 20,
       paddingVertical: 12,
       paddingHorizontal: 14,
-      ...Platform.select({
-        ios: {
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: isDarkMode ? 0.2 : 0.05,
-          shadowRadius: 8,
-        },
-        android: { elevation: 0 },
-      }),
+      elevation: 0,
     },
     checkboxTouchTarget: {
       padding: 4,
@@ -1696,10 +1663,8 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
 
     modalInputWrapper: {
       borderWidth: 1,
-      borderColor: theme.glass.borderColor,
-      backgroundColor: isDarkMode
-        ? "rgba(255,255,255,0.04)"
-        : "rgba(0,0,0,0.02)",
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.surfaceMuted,
       borderRadius: 18,
       padding: 14,
       marginBottom: 18,
@@ -1734,8 +1699,8 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       paddingVertical: 12,
       borderRadius: 16,
       borderWidth: 1.5,
-      borderColor: theme.glass.borderColor,
-      backgroundColor: neutralFill,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.surfaceMuted,
     },
     modalCategoryChipActive: {
       backgroundColor: activeTint,

@@ -1,10 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
 import React, { useMemo } from "react";
 import {
   Animated,
   GestureResponderHandlers,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -51,7 +49,6 @@ const RoutinePeekBarComponent: React.FC<RoutinePeekBarProps> = ({
     onOpenList();
   };
 
-  const isLight = !theme.isDarkMode;
   const isDark = theme.isDarkMode;
   const badgeTint = blendOpaque(nextTaskBadgeColor, theme.colors.surface, isDark ? 0.20 : 0.14);
   const badgeDot = isDark ? scaleChroma(nextTaskBadgeColor, 0.9) : nextTaskBadgeColor;
@@ -79,24 +76,12 @@ const RoutinePeekBarComponent: React.FC<RoutinePeekBarProps> = ({
         accessibilityLabel="Open daily routine detail panel"
         {...(panHandlers ?? {})}
       >
-        {Platform.OS === "web" ? (
-          <View
-            style={[
-              StyleSheet.absoluteFill,
-              { backgroundColor: theme.colors.background, opacity: 0.92 },
-            ]}
-            pointerEvents="none"
-          />
-        ) : (
-          <BlurView
-            intensity={100}
-            tint={isLight ? "systemMaterialLight" : "systemMaterialDark"}
-            style={StyleSheet.absoluteFill}
-            pointerEvents="none"
-          />
-        )}
         <View
-          style={[StyleSheet.absoluteFill, { backgroundColor: theme.glass.cardBg }]}
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: theme.colors.surface },
+          ]}
+          pointerEvents="none"
         />
 
         <View style={styles.collapsedPillContent}>
@@ -215,13 +200,10 @@ const getStyles = (theme: Theme) =>
       height: 68,
       borderRadius: themeTokens.borderRadius.full,
       borderWidth: 1,
-      borderColor: theme.glass.borderColor,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.surface,
       overflow: "hidden",
-      elevation: 6,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.08,
-      shadowRadius: 16,
+      elevation: 0,
       alignItems: "center",
       paddingHorizontal: themeTokens.spacing.md,
     },

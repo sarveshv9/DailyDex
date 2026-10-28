@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
 import React, { useMemo } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { themeTokens } from "../../constants/themeTokens";
@@ -26,16 +25,6 @@ const FocusCompletionCardComponent: React.FC<FocusCompletionCardProps> = ({
   return (
     <View style={styles.completionSection}>
       <View style={styles.completionCard}>
-        <BlurView
-          intensity={isDarkMode ? 30 : 50}
-          tint={
-            isDarkMode
-              ? "systemThickMaterialDark"
-              : "systemThickMaterialLight"
-          }
-          style={StyleSheet.absoluteFill}
-          pointerEvents="none"
-        />
         <View style={styles.completionIconCircle}>
           <Ionicons
             name="checkmark-circle"
@@ -119,12 +108,15 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       marginTop: 4,
     },
     completionCard: {
-      ...shared.glassCard,
+      backgroundColor: theme.colors.surface,
+      borderColor: theme.colors.border,
+      borderWidth: 1,
       width: "100%",
       borderRadius: themeTokens.borderRadius.xl,
       overflow: "hidden",
       padding: themeTokens.spacing.xl,
       alignItems: "center",
+      elevation: 0,
     },
     completionIconCircle: {
       ...shared.iconCircle,

@@ -11,12 +11,10 @@ import {
 } from 'expo-router/react-navigation';
 import * as Haptics from '../../utils/haptics';
 import { withLayoutContext } from 'expo-router';
-import { BlurView } from 'expo-blur';
 import React, { useEffect, useRef } from 'react';
 import {
   Animated,
   BackHandler,
-  Platform,
   Pressable,
   StyleSheet,
   View,
@@ -133,29 +131,18 @@ function CustomTabBar({
             {
               width: tabBarWidth,
               borderWidth: 1,
-              borderColor: theme.glass.borderColor,
+              borderColor: theme.colors.border,
             },
           ]}
         >
-          {/* Blur background - fallback to solid bg on web */}
-          {Platform.OS === 'web' ? (
-            <View 
-              style={[
-                StyleSheet.absoluteFill, 
-                { backgroundColor: theme.colors.background, opacity: 0.92 }
-              ]} 
-              pointerEvents="none"
-            />
-          ) : (
-            <BlurView
-              intensity={100}
-              tint={theme.isDarkMode ? 'systemMaterialDark' : 'systemMaterialLight'}
-              style={StyleSheet.absoluteFill}
-              pointerEvents="none"
-            />
-          )}
-          {/* Glass tint overlay */}
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.glass.cardBg }]} />
+          {/* Clean Flat solid background */}
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              { backgroundColor: theme.colors.surface },
+            ]}
+            pointerEvents="none"
+          />
           {/* Background icons (outlined) - each in their own position */}
           {state.routes.map((route: TabRoute, index: number) => {
             const { options } = descriptors[route.key];
@@ -341,10 +328,6 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 99,
     elevation: 0,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
     overflow: 'hidden',
   },
   tabBarButton: {

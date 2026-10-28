@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
 import React, { useMemo } from "react";
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { Theme, getSharedStyles } from "../../styles/shared";
 import { themeTokens } from "../../constants/themeTokens";
@@ -27,18 +26,8 @@ const SetupPromptCardComponent: React.FC<SetupPromptCardProps> = ({
         entering={FadeIn.duration(700).delay(120)}
         style={[styles.setupCard, { maxWidth }]}
       >
-        <BlurView
-          intensity={100}
-          tint={
-            isDarkMode
-              ? "systemThickMaterialDark"
-              : "systemThickMaterialLight"
-          }
-          style={styles.blurWrapper}
-        >
-          <View style={styles.cardTint} />
-          <View style={styles.setupCardInner}>
-            <View style={styles.setupIconCircle}>
+        <View style={styles.setupCardInner}>
+          <View style={styles.setupIconCircle}>
               <Ionicons
                 name="leaf-outline"
                 size={40}
@@ -74,8 +63,7 @@ const SetupPromptCardComponent: React.FC<SetupPromptCardProps> = ({
               <Text style={styles.primaryButtonText}>Create Routine</Text>
             </Pressable>
           </View>
-        </BlurView>
-      </Animated.View>
+        </Animated.View>
     </View>
   );
 };
@@ -91,27 +79,12 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     },
     setupCard: {
       width: "100%",
-      borderRadius: 32,
-      ...Platform.select({
-        ios: {
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: isDarkMode ? 0.3 : 0.08,
-          shadowRadius: 16,
-        },
-        android: { elevation: 4 },
-      }),
-    },
-    blurWrapper: {
-      borderRadius: 32,
-      overflow: "hidden",
+      borderRadius: 24,
       borderWidth: 1,
-      borderColor: theme.glass.borderColor,
-      width: "100%",
-    },
-    cardTint: {
-      ...StyleSheet.absoluteFill,
-      backgroundColor: theme.glass.cardBg,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.surface,
+      overflow: "hidden",
+      elevation: 0,
     },
     setupCardInner: {
       padding: 36,

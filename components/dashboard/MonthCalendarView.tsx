@@ -425,7 +425,7 @@ function MonthCalendarViewComponent({ currentDate, routineItems, onSelectDate, t
             </View>
 
             {/* ── Thin separator ── */}
-            <View style={[sep.line, { backgroundColor: theme.glass.borderColor, marginHorizontal: 16, marginTop: 16 }]} />
+            <View style={[sep.line, { backgroundColor: theme.colors.border, marginHorizontal: 16, marginTop: 16 }]} />
 
             {/* ── Selected Day Detail ── tap the card to confirm selection ── */}
             <Pressable

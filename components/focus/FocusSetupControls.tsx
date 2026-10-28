@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
 import React, { useMemo } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { CrossPlatformSegmentedControl } from "../common/CrossPlatformSegmentedControl";
@@ -146,16 +145,6 @@ const FocusSetupControlsComponent: React.FC<FocusSetupControlsProps> = ({
       ) : (
         <>
           <View style={styles.pomodoroExplainerCard}>
-            <BlurView
-              intensity={isDarkMode ? 20 : 40}
-              tint={
-                isDarkMode
-                  ? "systemThickMaterialDark"
-                  : "systemThickMaterialLight"
-              }
-              style={StyleSheet.absoluteFill}
-              pointerEvents="none"
-            />
             <View style={styles.pomodoroExplainerTitleRow}>
               <Ionicons
                 name="sparkles-outline"
@@ -256,11 +245,15 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       color: theme.colors.onPrimary,
     },
     pomodoroExplainerCard: {
-      ...shared.glassCard,
+      backgroundColor: theme.colors.surface,
+      borderColor: theme.colors.border,
+      borderWidth: 1,
+      borderRadius: theme.borderRadius.lg,
       width: "100%",
       overflow: "hidden",
       padding: themeTokens.spacing.lg,
       marginBottom: themeTokens.spacing.xl,
+      elevation: 0,
     },
     pomodoroExplainerTitleRow: {
       flexDirection: "row",

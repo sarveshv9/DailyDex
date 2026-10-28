@@ -386,27 +386,16 @@ const getStyles = (theme: Theme) => {
       paddingVertical: 4,
     },
     clockCard: {
-      ...shared.glassCard,
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
       padding: 12,
       gap: 8,
-      ...Platform.select({
-        ios: {
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: theme.glass.shadowOpacity,
-          shadowRadius: 10,
-        },
-        android: {
-          elevation: 4,
-        },
-        web: {
-          boxShadow: `0 4px 16px rgba(0,0,0,${theme.glass.shadowOpacity})`,
-          backdropFilter: "blur(12px)",
-        },
-      }),
+      backgroundColor: theme.colors.surface,
+      borderColor: theme.colors.border,
+      borderWidth: 1,
+      borderRadius: theme.borderRadius.lg,
+      elevation: 0,
     },
     digitGroup: {
       alignItems: "center",
@@ -417,11 +406,11 @@ const getStyles = (theme: Theme) => {
       width: 38,
       height: 30,
       borderRadius: theme.borderRadius.sm,
-      backgroundColor: theme.glass.neutralFill,
+      backgroundColor: theme.colors.surfaceMuted,
       alignItems: "center",
       justifyContent: "center",
       borderWidth: 1,
-      borderColor: theme.glass.borderColor,
+      borderColor: theme.colors.border,
     },
     stepperPressed: {
       opacity: 0.6,

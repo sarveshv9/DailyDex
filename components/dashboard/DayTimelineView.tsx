@@ -280,7 +280,7 @@ const TimelineColumn = memo<TimelineColumnProps>(({
     }, [colItems, circleSize, cumY, totalMinutes, startHour]);
 
     const primaryColor = theme.colors.primary;
-    const spineColor = isSelected ? primaryColor : (isDarkMode ? '#2C2C2E' : '#D0D0D0');
+    const spineColor = isSelected ? primaryColor : theme.colors.border;
 
     return (
         <View style={[styles.column, { flex: 1, opacity: isSelected ? 1 : 0.45, height: dynamicBodyHeight }]}>
@@ -337,7 +337,7 @@ const TimelineColumn = memo<TimelineColumnProps>(({
                                         width: circleSize,
                                         height: circleSize,
                                         borderRadius: circleSize / 2,
-                                        backgroundColor: isSelected ? primaryColor : (isDarkMode ? '#242426' : '#E8E8E8'),
+                                        backgroundColor: isSelected ? primaryColor : theme.colors.surfaceMuted,
                                         borderWidth: isSelected ? 1.5 : 1,
                                         borderColor: isSelected ? `${primaryColor}CC` : 'transparent',
                                         alignItems: 'center',
@@ -391,7 +391,7 @@ const TimelineColumn = memo<TimelineColumnProps>(({
                                         width: circleSize,
                                         height,
                                         borderRadius: circleSize / 2,
-                                        backgroundColor: TASK_COLORS[item.imageKey ?? ''] ?? (isDarkMode ? '#2C2C2E' : '#E0E0E0'),
+                                        backgroundColor: TASK_COLORS[item.imageKey ?? ''] ?? theme.colors.border,
                                         borderWidth: 1.5,
                                         borderColor: theme.colors.background,
                                         alignItems: 'center',
@@ -428,7 +428,7 @@ const TimelineColumn = memo<TimelineColumnProps>(({
                         <React.Fragment key={`chain-${elIdx}-${chainItems[0]?.id}`}>
                             {chainItems.map((item, cIdx) => {
                                 const pillTop = top + cIdx * stepY;
-                                const pillBg = TASK_COLORS[item.imageKey ?? ''] ?? (isDarkMode ? '#2C2C2E' : '#E0E0E0');
+                                const pillBg = TASK_COLORS[item.imageKey ?? ''] ?? theme.colors.border;
                                 const iconColor = '#FFFFFF';
 
                                 return (

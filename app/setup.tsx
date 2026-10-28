@@ -1,6 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState, useMemo } from "react";
 import Svg, { Circle, Defs, RadialGradient, Stop } from "react-native-svg";
@@ -191,14 +190,20 @@ function StepWelcome({
         );
     }, [pulseAnim]);
 
-    const pulseAuraStyle = useAnimatedStyle(() => ({
-        transform: [{ scale: pulseAnim.value }],
-        opacity: 0.85 + (pulseAnim.value - 1) * 1.25,
-    }));
+    const pulseAuraStyle = useAnimatedStyle(() => {
+        'worklet';
+        return {
+            transform: [{ scale: pulseAnim.value }],
+            opacity: 0.85 + (pulseAnim.value - 1) * 1.25,
+        };
+    });
 
-    const pulseRingStyle = useAnimatedStyle(() => ({
-        transform: [{ scale: 1 + (pulseAnim.value - 1) * 0.6 }],
-    }));
+    const pulseRingStyle = useAnimatedStyle(() => {
+        'worklet';
+        return {
+            transform: [{ scale: 1 + (pulseAnim.value - 1) * 0.6 }],
+        };
+    });
 
     return (
         <View style={styles.welcomeContainer}>
@@ -256,44 +261,9 @@ function StepWelcome({
                     <Text style={styles.welcomeBrand}>ZEN</Text>
                 </View>
 
-                <Text style={styles.welcomeHeadline}>
+                <Text style={styles.welcomeCatchphrase}>
                     Design your days with calm, intentional momentum.
                 </Text>
-                <Text style={styles.welcomeSubtitle}>
-                    Anchor your biological clock, build friction-free rituals, and experience calm productivity.
-                </Text>
-
-                <View style={styles.welcomeHighlights}>
-                    <View style={styles.welcomeHighlightItem}>
-                        <View style={styles.welcomeHighlightIconCircle}>
-                            <Ionicons name="sunny-outline" size={18} color={theme.colors.primary} />
-                        </View>
-                        <View style={styles.welcomeHighlightContent}>
-                            <Text style={styles.welcomeHighlightTitle}>Circadian rhythm anchors</Text>
-                            <Text style={styles.welcomeHighlightDesc}>Sync wake & sleep times to your natural biological clock</Text>
-                        </View>
-                    </View>
-
-                    <View style={styles.welcomeHighlightItem}>
-                        <View style={styles.welcomeHighlightIconCircle}>
-                            <Ionicons name="flash-outline" size={18} color={theme.colors.primary} />
-                        </View>
-                        <View style={styles.welcomeHighlightContent}>
-                            <Text style={styles.welcomeHighlightTitle}>Fluid daily rituals</Text>
-                            <Text style={styles.welcomeHighlightDesc}>Friction-free routines that flow with your energy</Text>
-                        </View>
-                    </View>
-
-                    <View style={styles.welcomeHighlightItem}>
-                        <View style={styles.welcomeHighlightIconCircle}>
-                            <Ionicons name="notifications-outline" size={18} color={theme.colors.primary} />
-                        </View>
-                        <View style={styles.welcomeHighlightContent}>
-                            <Text style={styles.welcomeHighlightTitle}>Quiet, mindful reminders</Text>
-                            <Text style={styles.welcomeHighlightDesc}>Gentle nudges when it’s time to transition</Text>
-                        </View>
-                    </View>
-                </View>
             </View>
 
             <View style={styles.welcomeBottomBar}>
@@ -609,7 +579,6 @@ function StepPick({
                         style={styles.previewBackdrop}
                         onPress={() => setShowCustomModal(false)}
                     >
-                        <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} />
                         <KeyboardAvoidingView
                             behavior={Platform.OS === "ios" ? "padding" : undefined}
                             style={{ width: "100%", alignItems: "center", justifyContent: "center" }}
@@ -937,7 +906,6 @@ function StepTimes({
             {recurringModalItem !== null && (
                 <View style={[StyleSheet.absoluteFill, { zIndex: 200, elevation: 200 }]}>
                     <Pressable style={styles.previewBackdrop} onPress={() => setRecurringModalItem(null)}>
-                        <BlurView intensity={25} tint="dark" style={StyleSheet.absoluteFill} />
                         <KeyboardAvoidingView
                             behavior={Platform.OS === "ios" ? "padding" : undefined}
                             style={{ width: "100%", alignItems: "center", justifyContent: "center" }}
@@ -1401,16 +1369,18 @@ const getStyles = (theme: Theme) =>
             color: theme.colors.textSecondary,
         },
         welcomeCenter: {
+            flex: 1,
             alignItems: "center",
-            paddingHorizontal: 22,
-            paddingTop: 4,
+            justifyContent: "center",
+            paddingHorizontal: 28,
+            paddingBottom: 24,
         },
         welcomeAuraWrap: {
             width: 140,
             height: 140,
             alignItems: "center",
             justifyContent: "center",
-            marginBottom: 16,
+            marginBottom: 20,
         },
         welcomeSvgGlow: {
             position: "absolute",
@@ -1457,13 +1427,13 @@ const getStyles = (theme: Theme) =>
         welcomeBrandBadge: {
             flexDirection: "row",
             alignItems: "center",
-            paddingHorizontal: 12,
-            paddingVertical: 4,
+            paddingHorizontal: 14,
+            paddingVertical: 5,
             borderRadius: 16,
             backgroundColor: hexToRgba(theme.colors.primary, 0.10),
             borderWidth: 1,
             borderColor: hexToRgba(theme.colors.primary, 0.25),
-            marginBottom: 12,
+            marginBottom: 16,
         },
         welcomeBrand: {
             fontSize: 11,
@@ -1471,63 +1441,14 @@ const getStyles = (theme: Theme) =>
             letterSpacing: 3,
             color: theme.colors.primary,
         },
-        welcomeHeadline: {
-            fontSize: 27,
+        welcomeCatchphrase: {
+            fontSize: 22,
             fontFamily: theme.fonts.bold,
             color: theme.colors.text,
             textAlign: "center",
-            lineHeight: 34,
-            letterSpacing: -0.4,
-            marginBottom: 8,
-        },
-        welcomeSubtitle: {
-            fontSize: themeTokens.fonts.size.sm,
-            fontFamily: theme.fonts.regular,
-            color: theme.colors.textSecondary,
-            textAlign: "center",
-            lineHeight: 21,
-            marginBottom: 20,
-            paddingHorizontal: 8,
-        },
-        welcomeHighlights: {
-            width: "100%",
-            gap: 10,
-        },
-        welcomeHighlightItem: {
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 14,
-            backgroundColor: theme.colors.surfaceMuted,
-            paddingHorizontal: 16,
-            paddingVertical: 12,
-            borderRadius: 18,
-            borderWidth: 1,
-            borderColor: theme.colors.border,
-        },
-        welcomeHighlightIconCircle: {
-            width: 38,
-            height: 38,
-            borderRadius: 13,
-            backgroundColor: hexToRgba(theme.colors.primary, 0.12),
-            borderWidth: 1,
-            borderColor: hexToRgba(theme.colors.primary, 0.22),
-            alignItems: "center",
-            justifyContent: "center",
-        },
-        welcomeHighlightContent: {
-            flex: 1,
-            gap: 2,
-        },
-        welcomeHighlightTitle: {
-            fontSize: themeTokens.fonts.size.sm,
-            fontFamily: theme.fonts.bold,
-            color: theme.colors.text,
-        },
-        welcomeHighlightDesc: {
-            fontSize: 12,
-            fontFamily: theme.fonts.regular,
-            color: theme.colors.textSecondary,
-            lineHeight: 16,
+            lineHeight: 30,
+            letterSpacing: -0.3,
+            maxWidth: 320,
         },
         welcomeBottomBar: {
             paddingHorizontal: 20,

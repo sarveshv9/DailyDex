@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
 import React, { useMemo } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
@@ -50,18 +49,8 @@ const FocusHeroCardComponent: React.FC<FocusHeroCardProps> = ({
       </View>
 
       <View style={styles.focusCard}>
-        <BlurView
-          intensity={100}
-          tint={
-            isDarkMode
-              ? "systemThickMaterialDark"
-              : "systemThickMaterialLight"
-          }
-          style={styles.blurWrapper}
-        >
-          <View style={styles.cardTint} />
-          <View style={styles.focusCardInner}>
-            {/* Top: Icon + Name + Description + Duration + Focus Timer Button */}
+        <View style={styles.focusCardInner}>
+          {/* Top: Icon + Name + Description + Duration + Focus Timer Button */}
             <View style={styles.focusTopRow}>
               <View style={styles.focusIconSquircle}>
                 <Ionicons
@@ -175,9 +164,8 @@ const FocusHeroCardComponent: React.FC<FocusHeroCardProps> = ({
               />
             </Pressable>
           </View>
-        </BlurView>
-      </View>
-    </Animated.View>
+        </View>
+      </Animated.View>
   );
 };
 
@@ -199,26 +187,12 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       ...shared.sectionLabel,
     },
     focusCard: {
-      borderRadius: 28,
-      ...Platform.select({
-        ios: {
-          shadowColor: "#000000",
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: isDarkMode ? 0.3 : 0.08,
-          shadowRadius: 16,
-        },
-        android: { elevation: 0 },
-      }),
-    },
-    blurWrapper: {
-      borderRadius: 28,
-      overflow: "hidden",
+      borderRadius: 24,
       borderWidth: 1,
-      borderColor: theme.glass.borderColor,
-    },
-    cardTint: {
-      ...StyleSheet.absoluteFill,
-      backgroundColor: theme.glass.cardBg,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.surface,
+      overflow: "hidden",
+      elevation: 0,
     },
     focusCardInner: {
       padding: 22,
@@ -265,9 +239,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       paddingHorizontal: 9,
       paddingVertical: 4,
       borderRadius: 12,
-      backgroundColor: isDarkMode
-        ? "rgba(255, 255, 255, 0.08)"
-        : "rgba(0, 0, 0, 0.05)",
+      backgroundColor: theme.colors.surfaceMuted,
       borderWidth: 1,
       borderColor: theme.colors.border,
     },
@@ -324,13 +296,9 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     progressBarTrack: {
       height: 8,
       borderRadius: 999,
-      backgroundColor: isDarkMode
-        ? "rgba(255, 255, 255, 0.16)"
-        : "rgba(0, 0, 0, 0.10)",
+      backgroundColor: theme.colors.surfaceMuted,
       borderWidth: 1,
-      borderColor: isDarkMode
-        ? "rgba(255, 255, 255, 0.12)"
-        : "rgba(0, 0, 0, 0.08)",
+      borderColor: theme.colors.border,
       overflow: "hidden",
     },
     progressBarFill: {

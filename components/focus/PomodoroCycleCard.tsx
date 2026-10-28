@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
 import React, { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { themeTokens } from "../../constants/themeTokens";
@@ -36,12 +35,6 @@ const PomodoroCycleCardComponent: React.FC<PomodoroCycleCardProps> = ({
 
   return (
     <View style={styles.pomoCycleCard}>
-      <BlurView
-        intensity={isDarkMode ? 20 : 40}
-        tint={isDarkMode ? "systemThickMaterialDark" : "systemThickMaterialLight"}
-        style={StyleSheet.absoluteFill}
-        pointerEvents="none"
-      />
       <View style={styles.pomoCycleHeader}>
         <View style={styles.pomoCycleTitleRow}>
           <Ionicons

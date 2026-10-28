@@ -97,18 +97,18 @@ export const themeTokens = {
 
   glass: {
     light: {
-      cardBg: "rgba(239, 239, 239, 0.76)",
-      borderColor: "rgba(255, 255, 255, 0.45)",
-      shadowOpacity: 0.06,
+      cardBg: "#FFFFFF",
+      borderColor: "#E0E0E0",
+      shadowOpacity: 0,
       iconTintAlpha: "1C", // ~11% of primary
-      neutralFill: "rgba(0, 0, 0, 0.06)",
+      neutralFill: "#EEEEEE",
     },
     dark: {
-      cardBg: "rgba(30, 30, 30, 0.55)",
-      borderColor: "rgba(255, 255, 255, 0.10)",
-      shadowOpacity: 0.15,
+      cardBg: "#000000",
+      borderColor: "#1C1C22",
+      shadowOpacity: 0,
       iconTintAlpha: "29", // ~16% of primary
-      neutralFill: "rgba(255, 255, 255, 0.08)",
+      neutralFill: "#0A0A0D",
     },
   },
 

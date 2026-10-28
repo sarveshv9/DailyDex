@@ -9,9 +9,9 @@ import {
 } from "react-native";
 import { useTheme } from "../../context/ThemeContext";
 import { useAppHaptics } from "../../hooks/useAppHaptics";
-import { getSharedStyles, Theme } from "../../styles/shared";
+import { Theme } from "../../styles/shared";
 
-export type CardVariant = "glass" | "solid" | "elevated";
+export type CardVariant = "flat" | "solid" | "elevated" | "glass";
 export type CardPadding = "none" | "sm" | "md" | "lg";
 
 export interface CardProps {
@@ -25,7 +25,7 @@ export interface CardProps {
 
 export const Card: React.FC<CardProps> = ({
   children,
-  variant = "glass",
+  variant = "flat",
   padding = "md",
   onPress,
   haptic = true,
@@ -60,17 +60,20 @@ export const Card: React.FC<CardProps> = ({
 };
 
 const getStyles = (theme: Theme, variant: CardVariant, padding: CardPadding) => {
-  const shared = getSharedStyles(theme);
   let paddingValue = theme.spacing.md;
   if (padding === "none") paddingValue = 0;
   else if (padding === "sm") paddingValue = theme.spacing.sm;
   else if (padding === "lg") paddingValue = theme.spacing.lg;
 
-  if (variant === "glass") {
+  if (variant === "flat" || variant === "glass" || variant === "solid") {
     return StyleSheet.create({
       card: {
-        ...shared.glassCard,
+        backgroundColor: theme.colors.surface,
+        borderColor: theme.colors.border,
+        borderWidth: 1,
+        borderRadius: theme.borderRadius.lg,
         padding: paddingValue,
+        elevation: 0,
       },
       pressed: {
         opacity: 0.88,
@@ -79,58 +82,25 @@ const getStyles = (theme: Theme, variant: CardVariant, padding: CardPadding) => 
     });
   }
 
-  let backgroundColor = theme.glass.cardBg;
-  let borderColor = theme.glass.borderColor;
+  let backgroundColor = theme.colors.surface;
+  let borderColor = theme.colors.border;
   let borderWidth = 1;
   let shadowStyle = {
     ...Platform.select({
       ios: {
         shadowColor: "#000000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: theme.isDarkMode ? 0.20 : 0.04,
-        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
       },
       android: {
-        elevation: 0,
+        elevation: 2,
       },
       web: {
-        boxShadow: `0px 4px 12px rgba(0, 0, 0, ${theme.isDarkMode ? 0.20 : 0.04})`,
+        boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.08)",
       },
     }),
   };
-
-  if (variant === "solid") {
-    backgroundColor = theme.colors.surface;
-    borderColor = theme.colors.border;
-    borderWidth = 1;
-    shadowStyle = {
-      ...Platform.select({
-        ios: { shadowColor: "#000000", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0, shadowRadius: 0 },
-        android: { elevation: 0 },
-        web: { boxShadow: "none" },
-      }),
-    };
-  } else if (variant === "elevated") {
-    backgroundColor = theme.colors.surface;
-    borderColor = theme.colors.border;
-    borderWidth = 1;
-    shadowStyle = {
-      ...Platform.select({
-        ios: {
-          shadowColor: "#000000",
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.1,
-          shadowRadius: 12,
-        },
-        android: {
-          elevation: 3,
-        },
-        web: {
-          boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)",
-        },
-      }),
-    };
-  }
 
   return StyleSheet.create({
     card: {

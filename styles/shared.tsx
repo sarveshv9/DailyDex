@@ -111,24 +111,11 @@ export const getSharedStyles = (theme: Theme) => {
     },
     destructiveButtonText: { color: theme.colors.danger, fontSize: 16, fontFamily: theme.fonts.bold, textAlign: "center" },
     glassCard: {
-      backgroundColor: theme.glass.cardBg,
+      backgroundColor: theme.colors.surface,
       borderWidth: 1,
-      borderColor: theme.glass.borderColor,
+      borderColor: theme.colors.border,
       borderRadius: theme.borderRadius.lg,
-      ...Platform.select({
-        ios: {
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: theme.isDarkMode ? 0.2 : 0.06,
-          shadowRadius: 8,
-        },
-        android: {
-          elevation: 0,
-        },
-        web: {
-          boxShadow: `0px 2px 8px rgba(0, 0, 0, ${theme.isDarkMode ? 0.2 : 0.06})`,
-        },
-      }),
+      elevation: 0,
     },
     modalOverlay: {
       flex: 1,

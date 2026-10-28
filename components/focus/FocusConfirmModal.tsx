@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
 import React, { useMemo } from "react";
-import { Modal, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { themeTokens } from "../../constants/themeTokens";
 import { getSharedStyles, Theme } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
@@ -35,38 +34,15 @@ const FocusConfirmModalComponent: React.FC<FocusConfirmModalProps> = ({
       onRequestClose={onClose}
     >
       <View style={styles.modalOverlay}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose}>
-          <BlurView
-            intensity={isDarkMode ? 50 : 35}
-            tint={isDarkMode ? "systemThickMaterialDark" : "systemThickMaterialLight"}
-            style={StyleSheet.absoluteFill}
-          />
-          <View
-            style={[
-              StyleSheet.absoluteFill,
-              {
-                backgroundColor: isDarkMode
-                  ? "rgba(0,0,0,0.55)"
-                  : "rgba(0,0,0,0.3)",
-              },
-            ]}
-          />
-        </Pressable>
+        <Pressable
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: theme.colors.scrim },
+          ]}
+          onPress={onClose}
+        />
 
         <View style={styles.modalCard}>
-          <BlurView
-            intensity={isDarkMode ? 40 : 60}
-            tint={isDarkMode ? "systemThickMaterialDark" : "systemThickMaterialLight"}
-            style={StyleSheet.absoluteFill}
-            pointerEvents="none"
-          />
-          <View
-            style={[
-              StyleSheet.absoluteFill,
-              { backgroundColor: theme.glass.cardBg },
-            ]}
-          />
-
           <View
             style={[
               styles.modalIconCircle,
@@ -228,18 +204,11 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       borderRadius: themeTokens.borderRadius.xl,
       overflow: "hidden",
       borderWidth: 1,
-      borderColor: theme.glass.borderColor,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.surface,
       padding: themeTokens.spacing.xl,
       alignItems: "center",
-      ...Platform.select({
-        ios: {
-          shadowColor: themeTokens.colors.black,
-          shadowOffset: { width: 0, height: 10 },
-          shadowOpacity: isDarkMode ? 0.45 : 0.12,
-          shadowRadius: 24,
-        },
-        android: { elevation: 8 },
-      }),
+      elevation: 0,
     },
     modalIconCircle: {
       ...shared.iconCircle,

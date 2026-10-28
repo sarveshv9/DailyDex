@@ -9,7 +9,7 @@ import {
   View,
 } from "react-native";
 import { useTheme } from "../../context/ThemeContext";
-import { Theme, getSharedStyles } from "../../styles/shared";
+import { Theme } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
 import type { LucideIcon } from "lucide-react-native";
 
@@ -166,30 +166,17 @@ export const CrossPlatformSegmentedControl: React.FC<
 };
 
 const getStyles = (theme: Theme) => {
-  const shared = getSharedStyles(theme);
   return StyleSheet.create({
     container: {
-      ...shared.glassCard,
       flexDirection: "row",
       position: "relative",
       padding: 4,
+      borderRadius: theme.borderRadius.lg,
+      backgroundColor: theme.colors.surfaceMuted,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
       overflow: "hidden",
-      ...Platform.select({
-        ios: {
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 3 },
-          shadowOpacity: theme.glass.shadowOpacity,
-          shadowRadius: 8,
-        },
-        android: {
-          elevation: 3,
-        },
-        web: {
-          boxShadow: `0 4px 12px rgba(0,0,0,${theme.glass.shadowOpacity})`,
-          backdropFilter: "blur(12px)",
-          WebkitBackdropFilter: "blur(12px)",
-        },
-      }),
+      elevation: 0,
     },
     activeSlider: {
       position: "absolute",

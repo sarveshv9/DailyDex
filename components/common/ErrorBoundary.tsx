@@ -94,7 +94,7 @@ function ErrorFallbackView({ error, errorInfo, onReset }: ErrorFallbackProps) {
     theme = colorScheme === "dark" ? darkThemes.pokeball : lightThemes.pokeball;
   }
 
-  const { colors, fonts, spacing, glass, borderRadius } = theme;
+  const { colors, fonts, spacing, borderRadius } = theme;
   const shared = React.useMemo(() => getSharedStyles(theme), [theme]);
 
   const handleCopy = () => {
@@ -274,7 +274,7 @@ function ErrorFallbackView({ error, errorInfo, onReset }: ErrorFallbackProps) {
                   styles.errorBox,
                   {
                     backgroundColor: colors.background,
-                    borderColor: glass.borderColor,
+                    borderColor: colors.border,
                     borderRadius: borderRadius.md,
                     padding: spacing.md,
                   },

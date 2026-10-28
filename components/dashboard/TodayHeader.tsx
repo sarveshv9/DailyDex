@@ -96,11 +96,7 @@ const TodayHeaderComponent: React.FC<TodayHeaderProps> = ({
               size={52}
               strokeWidth={4.5}
               color={theme.colors.primary}
-              trackColor={
-                isDarkMode
-                  ? "rgba(255, 255, 255, 0.08)"
-                  : "rgba(0, 0, 0, 0.06)"
-              }
+              trackColor={theme.colors.border}
             >
               <Text style={styles.progressCount}>{todayTasksDone}</Text>
             </ProgressRing>

@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
 import React from "react";
 import { Dimensions, StyleSheet, Text, View } from "react-native";
 import Svg, { Circle } from "react-native-svg";
@@ -124,40 +123,16 @@ export const CircularTimerDial: React.FC<CircularTimerDialProps> = ({
 
   return (
     <View style={styles.dialWrapper}>
-      <View
-        style={[
-          styles.dialShadowContainer,
-          {
-            shadowColor: theme.colors.primary,
-            shadowOffset: { width: 0, height: 12 },
-            shadowOpacity: isDarkMode ? 0.35 : 0.18,
-            shadowRadius: 28,
-            elevation: 0,
-          },
-        ]}
-      >
+      <View style={styles.dialShadowContainer}>
         <View
           style={[
             styles.dialOuter,
             {
-              borderColor: isDarkMode
-                ? "rgba(255, 255, 255, 0.14)"
-                : "rgba(0, 0, 0, 0.08)",
+              borderColor: theme.colors.border,
+              backgroundColor: theme.colors.surface,
             },
           ]}
         >
-          <BlurView
-            intensity={isDarkMode ? 35 : 60}
-            tint={isDarkMode ? "systemThinMaterialDark" : "systemThinMaterialLight"}
-            style={StyleSheet.absoluteFill}
-          />
-          <View
-            style={[
-              StyleSheet.absoluteFill,
-              { backgroundColor: theme.glass.cardBg },
-            ]}
-          />
-
           {/* SVG Progress Circle */}
           <Svg
             width={DIAL_SIZE}
@@ -204,9 +179,7 @@ export const CircularTimerDial: React.FC<CircularTimerDialProps> = ({
               style={[
                 styles.statusTag,
                 {
-                  backgroundColor: isDarkMode
-                    ? "rgba(255,255,255,0.08)"
-                    : "rgba(0,0,0,0.05)",
+                  backgroundColor: theme.colors.surfaceMuted,
                   borderColor: `${statusInfo.color}35`,
                 },
               ]}

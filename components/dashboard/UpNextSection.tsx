@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
 import React, { useCallback, useMemo } from "react";
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { Theme, getSharedStyles } from "../../styles/shared";
 import { themeTokens } from "../../constants/themeTokens";
@@ -136,45 +135,34 @@ const UpNextSectionComponent: React.FC<UpNextSectionProps> = ({
         </View>
       ) : (
         <View style={styles.emptyCardContainer}>
-          <BlurView
-            intensity={80}
-            tint={
-              isDarkMode
-                ? "systemThickMaterialDark"
-                : "systemThickMaterialLight"
-            }
-            style={styles.blurWrapper}
-          >
-            <View style={styles.cardTint} />
-            <View style={styles.emptyCardInner}>
-              <View style={styles.emptyIconCircle}>
-                <Ionicons
-                  name="sparkles-outline"
-                  size={26}
-                  color={theme.colors.primaryText}
-                />
-              </View>
-              <Text style={styles.emptyTitle}>All Caught Up For Today</Text>
-              <Text style={styles.emptySubtitle}>
-                You have finished all scheduled rituals for today. Take time to
-                relax, breathe, and recharge.
-              </Text>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="View full routine timeline"
-                style={styles.emptyActionButton}
-                onPress={onOpenRoutineTimeline}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Ionicons
-                  name="calendar-outline"
-                  size={16}
-                  color={theme.colors.primaryText}
-                />
-                <Text style={styles.emptyActionText}>View Full Timeline</Text>
-              </Pressable>
+          <View style={styles.emptyCardInner}>
+            <View style={styles.emptyIconCircle}>
+              <Ionicons
+                name="sparkles-outline"
+                size={26}
+                color={theme.colors.primaryText}
+              />
             </View>
-          </BlurView>
+            <Text style={styles.emptyTitle}>All Caught Up For Today</Text>
+            <Text style={styles.emptySubtitle}>
+              You have finished all scheduled rituals for today. Take time to
+              relax, breathe, and recharge.
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="View full routine timeline"
+              style={styles.emptyActionButton}
+              onPress={onOpenRoutineTimeline}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons
+                name="calendar-outline"
+                size={16}
+                color={theme.colors.primaryText}
+              />
+              <Text style={styles.emptyActionText}>View Full Timeline</Text>
+            </Pressable>
+          </View>
         </View>
       )}
     </Animated.View>
@@ -265,26 +253,12 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       fontVariant: ["tabular-nums"],
     },
     emptyCardContainer: {
-      borderRadius: 24,
-      ...Platform.select({
-        ios: {
-          shadowColor: "#000000",
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: isDarkMode ? 0.25 : 0.06,
-          shadowRadius: 12,
-        },
-        android: { elevation: 0 },
-      }),
-    },
-    blurWrapper: {
-      borderRadius: 24,
-      overflow: "hidden",
+      borderRadius: 20,
       borderWidth: 1,
-      borderColor: theme.glass.borderColor,
-    },
-    cardTint: {
-      ...StyleSheet.absoluteFill,
-      backgroundColor: theme.glass.cardBg,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.surface,
+      overflow: "hidden",
+      elevation: 0,
     },
     emptyCardInner: {
       padding: 28,
