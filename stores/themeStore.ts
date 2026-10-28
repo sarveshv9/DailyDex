@@ -44,7 +44,7 @@ export function computeTheme(
   }
 
   // 3. Fallback gracefully (e.g. pokeball accent), never undefined
-  const fallbackAccent = THEME_ACCENTS[DEFAULT_THEME_NAME]?.accent || "#FF3333";
+  const fallbackAccent = THEME_ACCENTS[DEFAULT_THEME_NAME]?.accent;
   return createTheme(fallbackAccent, mode);
 }
 
@@ -117,7 +117,7 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
             // Normalize customThemes: ensure accentHex exists and strip any stored full theme palettes
             for (const [id, cfg] of Object.entries(parsed as Record<string, any>)) {
               if (cfg && typeof cfg === "object") {
-                const accent = cfg.accentHex || cfg.primaryColor || "#FF3333";
+                const accent = cfg.accentHex || cfg.primaryColor || THEME_ACCENTS[DEFAULT_THEME_NAME].accent;
                 localCustomThemes[id] = {
                   id: String(cfg.id || cfg.pokemonId || id),
                   pokemonId: String(cfg.pokemonId || cfg.id || id),
@@ -135,7 +135,7 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
           try {
             const parsed = JSON.parse(oldCustomCfg);
             if (parsed && parsed.pokemonId) {
-              const accent = parsed.accentHex || parsed.primaryColor || "#FF3333";
+              const accent = parsed.accentHex || parsed.primaryColor || THEME_ACCENTS[DEFAULT_THEME_NAME].accent;
               localCustomThemes = {
                 [parsed.pokemonId]: {
                   id: String(parsed.pokemonId),

@@ -16,6 +16,8 @@ import { Theme } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
 import { RoutineItem } from "../../utils/utils";
 
+import { blendOpaque, scaleChroma } from "../../utils/color";
+
 export interface RoutinePeekBarProps {
   bottomOffset: number;
   tabBarWidth: number;
@@ -50,6 +52,9 @@ const RoutinePeekBarComponent: React.FC<RoutinePeekBarProps> = ({
   };
 
   const isLight = !theme.isDarkMode;
+  const isDark = theme.isDarkMode;
+  const badgeTint = blendOpaque(nextTaskBadgeColor, theme.colors.surface, isDark ? 0.20 : 0.14);
+  const badgeDot = isDark ? scaleChroma(nextTaskBadgeColor, 0.9) : nextTaskBadgeColor;
 
   return (
     <Animated.View
@@ -99,15 +104,15 @@ const RoutinePeekBarComponent: React.FC<RoutinePeekBarProps> = ({
             style={[
               styles.collapsedIconCircle,
               {
-                backgroundColor: `${nextTaskBadgeColor}22`,
-                borderColor: `${nextTaskBadgeColor}45`,
+                backgroundColor: badgeTint,
+                borderColor: theme.colors.border,
               },
             ]}
           >
             <Ionicons
               name={nextTaskIcon as any}
               size={20}
-              color={nextTaskBadgeColor}
+              color={badgeDot}
             />
           </View>
 
@@ -126,21 +131,36 @@ const RoutinePeekBarComponent: React.FC<RoutinePeekBarProps> = ({
                 <View
                   style={[
                     styles.collapsedBadge,
-                    { backgroundColor: `${nextTaskBadgeColor}18` },
+                    {
+                      backgroundColor: badgeTint,
+                      borderWidth: 1,
+                      borderColor: theme.colors.border,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 4,
+                    },
                   ]}
                 >
+                  <View
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: 3,
+                      backgroundColor: badgeDot,
+                    }}
+                  />
                   {nextTask.daysOfWeek?.length ? (
                     <Ionicons
                       name="repeat"
                       size={10}
-                      color={nextTaskBadgeColor}
-                      style={{ marginRight: 3 }}
+                      color={theme.colors.textSecondary}
+                      style={{ marginRight: 1 }}
                     />
                   ) : null}
                   <Text
                     style={[
                       styles.collapsedBadgeText,
-                      { color: nextTaskBadgeColor },
+                      { color: theme.colors.textSecondary },
                     ]}
                   >
                     {nextTask.daysOfWeek?.length ? "Daily" : "Once"}

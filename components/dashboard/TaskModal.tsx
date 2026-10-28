@@ -39,6 +39,7 @@ import {
   FALLBACK_COLORS,
   formatDuration,
 } from "../../hooks/useRoutineTaskForm";
+import { blendOpaque, scaleChroma } from "../../utils/color";
 
 interface TaskModalProps {
   visible: boolean;
@@ -101,6 +102,16 @@ const TaskModalInner: React.FC<TaskModalInnerProps> = React.memo(({
     const idx = Math.abs(hash) % FALLBACK_COLORS.length;
     return FALLBACK_COLORS[idx];
   }, [editedTask.imageKey, editedTask.task]);
+
+  const isDark = theme.isDarkMode;
+  const taskTint = useMemo(
+    () => blendOpaque(taskColor, theme.colors.surface, isDark ? 0.2 : 0.14),
+    [taskColor, theme.colors.surface, isDark]
+  );
+  const taskDot = useMemo(
+    () => (isDark ? scaleChroma(taskColor, 0.9) : taskColor),
+    [taskColor, isDark]
+  );
 
   /* ── Time Calculations ── */
   const getDisplayTime = () => {
@@ -171,8 +182,9 @@ const TaskModalInner: React.FC<TaskModalInnerProps> = React.memo(({
                 style={[
                   styles.heroIconRing,
                   {
-                    backgroundColor: `${taskColor}18`,
-                    borderColor: `${taskColor}50`,
+                    backgroundColor: taskTint,
+                    borderColor: theme.colors.border,
+                    borderWidth: 1.5,
                   },
                 ]}
                 onPress={() => {
@@ -185,7 +197,7 @@ const TaskModalInner: React.FC<TaskModalInnerProps> = React.memo(({
                 <Ionicons
                   name={getRoutineIcon(editedTask.imageKey)}
                   size={30}
-                  color={taskColor}
+                  color={taskDot}
                 />
                 <View style={[styles.heroEditPencilDot, { backgroundColor: theme.colors.primary }]}>
                   <Ionicons name="pencil" size={9} color={theme.colors.onPrimary} />
@@ -235,7 +247,7 @@ const TaskModalInner: React.FC<TaskModalInnerProps> = React.memo(({
                 <Ionicons
                   name="time-outline"
                   size={13}
-                  color={activeAccordion === "time" ? "#FFFFFF" : taskColor}
+                  color={activeAccordion === "time" ? "#FFFFFF" : taskDot}
                 />
                 <Text
                   numberOfLines={1}
@@ -268,7 +280,7 @@ const TaskModalInner: React.FC<TaskModalInnerProps> = React.memo(({
                 <Ionicons
                   name="hourglass-outline"
                   size={13}
-                  color={activeAccordion === "duration" ? "#FFFFFF" : taskColor}
+                  color={activeAccordion === "duration" ? "#FFFFFF" : taskDot}
                 />
                 <Text
                   numberOfLines={1}
@@ -301,7 +313,7 @@ const TaskModalInner: React.FC<TaskModalInnerProps> = React.memo(({
                 <Ionicons
                   name="repeat-outline"
                   size={13}
-                  color={activeAccordion === "repeat" ? "#FFFFFF" : taskColor}
+                  color={activeAccordion === "repeat" ? "#FFFFFF" : taskDot}
                 />
                 <Text
                   numberOfLines={1}
@@ -443,12 +455,12 @@ const TaskModalInner: React.FC<TaskModalInnerProps> = React.memo(({
               <View style={styles.card}>
                 <View style={styles.cardHeaderRow}>
                   <View style={styles.cardTitleWithIcon}>
-                    <Ionicons name="checkbox-outline" size={17} color={taskColor} />
+                    <Ionicons name="checkbox-outline" size={17} color={taskDot} />
                     <Text style={styles.cardTitle}>Subtasks</Text>
                   </View>
                   {subtasksList.length > 0 && (
-                    <View style={[styles.counterPill, { backgroundColor: `${taskColor}15` }]}>
-                      <Text style={[styles.counterPillText, { color: taskColor }]}>
+                    <View style={[styles.counterPill, { backgroundColor: taskTint, borderWidth: 1, borderColor: theme.colors.border }]}>
+                      <Text style={[styles.counterPillText, { color: theme.colors.text }]}>
                         {completedSubtasksCount}/{subtasksList.length}
                       </Text>
                     </View>

@@ -49,6 +49,7 @@
       ],
       "expo-font",
       "expo-audio",
+      "expo-notifications",
       "expo-web-browser",
       "@react-native-community/datetimepicker",
       "expo-status-bar",

@@ -222,24 +222,40 @@ function HomeScreen() {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
       const setupComplete = await AsyncStorage.getItem(SETUP_KEY);
-      if (setupComplete) {
-        const routineData = await AsyncStorage.getItem(ROUTINE_STORAGE_KEY);
-        if (routineData) {
+      const routineData = await AsyncStorage.getItem(ROUTINE_STORAGE_KEY);
+
+      if (routineData) {
+        try {
           const parsedRoutines = JSON.parse(routineData);
-          setRoutines(sortRoutineItems(parsedRoutines));
-          setIsReady(true);
-        } else {
+          if (Array.isArray(parsedRoutines) && parsedRoutines.length > 0) {
+            setRoutines(sortRoutineItems(parsedRoutines));
+            setIsReady(true);
+            if (!setupComplete) {
+              await AsyncStorage.setItem(SETUP_KEY, "true");
+            }
+          } else {
+            setIsReady(false);
+          }
+        } catch (err) {
+          console.error("Failed to parse routines:", err);
           setIsReady(false);
         }
       } else {
         setIsReady(false);
       }
 
-      const todoData =
-        (await AsyncStorage.getItem(TASKS_STORAGE_KEY)) ||
-        (await AsyncStorage.getItem(STORAGE_KEYS.LEGACY_TASKS));
-      if (todoData) {
-        setTodoTasks(JSON.parse(todoData));
+      try {
+        const todoData =
+          (await AsyncStorage.getItem(TASKS_STORAGE_KEY)) ||
+          (await AsyncStorage.getItem(STORAGE_KEYS.LEGACY_TASKS));
+        if (todoData) {
+          const parsedTodos = JSON.parse(todoData);
+          if (Array.isArray(parsedTodos)) {
+            setTodoTasks(parsedTodos);
+          }
+        }
+      } catch (todoErr) {
+        console.warn("Failed to parse todo tasks:", todoErr);
       }
 
       const statsData = await loadStats();

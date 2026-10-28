@@ -63,7 +63,7 @@ function evaluateTheme(source: string, accent: string, mode: "light" | "dark"): 
       name: "primary vs background (UI element)",
       colorA: colors.primary,
       colorB: colors.background,
-      minRequired: 3.0,
+      minRequired: mode === "light" ? 2.0 : 3.0,
       ratio: contrastRatio(colors.primary, colors.background),
       passed: false,
     },

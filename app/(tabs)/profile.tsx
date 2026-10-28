@@ -400,7 +400,7 @@ export default function ProfileScreen() {
           accessibilityLabel="Reset profile or full app data"
           accessibilityHint="Presents options to reset profile or perform a full app wipe"
         >
-          <Ionicons name="log-out-outline" size={20} color="#FF453A" />
+          <Ionicons name="log-out-outline" size={20} color={theme.colors.danger} />
           <Text style={styles.logoutButtonText}>Log Out & Reset</Text>
         </Pressable>
 
@@ -527,28 +527,28 @@ const makeStyles = (theme: Theme) =>
       paddingVertical: 14,
       paddingHorizontal: 16,
       borderRadius: 22,
-      backgroundColor: "#34C75914",
+      backgroundColor: theme.isDarkMode ? "rgba(34, 197, 94, 0.12)" : "rgba(34, 197, 94, 0.08)",
       borderWidth: 1,
-      borderColor: "#34C75930",
+      borderColor: theme.isDarkMode ? "rgba(34, 197, 94, 0.25)" : "rgba(34, 197, 94, 0.18)",
     },
     syncConnectedTitle: {
       fontSize: 14,
       fontFamily: theme.fonts.bold,
-      color: "#34C759",
+      color: theme.colors.successText,
     },
     syncConnectedSubtitle: {
       fontSize: 12,
       fontFamily: theme.fonts.regular,
-      color: "#34C759",
+      color: theme.colors.successText,
       opacity: 0.85,
       marginTop: 1,
     },
     logoutButton: {
       height: 56,
       borderRadius: 22,
-      backgroundColor: "#FF453A12",
+      backgroundColor: theme.colors.dangerSoft,
       borderWidth: 1,
-      borderColor: "#FF453A35",
+      borderColor: theme.colors.danger,
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
@@ -558,7 +558,7 @@ const makeStyles = (theme: Theme) =>
     logoutButtonText: {
       fontSize: 16,
       fontFamily: theme.fonts.bold,
-      color: "#FF453A",
+      color: theme.colors.danger,
     },
 
   });

@@ -36,6 +36,11 @@ export function hexToRgb(hex: string): [number, number, number] {
   return [r, g, b];
 }
 
+export function hexToRgba(hex: string, alpha: number): string {
+  const [r, g, b] = hexToRgb(hex);
+  return `rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, ${alpha})`;
+}
+
 export function rgbToHex(r: number, g: number, b: number): string {
   const to255 = (c: number) => {
     const clamped = Math.min(255, Math.max(0, Math.round(c * 255)));
@@ -113,10 +118,40 @@ export function hexToOklch(hex: string): [number, number, number] {
   return oklabToOklch(L, a, o_b);
 }
 
+function oklchLinearRgb(L: number, C: number, H: number): [number, number, number] {
+  const [, a, b] = oklchToOklab(L, C, H);
+  const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
+  const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
+  const s_ = L - 0.0894841775 * a - 1.2914855480 * b;
+  const l = l_ ** 3, m = m_ ** 3, s = s_ ** 3;
+  return [
+    +4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
+  ];
+}
+
 export function oklchToHex(L: number, C: number, H: number): string {
-  const [oL, a, b] = oklchToOklab(L, C, H);
+  const eps = 0.0005;
+  const inGamut = (c: number) =>
+    oklchLinearRgb(L, c, H).every((v) => v >= -eps && v <= 1 + eps);
+  let chroma = C;
+  if (!inGamut(chroma)) {
+    let lo = 0, hi = chroma;
+    for (let i = 0; i < 20; i++) {
+      const mid = (lo + hi) / 2;
+      if (inGamut(mid)) lo = mid; else hi = mid;
+    }
+    chroma = lo;
+  }
+  const [oL, a, b] = oklchToOklab(L, chroma, H);
   const [r, g, ob] = oklabToRgb(oL, a, b);
   return rgbToHex(r, g, ob);
+}
+
+export function scaleChroma(hex: string, factor: number): string {
+  const [L, C, H] = hexToOklch(hex);
+  return oklchToHex(L, C * factor, H);
 }
 
 // --- WCAG CONTRAST AND LUMINANCE ---

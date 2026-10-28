@@ -16,40 +16,40 @@ export interface ThemePresetConfig {
 
 export const THEME_ACCENTS: Record<string, ThemePresetConfig> = {
   pokeball: {
-    accent: "#FF3333",
+    accent: "#FF4D6D",
     label: "Classic Pokéball",
     pokemonId: 100,
-    description: "Iconic Red & White",
+    description: "Vibrant Coral Rose",
   },
   pikachu: {
-    accent: "#EAB308",
+    accent: "#F59E0B",
     label: "Pikachu",
     pokemonId: 25,
     description: "Electric energy",
   },
   squirtle: {
-    accent: "#0EA5E9",
+    accent: "#0284C7",
     label: "Squirtle",
     pokemonId: 7,
-    description: "Cool blue vibes",
+    description: "Cool azure vibes",
   },
   bulbasaur: {
     accent: "#10B981",
     label: "Bulbasaur",
     pokemonId: 1,
-    description: "Fresh & natural",
+    description: "Fresh emerald",
   },
   gengar: {
-    accent: "#A855F7",
+    accent: "#8B5CF6",
     label: "Gengar",
     pokemonId: 94,
-    description: "Spooky vibes",
+    description: "Electric violet",
   },
   charizard: {
     accent: "#F97316",
     label: "Charizard",
     pokemonId: 6,
-    description: "Fire & power",
+    description: "Radiant flame",
   },
 } as const;
 

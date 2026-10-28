@@ -41,10 +41,10 @@ import { useTheme } from "../context/ThemeContext";
 import * as Haptics from "../utils/haptics";
 import { timeToMinutes } from "../utils/utils";
 import { themeTokens } from "../constants/themeTokens";
+import { hexToRgba } from "../utils/color";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
-const RED = "#FF3B30";
 const DAY_BG = "#FFF8F3";
 const NIGHT_BG = "#07080C";
 
@@ -523,7 +523,7 @@ export function InteractiveTimeCard({
     isSleepStep: boolean;
 }) {
     const { theme } = useTheme();
-    const styles = useMemo(() => makeStyles(theme.fonts), [theme.fonts]);
+    const styles = useMemo(() => makeStyles(theme), [theme]);
     const { hours, minutes, ampm } = useMemo(() => parseTimeString(time), [time]);
 
     const militaryHour = ampm === "PM" ? (hours % 12) + 12 : hours % 12;
@@ -550,7 +550,7 @@ export function InteractiveTimeCard({
         onChange(formatTimeString(hours, minutes, ampm === "AM" ? "PM" : "AM"));
     };
 
-    const up = isSleepStep ? RED : "#1F2937";
+    const up = isSleepStep ? theme.colors.primary : "#1F2937";
     const down = isSleepStep ? "#8B90A0" : "#1F2937";
     const digitStyle = isSleepStep ? styles.digitNight : styles.digitDay;
     const colonStyle = isSleepStep ? styles.colonNight : styles.colonDay;
@@ -622,7 +622,7 @@ export function StepTime({
     skyProgress: SharedValue<number>;
 }) {
     const { theme } = useTheme();
-    const styles = useMemo(() => makeStyles(theme.fonts), [theme.fonts]);
+    const styles = useMemo(() => makeStyles(theme), [theme]);
 
     const [shown, setShown] = useState<Mode>(mode);
     const shownRef = useRef<Mode>(mode);
@@ -755,7 +755,7 @@ export function StepTime({
                         </View>
                     ) : (
                         <View style={styles.insightDay}>
-                            <Ionicons name="sunny-outline" size={24} color={RED} />
+                            <Ionicons name="sunny-outline" size={24} color={theme.colors.primary} />
                             <Text style={styles.insightTextDay}>
                                 Your morning routine and tasks will naturally branch from this anchor time.
                             </Text>
@@ -773,7 +773,7 @@ export function StepTime({
 
                 <Pressable style={[styles.next, night && styles.nextGlow]} onPress={press(onNext)}>
                     <Text style={styles.nextText}>Next Step</Text>
-                    <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+                    <Ionicons name="arrow-forward" size={18} color={theme.colors.onPrimary} />
                 </Pressable>
             </Animated.View>
         </View>
@@ -781,8 +781,9 @@ export function StepTime({
 }
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
-const makeStyles = (fonts: Theme["fonts"]) =>
-    StyleSheet.create({
+const makeStyles = (theme: Theme) => {
+    const fonts = theme.fonts;
+    return StyleSheet.create({
         screen: { flex: 1 }, // transparent: SkyBackground paints behind it
         scrollContent: { flexGrow: 1, paddingBottom: 12 },
 
@@ -799,7 +800,7 @@ const makeStyles = (fonts: Theme["fonts"]) =>
             fontSize: themeTokens.fonts.size.xs,
             lineHeight: 16,
             fontFamily: fonts.bold,
-            color: RED,
+            color: theme.colors.primaryText,
             letterSpacing: 1.4,
         },
         skip: { fontSize: themeTokens.fonts.size.sm, lineHeight: 18, fontFamily: fonts.medium },
@@ -847,7 +848,7 @@ const makeStyles = (fonts: Theme["fonts"]) =>
             marginBottom: 10,
         },
         timePillDay: {
-            backgroundColor: "#FDF0E9",
+            backgroundColor: hexToRgba(theme.colors.primary, 0.08),
             borderRadius: 20,
             paddingVertical: 8,
             paddingHorizontal: 18,
@@ -923,24 +924,24 @@ const makeStyles = (fonts: Theme["fonts"]) =>
             marginTop: -4,
         },
         ampmDay: {
-            backgroundColor: "#FBDCCF",
+            backgroundColor: hexToRgba(theme.colors.primary, 0.14),
             paddingHorizontal: 12,
             paddingVertical: 8,
             borderRadius: 12,
         },
         ampmNight: {
-            backgroundColor: "#2A1219",
+            backgroundColor: hexToRgba(theme.colors.primary, 0.22),
             paddingHorizontal: 14,
             paddingVertical: 10,
             borderRadius: 12,
         },
-        ampmTextDay: { fontSize: themeTokens.fonts.size.sm, fontFamily: fonts.bold, color: RED },
-        ampmTextNight: { fontSize: themeTokens.fonts.size.md, fontFamily: fonts.bold, color: "#FF4D55" },
+        ampmTextDay: { fontSize: themeTokens.fonts.size.sm, fontFamily: fonts.bold, color: theme.colors.primaryText },
+        ampmTextNight: { fontSize: themeTokens.fonts.size.md, fontFamily: fonts.bold, color: theme.colors.primary },
 
         // Insight cards
         insightDay: {
             minHeight: 104,
-            backgroundColor: "#FDEAE2",
+            backgroundColor: hexToRgba(theme.colors.primary, 0.08),
             borderRadius: 22,
             paddingVertical: 16,
             paddingHorizontal: 18,
@@ -1028,12 +1029,12 @@ const makeStyles = (fonts: Theme["fonts"]) =>
             flex: 1,
             height: 56,
             borderRadius: 22,
-            backgroundColor: themeTokens.colors.danger,
+            backgroundColor: theme.colors.primary,
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "center",
             gap: 8,
-            shadowColor: themeTokens.colors.danger,
+            shadowColor: theme.colors.primary,
             shadowOffset: { width: 0, height: 6 },
             shadowOpacity: 0.3,
             shadowRadius: 12,
@@ -1043,5 +1044,6 @@ const makeStyles = (fonts: Theme["fonts"]) =>
             shadowOpacity: 0.55,
             shadowRadius: 18,
         },
-        nextText: { fontSize: themeTokens.fonts.size.lg - 1, fontFamily: fonts.bold, color: "#FFFFFF" },
+        nextText: { fontSize: themeTokens.fonts.size.lg - 1, fontFamily: fonts.bold, color: theme.colors.onPrimary },
     });
+};

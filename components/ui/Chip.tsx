@@ -122,7 +122,7 @@ const getStyles = (theme: Theme, selected: boolean, size: "sm" | "md") => {
     badgeText: {
       fontSize: 10,
       fontFamily: theme.fonts.bold,
-      color: selected ? "#000000" : theme.colors.text,
+      color: selected ? theme.colors.onPrimary : theme.colors.text,
     },
     pressed: {
       opacity: 0.8,

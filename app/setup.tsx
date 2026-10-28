@@ -33,6 +33,7 @@ import { getRoutineIcon, RoutineItem, timeToMinutes } from "../utils/utils";
 import { StepTime, InteractiveTimeCard, SkyBackground } from "../components/SetupTimeSteps";
 import { ROUTINE_STORAGE_KEY, SETUP_STORAGE_KEY } from "../constants/storageKeys";
 import { themeTokens } from "../constants/themeTokens";
+import { hexToRgba } from "../utils/color";
 
 const STORAGE_KEY = ROUTINE_STORAGE_KEY;
 const SETUP_KEY = SETUP_STORAGE_KEY;
@@ -309,7 +310,7 @@ function StepWelcome({
                     accessibilityLabel="Begin interactive setup"
                 >
                     <Text style={styles.welcomeNextBtnText}>Begin Setup</Text>
-                    <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+                    <Ionicons name="arrow-forward" size={18} color={theme.colors.onPrimary} />
                 </Pressable>
             </View>
         </View>
@@ -1104,16 +1105,16 @@ export default function SetupScreen() {
         try {
             await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(minimalItems));
             await AsyncStorage.setItem(SETUP_KEY, "true");
-
-
-            await scheduleRoutineNotifications(minimalItems);
-            router.replace("/(tabs)");
         } catch (e) {
             console.error("Failed to skip setup", e);
-            router.replace("/(tabs)");
-        } finally {
-            setSaving(false);
         }
+
+        scheduleRoutineNotifications(minimalItems).catch((err) => {
+            console.warn("Could not schedule routine notifications:", err);
+        });
+
+        setSaving(false);
+        router.replace("/(tabs)");
     };
 
     const goToStep3 = () => {
@@ -1236,15 +1237,19 @@ export default function SetupScreen() {
         try {
             await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(items));
             await AsyncStorage.setItem(SETUP_KEY, "true");
-
-
-            await scheduleRoutineNotifications(items);
-            router.replace("/(tabs)");
         } catch (e) {
             console.error("Failed to save setup data", e);
             Alert.alert("Setup Error", "Failed to save your routine. Please try again.");
             setSaving(false);
+            return;
         }
+
+        // Schedule notifications safely in background without blocking user
+        scheduleRoutineNotifications(items).catch((err) => {
+            console.warn("Could not schedule routine notifications:", err);
+        });
+
+        router.replace("/(tabs)");
     };
 
     const progressBarAnimatedStyle = useAnimatedStyle(() => {
@@ -1278,7 +1283,6 @@ export default function SetupScreen() {
                         style={[
                             styles.progressFill,
                             { width: `${(step / 4) * 100}%` },
-                            (step === 1 || step === 2) && { backgroundColor: themeTokens.colors.danger },
                         ]}
                     />
                 </Animated.View>
@@ -1423,8 +1427,8 @@ const getStyles = (theme: Theme) =>
             height: 124,
             borderRadius: 62,
             borderWidth: 1.5,
-            borderColor: "rgba(255, 90, 95, 0.22)",
-            backgroundColor: "rgba(255, 90, 95, 0.05)",
+            borderColor: hexToRgba(theme.colors.primary, 0.22),
+            backgroundColor: hexToRgba(theme.colors.primary, 0.05),
         },
         welcomeAuraInnerRing: {
             position: "absolute",
@@ -1432,8 +1436,8 @@ const getStyles = (theme: Theme) =>
             height: 98,
             borderRadius: 49,
             borderWidth: 1,
-            borderColor: "rgba(255, 90, 95, 0.32)",
-            backgroundColor: "rgba(255, 90, 95, 0.09)",
+            borderColor: hexToRgba(theme.colors.primary, 0.32),
+            backgroundColor: hexToRgba(theme.colors.primary, 0.09),
         },
         welcomeIconCard: {
             width: 76,
@@ -1456,9 +1460,9 @@ const getStyles = (theme: Theme) =>
             paddingHorizontal: 12,
             paddingVertical: 4,
             borderRadius: 16,
-            backgroundColor: "rgba(255, 90, 95, 0.10)",
+            backgroundColor: hexToRgba(theme.colors.primary, 0.10),
             borderWidth: 1,
-            borderColor: "rgba(255, 90, 95, 0.25)",
+            borderColor: hexToRgba(theme.colors.primary, 0.25),
             marginBottom: 12,
         },
         welcomeBrand: {
@@ -1504,9 +1508,9 @@ const getStyles = (theme: Theme) =>
             width: 38,
             height: 38,
             borderRadius: 13,
-            backgroundColor: "rgba(255, 90, 95, 0.12)",
+            backgroundColor: hexToRgba(theme.colors.primary, 0.12),
             borderWidth: 1,
-            borderColor: "rgba(255, 90, 95, 0.22)",
+            borderColor: hexToRgba(theme.colors.primary, 0.22),
             alignItems: "center",
             justifyContent: "center",
         },
@@ -1548,7 +1552,7 @@ const getStyles = (theme: Theme) =>
         welcomeNextBtnText: {
             fontSize: 17,
             fontFamily: theme.fonts.bold,
-            color: "#FFFFFF",
+            color: theme.colors.onPrimary,
         },
 
         // ─── Common Step Header ──────────────────

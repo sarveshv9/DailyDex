@@ -13,7 +13,7 @@ import { AuthProvider, useAuth } from "../context/AuthContext";
 import { requestNotificationPermissions } from "../utils/notifications";
 import { ErrorBoundary } from "../components/common/ErrorBoundary";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { SETUP_STORAGE_KEY } from "../constants/storageKeys";
+import { ROUTINE_STORAGE_KEY, SETUP_STORAGE_KEY } from "../constants/storageKeys";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "../utils/queryClient";
@@ -74,11 +74,13 @@ function RootLayoutNav() {
   }, []);
 
   useEffect(() => {
-    requestNotificationPermissions();
+    requestNotificationPermissions()?.catch?.(() => {});
     const checkSetup = async () => {
       try {
         const setup = await AsyncStorage.getItem(SETUP_STORAGE_KEY);
-        setIsSetupComplete(setup === "true");
+        const routines = await AsyncStorage.getItem(ROUTINE_STORAGE_KEY);
+        const isComplete = setup === "true" || Boolean(routines && routines !== "[]");
+        setIsSetupComplete(isComplete);
       } catch {
         setIsSetupComplete(false);
       }
@@ -107,7 +109,9 @@ function RootLayoutNav() {
       if (inAuthGroup) {
         try {
           const setup = await AsyncStorage.getItem(SETUP_STORAGE_KEY);
-          if (setup !== "true") {
+          const routines = await AsyncStorage.getItem(ROUTINE_STORAGE_KEY);
+          const isComplete = setup === "true" || Boolean(routines && routines !== "[]");
+          if (!isComplete) {
             router.replace("/setup" as Href);
           } else {
             router.replace("/(tabs)" as Href);
@@ -122,9 +126,11 @@ function RootLayoutNav() {
       if (!inAuthGroup) {
         try {
           const setup = await AsyncStorage.getItem(SETUP_STORAGE_KEY);
-          if (setup !== "true" && inTabsGroup) {
+          const routines = await AsyncStorage.getItem(ROUTINE_STORAGE_KEY);
+          const isComplete = setup === "true" || Boolean(routines && routines !== "[]");
+          if (!isComplete && inTabsGroup) {
             router.replace("/setup" as Href);
-          } else if (setup === "true" && isSetupComplete === false) {
+          } else if (isComplete && isSetupComplete === false) {
             setIsSetupComplete(true);
           }
         } catch {

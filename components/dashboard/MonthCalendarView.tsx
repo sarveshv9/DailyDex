@@ -11,6 +11,8 @@ import {
 import * as Haptics from '../../utils/haptics';
 import { Theme } from '../../styles/shared';
 import { RoutineItem, getRoutineItemsForDate, timeToMinutes } from '../../utils/utils';
+import { CATEGORY_COLORS, FALLBACK_CATEGORY_COLORS } from '../../constants/categoryColors';
+import { blendOpaque, scaleChroma } from '../../utils/color';
 
 interface Props {
     currentDate: Date;
@@ -20,23 +22,8 @@ interface Props {
     todayTrigger?: number;
 }
 
-const TASK_COLORS: Record<string, string> = {
-    wakeup: '#FFB347',
-    sleep: '#9CBBE3',
-    water: '#77CCEE',
-    tea_journal: '#E6D5B8',
-    breakfast: '#FFD1BA',
-    lunch: '#FFD1BA',
-    dinner: '#FFD1BA',
-    study: '#A0C4FF',
-    walk: '#B9FBC0',
-    yoga: '#CFBAF0',
-    reflect: '#A0C4FF',
-    prepare_sleep: '#BDB2FF',
-    breathe: '#B9FBC0',
-};
-
-const FALLBACK_COLORS = ['#7B8CDE', '#C084FC', '#4DA8DA', '#6BCB77', '#E8975E', '#B89B72'];
+const TASK_COLORS: Record<string, string> = CATEGORY_COLORS;
+const FALLBACK_COLORS = FALLBACK_CATEGORY_COLORS;
 
 const MONTH_NAMES = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -125,9 +112,12 @@ function DayDetailComponent({ date, items, theme }: DayDetailProps) {
                     {items.map((item, i) => {
                         const color = getTaskColor(item, i);
                         const label = item.task ?? item.imageKey?.replace(/_/g, ' ') ?? '';
+                        const isDark = theme.isDarkMode;
+                        const pillTint = blendOpaque(color, theme.colors.surface, isDark ? 0.20 : 0.14);
+                        const dotColor = isDark ? scaleChroma(color, 0.9) : color;
                         return (
                             <View key={item.id ?? i} style={detail.taskRow}>
-                                <View style={[detail.taskDot, { backgroundColor: color }]} />
+                                <View style={[detail.taskDot, { backgroundColor: dotColor }]} />
                                 <View style={detail.taskInfo}>
                                     <Text style={[detail.taskName, { color: theme.colors.text, fontFamily: theme.fonts.medium }]}>
                                         {label}
@@ -137,8 +127,9 @@ function DayDetailComponent({ date, items, theme }: DayDetailProps) {
                                         {item.duration ? ` · ${item.duration}m` : ''}
                                     </Text>
                                 </View>
-                                <View style={[detail.taskPill, { backgroundColor: `${color}18`, borderColor: `${color}30` }]}>
-                                    <Text style={[detail.taskPillText, { color, fontFamily: theme.fonts.bold }]}>
+                                <View style={[detail.taskPill, { backgroundColor: pillTint, borderColor: theme.colors.border, flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
+                                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: dotColor }} />
+                                    <Text style={[detail.taskPillText, { color: theme.colors.text, fontFamily: theme.fonts.medium }]}>
                                         {fmtTime(item.time)}
                                     </Text>
                                 </View>
@@ -184,7 +175,7 @@ const CalendarCellComponent: React.FC<CalendarCellProps> = ({
             onPress={() => onPress(date)}
             style={({ pressed }) => [
                 grid.cell,
-                isSelected && [grid.cellSelected, { backgroundColor: theme.colors.primary }],
+                isSelected && [grid.cellSelected, { backgroundColor: theme.colors.primarySoft, borderWidth: 1.5, borderColor: theme.colors.primary }],
                 isToday && !isSelected && [grid.cellToday, { borderColor: theme.colors.primary }],
                 pressed && !isSelected && { opacity: 0.6 },
             ]}
@@ -195,7 +186,7 @@ const CalendarCellComponent: React.FC<CalendarCellProps> = ({
                     grid.cellNum,
                     { fontFamily: theme.fonts.medium },
                     isSelected
-                        ? [grid.cellNumSelected, { fontFamily: theme.fonts.bold }]
+                        ? [grid.cellNumSelected, { color: theme.colors.primaryText, fontFamily: theme.fonts.bold }]
                         : isToday
                             ? [grid.cellNumToday, { color: theme.colors.primary, fontFamily: theme.fonts.bold }]
                             : { color: isWeekend ? theme.colors.textSecondary : theme.colors.text },
@@ -212,7 +203,7 @@ const CalendarCellComponent: React.FC<CalendarCellProps> = ({
                             key={di}
                             style={[
                                 grid.dot,
-                                { backgroundColor: isSelected ? '#FFFFFF' : color },
+                                { backgroundColor: color },
                             ]}
                         />
                     ))}
@@ -221,7 +212,7 @@ const CalendarCellComponent: React.FC<CalendarCellProps> = ({
                             style={[
                                 grid.dotMore,
                                 {
-                                    color: isSelected ? '#FFFFFF' : theme.colors.textSecondary,
+                                    color: isSelected ? theme.colors.primaryText : theme.colors.textSecondary,
                                     fontFamily: theme.fonts.bold,
                                 },
                             ]}

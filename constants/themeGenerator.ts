@@ -16,6 +16,7 @@ import {
   deriveOnPrimary,
   derivePrimaryText,
   normalizeHex,
+  scaleChroma,
 } from "../utils/color";
 
 export interface ThemeColors {
@@ -38,6 +39,13 @@ export interface ThemeColors {
   // Semantic status
   danger: string;
   dangerSoft: string;
+  dangerText: string;
+  warning: string;
+  warningText: string;
+  success: string;
+  successText: string;
+  info: string;
+  infoText: string;
 }
 
 export interface ThemeGlass {
@@ -98,7 +106,7 @@ export function createTheme(
   const isDark = mode === "dark";
 
   // 1. NEUTRALS: Independent of theme per mode
-  const background = isDark ? themeTokens.colors.black : themeTokens.colors.white;
+  const background = isDark ? themeTokens.colors.ink : themeTokens.colors.white;
   const surface = isDark ? themeTokens.colors.gray[950] : themeTokens.colors.gray[50];
   const surfaceMuted = isDark ? themeTokens.colors.gray[850] : themeTokens.colors.gray[200];
   const border = isDark ? themeTokens.colors.gray[800] : themeTokens.colors.gray[300];
@@ -108,11 +116,26 @@ export function createTheme(
   const scrim = isDark ? "rgba(0, 0, 0, 0.65)" : "rgba(0, 0, 0, 0.45)";
 
   const danger = isDark ? themeTokens.colors.danger : themeTokens.colors.dangerDark;
-  const dangerSoft = isDark ? "#3B1414" : "#FEE2E2";
+  const dangerSoft = isDark ? themeTokens.colors.dangerSoftDark : themeTokens.colors.dangerSoftLight;
+  const dangerText = isDark ? themeTokens.colors.danger : themeTokens.colors.dangerDark;
+
+  const warning = themeTokens.colors.warning;
+  const warningText = isDark ? themeTokens.colors.warning : themeTokens.colors.warningDark;
+
+  const success = themeTokens.colors.success;
+  const successText = isDark ? themeTokens.colors.success : themeTokens.colors.successDark;
+
+  const info = themeTokens.colors.info;
+  const infoText = isDark ? themeTokens.colors.info : themeTokens.colors.infoDark;
 
   // 2. ACCENT DERIVATION
-  // Primary fill: guaranteed >= 3.0:1 contrast vs background
-  const clamped = clampForContrast(normAccent, background, 3.0, mode);
+  // Filled buttons already get a legible label via onPrimary (>= 4.5:1),
+  // and accent-as-text is protected separately by primaryText (>= 4.5:1).
+  // Lowering only the fill target in light mode is a deliberate vibrancy trade-off.
+  // Do NOT lower the primaryText or onPrimary thresholds.
+  const tunedAccent = isDark ? scaleChroma(normAccent, 0.9) : normAccent;
+  const fillMinContrast = isDark ? 3.0 : 2.0;
+  const clamped = clampForContrast(tunedAccent, background, fillMinContrast, mode);
   const primary = clamped.hex;
   const wasAdjusted = clamped.wasAdjusted;
 
@@ -166,6 +189,13 @@ export function createTheme(
       scrim,
       danger,
       dangerSoft,
+      dangerText,
+      warning,
+      warningText,
+      success,
+      successText,
+      info,
+      infoText,
     },
     glass,
     fonts: {

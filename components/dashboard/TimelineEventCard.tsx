@@ -23,33 +23,9 @@ import * as Haptics from '../../utils/haptics';
 import { RoutineItem, ICON_MAP, formatDuration, isWakeupOrSleep } from '../../utils/utils';
 import { themeTokens } from '../../constants/themeTokens';
 
-export const TASK_COLORS: Record<string, string> = {
-  wakeup: '#FFB347',
-  sleep: '#9CBBE3',
-  water: '#77CCEE',
-  tea_journal: '#E6D5B8',
-  breakfast: '#FFD1BA',
-  lunch: '#FFD1BA',
-  dinner: '#FFD1BA',
-  study: '#A0C4FF',
-  walk: '#B9FBC0',
-  yoga: '#CFBAF0',
-  reflect: '#A0C4FF',
-  prepare_sleep: '#BDB2FF',
-  breathe: '#B9FBC0',
-  commute: '#79B4B7',
-  gym: '#FF9F80',
-  cleaning: '#80CED7',
-  pet: '#E3C75F',
-  shopping: '#F6B8B8',
-  coding: '#7EA0B7',
-  gaming: '#BD93F9',
-  finances: '#9AD0C2',
-  laundry: '#C5DFF8',
-  travel: '#7BC9FF',
-  health: '#F875AA',
-  podcast: '#C683D7',
-};
+import { CATEGORY_COLORS } from '../../constants/categoryColors';
+
+export const TASK_COLORS: Record<string, string> = CATEGORY_COLORS;
 
 export interface TimelineEventCardProps {
   item: RoutineItem;
