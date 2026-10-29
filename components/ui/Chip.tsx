@@ -8,9 +8,9 @@ import {
   View,
   ViewStyle,
 } from "react-native";
+import { themeTokens } from "../../constants/themeTokens";
 import { useTheme } from "../../context/ThemeContext";
 import { useAppHaptics } from "../../hooks/useAppHaptics";
-import { themeTokens } from "../../constants/themeTokens";
 import { getSharedStyles, Theme } from "../../styles/shared";
 
 export interface ChipProps {

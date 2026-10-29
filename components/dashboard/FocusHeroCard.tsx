@@ -51,121 +51,121 @@ const FocusHeroCardComponent: React.FC<FocusHeroCardProps> = ({
       <View style={styles.focusCard}>
         <View style={styles.focusCardInner}>
           {/* Top: Icon + Name + Description + Duration + Focus Timer Button */}
-            <View style={styles.focusTopRow}>
-              <View style={styles.focusIconSquircle}>
-                <Ionicons
-                  name={taskIcon}
-                  size={26}
-                  color={theme.colors.primaryText}
-                />
-              </View>
-              <View style={styles.focusTextCol}>
-                <Text
-                  style={styles.focusTaskName}
-                  numberOfLines={1}
-                  accessibilityRole="header"
-                >
-                  {currentTaskText}
-                </Text>
-                {currentTaskDesc ? (
-                  <Text style={styles.focusDescription} numberOfLines={1}>
-                    {currentTaskDesc}
-                  </Text>
-                ) : null}
-              </View>
-              <View style={styles.focusTopActions}>
-                {currentTaskItem?.duration ? (
-                  <View style={styles.durationBadge}>
-                    <Ionicons
-                      name="time-outline"
-                      size={13}
-                      color={theme.colors.textSecondary}
-                    />
-                    <Text style={styles.durationBadgeText}>
-                      {currentTaskItem.duration}m
-                    </Text>
-                  </View>
-                ) : null}
-
-                {currentTaskItem ? (
-                  <ActiveTimerBadge
-                    taskId={currentTaskItem.id}
-                    onOpenFocus={onOpenFocus}
-                    primaryColor={theme.colors.primaryText}
-                    badgeStyle={styles.activeTimerBadge}
-                    textStyle={styles.activeTimerText}
-                    fallback={
-                      <Pressable
-                        style={styles.focusTimerIconButton}
-                        onPress={onOpenFocus}
-                        hitSlop={8}
-                        accessibilityLabel="Start Focus Timer"
-                      >
-                        <Ionicons
-                          name="timer-outline"
-                          size={18}
-                          color={theme.colors.primaryText}
-                        />
-                      </Pressable>
-                    }
-                  />
-                ) : null}
-              </View>
-            </View>
-
-            {/* Progress Bar & Indicators */}
-            <View
-              style={styles.progressSection}
-              accessible={true}
-              accessibilityRole="progressbar"
-              accessibilityLabel={`Progress: ${progressPercent} percent`}
-              accessibilityValue={{ min: 0, max: 100, now: progressPercent }}
-            >
-              <View style={styles.progressLabelRow}>
-                <Text style={styles.progressLabelText}>Progress</Text>
-                <Text style={styles.progressPercent}>{progressPercent}%</Text>
-              </View>
-              <View style={styles.progressBarTrack}>
-                <View
-                  style={[
-                    styles.progressBarFill,
-                    { width: `${progressPercent}%` },
-                  ]}
-                />
-              </View>
-            </View>
-
-            {/* Main CTA Button: Default redirect to timeline */}
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="View day timeline"
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              android_ripple={{ color: "rgba(0,0,0,0.06)" }}
-              style={({ pressed }) => [
-                styles.primaryButton,
-                {
-                  opacity: pressed ? 0.92 : 1,
-                  transform: [{ scale: pressed ? 0.98 : 1 }],
-                },
-              ]}
-              onPress={onOpenTimeline}
-            >
-              <Text style={styles.primaryButtonText}>
-                {hasActiveTask
-                  ? "View Day Timeline"
-                  : hasNextTask
-                    ? "Start My Day"
-                    : "View Day Timeline"}
-              </Text>
+          <View style={styles.focusTopRow}>
+            <View style={styles.focusIconSquircle}>
               <Ionicons
-                name="arrow-forward"
-                size={20}
-                color={theme.colors.onPrimary}
+                name={taskIcon}
+                size={26}
+                color={theme.colors.primaryText}
               />
-            </Pressable>
+            </View>
+            <View style={styles.focusTextCol}>
+              <Text
+                style={styles.focusTaskName}
+                numberOfLines={1}
+                accessibilityRole="header"
+              >
+                {currentTaskText}
+              </Text>
+              {currentTaskDesc ? (
+                <Text style={styles.focusDescription} numberOfLines={1}>
+                  {currentTaskDesc}
+                </Text>
+              ) : null}
+            </View>
+            <View style={styles.focusTopActions}>
+              {currentTaskItem?.duration ? (
+                <View style={styles.durationBadge}>
+                  <Ionicons
+                    name="time-outline"
+                    size={13}
+                    color={theme.colors.textSecondary}
+                  />
+                  <Text style={styles.durationBadgeText}>
+                    {currentTaskItem.duration}m
+                  </Text>
+                </View>
+              ) : null}
+
+              {currentTaskItem ? (
+                <ActiveTimerBadge
+                  taskId={currentTaskItem.id}
+                  onOpenFocus={onOpenFocus}
+                  primaryColor={theme.colors.primaryText}
+                  badgeStyle={styles.activeTimerBadge}
+                  textStyle={styles.activeTimerText}
+                  fallback={
+                    <Pressable
+                      style={styles.focusTimerIconButton}
+                      onPress={onOpenFocus}
+                      hitSlop={8}
+                      accessibilityLabel="Start Focus Timer"
+                    >
+                      <Ionicons
+                        name="timer-outline"
+                        size={18}
+                        color={theme.colors.primaryText}
+                      />
+                    </Pressable>
+                  }
+                />
+              ) : null}
+            </View>
           </View>
+
+          {/* Progress Bar & Indicators */}
+          <View
+            style={styles.progressSection}
+            accessible={true}
+            accessibilityRole="progressbar"
+            accessibilityLabel={`Progress: ${progressPercent} percent`}
+            accessibilityValue={{ min: 0, max: 100, now: progressPercent }}
+          >
+            <View style={styles.progressLabelRow}>
+              <Text style={styles.progressLabelText}>Progress</Text>
+              <Text style={styles.progressPercent}>{progressPercent}%</Text>
+            </View>
+            <View style={styles.progressBarTrack}>
+              <View
+                style={[
+                  styles.progressBarFill,
+                  { width: `${progressPercent}%` },
+                ]}
+              />
+            </View>
+          </View>
+
+          {/* Main CTA Button: Default redirect to timeline */}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="View day timeline"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            android_ripple={{ color: "rgba(0,0,0,0.06)" }}
+            style={({ pressed }) => [
+              styles.primaryButton,
+              {
+                opacity: pressed ? 0.92 : 1,
+                transform: [{ scale: pressed ? 0.98 : 1 }],
+              },
+            ]}
+            onPress={onOpenTimeline}
+          >
+            <Text style={styles.primaryButtonText}>
+              {hasActiveTask
+                ? "View Day Timeline"
+                : hasNextTask
+                  ? "Start My Day"
+                  : "View Day Timeline"}
+            </Text>
+            <Ionicons
+              name="arrow-forward"
+              size={20}
+              color={theme.colors.onPrimary}
+            />
+          </Pressable>
         </View>
-      </Animated.View>
+      </View>
+    </Animated.View>
   );
 };
 

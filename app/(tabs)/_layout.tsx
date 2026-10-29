@@ -1,16 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import {
   MaterialTopTabBarProps,
-  MaterialTopTabNavigationEventMap,
-  MaterialTopTabNavigationOptions,
-  createMaterialTopTabNavigator,
+  TopTabs as MaterialTopTabs,
 } from 'expo-router/js-top-tabs';
-import {
-  ParamListBase,
-  TabNavigationState,
-} from 'expo-router/react-navigation';
 import * as Haptics from '../../utils/haptics';
-import { withLayoutContext } from 'expo-router';
 import React, { useEffect, useRef } from 'react';
 import {
   Animated,
@@ -29,19 +22,13 @@ import {
 } from 'react-native-gesture-handler';
 import { useTheme } from '../../context/ThemeContext';
 
-const { Navigator } = createMaterialTopTabNavigator();
-
-export const MaterialTopTabs = withLayoutContext<
-  MaterialTopTabNavigationOptions,
-  typeof Navigator,
-  TabNavigationState<ParamListBase>,
-  MaterialTopTabNavigationEventMap
->(Navigator);
+export { MaterialTopTabs };
 
 function CustomTabBar({
   state,
   descriptors,
-  navigation,
+  emitter,
+  navigateToTab,
   position,
 }: MaterialTopTabBarProps) {
   const { theme } = useTheme();
@@ -59,15 +46,18 @@ function CustomTabBar({
     const onBackPress = () => {
       const currentRoute = state.routes[state.index]?.name;
       if (currentRoute !== 'index') {
-        navigation.navigate('index');
-        return true;
+        const homeRoute = state.routes.find((r: TabRoute) => r.name === 'index');
+        if (homeRoute) {
+          navigateToTab(homeRoute.key);
+          return true;
+        }
       }
       return false;
     };
 
     const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
     return () => subscription.remove();
-  }, [state.index, state.routes, navigation]);
+  }, [state.index, state.routes, navigateToTab]);
 
   // Use interpolation to move the indicator
   const translateX = position.interpolate({
@@ -111,7 +101,7 @@ function CustomTabBar({
 
         if (targetIndex !== state.index) {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          navigation.navigate(state.routes[targetIndex].name, { merge: true });
+          navigateToTab(state.routes[targetIndex].key);
         }
       }
     }
@@ -221,18 +211,18 @@ function CustomTabBar({
               if (!isFocused) {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               }
-              const event = navigation.emit({
+              const event = emitter.emit({
                 type: 'tabPress',
                 target: route.key,
                 canPreventDefault: true,
               });
               if (!isFocused && !event.defaultPrevented) {
-                navigation.navigate(route.name, { merge: true });
+                navigateToTab(route.key);
               }
             };
 
             const onLongPress = () =>
-              navigation.emit({ type: 'tabLongPress', target: route.key });
+              emitter.emit({ type: 'tabLongPress', target: route.key });
 
             return (
               <Pressable
@@ -259,7 +249,6 @@ export default function TabLayout() {
       <MaterialTopTabs
         tabBar={(props: MaterialTopTabBarProps) => <CustomTabBar {...props} />}
         tabBarPosition="bottom"
-        initialRouteName="index"
         screenOptions={{
           tabBarShowLabel: false,
           animationEnabled: true,
@@ -274,7 +263,7 @@ export default function TabLayout() {
               <Ionicons
                 name={focused ? 'clipboard' : 'clipboard-outline'}
                 size={24}
-                color={color}
+                color={String(color)}
               />
             ),
           }}
@@ -287,7 +276,7 @@ export default function TabLayout() {
               <Ionicons
                 name={focused ? 'home' : 'home-outline'}
                 size={24}
-                color={color}
+                color={String(color)}
               />
             ),
           }}
@@ -300,7 +289,7 @@ export default function TabLayout() {
               <Ionicons
                 name={focused ? 'person' : 'person-outline'}
                 size={24}
-                color={color}
+                color={String(color)}
               />
             ),
           }}

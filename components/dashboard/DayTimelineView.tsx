@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from '../../utils/haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { memo, useCallback, useMemo, useRef } from 'react';
@@ -16,11 +15,12 @@ import {
     useWindowDimensions,
     View,
 } from 'react-native';
-import { Theme } from '../../styles/shared';
-import { useTheme } from '../../context/ThemeContext';
-import { RoutineItem, timeToMinutes, getRoutineItemsForDate, ICON_MAP, isWakeupOrSleep } from '../../utils/utils';
-import { MonthCalendarView } from './MonthCalendarView';
 import { CATEGORY_COLORS } from '../../constants/categoryColors';
+import { useTheme } from '../../context/ThemeContext';
+import { Theme } from '../../styles/shared';
+import * as Haptics from '../../utils/haptics';
+import { getRoutineItemsForDate, ICON_MAP, isWakeupOrSleep, RoutineItem, timeToMinutes } from '../../utils/utils';
+import { MonthCalendarView } from './MonthCalendarView';
 
 /* ─────────────────────────────── Config ─────────────────────────────── */
 
@@ -28,7 +28,7 @@ import { CATEGORY_COLORS } from '../../constants/categoryColors';
 const TIME_AXIS_WIDTH = 26;
 
 /** Helper to compute column width dynamically based on screen width with symmetric margins */
-const getColWidth = (screenWidth: number) => 
+const getColWidth = (screenWidth: number) =>
     (screenWidth - 2 * TIME_AXIS_WIDTH) / 7;
 
 /** Circle sizes — well-proportioned for 7-day week timeline */
@@ -809,65 +809,65 @@ const TimelinePage = memo<{
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={{ paddingBottom: 110 }}
                 >
-                {/* Body row — time axis + columns */}
-                <View style={styles.bodyRow}>
-                {/* ── Left time axis ── */}
-                <View style={[styles.timeAxis, { height: dynamicBodyHeight }]}>
-                    {timeAxisPositions.map(tl => (
-                        <TimeAxisItem
-                            key={tl.hour}
-                            num={tl.num}
-                            ampm={tl.ampm}
-                            topY={tl.topY}
-                            circleHalf={circleSel / 2}
-                            theme={theme}
-                        />
-                    ))}
-                </View>
+                    {/* Body row — time axis + columns */}
+                    <View style={styles.bodyRow}>
+                        {/* ── Left time axis ── */}
+                        <View style={[styles.timeAxis, { height: dynamicBodyHeight }]}>
+                            {timeAxisPositions.map(tl => (
+                                <TimeAxisItem
+                                    key={tl.hour}
+                                    num={tl.num}
+                                    ampm={tl.ampm}
+                                    topY={tl.topY}
+                                    circleHalf={circleSel / 2}
+                                    theme={theme}
+                                />
+                            ))}
+                        </View>
 
-                {/* ── Horizontal time reference lines ── */}
-                {timeAxisPositions.map(tl => (
-                    <View
-                        key={`hline-${tl.hour}`}
-                        style={{
-                            position: 'absolute',
-                            top: tl.topY,
-                            left: TIME_AXIS_WIDTH,
-                            right: TIME_AXIS_WIDTH,
-                            height: StyleSheet.hairlineWidth,
-                            backgroundColor: `${theme.colors.text}08`,
-                        }}
-                    />
-                ))}
+                        {/* ── Horizontal time reference lines ── */}
+                        {timeAxisPositions.map(tl => (
+                            <View
+                                key={`hline-${tl.hour}`}
+                                style={{
+                                    position: 'absolute',
+                                    top: tl.topY,
+                                    left: TIME_AXIS_WIDTH,
+                                    right: TIME_AXIS_WIDTH,
+                                    height: StyleSheet.hairlineWidth,
+                                    backgroundColor: `${theme.colors.text}08`,
+                                }}
+                            />
+                        ))}
 
-                {/* ── 7 day columns (Week timeline) ── */}
-                {pageDates.map(date => {
-                    const key = formatDateKey(date);
-                    const isSelected = Boolean(selectedKey && key === selectedKey);
-                    const colItems = getRoutineItemsForDate(allRoutines, date)
-                        .sort((a, b) => getTimelineMinute(a.time, startHour) - getTimelineMinute(b.time, startHour));
-                    const circleSize = isSelected ? circleSel : circleOther;
+                        {/* ── 7 day columns (Week timeline) ── */}
+                        {pageDates.map(date => {
+                            const key = formatDateKey(date);
+                            const isSelected = Boolean(selectedKey && key === selectedKey);
+                            const colItems = getRoutineItemsForDate(allRoutines, date)
+                                .sort((a, b) => getTimelineMinute(a.time, startHour) - getTimelineMinute(b.time, startHour));
+                            const circleSize = isSelected ? circleSel : circleOther;
 
-                    return (
-                        <TimelineColumn
-                            key={key}
-                            isSelected={isSelected}
-                            colItems={colItems}
-                            circleSize={circleSize}
-                            dynamicBodyHeight={dynamicBodyHeight}
-                            cumY={cumY}
-                            totalMinutes={totalMinutes}
-                            startHour={startHour}
-                            theme={theme}
-                            isDarkMode={isDarkMode}
-                            styles={styles}
-                            onPressTask={onPressTask}
-                        />
-                    );
-                })}
-                {/* Right spacer for symmetry */}
-                <View style={{ width: TIME_AXIS_WIDTH }} />
-            </View>
+                            return (
+                                <TimelineColumn
+                                    key={key}
+                                    isSelected={isSelected}
+                                    colItems={colItems}
+                                    circleSize={circleSize}
+                                    dynamicBodyHeight={dynamicBodyHeight}
+                                    cumY={cumY}
+                                    totalMinutes={totalMinutes}
+                                    startHour={startHour}
+                                    theme={theme}
+                                    isDarkMode={isDarkMode}
+                                    styles={styles}
+                                    onPressTask={onPressTask}
+                                />
+                            );
+                        })}
+                        {/* Right spacer for symmetry */}
+                        <View style={{ width: TIME_AXIS_WIDTH }} />
+                    </View>
                 </ScrollView>
             </Animated.View>
         </View>

@@ -2,10 +2,10 @@ import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Dimensions, StyleSheet, Text, View } from "react-native";
 import Svg, { Circle } from "react-native-svg";
+import { themeTokens } from "../../constants/themeTokens";
 import { useTheme } from "../../context/ThemeContext";
 import { useTimerRemainingSeconds } from "../../hooks/useTimerRemainingSeconds";
 import { useTimerStore } from "../../stores/timerStore";
-import { themeTokens } from "../../constants/themeTokens";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const DIAL_SIZE = Math.min(SCREEN_WIDTH * 0.76, 290);
@@ -53,8 +53,8 @@ export const CircularTimerDial: React.FC<CircularTimerDialProps> = ({
       ? 25 * 60
       : selectedDuration
     : isActive
-    ? remainingSeconds
-    : pausedTimeRemaining ?? duration ?? selectedDuration;
+      ? remainingSeconds
+      : pausedTimeRemaining ?? duration ?? selectedDuration;
 
   const totalDuration = showDurationPicker
     ? selectedMode === "Pomodoro"
@@ -65,8 +65,8 @@ export const CircularTimerDial: React.FC<CircularTimerDialProps> = ({
   const progress = isCompleted
     ? 0
     : showDurationPicker
-    ? 1
-    : Math.max(0, Math.min(1, displayTime / totalDuration));
+      ? 1
+      : Math.max(0, Math.min(1, displayTime / totalDuration));
 
   const strokeDashoffset = CIRCUMFERENCE * (1 - progress);
 
@@ -169,9 +169,8 @@ export const CircularTimerDial: React.FC<CircularTimerDialProps> = ({
             style={styles.dialContent}
             accessible={true}
             accessibilityRole="progressbar"
-            accessibilityLabel={`Timer: ${Math.floor(displayTime / 60)} minutes and ${
-              displayTime % 60
-            } seconds remaining`}
+            accessibilityLabel={`Timer: ${Math.floor(displayTime / 60)} minutes and ${displayTime % 60
+              } seconds remaining`}
             accessibilityValue={{ min: 0, max: totalDuration, now: displayTime }}
           >
             {/* Session Status Tag */}
@@ -216,8 +215,8 @@ export const CircularTimerDial: React.FC<CircularTimerDialProps> = ({
               {isCompleted
                 ? "Mindful Session Complete"
                 : showDurationPicker
-                ? `Ready • ${Math.round(displayTime / 60)} minutes`
-                : `${Math.round(progress * 100)}% remaining`}
+                  ? `Ready • ${Math.round(displayTime / 60)} minutes`
+                  : `${Math.round(progress * 100)}% remaining`}
             </Text>
           </View>
         </View>

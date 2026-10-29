@@ -2,8 +2,8 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
-import { Theme } from "../../styles/shared";
 import { themeTokens } from "../../constants/themeTokens";
+import { Theme } from "../../styles/shared";
 import { ProgressRing } from "./ProgressRing";
 
 type IoniconName = keyof typeof Ionicons.glyphMap;

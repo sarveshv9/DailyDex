@@ -763,7 +763,7 @@ const TodoHeaderComponent = ({
 }: TodoHeaderProps) => {
   const styles = useMemo(() => getStyles(theme, isDarkMode), [theme, isDarkMode]);
   const [quickInputText, setQuickInputText] = useState("");
-  const quickInputRef = useRef<TextInput>(null);
+  const quickInputRef = useRef<React.ElementRef<typeof TextInput>>(null);
 
   const handleSubmit = useCallback(() => {
     const trimmed = quickInputText.trim();

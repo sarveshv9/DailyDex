@@ -107,7 +107,9 @@ export const ICON_MAP: Record<string, keyof typeof Ionicons.glyphMap> = {
   gaming: "game-controller-outline",
   podcast: "headset-outline",
 
-  // Fallback
+  // Fallback & custom
+  star: "star-outline",
+  sparkles: "sparkles-outline",
   custom: "add-circle-outline",
 };
 

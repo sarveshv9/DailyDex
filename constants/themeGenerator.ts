@@ -9,7 +9,6 @@
  * Must run cleanly in plain Node.js / tsx environments.
  */
 
-import { themeTokens } from "./themeTokens";
 import {
   blendOpaque,
   clampForContrast,
@@ -18,6 +17,7 @@ import {
   normalizeHex,
   scaleChroma,
 } from "../utils/color";
+import { themeTokens } from "./themeTokens";
 
 export interface ThemeColors {
   // New primary / accent tokens
