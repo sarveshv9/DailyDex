@@ -270,6 +270,10 @@ function HomeScreen() {
     }
   }, []);
 
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
+
   useFocusEffect(
     useCallback(() => {
       loadDashboardData();
@@ -557,7 +561,7 @@ function HomeScreen() {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <ActivityIndicator size="large" color={theme.colors.primary} style={styles.indicator} />
       </View>
     );
   }
@@ -653,6 +657,10 @@ const getStyles = (theme: { colors: { background: string } }) =>
       backgroundColor: theme.colors.background,
       justifyContent: "center",
       alignItems: "center",
+    },
+    indicator: {
+      width: 48,
+      height: 48,
     },
   });
 

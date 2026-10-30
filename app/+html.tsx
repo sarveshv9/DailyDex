@@ -24,16 +24,16 @@ export default function Root({ children }: PropsWithChildren) {
                 {/* Force full-screen coverage on mobile browsers including safe areas */}
                 <style dangerouslySetInnerHTML={{ __html: `
                   html, body {
-                    background-color: #000000;
+                    background-color: #ffffff;
                     margin: 0;
                     padding: 0;
                     overflow: hidden;
                     width: 100%;
                     height: 100%;
                   }
-                  @media (prefers-color-scheme: light) {
+                  @media (prefers-color-scheme: dark) {
                     html, body {
-                      background-color: #ffffff;
+                      background-color: #0D0E12;
                     }
                   }
                   #root {

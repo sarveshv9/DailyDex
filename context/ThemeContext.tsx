@@ -87,8 +87,6 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     ]
   );
 
-  if (!isLoaded && !(Platform.OS === 'web' && typeof window === 'undefined')) return null;
-
   return (
     <ThemeContext.Provider value={value}>
       {children}

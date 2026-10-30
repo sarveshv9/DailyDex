@@ -1,3 +1,4 @@
+import "react-native-gesture-handler";
 import "../utils/suppressWarnings";
 import * as SplashScreen from "expo-splash-screen";
 import { useFonts } from "expo-font";
@@ -6,6 +7,8 @@ import { StatusBar } from "expo-status-bar";
 import { ThemeProvider } from "../context/ThemeContext";
 
 import { useEffect, useState } from "react";
+import { ActivityIndicator, Platform, StyleSheet, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AudioProvider } from "../context/AudioContext";
 import { SettingsProvider } from "../context/SettingsContext";
 import { TimerProvider } from "../context/TimerContext";
@@ -20,8 +23,10 @@ import { queryClient } from "../utils/queryClient";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useThemeStore } from "../stores/themeStore";
 
-// Prevent splash screen from auto-hiding until initial stores and fonts are ready
-SplashScreen.preventAutoHideAsync().catch(() => {});
+// Prevent splash screen from auto-hiding until initial stores and fonts are ready (native only)
+if (Platform.OS !== "web") {
+  SplashScreen.preventAutoHideAsync().catch(() => {});
+}
 
 function RootLayoutNav() {
   const [fontsLoaded] = useFonts({
@@ -44,7 +49,9 @@ function RootLayoutNav() {
       useThemeStore.setState({ isLoaded: true });
       useSettingsStore.setState({ isLoading: false });
       setThemeReady(true);
-      SplashScreen.hideAsync().catch(() => {});
+      if (Platform.OS !== "web") {
+        SplashScreen.hideAsync().catch(() => {});
+      }
     }, 2000);
 
     Promise.all([
@@ -59,7 +66,9 @@ function RootLayoutNav() {
         useThemeStore.setState({ isLoaded: true });
         useSettingsStore.setState({ isLoading: false });
         setThemeReady(true);
-        SplashScreen.hideAsync().catch(() => {});
+        if (Platform.OS !== "web") {
+          SplashScreen.hideAsync().catch(() => {});
+        }
       });
 
     return () => clearTimeout(safetyTimeout);
@@ -89,12 +98,16 @@ function RootLayoutNav() {
   }, []);
 
   const isAppReady =
-    (fontsLoaded && isSetupComplete !== null && initialized && themeReady) ||
-    fallbackTimedOut;
+    Platform.OS === "web"
+      ? true
+      : (fontsLoaded && isSetupComplete !== null && initialized && themeReady) ||
+        fallbackTimedOut;
 
   useEffect(() => {
     if (!isAppReady) return;
-    SplashScreen.hideAsync().catch(() => {});
+    if (Platform.OS !== "web") {
+      SplashScreen.hideAsync().catch(() => {});
+    }
   }, [isAppReady]);
 
   useEffect(() => {
@@ -145,6 +158,13 @@ function RootLayoutNav() {
   }, [isAppReady, segments, session, initialized, isSetupComplete, router]);
 
   if (!isAppReady) {
+    if (Platform.OS === "web") {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#FF3B3B" style={styles.indicator} />
+        </View>
+      );
+    }
     return null;
   }
 
@@ -178,10 +198,28 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   return (
-    <SafeAreaProvider>
-      <AuthProvider>
-        <RootLayoutNav />
-      </AuthProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={styles.root}>
+      <SafeAreaProvider style={styles.root}>
+        <AuthProvider>
+          <RootLayoutNav />
+        </AuthProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+  },
+  indicator: {
+    width: 48,
+    height: 48,
+  },
+});

@@ -2,7 +2,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -91,6 +91,10 @@ export default function ProfileScreen() {
       setIsLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    loadProfileData();
+  }, [loadProfileData]);
 
   useFocusEffect(
     useCallback(() => {
@@ -341,7 +345,7 @@ export default function ProfileScreen() {
           alignItems: "center",
         }}
       >
-        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <ActivityIndicator size="large" color={theme.colors.primary} style={{ width: 48, height: 48 }} />
       </View>
     );
   }

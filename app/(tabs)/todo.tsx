@@ -941,6 +941,10 @@ export default function TodoScreen() {
     }
   }, []);
 
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
+
   useFocusEffect(
     useCallback(() => {
       fetchTasks();
@@ -1188,7 +1192,7 @@ export default function TodoScreen() {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color={theme.colors.primary} style={styles.indicator} />
         </View>
       </SafeAreaView>
     );
@@ -1264,6 +1268,10 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       flex: 1,
       justifyContent: "center",
       alignItems: "center",
+    },
+    indicator: {
+      width: 48,
+      height: 48,
     },
     mainScrollView: {
       flex: 1,
