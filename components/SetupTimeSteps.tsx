@@ -26,7 +26,6 @@ import Animated, {
 import Svg, {
     Circle,
     Defs,
-    Ellipse,
     G,
     Line,
     LinearGradient,
@@ -34,14 +33,14 @@ import Svg, {
     Path,
     RadialGradient,
     Rect,
-    Stop,
+    Stop
 } from "react-native-svg";
-import type { Theme } from "../styles/shared";
+import { themeTokens } from "../constants/themeTokens";
 import { useTheme } from "../context/ThemeContext";
+import type { Theme } from "../styles/shared";
+import { hexToRgba } from "../utils/color";
 import * as Haptics from "../utils/haptics";
 import { timeToMinutes } from "../utils/utils";
-import { themeTokens } from "../constants/themeTokens";
-import { hexToRgba } from "../utils/color";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -74,12 +73,15 @@ function calculateSleepWindow(sleepStr: string, wakeStr: string) {
     const text = minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
 
     let desc = "Optimal restorative balance. Ample deep sleep and REM for peak daytime focus.";
+    let isWarning = false;
     if (hours < 7) {
         desc = "Slightly shorter sleep window. Zen recommends 7–9 hours for sustained cognitive clarity.";
-    } else if (hours > 9) {
+        isWarning = true;
+    } else if (hours > 9 || (hours === 9 && minutes > 30)) {
         desc = "Generous rest window. Plenty of time to recharge your body and nervous system.";
+        isWarning = false;
     }
-    return { text, desc };
+    return { text, desc, isWarning };
 }
 
 // ─── Illustration pieces ─────────────────────────────────────────────────────
@@ -94,11 +96,104 @@ function Cloud({ x, y, scale = 1, fill }: { x: number; y: number; scale?: number
     );
 }
 
-function Tree({ x, y, scale = 1, fill }: { x: number; y: number; scale?: number; fill: string }) {
+// ─── Foliage ─────────────────────────────────────────────────────────────────
+// Soft, painterly plants. Every shape fades toward its base so it melts into the
+// hill behind it instead of sitting on top like a sticker. `hi` is the strength
+// of the lighter facet on one side of each leaf / lump.
+const fadeId = (c: string) => `fade-${c.replace("#", "")}`;
+
+function Fade({ color }: { color: string }) {
+    return (
+        <Defs>
+            <LinearGradient id={fadeId(color)} x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0" stopColor={color} stopOpacity={1} />
+                <Stop offset="0.55" stopColor={color} stopOpacity={0.92} />
+                <Stop offset="1" stopColor={color} stopOpacity={0.3} />
+            </LinearGradient>
+        </Defs>
+    );
+}
+
+type FoliageProps = { x: number; y: number; scale?: number; fill: string; hi?: number };
+
+// Slender, pointed leaf buds (tall, overlapping, two-toned).
+const LEAF = "M0 0 C-5.5 -9 -6 -27 0 -46 C6 -27 5.5 -9 0 0 Z";
+const LEAF_FACET = "M0 -6 C4.5 -12 6 -27 0 -46 L0 -6 Z";
+const BUD_LEAVES = [
+    { r: -20, s: 0.5, dx: -3, o: 0.8 },
+    { r: 19, s: 0.46, dx: 3, o: 0.8 },
+    { r: -9, s: 0.8, dx: -2, o: 0.88 },
+    { r: 8, s: 0.72, dx: 2, o: 0.88 },
+    { r: 0, s: 1, dx: 0, o: 1 },
+];
+
+function Tree({ x, y, scale = 1, fill, hi = 0.16 }: FoliageProps) {
     return (
         <G transform={`translate(${x} ${y}) scale(${scale})`}>
-            <Path d="M0 -44 C9 -28 12 -10 12 0 L-12 0 C-12 -10 -9 -28 0 -44 Z" fill={fill} />
+            <Fade color={fill} />
+            {BUD_LEAVES.map((l, i) => (
+                <G key={i} transform={`translate(${l.dx} 0) rotate(${l.r}) scale(${l.s})`} opacity={l.o}>
+                    <Path d={LEAF} fill={`url(#${fadeId(fill)})`} />
+                    <Path d={LEAF_FACET} fill="#FFFFFF" fillOpacity={hi} />
+                </G>
+            ))}
         </G>
+    );
+}
+
+// Narrow splayed blades (agave / grass tuft).
+const BLADE = "M0 0 C-2.6 -8 -3.2 -22 0 -40 C3.2 -22 2.6 -8 0 0 Z";
+const BLADE_FACET = "M0 -4 C2.4 -10 3.2 -22 0 -40 L0 -4 Z";
+const SPIKES = [
+    { r: -58, s: 0.55 },
+    { r: 58, s: 0.55 },
+    { r: -40, s: 0.75 },
+    { r: 40, s: 0.75 },
+    { r: -20, s: 0.92 },
+    { r: 20, s: 0.92 },
+    { r: 0, s: 1 },
+];
+
+function Spike({ x, y, scale = 1, fill, hi = 0.16 }: FoliageProps) {
+    return (
+        <G transform={`translate(${x} ${y}) scale(${scale})`}>
+            <Fade color={fill} />
+            {SPIKES.map((l, i) => (
+                <G key={i} transform={`rotate(${l.r}) scale(${l.s})`}>
+                    <Path d={BLADE} fill={`url(#${fadeId(fill)})`} />
+                    <Path d={BLADE_FACET} fill="#FFFFFF" fillOpacity={hi} />
+                </G>
+            ))}
+        </G>
+    );
+}
+
+// Lumpy rounded shrub with a lighter front lump; fades out at the base.
+const BUSH = "M-28 2 A8 8 0 0 1 -21 -10 A11 11 0 0 1 -3 -17 A12 12 0 0 1 16 -15 A9 9 0 0 1 28 -4 L29 2 Z";
+const BUSH_FRONT = "M-15 2 A7 7 0 0 1 -8 -6 A9 9 0 0 1 8 -8 A7 7 0 0 1 17 2 Z";
+
+function Bush({ x, y, scale = 1, fill, hi = 0.16 }: FoliageProps) {
+    return (
+        <G transform={`translate(${x} ${y}) scale(${scale})`}>
+            <Fade color={fill} />
+            <Path d={BUSH} fill={`url(#${fadeId(fill)})`} />
+            <Path d={BUSH_FRONT} fill="#FFFFFF" fillOpacity={hi * 0.8} />
+        </G>
+    );
+}
+
+// Soft mauve ground patch the plants stand on.
+function Mound({ d, color, id }: { d: string; color: string; id: string }) {
+    return (
+        <>
+            <Defs>
+                <LinearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+                    <Stop offset="0" stopColor={color} stopOpacity={0.85} />
+                    <Stop offset="1" stopColor={color} stopOpacity={0} />
+                </LinearGradient>
+            </Defs>
+            <Path d={d} fill={`url(#${id})`} />
+        </>
     );
 }
 
@@ -112,7 +207,11 @@ const HILLS = {
         back: ["#FAD5BE", "#F7C7AA"],
         mid: ["#F8CBAE", "#FBDCC8"],
         front: ["#FBDCC9", DAY_BG],
-        tree: "#F0B99C",
+        tree: "#A98BA3",
+        treeMid: "#C9A1A9",
+        treeLight: "#D8AEAA",
+        mound: "#CFA9AF",
+        hi: 0.16,
         rim: "#FFFFFF",
         rimOpacity: 0.55,
         cloud: "#FBE4D5",
@@ -121,7 +220,11 @@ const HILLS = {
         back: ["#2C1C40", "#1A1230"],
         mid: ["#1F1533", "#150F25"],
         front: ["#150F24", NIGHT_BG],
-        tree: "#0C0817",
+        tree: "#150E27",
+        treeMid: "#1D1434",
+        treeLight: "#251B42",
+        mound: "#140D24",
+        hi: 0.09,
         rim: "#FFFFFF",
         rimOpacity: 0.2,
         cloud: "#26193A",
@@ -293,13 +396,25 @@ function Hills({ mode }: { mode: Mode }) {
             <Path d={`${BACK_RIDGE} L390 ${B} L0 ${B} Z`} fill={`url(#rBack-${mode})`} />
             <Path d={BACK_RIDGE} stroke={p.rim} strokeOpacity={p.rimOpacity} strokeWidth={1.2} fill="none" />
 
-            <Tree x={14} y={106} scale={1.15} fill={p.tree} />
-            <Tree x={38} y={100} scale={0.8} fill={p.tree} />
-            <Tree x={62} y={97} scale={0.6} fill={p.tree} />
-            <Ellipse cx={26} cy={104} rx={18} ry={7} fill={p.tree} />
-            <Tree x={344} y={94} scale={0.7} fill={p.tree} />
-            <Tree x={372} y={90} scale={1.2} fill={p.tree} />
-            <Ellipse cx={362} cy={92} rx={20} ry={7} fill={p.tree} />
+            <Mound id={`mL-${mode}`} color={p.mound} d="M-5 112 C25 101 70 104 110 111 C140 117 160 124 178 134 L-5 134 Z" />
+            <Mound id={`mR-${mode}`} color={p.mound} d="M395 100 C370 99 340 103 312 109 C290 114 270 124 252 134 L395 134 Z" />
+
+            {/* left cluster */}
+            <Bush x={74} y={118} scale={1} fill={p.treeMid} hi={p.hi} />
+            <Bush x={106} y={119} scale={0.6} fill={p.treeLight} hi={p.hi} />
+            <Spike x={6} y={120} scale={0.5} fill={p.tree} hi={p.hi} />
+            <Tree x={17} y={118} scale={0.85} fill={p.tree} hi={p.hi} />
+            <Tree x={47} y={118} scale={0.8} fill={p.tree} hi={p.hi} />
+            <Tree x={33} y={117} scale={1.2} fill={p.tree} hi={p.hi} />
+            <Spike x={128} y={121} scale={0.35} fill={p.treeMid} hi={p.hi} />
+
+            {/* right cluster */}
+            <Bush x={304} y={108} scale={0.55} fill={p.treeMid} hi={p.hi} />
+            <Bush x={348} y={107} scale={0.6} fill={p.treeLight} hi={p.hi} />
+            <Tree x={312} y={108} scale={0.5} fill={p.tree} hi={p.hi} />
+            <Tree x={324} y={108} scale={0.75} fill={p.tree} hi={p.hi} />
+            <Spike x={386} y={108} scale={0.7} fill={p.tree} hi={p.hi} />
+            <Spike x={372} y={107} scale={1.15} fill={p.tree} hi={p.hi} />
 
             <Path
                 d={`M0 134 C70 112 140 122 205 136 C275 150 335 128 390 114 L390 ${B} L0 ${B} Z`}
@@ -540,9 +655,23 @@ export function InteractiveTimeCard({
     const changeMinute = (delta: number) => {
         Haptics.selectionAsync();
         let nextM = minutes + delta;
-        if (nextM >= 60) nextM = 0;
-        if (nextM < 0) nextM = 55;
-        onChange(formatTimeString(hours, nextM, ampm));
+        let hourDelta = 0;
+        if (nextM >= 60) {
+            nextM = nextM % 60;
+            hourDelta = 1;
+        } else if (nextM < 0) {
+            nextM = (nextM + 60) % 60;
+            hourDelta = -1;
+        }
+
+        if (hourDelta !== 0) {
+            const nextMil = (militaryHour + hourDelta + 24) % 24;
+            const nextAmPm = nextMil >= 12 ? "PM" : "AM";
+            const nextH = nextMil % 12 === 0 ? 12 : nextMil % 12;
+            onChange(formatTimeString(nextH, nextM, nextAmPm));
+        } else {
+            onChange(formatTimeString(hours, nextM, ampm));
+        }
     };
 
     const toggleAmPm = () => {
@@ -686,7 +815,7 @@ export function StepTime({
 
     const press = (fn: () => void) => () => {
         if (busy.current) return;
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => { });
         fn();
     };
 
@@ -711,7 +840,7 @@ export function StepTime({
                 <Animated.View style={[styles.header, fadeAnimatedStyle]}>
                     <View style={styles.headerTop}>
                         <Text style={styles.eyebrow}>
-                            {night ? "STEP 2 OF 4 · EVENING REST" : "STEP 1 OF 4 · MORNING ANCHOR"}
+                            {night ? "STEP 2 OF 5 · EVENING REST" : "STEP 1 OF 5 · MORNING ANCHOR"}
                         </Text>
                         <Pressable onPress={onSkip} hitSlop={10}>
                             <Text style={[styles.skip, { color: night ? "#C4C7D0" : "#6B7280" }]}>
@@ -743,10 +872,59 @@ export function StepTime({
                 <Animated.View style={[styles.cards, fadeAnimatedStyle]}>
                     <InteractiveTimeCard time={time} onChange={onUpdateTime} isSleepStep={night} />
 
+                    {/* Quick Presets Row */}
+                    <View style={night ? styles.presetsRowNight : styles.presetsRowDay}>
+                        {(night
+                            ? ["10:00 PM", "10:30 PM", "11:00 PM", "11:30 PM", "12:00 AM"]
+                            : ["06:00 AM", "06:30 AM", "07:00 AM", "07:30 AM", "08:00 AM"]
+                        ).map((preset) => {
+                            const isSelected = preset === time;
+                            return (
+                                <Pressable
+                                    key={preset}
+                                    style={[
+                                        night ? styles.presetChipNight : styles.presetChipDay,
+                                        isSelected &&
+                                            (night
+                                                ? styles.presetChipActiveNight
+                                                : styles.presetChipActiveDay),
+                                    ]}
+                                    onPress={() => {
+                                        Haptics.selectionAsync();
+                                        onUpdateTime(preset);
+                                    }}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={`Quick select ${preset}`}
+                                >
+                                    <Text
+                                        style={[
+                                            night ? styles.presetTextNight : styles.presetTextDay,
+                                            isSelected &&
+                                                (night
+                                                    ? styles.presetTextActiveNight
+                                                    : styles.presetTextActiveDay),
+                                        ]}
+                                    >
+                                        {preset.replace(/^0/, "").replace(/\s*[AP]M/, "")}
+                                    </Text>
+                                </Pressable>
+                            );
+                        })}
+                    </View>
+
                     {night && sleepInfo ? (
-                        <View style={styles.insightNight}>
-                            <View style={styles.insightIconNight}>
-                                <Ionicons name="moon-outline" size={26} color="#FFFFFF" />
+                        <View style={[styles.insightNight, sleepInfo.isWarning && styles.insightNightWarning]}>
+                            <View
+                                style={[
+                                    styles.insightIconNight,
+                                    sleepInfo.isWarning && styles.insightIconNightWarning,
+                                ]}
+                            >
+                                <Ionicons
+                                    name={sleepInfo.isWarning ? "alert-circle-outline" : "moon-outline"}
+                                    size={26}
+                                    color={sleepInfo.isWarning ? "#FCD34D" : "#FFFFFF"}
+                                />
                             </View>
                             <View style={{ flex: 1 }}>
                                 <Text style={styles.insightTitleNight}>{sleepInfo.text} Sleep Window</Text>
@@ -988,6 +1166,80 @@ const makeStyles = (theme: Theme) => {
             lineHeight: 18,
             fontFamily: fonts.regular,
             color: "#9EA2B0",
+        },
+        insightNightWarning: {
+            borderColor: "#B45309",
+            backgroundColor: "#1C140D",
+        },
+        insightIconNightWarning: {
+            backgroundColor: "#2E1A0C",
+            borderColor: "#78350F",
+        },
+
+        // Quick presets
+        presetsRowDay: {
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 6,
+            marginTop: 4,
+            marginBottom: 8,
+            paddingHorizontal: 2,
+        },
+        presetsRowNight: {
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 6,
+            marginTop: 4,
+            marginBottom: 8,
+            paddingHorizontal: 2,
+        },
+        presetChipDay: {
+            flex: 1,
+            paddingVertical: 9,
+            borderRadius: 14,
+            backgroundColor: "#FFFFFF",
+            borderWidth: 1,
+            borderColor: "#EDE3DB",
+            alignItems: "center",
+            justifyContent: "center",
+        },
+        presetChipActiveDay: {
+            backgroundColor: theme.colors.primary,
+            borderColor: theme.colors.primary,
+        },
+        presetTextDay: {
+            fontSize: themeTokens.fonts.size.xs + 1,
+            fontFamily: fonts.medium,
+            color: "#4B5563",
+        },
+        presetTextActiveDay: {
+            color: theme.colors.onPrimary,
+            fontFamily: fonts.bold,
+        },
+        presetChipNight: {
+            flex: 1,
+            paddingVertical: 9,
+            borderRadius: 14,
+            backgroundColor: "#0D0F17",
+            borderWidth: 1,
+            borderColor: "#1F2330",
+            alignItems: "center",
+            justifyContent: "center",
+        },
+        presetChipActiveNight: {
+            backgroundColor: theme.colors.primary,
+            borderColor: theme.colors.primary,
+        },
+        presetTextNight: {
+            fontSize: themeTokens.fonts.size.xs + 1,
+            fontFamily: fonts.medium,
+            color: "#9EA2B0",
+        },
+        presetTextActiveNight: {
+            color: theme.colors.onPrimary,
+            fontFamily: fonts.bold,
         },
 
         // Bottom bar

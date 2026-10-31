@@ -11,14 +11,6 @@ export const TEMPLATES: ActivityTemplate[] = [
         minutes: 10,
     },
     {
-        task: "Hydrate",
-        description: "Refresh your body with water.",
-        imageKey: "water",
-        defaultTime: "07:15 AM",
-        category: "morning",
-        minutes: 2,
-    },
-    {
         task: "Drink water",
         description: "Hydrate your body to jumpstart your day.",
         imageKey: "water",
@@ -126,14 +118,6 @@ export const TEMPLATES: ActivityTemplate[] = [
     },
 
     // Fitness
-    {
-        task: "Gym",
-        description: "Build strength and discipline.",
-        imageKey: "gym",
-        defaultTime: "06:30 AM",
-        category: "fitness",
-        minutes: 45,
-    },
     {
         task: "Strength training",
         description: "Build power and physical resilience.",
@@ -249,26 +233,10 @@ export const TEMPLATES: ActivityTemplate[] = [
         minutes: 45,
     },
     {
-        task: "Deep Work",
-        description: "Dive deep into focused creation.",
-        imageKey: "deep_work",
-        defaultTime: "10:00 AM",
-        category: "productivity",
-        minutes: 45,
-    },
-    {
         task: "Read 20 pages",
         description: "Expand your mind one page at a time.",
         imageKey: "read",
         defaultTime: "08:30 PM",
-        category: "productivity",
-        minutes: 20,
-    },
-    {
-        task: "Read",
-        description: "Expand your mind one page at a time.",
-        imageKey: "read",
-        defaultTime: "08:00 PM",
         category: "productivity",
         minutes: 20,
     },
@@ -288,14 +256,6 @@ export const TEMPLATES: ActivityTemplate[] = [
         category: "productivity",
         minutes: 20,
     },
-    {
-        task: "Planning",
-        description: "Map out your path forward.",
-        imageKey: "planning",
-        defaultTime: "08:00 AM",
-        category: "productivity",
-        minutes: 15,
-    },
 
     // Mindfulness
     {
@@ -309,14 +269,6 @@ export const TEMPLATES: ActivityTemplate[] = [
     {
         task: "Breathing exercise",
         description: "Conscious breathwork for nervous system reset.",
-        imageKey: "breathe",
-        defaultTime: "12:00 PM",
-        category: "mindfulness",
-        minutes: 5,
-    },
-    {
-        task: "Breathe",
-        description: "Conscious breathing for inner calm.",
         imageKey: "breathe",
         defaultTime: "12:00 PM",
         category: "mindfulness",
@@ -345,14 +297,6 @@ export const TEMPLATES: ActivityTemplate[] = [
         defaultTime: "06:00 PM",
         category: "mindfulness",
         minutes: 10,
-    },
-    {
-        task: "Gratitude",
-        description: "Count your blessings, big and small.",
-        imageKey: "gratitude",
-        defaultTime: "09:30 PM",
-        category: "mindfulness",
-        minutes: 5,
     },
     {
         task: "Prayer",
@@ -415,23 +359,7 @@ export const TEMPLATES: ActivityTemplate[] = [
         minutes: 15,
     },
     {
-        task: "Call a Friend",
-        description: "Stay connected to the people you love.",
-        imageKey: "call_friend",
-        defaultTime: "07:00 PM",
-        category: "social",
-        minutes: 15,
-    },
-    {
         task: "Family time",
-        description: "Be present with those who matter most.",
-        imageKey: "family_time",
-        defaultTime: "06:30 PM",
-        category: "social",
-        minutes: 30,
-    },
-    {
-        task: "Family Time",
         description: "Be present with those who matter most.",
         imageKey: "family_time",
         defaultTime: "06:30 PM",
@@ -459,14 +387,6 @@ export const TEMPLATES: ActivityTemplate[] = [
     {
         task: "Wind-down routine",
         description: "Gentle preparation for peaceful deep sleep.",
-        imageKey: "prepare_sleep",
-        defaultTime: "09:00 PM",
-        category: "evening",
-        minutes: 15,
-    },
-    {
-        task: "Wind Down",
-        description: "Slow down and prepare for rest.",
         imageKey: "prepare_sleep",
         defaultTime: "09:00 PM",
         category: "evening",

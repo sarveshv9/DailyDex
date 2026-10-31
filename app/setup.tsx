@@ -1,11 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
     Alert,
     BackHandler,
     KeyboardAvoidingView,
+    Modal,
     Platform,
     Pressable,
     ScrollView,
@@ -53,11 +54,185 @@ function StepWelcome({
 
 // ─── Step 1 & 2: Day & Night Anchor Screens are imported from ../components/SetupTimeSteps ──
 
-// ─── Step 3: Curate Habits is imported from ../components/setup/stepPick/StepPick ──
+// ─── Step 3 & 4: Focus & Curate Habits are imported from ../components/setup/stepPick/StepPick ──
 
-// ─── Step 4: Finalize Times & Schedule ────────────────────────────────────────
+// ─── Conflict Detection Types & Helper ────────────────────────────────────────
+interface ScheduleConflict {
+    type: "overlap" | "outside_waking_hours";
+    message: string;
+    details?: string;
+}
+
+function computeRoutineConflicts(
+    routines: DraftItem[],
+    wakeTimeStr: string,
+    sleepTimeStr: string
+): Record<string, ScheduleConflict> {
+    const conflicts: Record<string, ScheduleConflict> = {};
+    if (routines.length === 0) return conflicts;
+
+    const wakeMin = timeToMinutes(wakeTimeStr);
+    const rawSleepMin = timeToMinutes(sleepTimeStr);
+
+    // Calculate sleep window boundaries & midpoint
+    const isSleepPastMidnight = rawSleepMin <= wakeMin;
+    let sleepDuration = 0;
+    let sleepMidpoint = 0;
+
+    if (isSleepPastMidnight) {
+        sleepDuration = wakeMin - rawSleepMin;
+        sleepMidpoint = (rawSleepMin + Math.floor(sleepDuration / 2)) % 1440;
+    } else {
+        sleepDuration = (1440 - rawSleepMin) + wakeMin;
+        sleepMidpoint = (rawSleepMin + Math.floor(sleepDuration / 2)) % 1440;
+    }
+
+    const effectiveSleepMin = isSleepPastMidnight ? rawSleepMin + 1440 : rawSleepMin;
+
+    // 1. Outside waking hours check (for non-anchor items)
+    for (const item of routines) {
+        const isAnchor =
+            item.task.toLowerCase() === "wake up" ||
+            item.task.toLowerCase() === "sleep";
+
+        if (isAnchor) continue;
+
+        const rawMin = timeToMinutes(item.time);
+        const duration = item.duration || 30;
+
+        let isSleepingHour = false;
+        let isCloserToWake = false;
+
+        if (isSleepPastMidnight) {
+            // Sleeping window is [rawSleepMin, wakeMin)
+            if (rawMin >= rawSleepMin && rawMin < wakeMin) {
+                isSleepingHour = true;
+                isCloserToWake = rawMin >= sleepMidpoint;
+            }
+        } else {
+            // Sleeping window is [rawSleepMin, 1440) OR [0, wakeMin)
+            if (rawMin >= rawSleepMin || rawMin < wakeMin) {
+                isSleepingHour = true;
+                // Midpoint is in early morning [0, wakeMin)
+                if (rawMin >= sleepMidpoint && rawMin < wakeMin) {
+                    isCloserToWake = true;
+                } else {
+                    isCloserToWake = false;
+                }
+            }
+        }
+
+        if (isSleepingHour) {
+            if (isCloserToWake) {
+                conflicts[item.id] = {
+                    type: "outside_waking_hours",
+                    message: "Before wake-up",
+                    details: `Scheduled for ${item.time}, before your ${wakeTimeStr} wake-up.`,
+                };
+            } else {
+                conflicts[item.id] = {
+                    type: "outside_waking_hours",
+                    message: "Past bedtime",
+                    details: `Scheduled for ${item.time}, after your ${sleepTimeStr} bedtime.`,
+                };
+            }
+            continue;
+        }
+
+        // Check if task starts in waking window but ends after bedtime
+        let normalizedTaskStart = rawMin;
+        if (rawMin < wakeMin) {
+            normalizedTaskStart += 1440;
+        }
+        const normalizedTaskEnd = normalizedTaskStart + duration;
+
+        if (normalizedTaskEnd > effectiveSleepMin) {
+            conflicts[item.id] = {
+                type: "outside_waking_hours",
+                message: "Overlaps bedtime",
+                details: `Runs past your ${sleepTimeStr} bedtime.`,
+            };
+        }
+    }
+
+    // 2. Overlapping activities check between items in chronological waking flow
+    const wakingItems = routines.map((item) => {
+        const rawMin = timeToMinutes(item.time);
+        const elapsed = (rawMin - wakeMin + 1440) % 1440;
+        return {
+            ...item,
+            rawMin,
+            elapsed,
+            duration: item.duration || 30,
+        };
+    });
+
+    wakingItems.sort((a, b) => a.elapsed - b.elapsed);
+
+    for (let i = 0; i < wakingItems.length - 1; i++) {
+        const current = wakingItems[i];
+        const next = wakingItems[i + 1];
+
+        // Check if current item ends after next begins
+        if (
+            current.elapsed + current.duration > next.elapsed &&
+            next.elapsed > current.elapsed
+        ) {
+            const overlapMins = current.elapsed + current.duration - next.elapsed;
+            if (!conflicts[current.id]) {
+                conflicts[current.id] = {
+                    type: "overlap",
+                    message: `Overlaps with ${next.task}`,
+                    details: `Ends ${overlapMins}m after ${next.task} begins (${next.time}).`,
+                };
+            }
+            if (!conflicts[next.id]) {
+                conflicts[next.id] = {
+                    type: "overlap",
+                    message: `Overlaps with ${current.task}`,
+                    details: `Starts before ${current.task} completes (${current.duration}m).`,
+                };
+            }
+        }
+    }
+
+    return conflicts;
+}
+
+function getRecurringPreviewTimes(
+    item: DraftItem,
+    hoursInterval: number,
+    wakeTimeStr: string,
+    sleepTimeStr: string
+): string[] {
+    const wakeMin = timeToMinutes(wakeTimeStr);
+    let sleepMin = timeToMinutes(sleepTimeStr);
+    if (sleepMin <= wakeMin) sleepMin += 24 * 60;
+
+    let itemMin = timeToMinutes(item.time);
+    if (itemMin < wakeMin) itemMin += 24 * 60;
+
+    let cur = itemMin + hoursInterval * 60;
+    const times: string[] = [];
+
+    while (cur < sleepMin) {
+        const norm = cur % (24 * 60);
+        let h = Math.floor(norm / 60);
+        const m = norm % 60;
+        const ampm = h >= 12 ? "PM" : "AM";
+        if (h === 0) h = 12;
+        else if (h > 12) h -= 12;
+        times.push(`${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")} ${ampm}`);
+        cur += hoursInterval * 60;
+    }
+    return times;
+}
+
+// ─── Step 5: Finalize Times & Schedule ────────────────────────────────────────
 function StepTimes({
     routines,
+    wakeTime,
+    sleepTime,
     onUpdateTime,
     onUpdateDesc,
     onUpdateDuration,
@@ -69,6 +244,8 @@ function StepTimes({
     saving,
 }: {
     routines: DraftItem[];
+    wakeTime: string;
+    sleepTime: string;
     onUpdateTime: (id: string, val: string) => void;
     onUpdateDesc: (id: string, val: string) => void;
     onUpdateDuration: (id: string, duration: number) => void;
@@ -84,13 +261,27 @@ function StepTimes({
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [recurringModalItem, setRecurringModalItem] = useState<DraftItem | null>(null);
 
+    const conflicts = useMemo(
+        () => computeRoutineConflicts(routines, wakeTime, sleepTime),
+        [routines, wakeTime, sleepTime]
+    );
+
+    const recurringPreviews = useMemo(() => {
+        if (!recurringModalItem) return {};
+        const res: Record<number, string[]> = {};
+        for (const h of [1, 2, 3, 4]) {
+            res[h] = getRecurringPreviewTimes(recurringModalItem, h, wakeTime, sleepTime);
+        }
+        return res;
+    }, [recurringModalItem, wakeTime, sleepTime]);
+
     const DURATION_CHOICES = [15, 30, 45, 60];
 
     return (
         <View style={{ flex: 1 }}>
             <View style={styles.stepHeader}>
                 <View style={styles.headerTop}>
-                    <Text style={styles.stepEyebrow}>Step 4 of 4 · Schedule</Text>
+                    <Text style={styles.stepEyebrow}>Step 5 of 5 · Schedule</Text>
                     <Pressable
                         onPress={onSkip}
                         style={styles.skipBtn}
@@ -130,6 +321,7 @@ function StepTimes({
                     {routines.map((item, index) => {
                         const isOpen = expandedId === item.id;
                         const duration = item.duration || 30;
+                        const conflict = conflicts[item.id];
 
                         return (
                             <View key={item.id} style={styles.timelineRow}>
@@ -140,7 +332,13 @@ function StepTimes({
                                     )}
                                 </View>
 
-                                <View style={[styles.timelineCard, isOpen && styles.timelineCardOpen]}>
+                                <View
+                                    style={[
+                                        styles.timelineCard,
+                                        isOpen && styles.timelineCardOpen,
+                                        Boolean(conflict) && styles.timelineCardConflict,
+                                    ]}
+                                >
                                     <Pressable
                                         style={styles.timelineCardTop}
                                         onPress={() => {
@@ -148,7 +346,9 @@ function StepTimes({
                                             setExpandedId(isOpen ? null : item.id);
                                         }}
                                         accessibilityRole="button"
-                                        accessibilityLabel={`${item.task} at ${item.time}, ${duration} minutes. Tap to ${isOpen ? "collapse" : "expand"}`}
+                                        accessibilityLabel={`${item.task} at ${item.time}, ${duration} minutes${
+                                            conflict ? `, note: ${conflict.message}` : ""
+                                        }. Tap to ${isOpen ? "collapse" : "expand"}`}
                                     >
                                         <View style={styles.timelineCardLeft}>
                                             <View style={styles.timelineCardIconWrap}>
@@ -158,12 +358,24 @@ function StepTimes({
                                                     color={theme.colors.primary}
                                                 />
                                             </View>
-                                            <View>
+                                            <View style={{ flex: 1 }}>
                                                 <Text style={styles.timelineTask}>{item.task}</Text>
-                                                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                                                <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
                                                     <Text style={styles.timelineTime}>{item.time}</Text>
                                                     <Text style={styles.timelineDurationDot}>·</Text>
                                                     <Text style={styles.timelineDurationText}>{duration}m</Text>
+                                                    {conflict && (
+                                                        <View style={styles.conflictBadge}>
+                                                            <Ionicons
+                                                                name={conflict.type === "overlap" ? "alert-circle" : "moon"}
+                                                                size={12}
+                                                                color={theme.isDarkMode ? "#FCD34D" : "#D97706"}
+                                                            />
+                                                            <Text style={styles.conflictBadgeText}>
+                                                                {conflict.message}
+                                                            </Text>
+                                                        </View>
+                                                    )}
                                                 </View>
                                             </View>
                                         </View>
@@ -178,6 +390,24 @@ function StepTimes({
 
                                     {isOpen && (
                                         <View style={styles.timelineExpanded}>
+                                            {conflict && (
+                                                <View style={styles.conflictDetailCard}>
+                                                    <Ionicons
+                                                        name={conflict.type === "overlap" ? "alert-circle-outline" : "moon-outline"}
+                                                        size={16}
+                                                        color={theme.isDarkMode ? "#FCD34D" : "#D97706"}
+                                                        style={{ marginTop: 1 }}
+                                                    />
+                                                    <View style={{ flex: 1 }}>
+                                                        <Text style={styles.conflictDetailTitle}>
+                                                            {conflict.type === "overlap" ? "Schedule Overlap" : "Rest Window Note"}
+                                                        </Text>
+                                                        <Text style={styles.conflictDetailText}>
+                                                            {conflict.details}
+                                                        </Text>
+                                                    </View>
+                                                </View>
+                                            )}
                                             <View style={styles.expandedDivider} />
                                             
                                             <Text style={styles.expandedLabel}>Adjust Start Time</Text>
@@ -287,23 +517,39 @@ function StepTimes({
                                 </Text>
 
                                 <View style={{ width: "100%", gap: 10 }}>
-                                    {[1, 2, 3, 4].map((hours) => (
-                                        <Pressable
-                                            key={hours}
-                                            style={styles.recurringOptionBtn}
-                                            onPress={() => {
-                                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                                onMakeRecurring(recurringModalItem.id, hours);
-                                                setRecurringModalItem(null);
-                                            }}
-                                            accessibilityRole="button"
-                                            accessibilityLabel={`Repeat every ${hours} hour${hours > 1 ? "s" : ""}`}
-                                        >
-                                            <Text style={styles.recurringOptionText}>
-                                                Every {hours} hour{hours > 1 ? "s" : ""}
-                                            </Text>
-                                        </Pressable>
-                                    ))}
+                                    {[1, 2, 3, 4].map((hours) => {
+                                        const times = recurringPreviews[hours] || [];
+                                        const count = times.length;
+                                        return (
+                                            <Pressable
+                                                key={hours}
+                                                style={styles.recurringOptionBtn}
+                                                onPress={() => {
+                                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                                    onMakeRecurring(recurringModalItem.id, hours);
+                                                    setRecurringModalItem(null);
+                                                }}
+                                                accessibilityRole="button"
+                                                accessibilityLabel={`Repeat every ${hours} hour${hours > 1 ? "s" : ""}, adds ${count} sessions`}
+                                            >
+                                                <View style={{ flex: 1, paddingRight: 8 }}>
+                                                    <Text style={styles.recurringOptionText}>
+                                                        Every {hours} hour{hours > 1 ? "s" : ""}
+                                                    </Text>
+                                                    <Text style={styles.recurringOptionPreviewText}>
+                                                        {count > 0
+                                                            ? `Adds ${count} session${count > 1 ? "s" : ""}: ${times.slice(0, 3).join(", ")}${count > 3 ? "…" : ""}`
+                                                            : "No daytime slots before bedtime"}
+                                                    </Text>
+                                                </View>
+                                                <Ionicons
+                                                    name="add-circle"
+                                                    size={20}
+                                                    color={theme.colors.primary}
+                                                />
+                                            </Pressable>
+                                        );
+                                    })}
                                 </View>
                             </Pressable>
                         </KeyboardAvoidingView>
@@ -319,7 +565,7 @@ function StepTimes({
                         onBack();
                     }}
                     accessibilityRole="button"
-                    accessibilityLabel="Back to Habits selection"
+                    accessibilityLabel="Back to previous step"
                 >
                     <Ionicons name="arrow-back" size={18} color={theme.colors.text} />
                     <Text style={styles.backBtnText}>Back</Text>
@@ -332,12 +578,12 @@ function StepTimes({
                     }}
                     disabled={saving}
                     accessibilityRole="button"
-                    accessibilityLabel={saving ? "Creating Rhythm" : "Step Into Zen"}
+                    accessibilityLabel={saving ? "Creating Rhythm…" : "Finish Setup"}
                 >
                     <Text style={styles.saveBtnText}>
-                        {saving ? "Creating Rhythm…" : "Step Into Zen"}
+                        {saving ? "Creating Rhythm…" : "Finish Setup"}
                     </Text>
-                    <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+                    <Ionicons name="arrow-forward" size={18} color={theme.colors.onPrimary} />
                 </Pressable>
             </View>
         </View>
@@ -350,7 +596,7 @@ export default function SetupScreen() {
     const { theme } = useTheme();
     const styles = getStyles(theme);
 
-    const [step, setStep] = useState<0 | 1 | 2 | 3 | 4>(0);
+    const [step, setStep] = useState<0 | 1 | 2 | 3 | 4 | 5>(0);
     const [saving, setSaving] = useState(false);
     const skyProgress = useSharedValue(0);
 
@@ -366,7 +612,7 @@ export default function SetupScreen() {
     useEffect(() => {
         const onBackPress = () => {
             if (step > 0) {
-                setStep((prev) => (prev - 1) as 0 | 1 | 2 | 3 | 4);
+                setStep((prev) => (prev - 1) as 0 | 1 | 2 | 3 | 4 | 5);
                 return true;
             }
             return false;
@@ -382,6 +628,7 @@ export default function SetupScreen() {
     const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
     const [routines, setRoutines] = useState<DraftItem[]>([]);
     const [customActivities, setCustomActivities] = useState<ActivityTemplate[]>([]);
+    const [skipModalVisible, setSkipModalVisible] = useState(false);
 
     const addCustomActivity = (activity: ActivityTemplate) => {
         setCustomActivities((prev) => [...prev, activity]);
@@ -394,8 +641,27 @@ export default function SetupScreen() {
         );
     };
 
-    const handleSkipAll = async () => {
+    const saveAndExit = async (items: RoutineItem[]) => {
         setSaving(true);
+        try {
+            await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+            await AsyncStorage.setItem(SETUP_KEY, "true");
+        } catch (e) {
+            console.error("Failed to save setup data", e);
+            Alert.alert("Setup Error", "Failed to save your routine. Please try again.");
+            setSaving(false);
+            return;
+        }
+
+        scheduleRoutineNotifications(items).catch((err) => {
+            console.warn("Could not schedule routine notifications:", err);
+        });
+
+        setSaving(false);
+        router.replace("/(tabs)");
+    };
+
+    const saveMinimal = () => {
         const minimalItems: RoutineItem[] = [
             {
                 task: "Wake Up",
@@ -418,27 +684,47 @@ export default function SetupScreen() {
                 duration: 30,
             },
         ];
+        saveAndExit(minimalItems);
+    };
 
-        try {
-            await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(minimalItems));
-            await AsyncStorage.setItem(SETUP_KEY, "true");
-        } catch (e) {
-            console.error("Failed to skip setup", e);
-        }
+    const saveWithHabits = () => {
+        const allTemplates = [...TEMPLATES, ...customActivities];
+        const tasksWithAnchors = Array.from(new Set(["Wake Up", ...selectedTasks, "Sleep"]));
+        const merged = tasksWithAnchors.map((t, idx) => {
+            const tmpl: ActivityTemplate = allTemplates.find((x) => x.task.toLowerCase() === t.toLowerCase()) || {
+                task: t,
+                description: "",
+                imageKey: "breathe",
+                defaultTime: "09:00 AM",
+                category: "morning",
+                minutes: 30,
+            };
 
-        scheduleRoutineNotifications(minimalItems).catch((err) => {
-            console.warn("Could not schedule routine notifications:", err);
+            let time = tmpl.defaultTime;
+            if (t === "Wake Up") time = wakeTime;
+            if (t === "Sleep") time = sleepTime;
+
+            return {
+                id: Date.now().toString() + idx,
+                task: tmpl.task,
+                description: tmpl.description,
+                imageKey: tmpl.imageKey,
+                time: time,
+                insertionOrder: idx + 1,
+                daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
+                duration: tmpl.minutes || 30,
+            };
         });
 
-        setSaving(false);
-        router.replace("/(tabs)");
+        merged.sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
+        saveAndExit(merged);
     };
 
-    const goToStep3 = () => {
-        setStep(3);
+    const handleSkipAll = () => {
+        setSkipModalVisible(true);
     };
 
-    const goToStep4 = () => {
+    const goToStep5 = () => {
         const allTemplates = [...TEMPLATES, ...customActivities];
         const tasksWithAnchors = Array.from(new Set(["Wake Up", ...selectedTasks, "Sleep"]));
         const merged: DraftItem[] = tasksWithAnchors.map((t, idx) => {
@@ -469,7 +755,7 @@ export default function SetupScreen() {
         merged.sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
 
         setRoutines(merged);
-        setStep(4);
+        setStep(5);
     };
 
     const updateRoutineTime = (id: string, val: string) => {
@@ -477,7 +763,7 @@ export default function SetupScreen() {
         const updated = next.find((r) => r.id === id);
         if (updated?.task === "Wake Up") setWakeTime(val);
         if (updated?.task === "Sleep") setSleepTime(val);
-        next.sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
+        // Do not immediately re-sort while user is editing to prevent cards jumping
         setRoutines(next);
     };
 
@@ -546,7 +832,10 @@ export default function SetupScreen() {
     const handleSave = async () => {
         if (routines.length === 0) return;
         setSaving(true);
-        const items: RoutineItem[] = routines.map((r, idx) => ({
+        const sorted = [...routines].sort(
+            (a, b) => timeToMinutes(a.time) - timeToMinutes(b.time)
+        );
+        const items: RoutineItem[] = sorted.map((r, idx) => ({
             ...r,
             id: Date.now().toString() + idx,
             insertionOrder: idx + 1,
@@ -602,7 +891,7 @@ export default function SetupScreen() {
                     <View
                         style={[
                             styles.progressFill,
-                            { width: `${(step / 4) * 100}%` },
+                            { width: `${(step / 5) * 100}%` },
                         ]}
                     />
                 </Animated.View>
@@ -633,7 +922,7 @@ export default function SetupScreen() {
                                 );
                                 return;
                             }
-                            goToStep3();
+                            setStep(3);
                         }
                     }}
                     onBack={() => {
@@ -647,11 +936,12 @@ export default function SetupScreen() {
 
             {step === 3 && (
                 <StepPick
+                    phase="start"
                     selected={selectedTasks}
                     onToggle={toggleTask}
                     onSetSelected={setSelectedTasks}
                     onAddCustom={addCustomActivity}
-                    onNext={goToStep4}
+                    onNext={() => setStep(4)}
                     onBack={() => setStep(2)}
                     onSkip={handleSkipAll}
                     customActivities={customActivities}
@@ -659,19 +949,126 @@ export default function SetupScreen() {
             )}
 
             {step === 4 && (
+                <StepPick
+                    phase="refine"
+                    selected={selectedTasks}
+                    onToggle={toggleTask}
+                    onSetSelected={setSelectedTasks}
+                    onAddCustom={addCustomActivity}
+                    onNext={goToStep5}
+                    onBack={() => setStep(3)}
+                    onSkip={handleSkipAll}
+                    customActivities={customActivities}
+                />
+            )}
+
+            {step === 5 && (
                 <StepTimes
                     routines={routines}
+                    wakeTime={wakeTime}
+                    sleepTime={sleepTime}
                     onUpdateTime={updateRoutineTime}
                     onUpdateDesc={updateRoutineDesc}
                     onUpdateDuration={updateRoutineDuration}
                     onRemove={removeItem}
                     onMakeRecurring={handleMakeRecurring}
                     onSave={handleSave}
-                    onBack={() => setStep(3)}
+                    onBack={() => setStep(4)}
                     onSkip={handleSkipAll}
                     saving={saving}
                 />
             )}
+
+            {/* Skip Confirmation Modal */}
+            <Modal
+                visible={skipModalVisible}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setSkipModalVisible(false)}
+            >
+                <Pressable
+                    style={styles.skipModalBackdrop}
+                    onPress={() => setSkipModalVisible(false)}
+                >
+                    <Pressable style={styles.skipModalCard} onPress={(e) => e.stopPropagation()}>
+                        <View style={styles.skipModalIconWrap}>
+                            <Ionicons
+                                name={selectedTasks.length > 0 ? "sparkles-outline" : "information-circle-outline"}
+                                size={28}
+                                color={theme.colors.primary}
+                            />
+                        </View>
+
+                        <Text style={styles.skipModalTitle}>
+                            {selectedTasks.length > 0 ? "Save Selected Habits?" : "Skip Setup?"}
+                        </Text>
+                        <Text style={styles.skipModalSubtitle}>
+                            {selectedTasks.length > 0
+                                ? `You've selected ${selectedTasks.length} habit${
+                                      selectedTasks.length > 1 ? "s" : ""
+                                  }. Would you like to keep them in your schedule or start with just your wake and sleep anchors?`
+                                : `We'll set up your daily rhythm with Wake Up (${wakeTime}) and Sleep (${sleepTime}). You can customize anytime.`}
+                        </Text>
+
+                        <View style={styles.skipModalActions}>
+                            {selectedTasks.length > 0 ? (
+                                <>
+                                    <Pressable
+                                        style={styles.skipModalPrimaryBtn}
+                                        onPress={() => {
+                                            setSkipModalVisible(false);
+                                            saveWithHabits();
+                                        }}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Save with habits"
+                                    >
+                                        <Text style={styles.skipModalPrimaryBtnText}>
+                                            Save With Habits
+                                        </Text>
+                                    </Pressable>
+
+                                    <Pressable
+                                        style={styles.skipModalSecondaryBtn}
+                                        onPress={() => {
+                                            setSkipModalVisible(false);
+                                            saveMinimal();
+                                        }}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Discard habits and keep anchors only"
+                                    >
+                                        <Text style={styles.skipModalSecondaryBtnText}>
+                                            Discard (Anchors Only)
+                                        </Text>
+                                    </Pressable>
+                                </>
+                            ) : (
+                                <Pressable
+                                    style={styles.skipModalPrimaryBtn}
+                                    onPress={() => {
+                                        setSkipModalVisible(false);
+                                        saveMinimal();
+                                    }}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Confirm skip setup"
+                                >
+                                    <Text style={styles.skipModalPrimaryBtnText}>
+                                        Yes, Skip Setup
+                                    </Text>
+                                </Pressable>
+                            )}
+
+                            <Pressable
+                                style={styles.skipModalCancelBtn}
+                                onPress={() => setSkipModalVisible(false)}
+                                accessibilityRole="button"
+                                accessibilityLabel="Keep editing setup"
+                            >
+                                <Text style={styles.skipModalCancelText}>Keep Editing</Text>
+                            </Pressable>
+                        </View>
+                    </Pressable>
+                </Pressable>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -812,6 +1209,48 @@ const getStyles = (theme: Theme) =>
         },
         timelineCardOpen: {
             borderColor: theme.colors.primary,
+        },
+        timelineCardConflict: {
+            borderColor: theme.isDarkMode ? "#B45309" : "#F59E0B",
+        },
+        conflictBadge: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 4,
+            backgroundColor: theme.isDarkMode ? "#2D1E0F" : "#FEF3C7",
+            paddingHorizontal: 7,
+            paddingVertical: 2,
+            borderRadius: 8,
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: theme.isDarkMode ? "#78350F" : "#FCD34D",
+        },
+        conflictBadgeText: {
+            fontSize: 10.5,
+            fontFamily: theme.fonts.bold,
+            color: theme.isDarkMode ? "#FCD34D" : "#92400E",
+        },
+        conflictDetailCard: {
+            flexDirection: "row",
+            alignItems: "flex-start",
+            gap: 10,
+            backgroundColor: theme.isDarkMode ? "#24170A" : "#FFFBEB",
+            borderWidth: 1,
+            borderColor: theme.isDarkMode ? "#78350F" : "#FDE68A",
+            padding: 12,
+            borderRadius: 12,
+            marginBottom: 14,
+        },
+        conflictDetailTitle: {
+            fontSize: 12,
+            fontFamily: theme.fonts.bold,
+            color: theme.isDarkMode ? "#FCD34D" : "#92400E",
+            marginBottom: 2,
+        },
+        conflictDetailText: {
+            fontSize: 11.5,
+            fontFamily: theme.fonts.regular,
+            color: theme.isDarkMode ? "#FDE68A" : "#B45309",
+            lineHeight: 16,
         },
         timelineCardTop: {
             flexDirection: "row",
@@ -987,21 +1426,26 @@ const getStyles = (theme: Theme) =>
         },
         recurringOptionBtn: {
             width: "100%",
-            height: 48,
+            paddingVertical: 12,
+            paddingHorizontal: 16,
             borderRadius: 14,
-            backgroundColor: theme.colors.primary,
+            backgroundColor: theme.colors.surfaceMuted,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            flexDirection: "row",
             alignItems: "center",
-            justifyContent: "center",
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.15,
-            shadowRadius: 8,
-            elevation: 3,
+            justifyContent: "space-between",
         },
         recurringOptionText: {
             fontSize: 14,
             fontFamily: theme.fonts.bold,
-            color: "#FFFFFF",
+            color: theme.colors.text,
+            marginBottom: 2,
+        },
+        recurringOptionPreviewText: {
+            fontSize: 11.5,
+            fontFamily: theme.fonts.regular,
+            color: theme.colors.textSecondary,
         },
 
         // ─── Bottom Navigation Bar ───────────────
@@ -1072,6 +1516,98 @@ const getStyles = (theme: Theme) =>
         saveBtnText: {
             fontSize: 17,
             fontFamily: theme.fonts.bold,
-            color: "#FFFFFF",
+            color: theme.colors.onPrimary,
+        },
+
+        // ─── Skip Confirmation Modal ─────────────
+        skipModalBackdrop: {
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.55)",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 24,
+        },
+        skipModalCard: {
+            width: "100%",
+            maxWidth: 360,
+            backgroundColor: theme.colors.surface,
+            borderRadius: 24,
+            padding: 24,
+            alignItems: "center",
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 8 },
+            shadowOpacity: 0.18,
+            shadowRadius: 16,
+            elevation: 8,
+        },
+        skipModalIconWrap: {
+            width: 56,
+            height: 56,
+            borderRadius: 20,
+            backgroundColor: theme.colors.primarySoft,
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 16,
+        },
+        skipModalTitle: {
+            fontSize: 20,
+            fontFamily: theme.fonts.bold,
+            color: theme.colors.text,
+            textAlign: "center",
+            marginBottom: 8,
+        },
+        skipModalSubtitle: {
+            fontSize: 14,
+            fontFamily: theme.fonts.regular,
+            color: theme.colors.textSecondary,
+            textAlign: "center",
+            lineHeight: 20,
+            marginBottom: 20,
+        },
+        skipModalActions: {
+            width: "100%",
+            gap: 10,
+        },
+        skipModalPrimaryBtn: {
+            width: "100%",
+            height: 48,
+            borderRadius: 14,
+            backgroundColor: theme.colors.primary,
+            alignItems: "center",
+            justifyContent: "center",
+        },
+        skipModalPrimaryBtnText: {
+            fontSize: 14,
+            fontFamily: theme.fonts.bold,
+            color: theme.colors.onPrimary,
+        },
+        skipModalSecondaryBtn: {
+            width: "100%",
+            height: 46,
+            borderRadius: 14,
+            backgroundColor: theme.colors.surfaceMuted,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            alignItems: "center",
+            justifyContent: "center",
+        },
+        skipModalSecondaryBtnText: {
+            fontSize: 13.5,
+            fontFamily: theme.fonts.bold,
+            color: theme.colors.textSecondary,
+        },
+        skipModalCancelBtn: {
+            width: "100%",
+            height: 40,
+            alignItems: "center",
+            justifyContent: "center",
+            marginTop: 2,
+        },
+        skipModalCancelText: {
+            fontSize: 13,
+            fontFamily: theme.fonts.medium,
+            color: theme.colors.textSecondary,
         },
     });

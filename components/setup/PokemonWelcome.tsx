@@ -4,10 +4,12 @@ import {
     Image,
     Platform,
     Pressable,
+    ScrollView,
     StyleSheet,
     Text,
     View,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../context/ThemeContext";
 import * as Haptics from "../../utils/haptics";
 import { themeTokens } from "../../constants/themeTokens";
@@ -155,8 +157,23 @@ export function PokemonWelcome({
 
     return (
         <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-            {/* Top Navigation Bar with subtle Skip option */}
+            {/* Top Navigation Bar with subtle indicator and Skip option */}
             <View style={styles.topNav}>
+                <View
+                    style={[
+                        styles.stepBadge,
+                        { backgroundColor: theme.colors.primarySoft },
+                    ]}
+                >
+                    <Text
+                        style={[
+                            styles.stepBadgeText,
+                            { color: theme.colors.primary },
+                        ]}
+                    >
+                        5 Quick Steps
+                    </Text>
+                </View>
                 <View style={{ flex: 1 }} />
                 <Pressable
                     onPress={onSkip}
@@ -169,33 +186,44 @@ export function PokemonWelcome({
                     accessibilityLabel="Skip welcome"
                 >
                     <Text style={[styles.skipBtnText, { color: theme.colors.textSecondary }]}>
-                        Skip
+                        Skip All
                     </Text>
                 </Pressable>
             </View>
 
-            {/* Title Headline */}
-            <View style={styles.headerArea}>
-                <Text style={[styles.title, { color: theme.colors.text }]}>
-                    Welcome! Want to get on{"\n"}good terms with your{"\n"}daily routine?
-                </Text>
-            </View>
-
-            {/* Static Pokémon Constellation */}
-            <View style={styles.centerStage}>
-                <View style={styles.constellationCard}>
-                    {POKEMON_MASCOTS.map((mascot) => (
-                        <MascotBadge key={mascot.id} config={mascot} />
-                    ))}
+            {/* Scrollable Center Content */}
+            <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+                bounces={false}
+            >
+                {/* Title Headline */}
+                <View style={styles.headerArea}>
+                    <Text style={[styles.title, { color: theme.colors.text }]}>
+                        Welcome! Want to get on{"\n"}good terms with your{"\n"}daily routine?
+                    </Text>
                 </View>
-            </View>
+
+                {/* Static Pokémon Constellation */}
+                <View style={styles.centerStage}>
+                    <View style={styles.constellationCard}>
+                        {POKEMON_MASCOTS.map((mascot) => (
+                            <MascotBadge key={mascot.id} config={mascot} />
+                        ))}
+                    </View>
+                </View>
+            </ScrollView>
 
             {/* Bottom Call To Action: "Get Started" */}
             <View style={styles.bottomBar}>
                 <Pressable
                     style={({ pressed }) => [
                         styles.primaryBtn,
-                        { backgroundColor: theme.colors.primary },
+                        {
+                            backgroundColor: theme.colors.primary,
+                            shadowColor: theme.colors.primary,
+                        },
                         pressed && styles.primaryBtnPressed,
                     ]}
                     onPress={() => {
@@ -208,6 +236,11 @@ export function PokemonWelcome({
                     <Text style={[styles.primaryBtnText, { color: theme.colors.onPrimary }]}>
                         Get Started
                     </Text>
+                    <Ionicons
+                        name="arrow-forward"
+                        size={18}
+                        color={theme.colors.onPrimary}
+                    />
                 </Pressable>
             </View>
         </View>
@@ -217,13 +250,29 @@ export function PokemonWelcome({
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        justifyContent: "space-between",
+    },
+    scrollContent: {
+        flexGrow: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        paddingBottom: 8,
     },
     topNav: {
         paddingHorizontal: 22,
         paddingTop: Platform.OS === "android" ? 14 : 10,
+        paddingBottom: 4,
         flexDirection: "row",
         alignItems: "center",
+    },
+    stepBadge: {
+        paddingHorizontal: 12,
+        paddingVertical: 5,
+        borderRadius: 14,
+    },
+    stepBadgeText: {
+        fontSize: 12,
+        fontFamily: themeTokens.fonts.family.bold,
+        letterSpacing: 0.3,
     },
     skipBtn: {
         paddingHorizontal: 12,
@@ -306,20 +355,24 @@ const styles = StyleSheet.create({
 
     // Bottom Action Button
     bottomBar: {
-        paddingHorizontal: 24,
-        paddingBottom: Platform.OS === "android" ? 24 : 18,
-        paddingTop: 8,
+        flexDirection: "row",
+        alignItems: "center",
+        paddingHorizontal: 20,
+        paddingTop: 10,
+        paddingBottom: 14,
     },
     primaryBtn: {
+        flex: 1,
         height: 56,
         borderRadius: 22,
+        flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
-        shadowColor: "#000000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
-        elevation: 4,
+        gap: 8,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.35,
+        shadowRadius: 12,
+        elevation: 6,
     },
     primaryBtnPressed: {
         opacity: 0.92,

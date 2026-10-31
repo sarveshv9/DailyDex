@@ -44,5 +44,6 @@ export interface StepPickProps {
     onBack: () => void;
     onSkip: () => void;
     customActivities: ActivityTemplate[];
+    phase?: "start" | "refine";
 }
 

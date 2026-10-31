@@ -49,13 +49,16 @@ export function StepPick({
     onBack,
     onSkip,
     customActivities,
+    phase: controlledPhase,
 }: StepPickProps) {
     const { theme } = useTheme();
 
-    // Internal Phase: 'start' | 'refine'
-    const [phase, setPhase] = useState<"start" | "refine">(
-        selected.length > 0 ? "refine" : "start"
-    );
+    // Internal Phase fallback: 'start' | 'refine'
+    const [internalPhase, setInternalPhase] = useState<"start" | "refine">("start");
+    const phase = controlledPhase ?? internalPhase;
+    const setPhase = (newPhase: "start" | "refine") => {
+        setInternalPhase(newPhase);
+    };
 
     // --- Phase 1: Outcome Packs State ---
     const [expandedPackId, setExpandedPackId] = useState<string | null>(null);
@@ -106,9 +109,13 @@ export function StepPick({
         }).start(() => setToast(null));
     };
 
-    // All combined templates
+    // All combined templates (excluding Wake Up and Sleep anchors which are configured in Steps 1 & 2)
     const allTemplates = useMemo(() => {
-        return [...TEMPLATES, ...customActivities];
+        return [...TEMPLATES, ...customActivities].filter(
+            (t) =>
+                t.task.toLowerCase() !== "wake up" &&
+                t.task.toLowerCase() !== "sleep"
+        );
     }, [customActivities]);
 
     // Unique habits across all packs in Phase 1
@@ -117,22 +124,30 @@ export function StepPick({
         return Array.from(new Set(allChecked));
     }, [packSelections]);
 
-    // Accordion toggle in Phase 1
+    // Accordion toggle in Phase 1 (expand/collapse preview without auto-selecting)
     const handleTogglePackExpand = (packId: string) => {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-        if (expandedPackId === packId) {
-            setExpandedPackId(null);
-        } else {
-            setExpandedPackId(packId);
-            // If pack not previously selected / empty, check all its habits by default
-            const pack = OUTCOME_PACKS.find((p) => p.id === packId);
-            if (pack && (!packSelections[packId] || packSelections[packId].length === 0)) {
-                setPackSelections((prev) => ({
-                    ...prev,
-                    [packId]: [...pack.habits],
-                }));
-            }
-        }
+        Haptics.selectionAsync();
+        setExpandedPackId((prev) => (prev === packId ? null : packId));
+    };
+
+    // Toggle all habits in an outcome pack
+    const handleToggleAllPackHabits = (packId: string) => {
+        const pack = OUTCOME_PACKS.find((p) => p.id === packId);
+        if (!pack) return;
+
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+        setPackSelections((prev) => {
+            const current = prev[packId] || [];
+            const isAllSelected = current.length === pack.habits.length;
+            const updated = isAllSelected ? [] : [...pack.habits];
+            return {
+                ...prev,
+                [packId]: updated,
+            };
+        });
     };
 
     // Toggle single habit within an outcome pack
@@ -152,7 +167,10 @@ export function StepPick({
 
     // Phase 1 Continue
     const handlePhase1Continue = () => {
-        if (uniquePacksHabits.length === 0) return;
+        if (uniquePacksHabits.length === 0) {
+            onNext();
+            return;
+        }
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
         const previousSelection = [...selected];
@@ -171,20 +189,20 @@ export function StepPick({
         }
 
         const addedCount = newMergedSelection.length - previousSelection.length;
-        setPhase("refine");
-
-        showToastMessage(
-            addedCount > 0
-                ? `Added ${addedCount} habit${addedCount > 1 ? "s" : ""} from focus packs`
-                : "Habits merged",
-            "Undo",
-            () => {
-                if (onSetSelected) {
-                    onSetSelected(previousSelection);
+        if (addedCount > 0) {
+            showToastMessage(
+                `Added ${addedCount} habit${addedCount > 1 ? "s" : ""} from focus packs`,
+                "Undo",
+                () => {
+                    if (onSetSelected) {
+                        onSetSelected(previousSelection);
+                    }
+                    showToastMessage("Selection restored");
                 }
-                showToastMessage("Selection restored");
-            }
-        );
+            );
+        }
+
+        onNext();
     };
 
     // Filtered templates for Phase 2
@@ -242,59 +260,37 @@ export function StepPick({
         showToastMessage(`"${task}" selected`);
     };
 
-    // Phase 2 CTA label calculation
-    const remainingToMin = Math.max(0, 3 - selected.length);
-    const canContinuePhase2 = selected.length >= 3;
-    const phase2CtaLabel = canContinuePhase2
-        ? `Continue (${selected.length} habits)`
-        : `Pick ${remainingToMin} more`;
+    const handleToggleHabitWithFeedback = (task: string) => {
+        const isRemoving = selected.includes(task);
+        onToggle(task);
+        if (isRemoving) {
+            showToastMessage(`Removed "${task}"`, "Undo", () => {
+                onToggle(task);
+            });
+        } else {
+            showToastMessage(`Added "${task}"`);
+        }
+    };
+
 
     return (
         <View style={styles.container}>
             {/* Header Section */}
             <View style={styles.header}>
                 <View style={styles.headerTop}>
-                    {phase === "refine" ? (
-                        <Pressable
-                            onPress={() => {
-                                Haptics.selectionAsync();
-                                setPhase("start");
-                            }}
-                            accessibilityRole="button"
-                            accessibilityLabel="Return to Starting points"
-                            style={styles.backLink}
-                            hitSlop={10}
-                        >
-                            <Ionicons
-                                name="chevron-back"
-                                size={18}
-                                color={theme.colors.primary}
-                            />
-                            <Text
-                                style={[
-                                    styles.backLinkText,
-                                    {
-                                        color: theme.colors.primary,
-                                        fontFamily: theme.fonts.bold,
-                                    },
-                                ]}
-                            >
-                                Starting points
-                            </Text>
-                        </Pressable>
-                    ) : (
-                        <Text
-                            style={[
-                                styles.stepEyebrow,
-                                {
-                                    color: theme.colors.primary,
-                                    fontFamily: theme.fonts.bold,
-                                },
-                            ]}
-                        >
-                            Step 3 of 4 · Habits
-                        </Text>
-                    )}
+                    <Text
+                        style={[
+                            styles.stepEyebrow,
+                            {
+                                color: theme.colors.primary,
+                                fontFamily: theme.fonts.bold,
+                            },
+                        ]}
+                    >
+                        {phase === "refine"
+                            ? "Step 4 of 5 · Habits"
+                            : "Step 3 of 5 · Focus"}
+                    </Text>
 
                     <Pressable
                         onPress={onSkip}
@@ -362,7 +358,7 @@ export function StepPick({
                                 },
                             ]}
                         >
-                            Choose 3 or more habits to build your daily momentum.
+                            Choose habits to build your daily momentum. Start with as few as you like.
                         </Text>
                     </>
                 )}
@@ -392,6 +388,9 @@ export function StepPick({
                                     onToggleHabit={(habit) =>
                                         handleToggleHabitInPack(pack.id, habit)
                                     }
+                                    onToggleAll={() =>
+                                        handleToggleAllPackHabits(pack.id)
+                                    }
                                 />
                             );
                         })}
@@ -400,7 +399,7 @@ export function StepPick({
                         <Pressable
                             onPress={() => {
                                 Haptics.selectionAsync();
-                                setPhase("refine");
+                                onNext();
                             }}
                             accessibilityRole="button"
                             accessibilityLabel="Build your own from scratch"
@@ -435,7 +434,7 @@ export function StepPick({
                                 styles.backAnchorBtn,
                                 {
                                     borderColor: theme.colors.border,
-                                    backgroundColor: theme.colors.surfaceMuted,
+                                    backgroundColor: theme.colors.surface,
                                 },
                             ]}
                             onPress={() => {
@@ -445,7 +444,7 @@ export function StepPick({
                                 onBack();
                             }}
                             accessibilityRole="button"
-                            accessibilityLabel="Back to Sleep anchor"
+                            accessibilityLabel="Back to previous step"
                         >
                             <Ionicons
                                 name="arrow-back"
@@ -470,18 +469,16 @@ export function StepPick({
                                 styles.continueBtn,
                                 {
                                     backgroundColor: theme.colors.primary,
-                                    opacity:
-                                        uniquePacksHabits.length > 0 ? 1 : 0.45,
+                                    shadowColor: theme.colors.primary,
                                 },
                             ]}
-                            disabled={uniquePacksHabits.length === 0}
-                            onPress={handlePhase1Continue}
-                            accessibilityRole="button"
-                            accessibilityLabel={
-                                uniquePacksHabits.length === 0
-                                    ? "Choose a focus"
-                                    : `Continue with ${uniquePacksHabits.length} habits`
+                            onPress={
+                                uniquePacksHabits.length > 0
+                                    ? handlePhase1Continue
+                                    : onNext
                             }
+                            accessibilityRole="button"
+                            accessibilityLabel="Next Step"
                         >
                             <Text
                                 style={[
@@ -492,11 +489,7 @@ export function StepPick({
                                     },
                                 ]}
                             >
-                                {uniquePacksHabits.length === 0
-                                    ? "Choose a focus"
-                                    : `Continue with ${uniquePacksHabits.length} habit${
-                                          uniquePacksHabits.length > 1 ? "s" : ""
-                                      }`}
+                                Next Step
                             </Text>
                             <Ionicons
                                 name="arrow-forward"
@@ -515,7 +508,7 @@ export function StepPick({
                     <SelectedTray
                         selected={selected}
                         templates={allTemplates}
-                        onRemove={(task) => onToggle(task)}
+                        onRemove={handleToggleHabitWithFeedback}
                     />
 
                     {/* Category Tabs */}
@@ -642,7 +635,7 @@ export function StepPick({
                                         key={template.task}
                                         template={template}
                                         isSelected={isSelected}
-                                        onToggle={onToggle}
+                                        onToggle={handleToggleHabitWithFeedback}
                                     />
                                 );
                             })
@@ -742,15 +735,17 @@ export function StepPick({
                                 styles.backAnchorBtn,
                                 {
                                     borderColor: theme.colors.border,
-                                    backgroundColor: theme.colors.surfaceMuted,
+                                    backgroundColor: theme.colors.surface,
                                 },
                             ]}
                             onPress={() => {
-                                Haptics.selectionAsync();
-                                setPhase("start");
+                                Haptics.impactAsync(
+                                    Haptics.ImpactFeedbackStyle.Light
+                                );
+                                onBack();
                             }}
                             accessibilityRole="button"
-                            accessibilityLabel="Back to Starting Points"
+                            accessibilityLabel="Back to previous step"
                         >
                             <Ionicons
                                 name="arrow-back"
@@ -766,7 +761,7 @@ export function StepPick({
                                     },
                                 ]}
                             >
-                                Focus
+                                Back
                             </Text>
                         </Pressable>
 
@@ -775,10 +770,9 @@ export function StepPick({
                                 styles.continueBtn,
                                 {
                                     backgroundColor: theme.colors.primary,
-                                    opacity: canContinuePhase2 ? 1 : 0.45,
+                                    shadowColor: theme.colors.primary,
                                 },
                             ]}
-                            disabled={!canContinuePhase2}
                             onPress={() => {
                                 Haptics.impactAsync(
                                     Haptics.ImpactFeedbackStyle.Light
@@ -786,7 +780,7 @@ export function StepPick({
                                 onNext();
                             }}
                             accessibilityRole="button"
-                            accessibilityLabel={phase2CtaLabel}
+                            accessibilityLabel="Next Step"
                         >
                             <Text
                                 style={[
@@ -797,7 +791,7 @@ export function StepPick({
                                     },
                                 ]}
                             >
-                                {phase2CtaLabel}
+                                Next Step
                             </Text>
                             <Ionicons
                                 name="arrow-forward"
@@ -1020,9 +1014,10 @@ const styles = StyleSheet.create({
     },
     bottomBar: {
         flexDirection: "row",
+        alignItems: "center",
         paddingHorizontal: 20,
-        paddingVertical: 14,
-        paddingBottom: Platform.OS === "android" ? 20 : 16,
+        paddingTop: 10,
+        paddingBottom: 14,
         borderTopWidth: StyleSheet.hairlineWidth,
         gap: 12,
         shadowColor: "#000",
@@ -1032,34 +1027,33 @@ const styles = StyleSheet.create({
         elevation: 4,
     },
     backAnchorBtn: {
+        height: 56,
+        paddingHorizontal: 24,
+        borderRadius: 22,
+        borderWidth: 1,
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
-        height: 52,
-        paddingHorizontal: 18,
-        borderRadius: 18,
-        borderWidth: 1.5,
-        gap: 6,
+        gap: 8,
     },
     backBtnText: {
-        fontSize: 15,
+        fontSize: 16,
     },
     continueBtn: {
         flex: 1,
+        height: 56,
+        borderRadius: 22,
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
-        height: 52,
-        borderRadius: 18,
         gap: 8,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.15,
-        shadowRadius: 6,
-        elevation: 3,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.35,
+        shadowRadius: 12,
+        elevation: 6,
     },
     continueBtnText: {
-        fontSize: 15,
+        fontSize: 17,
     },
     toastContainer: {
         position: "absolute",

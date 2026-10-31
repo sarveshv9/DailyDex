@@ -27,6 +27,12 @@ export function SelectedTray({
     const { theme } = useTheme();
     const count = selected.length;
     const isMet = count >= 3;
+    const statusNote =
+        count >= 3
+            ? "✓ strong rhythm"
+            : count > 0
+            ? "building momentum"
+            : "recommended 3";
 
     const getIconKey = (task: string) => {
         const tmpl = templates.find(
@@ -76,7 +82,7 @@ export function SelectedTray({
                                 fontFamily: theme.fonts.bold,
                             }}
                         >
-                            {isMet ? "✓ minimum met" : "minimum 3"}
+                            {statusNote}
                         </Text>
                     </Text>
                 </View>

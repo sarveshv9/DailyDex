@@ -49,6 +49,40 @@ export function CategoryTabs({
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContent}
             >
+                {/* Search Icon Button at the start */}
+                <Pressable
+                    onPress={() => {
+                        Haptics.selectionAsync();
+                        onToggleSearch();
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                        isSearchActive ? "Close search" : "Search habits"
+                    }
+                    style={({ pressed }) => [
+                        styles.searchBtn,
+                        {
+                            backgroundColor: isSearchActive
+                                ? theme.colors.primary
+                                : theme.colors.surface,
+                            borderColor: isSearchActive
+                                ? theme.colors.primary
+                                : theme.colors.border,
+                        },
+                        pressed && styles.pillPressed,
+                    ]}
+                >
+                    <Ionicons
+                        name={isSearchActive ? "search" : "search-outline"}
+                        size={16}
+                        color={
+                            isSearchActive
+                                ? theme.colors.onPrimary
+                                : theme.colors.textSecondary
+                        }
+                    />
+                </Pressable>
+
                 {CATEGORIES.map((cat) => {
                     const isTabActive = !isSearchActive && activeCategory === cat.key;
                     const catCount = templates.filter(
@@ -139,40 +173,6 @@ export function CategoryTabs({
                         </Pressable>
                     );
                 })}
-
-                {/* Search Icon Button at the end */}
-                <Pressable
-                    onPress={() => {
-                        Haptics.selectionAsync();
-                        onToggleSearch();
-                    }}
-                    accessibilityRole="button"
-                    accessibilityLabel={
-                        isSearchActive ? "Close search" : "Search habits"
-                    }
-                    style={({ pressed }) => [
-                        styles.searchBtn,
-                        {
-                            backgroundColor: isSearchActive
-                                ? theme.colors.primary
-                                : theme.colors.surface,
-                            borderColor: isSearchActive
-                                ? theme.colors.primary
-                                : theme.colors.border,
-                        },
-                        pressed && styles.pillPressed,
-                    ]}
-                >
-                    <Ionicons
-                        name={isSearchActive ? "search" : "search-outline"}
-                        size={16}
-                        color={
-                            isSearchActive
-                                ? theme.colors.onPrimary
-                                : theme.colors.textSecondary
-                        }
-                    />
-                </Pressable>
             </ScrollView>
         </View>
     );

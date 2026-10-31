@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
     KeyboardAvoidingView,
     Modal,
@@ -64,6 +64,14 @@ export function CustomHabitSheet({
         initialCategory || "morning"
     );
     const [selectedIcon, setSelectedIcon] = useState("star");
+
+    useEffect(() => {
+        if (visible) {
+            setName(initialName);
+            setCategory(initialCategory || "morning");
+            setSelectedIcon("star");
+        }
+    }, [visible, initialCategory, initialName]);
 
     const handleSave = () => {
         const trimmedName = name.trim();

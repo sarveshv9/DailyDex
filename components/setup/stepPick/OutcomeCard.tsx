@@ -32,6 +32,7 @@ interface OutcomeCardProps {
     checkedHabits: string[];
     onToggleExpand: () => void;
     onToggleHabit: (habitName: string) => void;
+    onToggleAll: () => void;
 }
 
 export function OutcomeCard({
@@ -41,8 +42,11 @@ export function OutcomeCard({
     checkedHabits,
     onToggleExpand,
     onToggleHabit,
+    onToggleAll,
 }: OutcomeCardProps) {
     const { theme } = useTheme();
+    const isFullySelected = pack.habits.length > 0 && checkedHabits.length === pack.habits.length;
+    const isPartiallySelected = checkedHabits.length > 0 && checkedHabits.length < pack.habits.length;
     const isChosen = checkedHabits.length > 0;
     const commitment = computePackCommitment(pack, templates);
 
@@ -50,6 +54,12 @@ export function OutcomeCard({
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         Haptics.selectionAsync();
         onToggleExpand();
+    };
+
+    const handleToggleAllPress = (e: any) => {
+        e?.stopPropagation?.();
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        onToggleAll();
     };
 
     const getHabitTemplate = (habitName: string) => {
@@ -63,11 +73,11 @@ export function OutcomeCard({
             style={[
                 styles.cardContainer,
                 {
-                    backgroundColor: isChosen
-                        ? theme.colors.surface
-                        : theme.colors.surface,
-                    borderColor: isChosen
+                    backgroundColor: theme.colors.surface,
+                    borderColor: isFullySelected
                         ? theme.colors.primary
+                        : isPartiallySelected
+                        ? theme.colors.primarySoft
                         : theme.colors.border,
                 },
                 pack.isHero && styles.heroContainer,
@@ -78,7 +88,13 @@ export function OutcomeCard({
             <Pressable
                 onPress={handleHeaderPress}
                 accessibilityRole="button"
-                accessibilityLabel={`${pack.title} focus pack, ${isChosen ? "chosen" : "not chosen"}, ${isExpanded ? "expanded" : "collapsed"}`}
+                accessibilityLabel={`${pack.title} focus pack, ${
+                    isFullySelected
+                        ? "fully selected"
+                        : isPartiallySelected
+                        ? `${checkedHabits.length} of ${pack.habits.length} selected`
+                        : "not selected"
+                }, ${isExpanded ? "expanded" : "collapsed"}`}
                 accessibilityState={{ expanded: isExpanded, selected: isChosen }}
                 style={[
                     styles.headerPressable,
@@ -142,18 +158,58 @@ export function OutcomeCard({
                         {pack.promise}
                     </Text>
 
-                    {/* Commitment Line */}
-                    <Text
-                        style={[
-                            styles.commitmentText,
-                            {
-                                color: theme.colors.primary,
-                                fontFamily: theme.fonts.medium,
-                            },
-                        ]}
-                    >
-                        {commitment}
-                    </Text>
+                    {/* Commitment & Selection Status Line */}
+                    <View style={styles.statusLineRow}>
+                        <Text
+                            style={[
+                                styles.commitmentText,
+                                {
+                                    color: theme.colors.textSecondary,
+                                    fontFamily: theme.fonts.medium,
+                                },
+                            ]}
+                        >
+                            {commitment}
+                        </Text>
+                        {isFullySelected ? (
+                            <View
+                                style={[
+                                    styles.packStateChip,
+                                    { backgroundColor: theme.colors.primarySoft },
+                                ]}
+                            >
+                                <Ionicons
+                                    name="checkmark-circle"
+                                    size={13}
+                                    color={theme.colors.primary}
+                                />
+                                <Text
+                                    style={[
+                                        styles.packStateChipText,
+                                        { color: theme.colors.primary, fontFamily: theme.fonts.bold },
+                                    ]}
+                                >
+                                    All added
+                                </Text>
+                            </View>
+                        ) : isPartiallySelected ? (
+                            <View
+                                style={[
+                                    styles.packStateChip,
+                                    { backgroundColor: theme.colors.surfaceMuted, borderColor: theme.colors.primary, borderWidth: 1 },
+                                ]}
+                            >
+                                <Text
+                                    style={[
+                                        styles.packStateChipText,
+                                        { color: theme.colors.primary, fontFamily: theme.fonts.bold },
+                                    ]}
+                                >
+                                    {checkedHabits.length}/{pack.habits.length} selected
+                                </Text>
+                            </View>
+                        ) : null}
+                    </View>
 
                     {/* Collapsed Icon Strip */}
                     {!isExpanded && (
@@ -161,16 +217,19 @@ export function OutcomeCard({
                             {pack.habits.slice(0, 3).map((habitName) => {
                                 const tmpl = getHabitTemplate(habitName);
                                 const iconName = getRoutineIcon(tmpl?.imageKey);
+                                const isChecked = checkedHabits.includes(habitName);
                                 return (
                                     <View
                                         key={habitName}
                                         style={[
                                             styles.iconStripBubble,
                                             {
-                                                backgroundColor:
-                                                    theme.colors.surfaceMuted,
-                                                borderColor:
-                                                    theme.colors.border,
+                                                backgroundColor: isChecked
+                                                    ? theme.colors.primarySoft
+                                                    : theme.colors.surfaceMuted,
+                                                borderColor: isChecked
+                                                    ? theme.colors.primary
+                                                    : theme.colors.border,
                                             },
                                         ]}
                                     >
@@ -211,29 +270,53 @@ export function OutcomeCard({
                     )}
                 </View>
 
-                {/* Right Area: Circular check badge & chevron */}
+                {/* Right Area: Dedicated Toggle-All Badge & expand chevron */}
                 <View style={styles.headerRight}>
-                    <View
+                    <Pressable
+                        onPress={handleToggleAllPress}
+                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                            isFullySelected
+                                ? `Deselect all habits in ${pack.title}`
+                                : `Select all habits in ${pack.title}`
+                        }
                         style={[
                             styles.checkBadge,
                             {
-                                borderColor: isChosen
+                                borderColor: isFullySelected
+                                    ? theme.colors.primary
+                                    : isPartiallySelected
                                     ? theme.colors.primary
                                     : theme.colors.border,
-                                backgroundColor: isChosen
+                                backgroundColor: isFullySelected
                                     ? theme.colors.primary
+                                    : isPartiallySelected
+                                    ? theme.colors.primarySoft
                                     : theme.colors.surfaceMuted,
                             },
                         ]}
                     >
-                        {isChosen && (
+                        {isFullySelected ? (
                             <Ionicons
                                 name="checkmark"
                                 size={14}
                                 color={theme.colors.onPrimary}
                             />
+                        ) : isPartiallySelected ? (
+                            <Ionicons
+                                name="remove"
+                                size={14}
+                                color={theme.colors.primary}
+                            />
+                        ) : (
+                            <Ionicons
+                                name="add"
+                                size={14}
+                                color={theme.colors.textSecondary}
+                            />
                         )}
-                    </View>
+                    </Pressable>
                     <Ionicons
                         name={isExpanded ? "chevron-up" : "chevron-down"}
                         size={18}
@@ -251,17 +334,40 @@ export function OutcomeCard({
                         { borderTopColor: theme.colors.divider },
                     ]}
                 >
-                    <Text
-                        style={[
-                            styles.expandedHint,
-                            {
-                                color: theme.colors.textSecondary,
-                                fontFamily: theme.fonts.medium,
-                            },
-                        ]}
-                    >
-                        {"Untick anything you don't want."}
-                    </Text>
+                    <View style={styles.expandedHeaderBar}>
+                        <Text
+                            style={[
+                                styles.expandedHint,
+                                {
+                                    color: theme.colors.textSecondary,
+                                    fontFamily: theme.fonts.medium,
+                                },
+                            ]}
+                        >
+                            {isFullySelected
+                                ? `All ${pack.habits.length} habits selected`
+                                : isPartiallySelected
+                                ? `${checkedHabits.length} of ${pack.habits.length} habits selected`
+                                : "Tap + or individual habits to select"}
+                        </Text>
+                        <Pressable
+                            onPress={handleToggleAllPress}
+                            hitSlop={8}
+                            style={styles.toggleAllBtn}
+                        >
+                            <Text
+                                style={[
+                                    styles.toggleAllText,
+                                    {
+                                        color: theme.colors.primary,
+                                        fontFamily: theme.fonts.bold,
+                                    },
+                                ]}
+                            >
+                                {isFullySelected ? "Clear pack" : "Select all"}
+                            </Text>
+                        </Pressable>
+                    </View>
 
                     <View style={styles.habitRowsList}>
                         {pack.habits.map((habitName) => {
@@ -449,7 +555,37 @@ const styles = StyleSheet.create({
     },
     commitmentText: {
         fontSize: 12.5,
+    },
+    statusLineRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
         marginBottom: 10,
+        flexWrap: "wrap",
+    },
+    packStateChip: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 12,
+    },
+    packStateChipText: {
+        fontSize: 11,
+    },
+    expandedHeaderBar: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: 10,
+    },
+    toggleAllBtn: {
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+    },
+    toggleAllText: {
+        fontSize: 12,
     },
     iconStrip: {
         flexDirection: "row",
