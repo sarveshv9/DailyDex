@@ -306,12 +306,12 @@ function StepTimes({
                 {/* Notification Primer Card */}
                 <View style={styles.notificationPrimerCard}>
                     <View style={styles.notificationPrimerIconWrap}>
-                        <Ionicons name="notifications-outline" size={22} color={theme.colors.primary} />
+                        <Ionicons name="alarm-outline" size={22} color={theme.colors.primary} />
                     </View>
                     <View style={{ flex: 1 }}>
-                        <Text style={styles.notificationPrimerTitle}>Peaceful Prompts</Text>
+                        <Text style={styles.notificationPrimerTitle}>Task Start Alarm</Text>
                         <Text style={styles.notificationPrimerDesc}>
-                            Zen gently notifies you at the start of each habit so you never have to watch the clock.
+                            A chime alarm and vibration will alert you when each scheduled task is due. Turn it off anytime in Settings.
                         </Text>
                     </View>
                 </View>

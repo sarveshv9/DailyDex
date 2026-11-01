@@ -18,7 +18,8 @@ if (Platform.OS !== 'web') {
   });
 }
 
-const CHANNEL_ID = "zen-routine";
+// Use a new ID so Android devices replace the older, lower-priority routine channel.
+const CHANNEL_ID = "zen-task-start-alarms";
 const NOTIFICATION_ID_PREFIX = "zen-routine-";
 export const FOCUS_CHANNEL_ID = "zen-focus-alarms";
 export const FOCUS_NOTIFICATION_ID = "zen-focus-timer";
@@ -33,10 +34,12 @@ export const requestNotificationPermissions = async (): Promise<boolean> => {
         if (Platform.OS === "android") {
             try {
                 await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
-                    name: "Zen Routine Reminders",
-                    importance: Notifications.AndroidImportance.HIGH,
-                    vibrationPattern: [0, 250, 250, 250],
+                    name: "Task Start Alarms",
+                    importance: Notifications.AndroidImportance.MAX,
+                    vibrationPattern: [0, 500, 250, 500],
                     lightColor: "#FF231F7C",
+                    lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+                    sound: "task_alarm.wav",
                 });
             } catch (channelErr) {
                 console.warn("Failed to create routine notification channel:", channelErr);
@@ -115,8 +118,8 @@ export const scheduleRoutineNotifications = async (
                                                         : item.imageKey === "sleep" ? "😴"
                                                             : "⭐";
 
-            const title = `Time for ${item.task}! ${emoji}`;
-            const body = item.description || "Your Zen routine awaits.";
+            const title = `${item.task} starts now ${emoji}`;
+            const body = item.description || "Time to begin your scheduled task.";
 
             try {
                 // Case 1: Specific one-off date ("YYYY-MM-DD")
@@ -129,7 +132,7 @@ export const scheduleRoutineNotifications = async (
                             content: {
                                 title,
                                 body,
-                                sound: true,
+                                sound: "task_alarm.wav",
                             },
                             trigger: {
                                 type: Notifications.SchedulableTriggerInputTypes.DATE,
@@ -151,7 +154,7 @@ export const scheduleRoutineNotifications = async (
                             content: {
                                 title,
                                 body,
-                                sound: true,
+                                sound: "task_alarm.wav",
                             },
                             trigger: {
                                 type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
@@ -171,7 +174,7 @@ export const scheduleRoutineNotifications = async (
                     content: {
                         title,
                         body,
-                        sound: true,
+                        sound: "task_alarm.wav",
                     },
                     trigger: {
                         type: Notifications.SchedulableTriggerInputTypes.DAILY,

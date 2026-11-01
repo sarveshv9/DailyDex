@@ -48,7 +48,12 @@
       ],
       "expo-font",
       "expo-audio",
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "sounds": ["./assets/audio/task_alarm.wav"]
+        }
+      ],
       "expo-web-browser",
       "@react-native-community/datetimepicker",
       "expo-status-bar",

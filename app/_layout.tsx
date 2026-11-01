@@ -13,7 +13,7 @@ import { AudioProvider } from "../context/AudioContext";
 import { SettingsProvider } from "../context/SettingsContext";
 import { TimerProvider } from "../context/TimerContext";
 import { AuthProvider, useAuth } from "../context/AuthContext";
-import { requestNotificationPermissions } from "../utils/notifications";
+import { requestNotificationPermissions, scheduleRoutineNotifications } from "../utils/notifications";
 import { ErrorBoundary } from "../components/common/ErrorBoundary";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ROUTINE_STORAGE_KEY, SETUP_STORAGE_KEY } from "../constants/storageKeys";
@@ -84,6 +84,21 @@ function RootLayoutNav() {
 
   useEffect(() => {
     requestNotificationPermissions()?.catch?.(() => {});
+    // Refresh existing schedules after app updates so they use the current
+    // alarm sound and Android channel configuration.
+    AsyncStorage.getItem(ROUTINE_STORAGE_KEY)
+      .then((data) => {
+        if (!data) return;
+        try {
+          const routines = JSON.parse(data);
+          if (Array.isArray(routines)) {
+            scheduleRoutineNotifications(routines).catch(() => {});
+          }
+        } catch {
+          // Leave malformed local data untouched.
+        }
+      })
+      .catch(() => {});
     const checkSetup = async () => {
       try {
         const setup = await AsyncStorage.getItem(SETUP_STORAGE_KEY);

@@ -281,9 +281,9 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
         )}
         <SettingSwitchItem
           theme={theme}
-          iconName="notifications-outline"
-          text="Routine Reminders"
-          subtext="Alerts for scheduled rituals"
+          iconName="alarm-outline"
+          text="Task Start Alarm"
+          subtext="Play an alarm when a scheduled task is due"
           value={settings.notifications.taskReminders}
           onValueChange={() => {
             if (settings.hapticsEnabled) {

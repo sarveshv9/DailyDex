@@ -1,4 +1,4 @@
-package com.anonymous.Zenapp
+package com.dailydex.app
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build
