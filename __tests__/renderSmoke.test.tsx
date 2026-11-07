@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import React from "react";
 import { render } from "@testing-library/react-native";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "../context/ThemeContext";
 import { SettingsProvider } from "../context/SettingsContext";
 import { AudioProvider } from "../context/AudioContext";
@@ -114,15 +113,6 @@ jest.mock("react-native-reanimated", () => {
   };
 });
 
-jest.mock("react-native-pager-view", () => {
-  const React = require("react");
-  const { View } = require("react-native");
-  return {
-    __esModule: true,
-    default: ({ children }: any) => <View>{children}</View>,
-  };
-});
-
 jest.mock("@shopify/flash-list", () => {
   const React = require("react");
   const { FlatList } = require("react-native");
@@ -171,7 +161,6 @@ jest.mock("react-native-safe-area-context", () => {
 describe("Screen Render Smoke Tests (Fails on Error, SSR window crash, or Maximum update depth)", () => {
   let consoleErrors: string[] = [];
   let originalError: typeof console.error;
-  let testQueryClient: QueryClient;
 
   beforeAll(() => {
     originalError = console.error;
@@ -179,11 +168,6 @@ describe("Screen Render Smoke Tests (Fails on Error, SSR window crash, or Maximu
 
   beforeEach(() => {
     consoleErrors = [];
-    testQueryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-      },
-    });
 
     jest.spyOn(console, "error").mockImplementation((...args: any[]) => {
       const message = args
@@ -212,17 +196,15 @@ describe("Screen Render Smoke Tests (Fails on Error, SSR window crash, or Maximu
 
   const renderWithProviders = (Component: React.ComponentType) => {
     return render(
-      <QueryClientProvider client={testQueryClient}>
-        <ThemeProvider>
-          <SettingsProvider>
-            <AudioProvider>
-              <TimerProvider>
-                <Component />
-              </TimerProvider>
-            </AudioProvider>
-          </SettingsProvider>
-        </ThemeProvider>
-      </QueryClientProvider>
+      <ThemeProvider>
+        <SettingsProvider>
+          <AudioProvider>
+            <TimerProvider>
+              <Component />
+            </TimerProvider>
+          </AudioProvider>
+        </SettingsProvider>
+      </ThemeProvider>
     );
   };
 

@@ -1,4 +1,3 @@
-import "react-native-gesture-handler";
 import "../utils/suppressWarnings";
 import * as SplashScreen from "expo-splash-screen";
 import { useFonts } from "expo-font";
@@ -18,8 +17,6 @@ import { ErrorBoundary } from "../components/common/ErrorBoundary";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ROUTINE_STORAGE_KEY, SETUP_STORAGE_KEY } from "../constants/storageKeys";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { queryClient } from "../utils/queryClient";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useThemeStore } from "../stores/themeStore";
 
@@ -184,30 +181,28 @@ function RootLayoutNav() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <ErrorBoundary>
-        <ThemeProvider>
-          <SettingsProvider>
-            <AudioProvider>
-              <TimerProvider>
-                <StatusBar style="dark" />
-                <Stack>
-                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                  <Stack.Screen name="(auth)/sign-in" options={{ headerShown: false }} />
-                  <Stack.Screen name="routine" options={{ headerShown: false }} />
-                  <Stack.Screen name="setup" options={{ headerShown: false }} />
-                  <Stack.Screen name="privacy" options={{ headerShown: false, presentation: "card" }} />
-                  <Stack.Screen name="terms" options={{ headerShown: false, presentation: "card" }} />
-                  <Stack.Screen name="focus" options={{ headerShown: false, presentation: "modal" }} />
-                  <Stack.Screen name="settings" options={{ presentation: "modal", headerShown: false }} />
-                  <Stack.Screen name="+not-found" options={{ title: "Oops!" }} />
-                </Stack>
-              </TimerProvider>
-            </AudioProvider>
-          </SettingsProvider>
-        </ThemeProvider>
-      </ErrorBoundary>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <SettingsProvider>
+          <AudioProvider>
+            <TimerProvider>
+              <StatusBar style="dark" />
+              <Stack>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="(auth)/sign-in" options={{ headerShown: false }} />
+                <Stack.Screen name="routine" options={{ headerShown: false }} />
+                <Stack.Screen name="setup" options={{ headerShown: false }} />
+                <Stack.Screen name="privacy" options={{ headerShown: false, presentation: "card" }} />
+                <Stack.Screen name="terms" options={{ headerShown: false, presentation: "card" }} />
+                <Stack.Screen name="focus" options={{ headerShown: false, presentation: "modal" }} />
+                <Stack.Screen name="settings" options={{ presentation: "modal", headerShown: false }} />
+                <Stack.Screen name="+not-found" options={{ title: "Oops!" }} />
+              </Stack>
+            </TimerProvider>
+          </AudioProvider>
+        </SettingsProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 

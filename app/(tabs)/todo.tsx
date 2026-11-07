@@ -941,10 +941,6 @@ export default function TodoScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchTasks();
-  }, [fetchTasks]);
-
   useFocusEffect(
     useCallback(() => {
       fetchTasks();

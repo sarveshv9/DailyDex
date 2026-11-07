@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 
 export interface PokemonApiResult {
   id: string;
@@ -37,12 +37,37 @@ export async function fetchPokemonData(nameOrId: string): Promise<PokemonApiResu
   return result;
 }
 
+const pokemonCache = new Map<string, PokemonApiResult>();
+
 export function usePokemonQuery(nameOrId: string, enabled: boolean = true) {
   const normalized = nameOrId.toLowerCase().trim();
-  return useQuery({
-    queryKey: ["pokemon", normalized],
-    queryFn: () => fetchPokemonData(normalized),
-    enabled: enabled && normalized.length > 0,
-    staleTime: 24 * 60 * 60 * 1000, // 24 hours
-  });
+  const cached = enabled && normalized ? pokemonCache.get(normalized) || null : null;
+  const [fetchedData, setFetchedData] = useState<PokemonApiResult | null>(null);
+  const [isError, setIsError] = useState(false);
+
+  useEffect(() => {
+    if (!enabled || !normalized || pokemonCache.has(normalized)) {
+      return;
+    }
+
+    let active = true;
+    fetchPokemonData(normalized)
+      .then((res) => {
+        if (!active) return;
+        if (res) pokemonCache.set(normalized, res);
+        setFetchedData(res);
+        setIsError(false);
+      })
+      .catch(() => {
+        if (!active) return;
+        setIsError(true);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [normalized, enabled]);
+
+  const data = cached || (enabled && normalized ? fetchedData : null);
+  return { data, isError };
 }

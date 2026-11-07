@@ -270,10 +270,6 @@ function HomeScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    loadDashboardData();
-  }, [loadDashboardData]);
-
   useFocusEffect(
     useCallback(() => {
       loadDashboardData();

@@ -1,7 +1,8 @@
 import * as Notifications from "expo-notifications";
+import { AndroidImportance, AndroidNotificationVisibility } from "expo-notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
-import { RoutineItem, timeToMinutes } from "./utils";
+import { parseTime, RoutineItem } from "./utils";
 import { SETTINGS_STORAGE_KEY } from "../constants/storageKeys";
 
 // Configure how notifications appear while app is in the foreground
@@ -35,10 +36,10 @@ export const requestNotificationPermissions = async (): Promise<boolean> => {
             try {
                 await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
                     name: "Task Start Alarms",
-                    importance: Notifications.AndroidImportance.MAX,
+                    importance: AndroidImportance.MAX,
                     vibrationPattern: [0, 500, 250, 500],
                     lightColor: "#FF231F7C",
-                    lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+                    lockscreenVisibility: AndroidNotificationVisibility.PUBLIC,
                     sound: "task_alarm.wav",
                 });
             } catch (channelErr) {
@@ -48,10 +49,10 @@ export const requestNotificationPermissions = async (): Promise<boolean> => {
             try {
                 await Notifications.setNotificationChannelAsync(FOCUS_CHANNEL_ID, {
                     name: "Focus Timer Alarms",
-                    importance: Notifications.AndroidImportance.MAX,
+                    importance: AndroidImportance.MAX,
                     vibrationPattern: [0, 500, 250, 500],
                     lightColor: "#4DA6FF",
-                    lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+                    lockscreenVisibility: AndroidNotificationVisibility.PUBLIC,
                 });
             } catch (focusChannelErr) {
                 console.warn("Failed to create focus alarm channel:", focusChannelErr);
@@ -98,11 +99,8 @@ export const scheduleRoutineNotifications = async (
         for (const item of routines) {
             if (item.isSkipped) continue;
 
-            const minutes = timeToMinutes(item.time);
-            if (minutes === Number.MAX_SAFE_INTEGER) continue; // skip invalid times
-
-            const hours = Math.floor(minutes / 60);
-            const mins = minutes % 60;
+            const { hours, minutes: mins, isValid } = parseTime(item.time);
+            if (!isValid) continue;
 
             const emoji = item.imageKey === "wakeup" ? "🌅"
                 : item.imageKey === "water" ? "💧"
@@ -199,11 +197,12 @@ export const cancelAllRoutineNotifications = async (): Promise<void> => {
     if (Platform.OS === 'web') return;
     try {
         const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-        for (const notif of scheduled) {
-            if (notif.identifier && notif.identifier.startsWith(NOTIFICATION_ID_PREFIX)) {
-                await Notifications.cancelScheduledNotificationAsync(notif.identifier).catch(() => {});
-            }
-        }
+        const routineNotifs = scheduled.filter((n) => n.identifier?.startsWith(NOTIFICATION_ID_PREFIX));
+        await Promise.all(
+            routineNotifs.map((n) =>
+                Notifications.cancelScheduledNotificationAsync(n.identifier).catch(() => {})
+            )
+        );
     } catch (e) {
         console.warn("Failed to cancel routine notifications:", e);
     }

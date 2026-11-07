@@ -408,10 +408,6 @@ export default function RoutineScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
   useFocusEffect(
     useCallback(() => {
       loadData();

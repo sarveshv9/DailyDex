@@ -843,22 +843,7 @@ export default function SetupScreen() {
             duration: r.duration || 30,
         }));
 
-        try {
-            await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-            await AsyncStorage.setItem(SETUP_KEY, "true");
-        } catch (e) {
-            console.error("Failed to save setup data", e);
-            Alert.alert("Setup Error", "Failed to save your routine. Please try again.");
-            setSaving(false);
-            return;
-        }
-
-        // Schedule notifications safely in background without blocking user
-        scheduleRoutineNotifications(items).catch((err) => {
-            console.warn("Could not schedule routine notifications:", err);
-        });
-
-        router.replace("/(tabs)");
+        await saveAndExit(items);
     };
 
     const progressBarAnimatedStyle = useAnimatedStyle(() => {

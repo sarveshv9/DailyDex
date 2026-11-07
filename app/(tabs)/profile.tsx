@@ -2,7 +2,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -91,10 +91,6 @@ export default function ProfileScreen() {
       setIsLoading(false);
     }
   }, []);
-
-  useEffect(() => {
-    loadProfileData();
-  }, [loadProfileData]);
 
   useFocusEffect(
     useCallback(() => {

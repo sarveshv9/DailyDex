@@ -7,6 +7,12 @@ jest.mock("@react-native-async-storage/async-storage", () =>
 );
 
 jest.mock("lucide-react-native", () => ({}));
+jest.mock("@expo/vector-icons", () => {
+    const { View } = require("react-native");
+    return {
+        Ionicons: (props: any) => <View {...props} testID={props.name} />,
+    };
+});
 jest.mock("../utils/haptics", () => ({
     impactAsync: jest.fn(),
     notificationAsync: jest.fn(),

@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { STATS_STORAGE_KEY } from "../constants/storageKeys";
+import { getDateString } from "./utils";
 
 import type { DailyStats, UserStats } from "../types/stats";
 
@@ -15,15 +16,12 @@ const DEFAULT_STATS: UserStats = {
     history: {},
 };
 
-export const getTodayString = () => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
+export const getTodayString = () => getDateString(new Date());
 
 const getYesterdayString = () => {
     const d = new Date();
     d.setDate(d.getDate() - 1);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return getDateString(d);
 };
 
 export const getWeeklyData = (stats: UserStats) => {
@@ -31,7 +29,7 @@ export const getWeeklyData = (stats: UserStats) => {
     for (let i = 6; i >= 0; i--) {
         const d = new Date();
         d.setDate(d.getDate() - i);
-        const dateStr = d.toISOString().split("T")[0];
+        const dateStr = getDateString(d);
         const dayOfWeek = d.toLocaleDateString('en-US', { weekday: 'short' });
 
         const dayStats = stats.history[dateStr] || { tasks: 0, focusMinutes: 0 };
@@ -50,7 +48,7 @@ export const getMonthlyData = (stats: UserStats) => {
     for (let i = 29; i >= 0; i--) {
         const d = new Date();
         d.setDate(d.getDate() - i);
-        const dateStr = d.toISOString().split("T")[0];
+        const dateStr = getDateString(d);
         const dayOfWeek = d.getDate().toString();
 
         const dayStats = stats.history[dateStr] || { tasks: 0, focusMinutes: 0 };
@@ -119,58 +117,71 @@ export const saveStats = async (stats: UserStats): Promise<void> => {
     }
 };
 
+let statsQueue: Promise<any> = Promise.resolve();
+const queueStatsUpdate = <T>(fn: () => Promise<T>): Promise<T> => {
+    const next = statsQueue.then(fn, fn);
+    statsQueue = next.then(() => {}, () => {});
+    return next;
+};
+
 export const addFocusSession = async (minutes: number): Promise<UserStats> => {
-    const stats = await loadStats();
-    const today = getTodayString();
+    return queueStatsUpdate(async () => {
+        const stats = await loadStats();
+        const today = getTodayString();
 
-    if (!stats.history[today]) {
-        stats.history[today] = { tasks: 0, focusMinutes: 0 };
-        // Only increment streak if this is the first action today
-        stats.currentStreak += 1;
-        if (stats.currentStreak > stats.bestStreak) {
-            stats.bestStreak = stats.currentStreak;
+        if (!stats.history[today]) {
+            stats.history[today] = { tasks: 0, focusMinutes: 0 };
+            // Only increment streak if this is the first action today
+            stats.currentStreak += 1;
+            if (stats.currentStreak > stats.bestStreak) {
+                stats.bestStreak = stats.currentStreak;
+            }
         }
-    }
 
-    stats.history[today].focusMinutes += minutes;
-    stats.totalFocusMinutes += minutes;
-    stats.sessionsCompleted += 1;
+        stats.history[today].focusMinutes += minutes;
+        stats.totalFocusMinutes += minutes;
+        stats.sessionsCompleted += 1;
 
-    await saveStats(stats);
-    return stats;
+        await saveStats(stats);
+        return stats;
+    });
 };
 
 export const addTaskCompleted = async (): Promise<UserStats> => {
-    const stats = await loadStats();
-    const today = getTodayString();
+    return queueStatsUpdate(async () => {
+        const stats = await loadStats();
+        const today = getTodayString();
 
-    if (!stats.history[today]) {
-        stats.history[today] = { tasks: 0, focusMinutes: 0 };
-        stats.currentStreak += 1;
-        if (stats.currentStreak > stats.bestStreak) {
-            stats.bestStreak = stats.currentStreak;
+        if (!stats.history[today]) {
+            stats.history[today] = { tasks: 0, focusMinutes: 0 };
+            stats.currentStreak += 1;
+            if (stats.currentStreak > stats.bestStreak) {
+                stats.bestStreak = stats.currentStreak;
+            }
         }
-    }
 
-    stats.history[today].tasks += 1;
-    stats.tasksCompleted += 1;
+        stats.history[today].tasks += 1;
+        stats.tasksCompleted += 1;
 
-    await saveStats(stats);
-    return stats;
+        await saveStats(stats);
+        return stats;
+    });
 };
+
 export const removeTaskCompleted = async (count: number = 1): Promise<UserStats> => {
-    const stats = await loadStats();
-    const today = getTodayString();
+    return queueStatsUpdate(async () => {
+        const stats = await loadStats();
+        const today = getTodayString();
 
-    if (stats.history[today] && stats.history[today].tasks > 0) {
-        stats.history[today].tasks = Math.max(0, stats.history[today].tasks - count);
-    }
-    
-    if (stats.tasksCompleted > 0) {
-        stats.tasksCompleted = Math.max(0, stats.tasksCompleted - count);
-    }
+        if (stats.history[today] && stats.history[today].tasks > 0) {
+            stats.history[today].tasks = Math.max(0, stats.history[today].tasks - count);
+        }
+        
+        if (stats.tasksCompleted > 0) {
+            stats.tasksCompleted = Math.max(0, stats.tasksCompleted - count);
+        }
 
-
-    await saveStats(stats);
-    return stats;
+        await saveStats(stats);
+        return stats;
+    });
 };

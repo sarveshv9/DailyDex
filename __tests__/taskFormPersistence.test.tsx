@@ -6,6 +6,12 @@ import type { RoutineFormData } from "../types";
 import { useThemeStore } from "../stores/themeStore";
 
 jest.mock("lucide-react-native", () => ({}));
+jest.mock("@expo/vector-icons", () => {
+  const { View } = require("react-native");
+  return {
+    Ionicons: (props: any) => <View {...props} testID={props.name} />,
+  };
+});
 
 jest.mock("expo-blur", () => ({
   BlurView: "BlurView",
