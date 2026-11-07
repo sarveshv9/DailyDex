@@ -219,12 +219,12 @@ export default function FocusScreen() {
         contentContainerStyle={styles.scrollContent}
         bounces={false}
       >
-        {/* Currently Focusing Task Card */}
-        <View style={styles.taskCard}>
+        {/* Currently Focusing Task Header */}
+        <View style={styles.taskHero}>
           <View style={styles.taskBadge}>
             <Ionicons
-              name="disc-outline"
-              size={12}
+              name="sparkles"
+              size={11}
               color={theme.colors.primary}
             />
             <Text style={styles.taskLabel}>CURRENTLY FOCUSING ON</Text>
@@ -325,35 +325,36 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
       paddingBottom: themeTokens.spacing.xl,
       alignItems: "center",
     },
-    taskCard: {
+    taskHero: {
       width: "100%",
-      borderRadius: themeTokens.borderRadius.lg,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      backgroundColor: theme.colors.surface,
-      overflow: "hidden",
-      paddingHorizontal: themeTokens.spacing.lg,
-      paddingVertical: 14,
       alignItems: "center",
-      marginBottom: themeTokens.spacing.lg,
-      elevation: 0,
+      paddingTop: 16,
+      paddingBottom: 6,
+      marginBottom: 8,
     },
     taskBadge: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 5,
-      marginBottom: 4,
+      gap: 6,
+      backgroundColor: theme.colors.primarySoft,
+      paddingHorizontal: 12,
+      paddingVertical: 5,
+      borderRadius: themeTokens.borderRadius.full,
+      marginBottom: 8,
     },
     taskLabel: {
       fontFamily: theme.fonts.bold,
-      fontSize: themeTokens.fonts.size.xs,
-      color: theme.colors.textSecondary,
-      letterSpacing: 1.2,
+      fontSize: 10,
+      color: theme.colors.primary,
+      letterSpacing: 1.1,
+      textTransform: "uppercase",
     },
     taskName: {
       fontFamily: theme.fonts.bold,
-      fontSize: themeTokens.fonts.size.xl,
-      color: theme.colors.primary,
+      fontSize: 26,
+      color: theme.colors.text,
       textAlign: "center",
+      letterSpacing: -0.4,
+      paddingHorizontal: 12,
     },
   });

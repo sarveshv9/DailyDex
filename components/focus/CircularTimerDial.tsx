@@ -21,8 +21,7 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const DIAL_SIZE = Math.min(SCREEN_WIDTH * 0.76, 290);
-const AURA_SIZE = DIAL_SIZE + 44;
-const STROKE_WIDTH = 10;
+const STROKE_WIDTH = 9;
 const RADIUS = (DIAL_SIZE - STROKE_WIDTH) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
@@ -126,11 +125,6 @@ export const CircularTimerDial: React.FC<CircularTimerDialProps> = ({
     transform: [{ scale: pulseScale.value }],
   }));
 
-  const animatedAuraStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: 0.98 + pulseScale.value * 0.02 }],
-    opacity: isActive ? 0.9 : 0.65,
-  }));
-
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -184,28 +178,17 @@ export const CircularTimerDial: React.FC<CircularTimerDialProps> = ({
 
   return (
     <View style={styles.dialWrapper}>
-      {/* Concentric Ambient Background Aura */}
-      <Animated.View
+      {/* Floating Dial with Soft Ambient Shadow */}
+      <View
         style={[
-          styles.ambientAura,
+          styles.dialShadowContainer,
           {
-            backgroundColor: theme.colors.primarySoft,
+            backgroundColor: theme.colors.surface,
+            shadowOpacity: isDarkMode ? 0.35 : 0.08,
           },
-          animatedAuraStyle,
         ]}
-        pointerEvents="none"
-      />
-
-      <View style={styles.dialShadowContainer}>
-        <View
-          style={[
-            styles.dialOuter,
-            {
-              borderColor: theme.colors.border,
-              backgroundColor: theme.colors.surface,
-            },
-          ]}
-        >
+      >
+        <View style={styles.dialOuter}>
           {/* SVG Progress Circle */}
           <Svg
             width={DIAL_SIZE}
@@ -251,13 +234,12 @@ export const CircularTimerDial: React.FC<CircularTimerDialProps> = ({
               style={[
                 styles.statusTag,
                 {
-                  backgroundColor: theme.colors.surfaceMuted,
-                  borderColor: `${statusInfo.color}35`,
+                  backgroundColor: theme.colors.primarySoft,
                 },
                 animatedBadgeStyle,
               ]}
             >
-              <Ionicons name={statusInfo.icon} size={12} color={statusInfo.color} />
+              <Ionicons name={statusInfo.icon} size={11} color={statusInfo.color} />
               <Text style={[styles.statusTagText, { color: statusInfo.color }]}>
                 {statusInfo.label}
               </Text>
@@ -305,20 +287,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginVertical: 18,
   },
-  ambientAura: {
-    position: "absolute",
-    width: AURA_SIZE,
-    height: AURA_SIZE,
-    borderRadius: AURA_SIZE / 2,
-  },
   dialShadowContainer: {
+    width: DIAL_SIZE,
+    height: DIAL_SIZE,
     borderRadius: DIAL_SIZE / 2,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 12 },
+    shadowRadius: 28,
+    elevation: 8,
   },
   dialOuter: {
     width: DIAL_SIZE,
     height: DIAL_SIZE,
     borderRadius: DIAL_SIZE / 2,
-    borderWidth: 1.5,
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
@@ -332,24 +315,24 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 4,
-    borderRadius: 20,
-    borderWidth: 1,
+    borderRadius: 16,
     marginBottom: 8,
   },
   statusTagText: {
-    fontSize: themeTokens.fonts.size.xs,
+    fontSize: 10,
     fontWeight: "700",
-    letterSpacing: 0.8,
+    letterSpacing: 1.1,
+    textTransform: "uppercase",
   },
   timerDigits: {
-    fontSize: 48,
-    letterSpacing: -1,
+    fontSize: 52,
+    letterSpacing: -1.5,
     fontVariant: ["tabular-nums"],
   },
   timerSubtext: {
-    fontSize: themeTokens.fonts.size.xs,
+    fontSize: 12,
     marginTop: 4,
     letterSpacing: 0.2,
   },

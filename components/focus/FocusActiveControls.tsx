@@ -1,9 +1,16 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { themeTokens } from "../../constants/themeTokens";
-import { Theme, getSharedStyles } from "../../styles/shared";
+import Animated, {
+  FadeIn,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
+import { Theme } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export interface FocusActiveControlsProps {
   isActive: boolean;
@@ -32,6 +39,16 @@ const FocusActiveControlsComponent: React.FC<FocusActiveControlsProps> = ({
 }) => {
   const styles = useMemo(() => getStyles(theme, isDarkMode), [theme, isDarkMode]);
 
+  // Smooth opacity change when Reset becomes enabled/disabled
+  const resetOpacity = useSharedValue(isResetEnabled ? 1 : 0.45);
+  useEffect(() => {
+    resetOpacity.value = withTiming(isResetEnabled ? 1 : 0.45, { duration: 180 });
+  }, [isResetEnabled, resetOpacity]);
+
+  const animatedResetStyle = useAnimatedStyle(() => ({
+    opacity: resetOpacity.value,
+  }));
+
   return (
     <View style={styles.activeControlsSection}>
       <View style={styles.controlsRow}>
@@ -48,23 +65,29 @@ const FocusActiveControlsComponent: React.FC<FocusActiveControlsProps> = ({
             pressed && styles.pressedScale,
           ]}
         >
-          <Ionicons
-            name={isActive ? "pause" : "play"}
-            size={20}
-            color={isActive ? theme.colors.primaryText : theme.colors.onPrimary}
-          />
-          <Text
-            style={[
-              styles.actionPillPrimaryText,
-              isActive && styles.actionPillPauseText,
-            ]}
+          <Animated.View
+            key={isActive ? "pause" : "play"}
+            entering={FadeIn.duration(150)}
+            style={styles.innerRow}
           >
-            {isActive ? "Pause" : "Resume"}
-          </Text>
+            <Ionicons
+              name={isActive ? "pause" : "play"}
+              size={20}
+              color={isActive ? theme.colors.primaryText : theme.colors.onPrimary}
+            />
+            <Text
+              style={[
+                styles.actionPillPrimaryText,
+                isActive && styles.actionPillPauseText,
+              ]}
+            >
+              {isActive ? "Pause" : "Resume"}
+            </Text>
+          </Animated.View>
         </Pressable>
 
         {/* Reset Pill: Enabled ONLY when timer is paused */}
-        <Pressable
+        <AnimatedPressable
           testID="focus-reset-btn"
           disabled={!isResetEnabled}
           onPress={() => {
@@ -78,23 +101,26 @@ const FocusActiveControlsComponent: React.FC<FocusActiveControlsProps> = ({
           style={({ pressed }) => [
             styles.actionPillSecondary,
             !isResetEnabled && styles.actionPillDisabled,
+            animatedResetStyle,
             isResetEnabled && pressed && styles.pressedScale,
           ]}
         >
-          <Ionicons
-            name="refresh-outline"
-            size={19}
-            color={isResetEnabled ? theme.colors.primaryText : theme.colors.textSecondary}
-          />
-          <Text
-            style={[
-              styles.actionPillSecondaryText,
-              !isResetEnabled && styles.actionPillDisabledText,
-            ]}
-          >
-            Reset
-          </Text>
-        </Pressable>
+          <View style={styles.innerRow}>
+            <Ionicons
+              name="refresh-outline"
+              size={18}
+              color={isResetEnabled ? theme.colors.text : theme.colors.textSecondary}
+            />
+            <Text
+              style={[
+                styles.actionPillSecondaryText,
+                !isResetEnabled && styles.actionPillDisabledText,
+              ]}
+            >
+              Reset
+            </Text>
+          </View>
+        </AnimatedPressable>
 
         {/* Pomodoro Advance Phase Pill */}
         {pomodoroMode && (
@@ -113,25 +139,27 @@ const FocusActiveControlsComponent: React.FC<FocusActiveControlsProps> = ({
               pressed && styles.pressedScale,
             ]}
           >
-            <Ionicons
-              name={
-                isLastPomoPhase
-                  ? "checkmark-circle-outline"
-                  : "play-skip-forward-outline"
-              }
-              size={19}
-              color={
-                isLastPomoPhase ? theme.colors.primaryText : theme.colors.textSecondary
-              }
-            />
-            <Text
-              style={[
-                styles.actionPillSecondaryText,
-                isLastPomoPhase && styles.actionPillFinishText,
-              ]}
-            >
-              {isLastPomoPhase ? "Finish" : "Next"}
-            </Text>
+            <View style={styles.innerRow}>
+              <Ionicons
+                name={
+                  isLastPomoPhase
+                    ? "checkmark-circle-outline"
+                    : "play-skip-forward-outline"
+                }
+                size={18}
+                color={
+                  isLastPomoPhase ? theme.colors.primaryText : theme.colors.textSecondary
+                }
+              />
+              <Text
+                style={[
+                  styles.actionPillSecondaryText,
+                  isLastPomoPhase && styles.actionPillFinishText,
+                ]}
+              >
+                {isLastPomoPhase ? "Finish" : "Next"}
+              </Text>
+            </View>
           </Pressable>
         )}
       </View>
@@ -148,7 +176,7 @@ const FocusActiveControlsComponent: React.FC<FocusActiveControlsProps> = ({
       >
         <Ionicons
           name="stop-circle-outline"
-          size={18}
+          size={16}
           color={theme.colors.textSecondary}
         />
         <Text style={styles.endSessionText}>End Session Early</Text>
@@ -160,61 +188,71 @@ const FocusActiveControlsComponent: React.FC<FocusActiveControlsProps> = ({
 export const FocusActiveControls = React.memo(FocusActiveControlsComponent);
 
 const getStyles = (theme: Theme, isDarkMode: boolean) => {
-  const shared = getSharedStyles(theme);
   return StyleSheet.create({
     activeControlsSection: {
       width: "100%",
       alignItems: "center",
-      marginTop: 4,
-      gap: themeTokens.spacing.md,
+      marginTop: 8,
+      gap: 14,
     },
     controlsRow: {
       flexDirection: "row",
       alignItems: "center",
-      gap: themeTokens.spacing.sm,
+      justifyContent: "center",
+      gap: 12,
       width: "100%",
+      maxWidth: 340,
+    },
+    innerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
     },
     actionPillPrimary: {
-      ...shared.primaryButton,
-      flex: 1.3,
-      gap: themeTokens.spacing.sm,
+      flex: 1,
+      height: 52,
+      borderRadius: 26,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: theme.colors.primary,
     },
     actionPillResume: {
       backgroundColor: theme.colors.primary,
     },
     actionPillPause: {
-      backgroundColor: theme.colors.surfaceMuted,
-      borderWidth: 1.5,
-      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.primarySoft,
     },
     actionPillPrimaryText: {
-      ...shared.primaryButtonText,
-      fontSize: themeTokens.fonts.size.md,
+      fontSize: 15,
+      fontFamily: theme.fonts.bold,
       color: theme.colors.onPrimary,
+      letterSpacing: 0.3,
     },
     actionPillPauseText: {
-      color: theme.colors.primaryText,
+      color: theme.colors.primary,
     },
     actionPillSecondary: {
-      ...shared.secondaryButton,
       flex: 1,
-      borderColor: theme.colors.border,
+      height: 52,
+      borderRadius: 26,
+      alignItems: "center",
+      justifyContent: "center",
       backgroundColor: theme.colors.surfaceMuted,
-      gap: 6,
     },
     actionPillSecondaryText: {
-      ...shared.secondaryButtonText,
-      fontSize: themeTokens.fonts.size.sm,
-      color: theme.colors.primaryText,
+      fontSize: 15,
+      fontFamily: theme.fonts.bold,
+      color: theme.colors.text,
+      letterSpacing: 0.3,
     },
     actionPillDisabled: {
-      opacity: 0.35,
+      opacity: 0.4,
     },
     actionPillDisabledText: {
       color: theme.colors.textSecondary,
     },
     actionPillFinish: {
-      borderColor: theme.colors.border,
       backgroundColor: theme.colors.primarySoft,
     },
     actionPillFinishText: {
@@ -223,15 +261,19 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     endSessionButton: {
       flexDirection: "row",
       alignItems: "center",
+      justifyContent: "center",
       gap: 6,
       paddingVertical: 10,
-      paddingHorizontal: 16,
-      borderRadius: themeTokens.borderRadius.lg,
+      paddingHorizontal: 18,
+      borderRadius: 20,
+      backgroundColor: isDarkMode ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.03)",
+      marginTop: 4,
     },
     endSessionText: {
       fontFamily: theme.fonts.medium,
-      fontSize: themeTokens.fonts.size.sm,
+      fontSize: 13,
       color: theme.colors.textSecondary,
+      letterSpacing: 0.2,
     },
     pressedScale: {
       opacity: 0.85,

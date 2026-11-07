@@ -1,6 +1,15 @@
-import React from "react";
-import { View } from "react-native";
+import React, { useEffect } from "react";
+import { StyleSheet } from "react-native";
+import Animated, {
+  useAnimatedProps,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+} from "react-native-reanimated";
 import Svg, { Circle } from "react-native-svg";
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 export interface ProgressRingProps {
   progress: number;
@@ -21,25 +30,51 @@ const ProgressRingComponent: React.FC<ProgressRingProps> = ({
 }) => {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset =
-    circumference * (1 - Math.min(1, Math.max(0, progress)));
+  const clampedProgress = Math.min(1, Math.max(0, progress));
+  const targetOffset = circumference * (1 - clampedProgress);
+
+  // Smooth fluid spring stroke fill
+  const animatedOffset = useSharedValue(circumference);
+  const ringScale = useSharedValue(1);
+
+  useEffect(() => {
+    animatedOffset.value = withSpring(targetOffset, {
+      damping: 18,
+      stiffness: 90,
+      mass: 0.8,
+    });
+  }, [targetOffset, animatedOffset]);
+
+  // Subtle celebration pop when reaching 100% completion
+  useEffect(() => {
+    if (clampedProgress >= 1) {
+      ringScale.value = withSequence(
+        withSpring(1.08, { damping: 10, stiffness: 220 }),
+        withSpring(1, { damping: 14, stiffness: 160 })
+      );
+    }
+  }, [clampedProgress, ringScale]);
+
+  const animatedCircleProps = useAnimatedProps(() => ({
+    strokeDashoffset: animatedOffset.value,
+  }));
+
+  const animatedContainerStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: ringScale.value }],
+  }));
 
   return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        alignItems: "center",
-        justifyContent: "center",
-      }}
+    <Animated.View
+      style={[
+        styles.container,
+        { width: size, height: size },
+        animatedContainerStyle,
+      ]}
     >
       <Svg
         width={size}
         height={size}
-        style={{
-          position: "absolute",
-          transform: [{ rotate: "-90deg" }],
-        }}
+        style={[StyleSheet.absoluteFill, styles.svgRotate]}
       >
         <Circle
           cx={size / 2}
@@ -49,7 +84,7 @@ const ProgressRingComponent: React.FC<ProgressRingProps> = ({
           strokeWidth={strokeWidth}
           fill="none"
         />
-        <Circle
+        <AnimatedCircle
           cx={size / 2}
           cy={size / 2}
           r={radius}
@@ -57,13 +92,23 @@ const ProgressRingComponent: React.FC<ProgressRingProps> = ({
           strokeWidth={strokeWidth}
           fill="none"
           strokeDasharray={`${circumference} ${circumference}`}
-          strokeDashoffset={strokeDashoffset}
+          animatedProps={animatedCircleProps}
           strokeLinecap="round"
         />
       </Svg>
       {children}
-    </View>
+    </Animated.View>
   );
 };
 
 export const ProgressRing = React.memo(ProgressRingComponent);
+
+const styles = StyleSheet.create({
+  container: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  svgRotate: {
+    transform: [{ rotate: "-90deg" }],
+  },
+});
