@@ -33,7 +33,6 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const isAutoTheme = useThemeStore((s) => s.isAutoTheme);
   const isDarkMode = useThemeStore((s) => s.isDarkMode);
   const customThemes = useThemeStore((s) => s.customThemes);
-  const isLoaded = useThemeStore((s) => s.isLoaded);
 
   const setThemeName = useThemeStore((s) => s.setThemeName);
   const setIsAutoTheme = useThemeStore((s) => s.setIsAutoTheme);

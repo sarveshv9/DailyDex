@@ -4,6 +4,7 @@ import {
     importZenDataFromJson,
     ZenBackupEnvelope,
 } from '../utils/storageBackup';
+import { pruneOldHistory } from '../utils/stats';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -66,5 +67,15 @@ describe('Storage Backup & Restore Utility', () => {
         expect(result.success).toBe(false);
         expect(result.restoredCount).toBe(0);
         expect(result.error).toContain('Invalid backup envelope');
+    });
+
+    it('prunes old history entries keeping only the latest maxDays entries', () => {
+        const history: Record<string, any> = {
+            '2024-01-01': { tasks: 1, focusMinutes: 20 },
+            '2024-01-02': { tasks: 2, focusMinutes: 40 },
+            '2024-01-03': { tasks: 3, focusMinutes: 60 },
+        };
+        pruneOldHistory(history, 2);
+        expect(Object.keys(history)).toEqual(['2024-01-02', '2024-01-03']);
     });
 });

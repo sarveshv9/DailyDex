@@ -109,8 +109,20 @@ export const loadStats = async (): Promise<UserStats> => {
     }
 };
 
+export const pruneOldHistory = (history: Record<string, DailyStats>, maxDays: number = 365) => {
+    const keys = Object.keys(history);
+    if (keys.length <= maxDays) return history;
+    const sorted = keys.sort();
+    const toRemove = sorted.slice(0, keys.length - maxDays);
+    for (const key of toRemove) {
+        delete history[key];
+    }
+    return history;
+};
+
 export const saveStats = async (stats: UserStats): Promise<void> => {
     try {
+        pruneOldHistory(stats.history, 365);
         await AsyncStorage.setItem(STATS_STORAGE_KEY, JSON.stringify(stats));
     } catch (e) {
         console.error("Failed to save stats", e);

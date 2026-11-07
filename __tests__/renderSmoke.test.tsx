@@ -2,9 +2,7 @@
 import React from "react";
 import { render } from "@testing-library/react-native";
 import { ThemeProvider } from "../context/ThemeContext";
-import { SettingsProvider } from "../context/SettingsContext";
 import { AudioProvider } from "../context/AudioContext";
-import { TimerProvider } from "../context/TimerContext";
 
 import HomeScreen from "../app/(tabs)/index";
 import TodoScreen from "../app/(tabs)/todo";
@@ -197,13 +195,9 @@ describe("Screen Render Smoke Tests (Fails on Error, SSR window crash, or Maximu
   const renderWithProviders = (Component: React.ComponentType) => {
     return render(
       <ThemeProvider>
-        <SettingsProvider>
-          <AudioProvider>
-            <TimerProvider>
-              <Component />
-            </TimerProvider>
-          </AudioProvider>
-        </SettingsProvider>
+        <AudioProvider>
+          <Component />
+        </AudioProvider>
       </ThemeProvider>
     );
   };

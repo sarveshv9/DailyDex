@@ -53,12 +53,8 @@ export function StepPick({
 }: StepPickProps) {
     const { theme } = useTheme();
 
-    // Internal Phase fallback: 'start' | 'refine'
-    const [internalPhase, setInternalPhase] = useState<"start" | "refine">("start");
-    const phase = controlledPhase ?? internalPhase;
-    const setPhase = (newPhase: "start" | "refine") => {
-        setInternalPhase(newPhase);
-    };
+    // Phase: 'start' | 'refine' (controlled with fallback)
+    const phase = controlledPhase ?? "start";
 
     // --- Phase 1: Outcome Packs State ---
     const [expandedPackId, setExpandedPackId] = useState<string | null>(null);

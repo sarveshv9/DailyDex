@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 import React from "react";
 import { render, screen, fireEvent, act } from "@testing-library/react-native";
 import { ThemeProvider } from "../context/ThemeContext";

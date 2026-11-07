@@ -9,8 +9,6 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, Platform, StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AudioProvider } from "../context/AudioContext";
-import { SettingsProvider } from "../context/SettingsContext";
-import { TimerProvider } from "../context/TimerContext";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { requestNotificationPermissions, scheduleRoutineNotifications } from "../utils/notifications";
 import { ErrorBoundary } from "../components/common/ErrorBoundary";
@@ -38,7 +36,7 @@ function RootLayoutNav() {
   const [fallbackTimedOut, setFallbackTimedOut] = useState(false);
   const router = useRouter();
   const segments = useSegments();
-  const { session, initialized } = useAuth();
+  const { initialized } = useAuth();
 
   // Theme & settings hydration gate: always sets themeReady(true) in .finally so app never hangs
   useEffect(() => {
@@ -126,48 +124,22 @@ function RootLayoutNav() {
     if (!isAppReady) return;
 
     // Setup routing check — auth is optional, no sign-in gate
-    const verifyRouting = async () => {
-      const inAuthGroup = (segments[0] as string | undefined) === "(auth)";
-      const inTabsGroup = (segments[0] as string | undefined) === "(tabs)";
+    const inAuthGroup = (segments[0] as string | undefined) === "(auth)";
+    const inTabsGroup = (segments[0] as string | undefined) === "(tabs)";
 
-      // Offline-first routing: If on auth screen, route directly to setup or dashboard
-      if (inAuthGroup) {
-        try {
-          const setup = await AsyncStorage.getItem(SETUP_STORAGE_KEY);
-          const routines = await AsyncStorage.getItem(ROUTINE_STORAGE_KEY);
-          const isComplete = setup === "true" || Boolean(routines && routines !== "[]");
-          if (!isComplete) {
-            router.replace("/setup" as Href);
-          } else {
-            router.replace("/(tabs)" as Href);
-          }
-        } catch {
-          router.replace("/setup" as Href);
-        }
-        return;
+    if (inAuthGroup) {
+      if (!isSetupComplete) {
+        router.replace("/setup" as Href);
+      } else {
+        router.replace("/(tabs)" as Href);
       }
+      return;
+    }
 
-      // For first-time users, check if setup is complete
-      if (!inAuthGroup) {
-        try {
-          const setup = await AsyncStorage.getItem(SETUP_STORAGE_KEY);
-          const routines = await AsyncStorage.getItem(ROUTINE_STORAGE_KEY);
-          const isComplete = setup === "true" || Boolean(routines && routines !== "[]");
-          if (!isComplete && inTabsGroup) {
-            router.replace("/setup" as Href);
-          } else if (isComplete && isSetupComplete === false) {
-            setIsSetupComplete(true);
-          }
-        } catch {
-          if (inTabsGroup) {
-            router.replace("/setup" as Href);
-          }
-        }
-      }
-    };
-
-    verifyRouting();
-  }, [isAppReady, segments, session, initialized, isSetupComplete, router]);
+    if (!isSetupComplete && inTabsGroup) {
+      router.replace("/setup" as Href);
+    }
+  }, [isAppReady, segments, isSetupComplete, router]);
 
   if (!isAppReady) {
     if (Platform.OS === "web") {
@@ -183,24 +155,20 @@ function RootLayoutNav() {
   return (
     <ErrorBoundary>
       <ThemeProvider>
-        <SettingsProvider>
-          <AudioProvider>
-            <TimerProvider>
-              <StatusBar style="dark" />
-              <Stack>
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="(auth)/sign-in" options={{ headerShown: false }} />
-                <Stack.Screen name="routine" options={{ headerShown: false }} />
-                <Stack.Screen name="setup" options={{ headerShown: false }} />
-                <Stack.Screen name="privacy" options={{ headerShown: false, presentation: "card" }} />
-                <Stack.Screen name="terms" options={{ headerShown: false, presentation: "card" }} />
-                <Stack.Screen name="focus" options={{ headerShown: false, presentation: "modal" }} />
-                <Stack.Screen name="settings" options={{ presentation: "modal", headerShown: false }} />
-                <Stack.Screen name="+not-found" options={{ title: "Oops!" }} />
-              </Stack>
-            </TimerProvider>
-          </AudioProvider>
-        </SettingsProvider>
+        <AudioProvider>
+          <StatusBar style="dark" />
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="(auth)/sign-in" options={{ headerShown: false }} />
+            <Stack.Screen name="routine" options={{ headerShown: false }} />
+            <Stack.Screen name="setup" options={{ headerShown: false }} />
+            <Stack.Screen name="privacy" options={{ headerShown: false, presentation: "card" }} />
+            <Stack.Screen name="terms" options={{ headerShown: false, presentation: "card" }} />
+            <Stack.Screen name="focus" options={{ headerShown: false, presentation: "modal" }} />
+            <Stack.Screen name="settings" options={{ presentation: "modal", headerShown: false }} />
+            <Stack.Screen name="+not-found" options={{ title: "Oops!" }} />
+          </Stack>
+        </AudioProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );
