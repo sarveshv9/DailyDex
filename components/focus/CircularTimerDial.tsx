@@ -1,14 +1,27 @@
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
+import React, { useEffect } from "react";
 import { Dimensions, StyleSheet, Text, View } from "react-native";
+import Animated, {
+  Easing,
+  useAnimatedProps,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 import Svg, { Circle } from "react-native-svg";
 import { themeTokens } from "../../constants/themeTokens";
 import { useTheme } from "../../context/ThemeContext";
 import { useTimerRemainingSeconds } from "../../hooks/useTimerRemainingSeconds";
 import { useTimerStore } from "../../stores/timerStore";
 
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const DIAL_SIZE = Math.min(SCREEN_WIDTH * 0.76, 290);
+const AURA_SIZE = DIAL_SIZE + 44;
 const STROKE_WIDTH = 10;
 const RADIUS = (DIAL_SIZE - STROKE_WIDTH) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
@@ -70,6 +83,54 @@ export const CircularTimerDial: React.FC<CircularTimerDialProps> = ({
 
   const strokeDashoffset = CIRCUMFERENCE * (1 - progress);
 
+  // Smooth continuous stroke transition
+  const animatedOffset = useSharedValue(strokeDashoffset);
+  useEffect(() => {
+    if (isActive) {
+      // 1-second continuous sweep for the active countdown
+      animatedOffset.value = withTiming(strokeDashoffset, {
+        duration: 950,
+        easing: Easing.linear,
+      });
+    } else {
+      // Gentle spring when selecting durations, stopping, or resetting
+      animatedOffset.value = withSpring(strokeDashoffset, {
+        damping: 18,
+        stiffness: 120,
+      });
+    }
+  }, [strokeDashoffset, isActive, animatedOffset]);
+
+  const animatedCircleProps = useAnimatedProps(() => ({
+    strokeDashoffset: animatedOffset.value,
+  }));
+
+  // Calming breathing pulse on session status badge while focusing
+  const pulseScale = useSharedValue(1);
+  useEffect(() => {
+    if (isActive) {
+      pulseScale.value = withRepeat(
+        withSequence(
+          withTiming(1.05, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+          withTiming(1.0, { duration: 1500, easing: Easing.inOut(Easing.ease) })
+        ),
+        -1,
+        true
+      );
+    } else {
+      pulseScale.value = withTiming(1, { duration: 250 });
+    }
+  }, [isActive, pulseScale]);
+
+  const animatedBadgeStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulseScale.value }],
+  }));
+
+  const animatedAuraStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 0.98 + pulseScale.value * 0.02 }],
+    opacity: isActive ? 0.9 : 0.65,
+  }));
+
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -123,6 +184,18 @@ export const CircularTimerDial: React.FC<CircularTimerDialProps> = ({
 
   return (
     <View style={styles.dialWrapper}>
+      {/* Concentric Ambient Background Aura */}
+      <Animated.View
+        style={[
+          styles.ambientAura,
+          {
+            backgroundColor: theme.colors.primarySoft,
+          },
+          animatedAuraStyle,
+        ]}
+        pointerEvents="none"
+      />
+
       <View style={styles.dialShadowContainer}>
         <View
           style={[
@@ -151,7 +224,7 @@ export const CircularTimerDial: React.FC<CircularTimerDialProps> = ({
               strokeWidth={STROKE_WIDTH}
               fill="none"
             />
-            <Circle
+            <AnimatedCircle
               cx={DIAL_SIZE / 2}
               cy={DIAL_SIZE / 2}
               r={RADIUS}
@@ -159,7 +232,7 @@ export const CircularTimerDial: React.FC<CircularTimerDialProps> = ({
               strokeWidth={STROKE_WIDTH}
               fill="none"
               strokeDasharray={`${CIRCUMFERENCE} ${CIRCUMFERENCE}`}
-              strokeDashoffset={strokeDashoffset}
+              animatedProps={animatedCircleProps}
               strokeLinecap="round"
             />
           </Svg>
@@ -173,21 +246,22 @@ export const CircularTimerDial: React.FC<CircularTimerDialProps> = ({
               } seconds remaining`}
             accessibilityValue={{ min: 0, max: totalDuration, now: displayTime }}
           >
-            {/* Session Status Tag */}
-            <View
+            {/* Session Status Tag with Subtle Breathing Motion */}
+            <Animated.View
               style={[
                 styles.statusTag,
                 {
                   backgroundColor: theme.colors.surfaceMuted,
                   borderColor: `${statusInfo.color}35`,
                 },
+                animatedBadgeStyle,
               ]}
             >
               <Ionicons name={statusInfo.icon} size={12} color={statusInfo.color} />
               <Text style={[styles.statusTagText, { color: statusInfo.color }]}>
                 {statusInfo.label}
               </Text>
-            </View>
+            </Animated.View>
 
             {/* Tabular Timer Text */}
             <Text
@@ -230,6 +304,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginVertical: 18,
+  },
+  ambientAura: {
+    position: "absolute",
+    width: AURA_SIZE,
+    height: AURA_SIZE,
+    borderRadius: AURA_SIZE / 2,
   },
   dialShadowContainer: {
     borderRadius: DIAL_SIZE / 2,

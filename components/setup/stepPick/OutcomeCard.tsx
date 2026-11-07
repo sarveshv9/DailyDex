@@ -84,24 +84,26 @@ export function OutcomeCard({
                 isChosen && styles.cardChosen,
             ]}
         >
-            {/* Header Pressable Area */}
-            <Pressable
-                onPress={handleHeaderPress}
-                accessibilityRole="button"
-                accessibilityLabel={`${pack.title} focus pack, ${
-                    isFullySelected
-                        ? "fully selected"
-                        : isPartiallySelected
-                        ? `${checkedHabits.length} of ${pack.habits.length} selected`
-                        : "not selected"
-                }, ${isExpanded ? "expanded" : "collapsed"}`}
-                accessibilityState={{ expanded: isExpanded, selected: isChosen }}
+            {/* Header Container */}
+            <View
                 style={[
                     styles.headerPressable,
                     pack.isHero ? styles.heroHeader : styles.standardHeader,
                 ]}
             >
-                <View style={styles.headerLeft}>
+                <Pressable
+                    onPress={handleHeaderPress}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${pack.title} focus pack, ${
+                        isFullySelected
+                            ? "fully selected"
+                            : isPartiallySelected
+                            ? `${checkedHabits.length} of ${pack.habits.length} selected`
+                            : "not selected"
+                    }, ${isExpanded ? "expanded" : "collapsed"}`}
+                    accessibilityState={{ expanded: isExpanded, selected: isChosen }}
+                    style={styles.headerLeft}
+                >
                     {/* Badge / Eyebrow */}
                     {pack.badge && (
                         <View
@@ -268,7 +270,7 @@ export function OutcomeCard({
                             )}
                         </View>
                     )}
-                </View>
+                </Pressable>
 
                 {/* Right Area: Dedicated Toggle-All Badge & expand chevron */}
                 <View style={styles.headerRight}>
@@ -317,14 +319,21 @@ export function OutcomeCard({
                             />
                         )}
                     </Pressable>
-                    <Ionicons
-                        name={isExpanded ? "chevron-up" : "chevron-down"}
-                        size={18}
-                        color={theme.colors.textSecondary}
-                        style={{ marginTop: 10 }}
-                    />
+                    <Pressable
+                        onPress={handleHeaderPress}
+                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel={isExpanded ? "Collapse" : "Expand"}
+                    >
+                        <Ionicons
+                            name={isExpanded ? "chevron-up" : "chevron-down"}
+                            size={18}
+                            color={theme.colors.textSecondary}
+                            style={{ marginTop: 10 }}
+                        />
+                    </Pressable>
                 </View>
-            </Pressable>
+            </View>
 
             {/* Accordion Expanded Body */}
             {isExpanded && (

@@ -3,7 +3,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BackHandler,
-  Dimensions,
   ScrollView,
   StyleSheet,
   Text,
@@ -26,8 +25,6 @@ import { MusicSelectionModal } from "../components/profile/MusicSelectionModal";
 import { themeTokens } from "../constants/themeTokens";
 import { Theme } from "../styles/shared";
 import * as Haptics from "../utils/haptics";
-
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 export default function FocusScreen() {
   const { theme, isDarkMode } = useTheme();
@@ -208,9 +205,6 @@ export default function FocusScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Ambient Background Aura */}
-      <View style={styles.ambientAura} pointerEvents="none" />
-
       {/* Header */}
       <FocusHeader
         onBack={requestQuit}
@@ -325,15 +319,6 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
     container: {
       flex: 1,
       backgroundColor: theme.colors.background,
-    },
-    ambientAura: {
-      position: "absolute",
-      top: 40,
-      left: SCREEN_WIDTH / 2 - 160,
-      width: 320,
-      height: 320,
-      borderRadius: 160,
-      backgroundColor: theme.colors.primarySoft,
     },
     scrollContent: {
       paddingHorizontal: themeTokens.spacing.lg,

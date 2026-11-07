@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useMemo } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import Animated, { FadeInUp, ZoomIn } from "react-native-reanimated";
 import { themeTokens } from "../../constants/themeTokens";
 import { getSharedStyles, Theme } from "../../styles/shared";
 import * as Haptics from "../../utils/haptics";
@@ -23,15 +24,21 @@ const FocusCompletionCardComponent: React.FC<FocusCompletionCardProps> = ({
   const styles = useMemo(() => getStyles(theme, isDarkMode), [theme, isDarkMode]);
 
   return (
-    <View style={styles.completionSection}>
+    <Animated.View
+      entering={FadeInUp.springify().damping(15).mass(0.8)}
+      style={styles.completionSection}
+    >
       <View style={styles.completionCard}>
-        <View style={styles.completionIconCircle}>
+        <Animated.View
+          entering={ZoomIn.delay(120).springify().damping(12)}
+          style={styles.completionIconCircle}
+        >
           <Ionicons
             name="checkmark-circle"
             size={36}
             color={theme.colors.primaryText}
           />
-        </View>
+        </Animated.View>
         <Text style={styles.completionTitle}>Session Accomplished</Text>
         <Text style={styles.completionMessage}>
           Take a calming breath. Your mindful presence and dedicated focus have
@@ -92,7 +99,7 @@ const FocusCompletionCardComponent: React.FC<FocusCompletionCardProps> = ({
           Start Another Session
         </Text>
       </Pressable>
-    </View>
+    </Animated.View>
   );
 };
 

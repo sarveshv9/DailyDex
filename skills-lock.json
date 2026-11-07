@@ -1,0 +1,855 @@
+{
+  "version": 1,
+  "skills": {
+    "8-bit-orbit-video-template": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "4dc23e4efd92f081d3f12f45b2d1131b05832ac4d659e6676e548a7ca716ed06"
+    },
+    "ad-creative": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "6eaeb792760fa1588ff3e63672e98ad49eb5f784970380044e57e09d8fe8e43d"
+    },
+    "after-hours-editorial-template": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "72d63f90ff77d65420cb3ca851c6ec86fe946538bd10c16575b520ac72b4c79a"
+    },
+    "agent-browser": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "31799ef729da132963a913b47784d0d5f9beef2348977663aaf3ab6b079583c5"
+    },
+    "ai-music-album": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "b44ed401a9e21b9fed416e61b947f8e7e0858d546d07fbb4b79cb948bec8e1b6"
+    },
+    "algorithmic-art": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "d9f2ef9f00d794f1d2c50773748b96a330a7d2541127807217f1b9e53a1d8787"
+    },
+    "animate": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "eb042f43473f2273f2c738e015bfd9f1f0d169ca8ee5894608e988858a5322ef"
+    },
+    "apple-hig": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "afaaff1d44af251fbae66771d634e9ce6c41e00dc22932d1aae81c9447b5ac70"
+    },
+    "article-magazine": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "87027fe506acf8ef2c2479bde97d8e4fb6bacab66aca074413489a8affe176b6"
+    },
+    "artifacts-builder": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "a3c85c3d275238f86b5ff1556092c990aa492216eb73ce45fd89c848908f99ea"
+    },
+    "brainstorming": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "ed42c777fd07bab779d731a08de3d045deeebfe35eb1b7e83fda0321c1c13be7"
+    },
+    "brand-extract": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "daf1497a38c7011764021e8126af43da310e0618dd7f8b289fd8fab2c2f57b54"
+    },
+    "brand-guidelines": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "a007a6b78beb05be1e6e903f87b57e9b0a57ddb16479761855faedd8c787e2b4"
+    },
+    "brandkit": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "181bc174e9c6ade767a4071e8f1a4b158e11d1a68bd83802f4cb314938963263"
+    },
+    "canvas-design": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "dda4c630e39def084af7cc4b9ac977e4e4e416262520325a6bb000011770781d"
+    },
+    "card-twitter": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "8faaf88065010fc72c215a184680d5974b8d35eb4c86d859a458f334a065fb07"
+    },
+    "card-xiaohongshu": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "77e80e7ca48a64d4975ba26843913148c495ec804c462b7cf921c58fe47c740e"
+    },
+    "chat-motion-overlay": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "50e563bb422d95f4793cb41d300880f69509ca7d2ef1fc94694de39661630ece"
+    },
+    "color-expert": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "9f33da9b942ca6a3f1d3be95e554c10e779d8674a6b5dd4a6750c028abb7714e"
+    },
+    "competitive-ads-extractor": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "ade866db22fdb082a4a3dcdff796d0eba59d5fba29764e31836d49094c8ee2c2"
+    },
+    "copywriting": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "c411dd9c3b88565aeea82b4d1f2c666981e3580a522b54202904ac8c46b49eea"
+    },
+    "creative-director": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "ef878b76b5527e123f5a1dc8ef81a7205f55842121b7f434320159ed73deae0a"
+    },
+    "d3-visualization": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "98e1f4184c788635156d47b099f88e5242228888c496058c820c78b3b081934e"
+    },
+    "data-report": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "75da1930a78d216acc576b7412bd70011296c123866b35d2d2e74df635f27936"
+    },
+    "deck-guizang-editorial": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "c9a2b6ecff4e2862b43198ee676f37999fc209777e3d258d5001e6ccecd173d7"
+    },
+    "deck-open-slide-canvas": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "0a9a632a4e8739fde3053ece29b15a0f6d9cd2c14e1b94635756b4581d4a16d0"
+    },
+    "deck-swiss-international": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "1247dd2f4fb4ec3dd2e7543d5f96d3659ebffd520b53add2f3a7ba2f3bd1146e"
+    },
+    "design-brief": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "27e361180516f6931c026293dc232d08a7d51ac1ec7c256894e1b717a18467e3"
+    },
+    "design-consultation": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "78f516184a4b228e79d797f00d4bb291c05cac620d91a3ae1982008e5ded9cf6"
+    },
+    "design-md": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "06b9065719901ffdf912c0dfbd74c4a79e5fbde4b69245edfa54f4b847199cc8"
+    },
+    "design-review": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "0aba6e3ac65eef16200e41bca2eb3ac4990e96c114a5860ae205d5d5338b6bc2"
+    },
+    "design-taste-frontend": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "487467674b8b57954ddffedb5424fd77f0efdfed0c8875bcc8327d688358782f"
+    },
+    "design-taste-frontend-v1": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "875b3f9f93ac765a60e372af30504334c8da730734705441f9aaf2e004bef01c"
+    },
+    "digits-fintech-swiss-template": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "1916089b4e1e11a0f9fd430f1efd986b3908984aea0c324dc5154eda1aca8c8f"
+    },
+    "doc": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "90776c655d6024739aa8691fa303f4d554bede1b1279ae3f1f4a59152e714c5e"
+    },
+    "doc-kami-parchment": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "dcf16efa2dabeccc75292af0c4a4d4200e47ce9d15dc1e22296cd4d5f7ec69a7"
+    },
+    "docx": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "74b5063fc9c8f87996d3600e6d379245b1ec6e8950409c31d37f6cf97989590d"
+    },
+    "domain-name-brainstormer": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "85ad06c7da9d46f3bcd549a395eb215563f241c6b9e1bea8df0ec34f08790d85"
+    },
+    "ecommerce-image-workflow": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "3501389eb4414183b9770ac8926497748fb9ffb966320ab1b5d5bfaf3862d02f"
+    },
+    "editorial-burgundy-principles-template": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "168e3501459b78579c90b3f15591cf69792478d1c7b35596724ee3bc59f1197f"
+    },
+    "emil-design-eng": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "9279bbe065dde3b66b31ba3ecc887dd6b30b4a81e3473bcd9bf2e1067c7a83b4"
+    },
+    "emilkowalski-motion": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "ac9e827c591d2527dea51f937e0ba0fc88627c04b713eaaa76bf634c807d547f"
+    },
+    "enhance-prompt": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "29cd89c077e1585bb4c8cadd9378b2ea4fca9f2c6b8b2406755f42b5e0a7baa7"
+    },
+    "export-download-debugging": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "6a71fd8f84e0ba1271b272a1d3e663f4eef3a3ec141b147d1607666313462d63"
+    },
+    "fal-3d": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "c86631d85de8c312ae567f453599caf29f77bd52d5c8936535271afaba0a3a65"
+    },
+    "fal-generate": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "8e24916b9bfd0403ab8dfc75007c0179a28e8495e8f5a7730c7b8a0731d48102"
+    },
+    "fal-image-edit": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "9298cc7291541327bd84f376547bec3cea48cc9c146d0f81ac230e75f232592c"
+    },
+    "fal-kling-o3": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "d031719ec9137704e367077f7d59e0f56f7ed502e728bc12ea8c197745171013"
+    },
+    "fal-lip-sync": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "c3c7cfb837b46dcdd34053a8ce08e1ae859a35f1a40cfd07615af59d0e66a2c8"
+    },
+    "fal-realtime": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "81a0785539a84a86db054fbaa6cd3a59ab60b4eb34902321528a49b1257c6014"
+    },
+    "fal-restore": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "54264ab497a9e7817e8ec1412c083497a78c0eb2c93036bbc3adb41a81946cba"
+    },
+    "fal-train": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "0a84aa1268f954fe919799de7644a94111481d127329675d416ee5add4f9dd50"
+    },
+    "fal-tryon": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "7b10e3485d973c775985d07d45e23fe617151d75a3ad00b0dac9e46e7c1adfe8"
+    },
+    "fal-upscale": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "478b55343c0cc6bd5884d4ec14cdcbde4cc4626e9ba3be3a2a24d4e278680417"
+    },
+    "fal-video-edit": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "30897e8004ecd30f23b44100db1490c5d393ed4b07c8f7c46c0e0b389ab9fba1"
+    },
+    "fal-vision": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "2f9a9091051f3698352f3c08985b4d190052dd8fd302971204b12a70e7da4588"
+    },
+    "faq-page": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "53c2b5f458965267d20908e58c5be48df8e6852f549b6d8674cb91051bd5a931"
+    },
+    "field-notes-editorial-template": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "014e7925c64b0e3da5828452785029a5e0dbd2df82689d7fc9125bf31b2627ea"
+    },
+    "figma-code-connect-components": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "82697b6208e98a816842a0bfb658a0b9ec07367d0a6547cc56c3230d24b33d2e"
+    },
+    "figma-create-design-system-rules": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "cf8077dad09ea3e49ea102dbef6552b05a07b942dcbc19fd2ea90aa396acbb4a"
+    },
+    "figma-create-new-file": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "efae3af5da2e5c0d8d4701df8a383531364f13aed4280f9703ad5919cb917e50"
+    },
+    "figma-generate-design": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "9e78d40e309ac75293d7dbb1afd822ba0b5c7fe828db9286a18a005fcf3013fb"
+    },
+    "figma-generate-library": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "43b54da1184d7855d6a6cc559a2d8b8dd797bc492842febbfcf1524883799535"
+    },
+    "figma-implement-design": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "5b42609289687123bbf6c710884b279dc9b12140f3367f240d25858cfc546e16"
+    },
+    "figma-use": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "05fdb24fbb824f454c605383bbc5ff4da328610e520f45f1cf87d9e4ea83ad46"
+    },
+    "flutter-animating-apps": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "1d6dd140ed3f49141980f88233b8d1b67f74bbaa2378661150ad1f82b0643a5d"
+    },
+    "frame-data-chart-nyt": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "0c816a5a049432cdd238282b9008b24074d31d6c1fc6374babcf8163dc46e1e7"
+    },
+    "frame-flowchart-sticky": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "815a928b897e024f117fef3e9b5aa62cc0f5688bcc6fb3eeca84910a5f8a0ba5"
+    },
+    "frame-glitch-title": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "436b05b57b38f668a61bc8a09a06ce6557490454f8d79afaa2d4ca2bf5a86f8a"
+    },
+    "frame-light-leak-cinema": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "c4f8178e61d1d8deac2fe542b42ac85ed86d80d8c03d00a7459041a75b00f422"
+    },
+    "frame-liquid-bg-hero": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "c7aafe8681303cad600387d37ded3c82cdf301c6b97b185bb9707a94ae144fe3"
+    },
+    "frame-logo-outro": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "00ca1673338cefee595368c9123868724686ff7bbea474eaf46d247620e16b3d"
+    },
+    "frame-macos-notification": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "4082c328fb160afdb6eabdaf82e1eab7414d05fc88790a9e7820b86b61deb97f"
+    },
+    "frontend-design": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "157de51af16b12d13df05bd3eb5b81f726aa87470abf05b164592fc4ac6fb904"
+    },
+    "frontend-dev": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "1bf9801df07b4b7a0ee54b98a5b2337a2ecb2073345aad313f80fdce85b75381"
+    },
+    "frontend-skill": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "c1c21a18a3a80cfbedb781c1a2caf04721191e918b5f9c07118849aa3697b692"
+    },
+    "frontend-slides": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "779cd7bff2a421277ad3567f2c5844ccce8f89cdf85d8d3401196b88fc76b2c5"
+    },
+    "full-output-enforcement": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "1356e8b955c299209d7e145dcef0b3941521d037c1910eb3fd8e12ac729de145"
+    },
+    "full-page-screenshot": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "c384611913eb0bfb36f84c0078c6d6ad13a81edd965cc9ed0145f204956d31e2"
+    },
+    "gif-sticker-maker": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "2843c570452e550605e3686507a46370bc3ec8e5273a9aaea3e6069259613bcb"
+    },
+    "gpt-taste": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "655d937030ea7669786a5f1340acdef60521ce779a4805e3058d07bd82793b55"
+    },
+    "gsap-core": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "c72bf93c87a3e2fc888bdf651e7fe3db3788dd73c748bec30768dddff7dddcef"
+    },
+    "gsap-frameworks": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "a1d9542fb63c93cc12f585e5e2e72f04c8d26119e7b5408329d48a7d621c8150"
+    },
+    "gsap-performance": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "7242f9a33fb6e9719ee39d353d58149825f2d2a84a2b580fe9a88196634e824d"
+    },
+    "gsap-plugins": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "81044709822eecaf07e13ecdd405741a0a6fb8d8cdfa480f0b12df3e4d774222"
+    },
+    "gsap-react": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "243cbfb603952bc56bd5f567307b2f01f1cd860ae82a9298840e3f20cce6db87"
+    },
+    "gsap-scrolltrigger": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "90d15302d693f3f03ac2d119dde01a66f00b41126f81426e3d9a165cb128c5c8"
+    },
+    "gsap-timeline": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "d3169412549cf8fd75fe3db55081e661d619890eaca02648b839751c23dee35c"
+    },
+    "gsap-utils": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "a4089b515e5e5b7377f0daff95018c33a86fbbb2576c8712cb780404abd30202"
+    },
+    "hand-drawn-diagrams": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "17da814e21547e66a32bdf94b6c3343479ac65873f139225e5c854d17d2225db"
+    },
+    "hatch-pet": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "3cb75390606753d28ee840fc0563c5f2e9a312a3ea47d06d2b1abcd996b452de"
+    },
+    "high-end-visual-design": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "cff8e68eeb556d4779dd7513b999e80036ea29d568e28344566bfb831cbb2ced"
+    },
+    "html-ppt-retro-quarterly-review": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "2eeb8087cb344b59f07f0e2c6d623d37718416d1e145633ed2758eaf8e4f6cc4"
+    },
+    "huashu-art-motion": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "abc484eff900c69608520929eb30bace9fe76e68c938639a25c560f79365f15a"
+    },
+    "image-enhancer": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "55ae7dd817b706c57f198866d367a8d1e1397a093805f37c1667b562c24bb9fb"
+    },
+    "image-to-code": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "4b5b7a88e33eaaf8995b1ae5751b4001cb5d337d36514e665520c70f306a0f8f"
+    },
+    "imagegen": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "d867f704f938c5f7fd79a5a723577debb35e51892e57f6cbbde716b7fa6fdb96"
+    },
+    "imagegen-frontend-mobile": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "5562940c8db9a4aab4aa826529c7ba6b083f0b1dd27c74671a1e06bf5ea772e5"
+    },
+    "imagegen-frontend-web": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "97f91c260f75270fe42efea5f7ab11628103114f59a08fa43f947d89245fd4b9"
+    },
+    "imagen": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "4563638615d688dfa9960c1da4a584fb948c30fc6922e69504d3963bf90b6edb"
+    },
+    "impeccable-design-polish": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "4e503449a58d0609daba362aea73aebf920b532a9793446158cc8a907e821b78"
+    },
+    "industrial-brutalist-ui": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "054f3b93978948db4093fa79863b22c4ac4ced5212cb48a8772fc5ac9b04e1f3"
+    },
+    "library-curator": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "b421136a941816b75b723bb425a570e03cd592577ed4c53e104315ea4af0932e"
+    },
+    "login-flow": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "f76d63660a053f9fdf99dec3a6396da73a9ec70a534e82a1ec79481c44f82775"
+    },
+    "marketing-psychology": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "47d6207f09809dcd556db2c014c64f041944fca7d5f3a956cf8cf6248c28e01c"
+    },
+    "minimalist-ui": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "8a365fff1bd8e54d5283c0dcf4d65e3be6c63e8b8c4596cab9d224f220377e3a"
+    },
+    "minimax-docx": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "9723afe76306c8b3c361073f14fa996cc5e5a858eeaa35df153622ad6c7feec5"
+    },
+    "minimax-pdf": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "4ca12b5fe67bd92f4de9918ae23b426b76841020a461e547c3537c65aa28baf7"
+    },
+    "mockup-device-3d": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "c6b01d1b4b6a211a95a64a9e7e035b124430430b11765ec186c3f9b2887f4ef1"
+    },
+    "motion-design": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "b463b10a180378e67a2ed07394c479ede61b898bfa0ffd08710c77e7bf5a8f70"
+    },
+    "motion-lab": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "8294c35f29c00b9ef4a268c25a1bdc235d7ea1fb7b66c079b1b2ba20318992d4"
+    },
+    "nanobanana-ppt": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "e426644853eaf43af753f3e6b7f14cbdd938e881cf54cbe960e3198b31194ea4"
+    },
+    "od-contribute": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "b2627b658922495a53f604a8bebd7508a648b5c975aab4774685d841d4200a64"
+    },
+    "od-next-media-inputs": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "f9cf1293836cdf3c75dc9b95a0ba24391c5fb922f4728d2ae4f0982a0a034921"
+    },
+    "oil-motion": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "c127194e14ba26e8d6aa6f674d65a6f1e04c2bf2523e767d1fa7e319899fdb00"
+    },
+    "paywall-upgrade-cro": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "1fc5f00fc594303b7a0f78667f0adef1bb26f8e9f27d0f48e9d25f7f9d4c4b50"
+    },
+    "pdf": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "5af3cde73065cdad6dfe39d2d64495c002d6e7c4fe839c869aec6460139a9c5c"
+    },
+    "pixelbin-media": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "852586d04a990a0064ac4d93a3cc112163f736a4a60feee37e919136592d50ec"
+    },
+    "plan-design-review": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "075f34d789c4bc97f178875ddb58d0ceb7d647c782561d553d8499364d6069f9"
+    },
+    "platform-design": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "db631c50b09ff341aa0f045e338d68ec457b9e01c01e4a03218f741adac3db5d"
+    },
+    "poster-hero": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "54894f2e8cbb9b3ce0da41b459ea8bdba6438b533d5a4976b03c08eeac81c504"
+    },
+    "ppt-keynote": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "8b5f4bcae9a428309698d0ec09051b9a769e62c45f6d60750985983520738e74"
+    },
+    "pptx": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "74d46c2402853b8fd7b7a0e639571ec8778c9a5aa359f181b9ffcaf5bf30ed4b"
+    },
+    "pptx-generator": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "218aba021be6e5f560caaad1a63af7e2aeeb808001c9dbd7d867fcb2bef1e64e"
+    },
+    "pptx-html-fidelity-audit": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "1cada143cdeb2d0a89a91dfd21d2086c222c51873966be56cd786729cc948206"
+    },
+    "pr-feedback-quality-gate": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "f942a046ddb7da1cdf82b8e3835810cf7145bfe9408f3669eb652c180fd38a1b"
+    },
+    "redesign-existing-projects": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "b80f20b4d6a38f901df385bf01fbd4e0f69527ce11c12acd650637382079f7a6"
+    },
+    "reference-design-contract": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "3f3910d6a6663a8f5696db5ea1cadf1f2d9cf55bbba4fc9480061a12eaf8a74b"
+    },
+    "release-notes-one-pager": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "5f05266761390e3df2cfaa9c80388ac2fe06c9cc96cd46a55a5055ee64d912e1"
+    },
+    "remotion": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "db69d2dab8ea4ab60751058bd60ce4549d02505a14b67bd38d6b26710102eb8c"
+    },
+    "replicate": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "93241fc5f2b3fc2b3d2b5e6f2df514049402a160406598c167518e5605a66e79"
+    },
+    "research-decision-room": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "62f5b63340cf6995f6f58871c7345eb9ee26620c7099600bf586e1e5967b9031"
+    },
+    "resume-modern": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "f9b2e0a0e9736c251204ddb372693f03b888787ba2342328e28ed6b158b7b196"
+    },
+    "review-animations": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "6130f0b00c6422049f30dc099a2f7e19148f8a9574d62cc8b2dd464e50040211"
+    },
+    "screenshot": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "75603204ce05f0d7aa479796f27dd2f283872ad841c9b5d4b06e5b4d36d424ea"
+    },
+    "screenshots-marketing": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "dbbdb9ffef4b858f8675e6c3ebb8eaa2550a8827911169293f85fc1550af1b2e"
+    },
+    "shadcn-ui": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "144ccd285daee47c47232c79c4f02817cdf7716ff33fa3bf0249208a1c40c452"
+    },
+    "shader-dev": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "efcc48262cdf8ba325ccc1dd243909eedfdc3e3a0c9bfd8b0f0b0638c294f724"
+    },
+    "slack-gif-creator": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "fdfa4be7b0b10eb54a01e6c534d64184df9a9e9e3d730a3498e8bb211661ff16"
+    },
+    "slides": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "0966410e23906f5e77e051ce9f7c5a6e11bba35ce433504f90e061c21ea4365a"
+    },
+    "social-reddit-card": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "7d9baae0362d5054fbe48a1cb0ba6a764df238e0963ca3b548ac105b0ed93514"
+    },
+    "social-spotify-card": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "7ddc0a436d7979ed2ea6ae0620d948a01148f8204d88d9466cb9b2d8277e8f29"
+    },
+    "social-x-post-card": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "232d13869116003ab051e283e8912aff3498760bc0c290501e72bdf996f2bbd5"
+    },
+    "sora": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "d489e5b1e0a334c0eb3f43bbe6d25626a7555936a8097ab1e9ed539dd406a97d"
+    },
+    "speech": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "7aa984f718f5b895a7941131423e13f88a8709b89e01493f866435b5284cbc4d"
+    },
+    "stitch-design-taste": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "1f9869f393c0d9c7b0eb2b7255d92316aafaf7dc96d8ffe2c1524ce23ebf9d62"
+    },
+    "stitch-loop": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "96535b9f6a11fed9a177d5f25a73b4e5b1eb44698368a53f65aebc11c0b26984"
+    },
+    "swiftui-design": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "cdfc52fd0cdd0c3120e3b1b441bd8badad865e1fdb11e58c154c3bca57f5694e"
+    },
+    "swiss-creative-mode-template": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "40b38d2096496b0e93ed9914c6964cb523854d0ce2b37db428dbdc4f515dc68b"
+    },
+    "swiss-user-research-video-template": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "1fa4aa638c43afcd3adfaf3df8257c32676c00a38b9199487683021f1da4d2f8"
+    },
+    "theme-factory": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "34d1321af61da173d4dd0a613c71aa0b733f874ef4b6993f7eb900462e2381ad"
+    },
+    "threejs": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "880f654b955819c258099eb8d64d4b83f40d2dc8214b685037e1efb024d5f4d5"
+    },
+    "ui-animation": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "6dccdf9054705e585416abd29a51eedb959b3e405a07ed90ea146bbb9bf8a8b6"
+    },
+    "ui-skills": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "c752ac5fbc8c9765d4958d8aa5e6d9fe8f76bec965aeb1c7ce2d8d3cd2a4ece0"
+    },
+    "ui-ux-pro-max": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "257883092dc8a10403cd967c959ceb417f1c4b8438215a8bab5002292d72936b"
+    },
+    "venice-audio-music": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "7600b0357da01014fbf543218b2fbfe082491d50d608772aef3d3b31b3924557"
+    },
+    "venice-audio-speech": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "ac4c68f6800f2030a4bacee1c4c1a05edc7fce2ab25481d56c8a67650f9423eb"
+    },
+    "venice-image-edit": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "21980c89669af039de7cf18a582a35b4edb2fbe888434315476d844f0bdd6342"
+    },
+    "venice-image-generate": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "b1f3736e10da59e10d4e94d1924d1f4c45e3c9d5727d31eff4b4ced6c30275f8"
+    },
+    "venice-video": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "59773bcb5eb1e706549186b5a571121b03a5916e0e53838022275c4e0911bd66"
+    },
+    "vfx-text-cursor": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "91fabc286ff6bdff4424e7980987ca6192a88e0d2f239cddaded202eca7e49e0"
+    },
+    "video-downloader": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "71d9e67f264027852cce88a465410f76f80524e9a1e73fce673954533aef952c"
+    },
+    "video-hyperframes": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "d9c7ad59f8be126d10d06fefccff291af4f064d52d48025b742353c4652d00f9"
+    },
+    "web-artifacts-builder": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "9c1efa5aa784bfdf0a8c747bebf955bfafed73a8fcdf90a790d56840574da38e"
+    },
+    "web-clone": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "901d5138bc75e48f687cddc38ff06305c455642d73dcf77252e5361ee5c2337c"
+    },
+    "web-design-guidelines": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "df2006a9f46ff0d4ea81bd42649a15d1b85440ed2ced14d9d0f3868a4ffad66d"
+    },
+    "weread-year-in-review-video-template": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "d4cb969409d9e08c2c8e7e6fda2ce7b10abf084f966c3ccdf76385c8d9052b2b"
+    },
+    "wpds": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "1c7ee8b840ceeebed1f9304b3c5bf65f3cf71b88eb1c35d2f4dff4965cab2793"
+    },
+    "writing-guidelines": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "081ebc8caf8a5cf6b0798bfe20ab9b38a453aa816db9418ede320bceeef26f02"
+    },
+    "youtube-clipper": {
+      "source": "nexu-io/open-design",
+      "sourceType": "github",
+      "computedHash": "0a1de11eca0098d832503140333278028cd0688d8648c07aad38dd5075ac037a"
+    }
+  }
+}

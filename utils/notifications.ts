@@ -1,22 +1,31 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants, { ExecutionEnvironment } from "expo-constants";
 import * as Notifications from "expo-notifications";
 import { AndroidImportance, AndroidNotificationVisibility } from "expo-notifications";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
-import { parseTime, RoutineItem } from "./utils";
 import { SETTINGS_STORAGE_KEY } from "../constants/storageKeys";
+import { parseTime, RoutineItem } from "./utils";
+
+const isExpoGo =
+    Constants.executionEnvironment === ExecutionEnvironment.StoreClient ||
+    Constants.appOwnership === "expo";
+
+// Custom audio files in expo-notifications config plugins are not supported in Expo Go
+// because Expo Go's precompiled client does not bundle custom native audio assets.
+const ROUTINE_SOUND: "default" | "task_alarm.wav" = isExpoGo ? "default" : "task_alarm.wav";
 
 // Configure how notifications appear while app is in the foreground
 // Skip on web - expo-notifications doesn't work on web
 if (Platform.OS !== 'web') {
-  Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-          shouldShowAlert: true,
-          shouldPlaySound: true,
-          shouldSetBadge: false,
-          shouldShowBanner: true,
-          shouldShowList: true,
-      }),
-  });
+    Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+            shouldShowAlert: true,
+            shouldPlaySound: true,
+            shouldSetBadge: false,
+            shouldShowBanner: true,
+            shouldShowList: true,
+        }),
+    });
 }
 
 // Use a new ID so Android devices replace the older, lower-priority routine channel.
@@ -40,7 +49,7 @@ export const requestNotificationPermissions = async (): Promise<boolean> => {
                     vibrationPattern: [0, 500, 250, 500],
                     lightColor: "#FF231F7C",
                     lockscreenVisibility: AndroidNotificationVisibility.PUBLIC,
-                    sound: "task_alarm.wav",
+                    ...(isExpoGo ? {} : { sound: "task_alarm.wav" }),
                 });
             } catch (channelErr) {
                 console.warn("Failed to create routine notification channel:", channelErr);
@@ -91,7 +100,7 @@ export const scheduleRoutineNotifications = async (
                     return;
                 }
             }
-        } catch {}
+        } catch { }
 
         const hasPermission = await requestNotificationPermissions();
         if (!hasPermission) return;
@@ -130,7 +139,7 @@ export const scheduleRoutineNotifications = async (
                             content: {
                                 title,
                                 body,
-                                sound: "task_alarm.wav",
+                                sound: ROUTINE_SOUND,
                             },
                             trigger: {
                                 type: Notifications.SchedulableTriggerInputTypes.DATE,
@@ -152,7 +161,7 @@ export const scheduleRoutineNotifications = async (
                             content: {
                                 title,
                                 body,
-                                sound: "task_alarm.wav",
+                                sound: ROUTINE_SOUND,
                             },
                             trigger: {
                                 type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
@@ -172,7 +181,7 @@ export const scheduleRoutineNotifications = async (
                     content: {
                         title,
                         body,
-                        sound: "task_alarm.wav",
+                        sound: ROUTINE_SOUND,
                     },
                     trigger: {
                         type: Notifications.SchedulableTriggerInputTypes.DAILY,
@@ -200,7 +209,7 @@ export const cancelAllRoutineNotifications = async (): Promise<void> => {
         const routineNotifs = scheduled.filter((n) => n.identifier?.startsWith(NOTIFICATION_ID_PREFIX));
         await Promise.all(
             routineNotifs.map((n) =>
-                Notifications.cancelScheduledNotificationAsync(n.identifier).catch(() => {})
+                Notifications.cancelScheduledNotificationAsync(n.identifier).catch(() => { })
             )
         );
     } catch (e) {
