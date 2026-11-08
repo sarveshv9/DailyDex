@@ -5,6 +5,12 @@ const expoConfig = require('eslint-config-expo/flat');
 module.exports = defineConfig([
   expoConfig,
   {
+    rules: {
+      // Reanimated shared values (.value) are designed to be mutated in event handlers
+      'react-hooks/immutability': 'off',
+    },
+  },
+  {
     ignores: [
       'android/**',
       'node_modules/**',

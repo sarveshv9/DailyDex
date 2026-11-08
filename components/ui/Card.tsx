@@ -7,6 +7,12 @@ import {
   View,
   ViewStyle,
 } from "react-native";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  Easing,
+} from "react-native-reanimated";
 import { useTheme } from "../../context/ThemeContext";
 import { useAppHaptics } from "../../hooks/useAppHaptics";
 import { Theme } from "../../styles/shared";
@@ -35,6 +41,26 @@ export const Card: React.FC<CardProps> = ({
   const { light } = useAppHaptics();
   const styles = useMemo(() => getStyles(theme, variant, padding), [theme, variant, padding]);
 
+  const scale = useSharedValue(1);
+  const opacity = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
+  }));
+
+  const handlePressIn = () => {
+    if (!onPress) return;
+    scale.value = withTiming(0.985, { duration: 110, easing: Easing.out(Easing.quad) });
+    opacity.value = withTiming(0.92, { duration: 110, easing: Easing.out(Easing.quad) });
+  };
+
+  const handlePressOut = () => {
+    if (!onPress) return;
+    scale.value = withTiming(1, { duration: 160, easing: Easing.out(Easing.quad) });
+    opacity.value = withTiming(1, { duration: 160, easing: Easing.out(Easing.quad) });
+  };
+
   const handlePress = () => {
     if (!onPress) return;
     if (haptic) light();
@@ -45,13 +71,13 @@ export const Card: React.FC<CardProps> = ({
     return (
       <Pressable
         onPress={handlePress}
-        style={({ pressed }) => [
-          styles.card,
-          pressed && styles.pressed,
-          style,
-        ]}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        accessibilityRole="button"
       >
-        {children}
+        <Animated.View style={[styles.card, style, animatedStyle]}>
+          {children}
+        </Animated.View>
       </Pressable>
     );
   }

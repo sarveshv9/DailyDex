@@ -10,6 +10,12 @@ import {
   View,
   ViewStyle,
 } from "react-native";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  Easing,
+} from "react-native-reanimated";
 import { useTheme } from "../../context/ThemeContext";
 import { useAppHaptics } from "../../hooks/useAppHaptics";
 import { themeTokens } from "../../constants/themeTokens";
@@ -54,6 +60,26 @@ export const Button: React.FC<ButtonProps> = ({
   const { light, medium, heavy, selection } = useAppHaptics();
   const styles = useMemo(() => getStyles(theme, variant, size), [theme, variant, size]);
 
+  const scale = useSharedValue(1);
+  const opacity = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
+  }));
+
+  const handlePressIn = () => {
+    if (disabled || loading) return;
+    scale.value = withTiming(0.97, { duration: 110, easing: Easing.out(Easing.quad) });
+    opacity.value = withTiming(0.88, { duration: 110, easing: Easing.out(Easing.quad) });
+  };
+
+  const handlePressOut = () => {
+    if (disabled || loading) return;
+    scale.value = withTiming(1, { duration: 160, easing: Easing.out(Easing.quad) });
+    opacity.value = withTiming(1, { duration: 160, easing: Easing.out(Easing.quad) });
+  };
+
   const handlePress = async () => {
     if (disabled || loading) return;
 
@@ -71,43 +97,51 @@ export const Button: React.FC<ButtonProps> = ({
   return (
     <Pressable
       onPress={handlePress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
       disabled={disabled || loading}
-      style={({ pressed }) => [
-        styles.button,
-        fullWidth && styles.fullWidth,
-        pressed && !disabled && !loading && styles.pressed,
-        disabled && styles.disabled,
-        style,
-      ]}
+      style={fullWidth ? styles.fullWidth : undefined}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: disabled || loading }}
     >
-      {loading ? (
-        <ActivityIndicator
-          size="small"
-          color={
-            variant === "primary"
-              ? theme.colors.onPrimary
-              : variant === "destructive"
-              ? theme.colors.danger
-              : theme.colors.primaryText
-          }
-        />
-      ) : (
-        <View style={styles.content}>
-          {icon && iconPosition === "left" && (
-            <View style={styles.leftIcon}>{icon}</View>
-          )}
-          {isTextContent ? (
-            <Text style={[styles.text, disabled && styles.disabledText, textStyle]}>
-              {displayContent}
-            </Text>
-          ) : (
-            displayContent
-          )}
-          {icon && iconPosition === "right" && (
-            <View style={styles.rightIcon}>{icon}</View>
-          )}
-        </View>
-      )}
+      <Animated.View
+        style={[
+          styles.button,
+          fullWidth && styles.fullWidth,
+          disabled && styles.disabled,
+          style,
+          animatedStyle,
+        ]}
+      >
+        {loading ? (
+          <ActivityIndicator
+            size="small"
+            color={
+              variant === "primary"
+                ? theme.colors.onPrimary
+                : variant === "destructive"
+                ? theme.colors.danger
+                : theme.colors.primaryText
+            }
+          />
+        ) : (
+          <View style={styles.content}>
+            {icon && iconPosition === "left" && (
+              <View style={styles.leftIcon}>{icon}</View>
+            )}
+            {isTextContent ? (
+              <Text style={[styles.text, disabled && styles.disabledText, textStyle]}>
+                {displayContent}
+              </Text>
+            ) : (
+              displayContent
+            )}
+            {icon && iconPosition === "right" && (
+              <View style={styles.rightIcon}>{icon}</View>
+            )}
+          </View>
+        )}
+      </Animated.View>
     </Pressable>
   );
 };

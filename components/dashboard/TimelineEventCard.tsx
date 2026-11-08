@@ -202,7 +202,7 @@ const TimelineEventCardComponent: React.FC<TimelineEventCardProps> = ({
         <Pressable
           style={({ pressed }) => [
             styles.contentPressable,
-            pressed && onPress && { opacity: 0.75 },
+            pressed && onPress && { opacity: 0.82, transform: [{ scale: 0.985 }] },
           ]}
           onPress={() => {
             if (onPress) {

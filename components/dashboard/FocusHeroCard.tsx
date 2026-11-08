@@ -1,7 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useMemo } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import Animated, {
+  FadeInDown,
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  Easing,
+} from "react-native-reanimated";
 import { themeTokens } from "../../constants/themeTokens";
 import { Theme, getSharedStyles } from "../../styles/shared";
 import { RoutineItem } from "../../utils/utils";
@@ -38,6 +44,24 @@ const FocusHeroCardComponent: React.FC<FocusHeroCardProps> = ({
 }) => {
   const styles = useMemo(() => getStyles(theme, isDarkMode), [theme, isDarkMode]);
   const progressPercent = Math.round(taskProgress * 100);
+
+  const ctaScale = useSharedValue(1);
+  const ctaOpacity = useSharedValue(1);
+
+  const ctaAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: ctaScale.value }],
+    opacity: ctaOpacity.value,
+  }));
+
+  const handleCtaPressIn = () => {
+    ctaScale.value = withTiming(0.97, { duration: 110, easing: Easing.out(Easing.quad) });
+    ctaOpacity.value = withTiming(0.9, { duration: 110, easing: Easing.out(Easing.quad) });
+  };
+
+  const handleCtaPressOut = () => {
+    ctaScale.value = withTiming(1, { duration: 160, easing: Easing.out(Easing.quad) });
+    ctaOpacity.value = withTiming(1, { duration: 160, easing: Easing.out(Easing.quad) });
+  };
 
   return (
     <Animated.View
@@ -140,28 +164,24 @@ const FocusHeroCardComponent: React.FC<FocusHeroCardProps> = ({
             accessibilityRole="button"
             accessibilityLabel="View day timeline"
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            android_ripple={{ color: "rgba(0,0,0,0.06)" }}
-            style={({ pressed }) => [
-              styles.primaryButton,
-              {
-                opacity: pressed ? 0.92 : 1,
-                transform: [{ scale: pressed ? 0.98 : 1 }],
-              },
-            ]}
             onPress={onOpenTimeline}
+            onPressIn={handleCtaPressIn}
+            onPressOut={handleCtaPressOut}
           >
-            <Text style={styles.primaryButtonText}>
-              {hasActiveTask
-                ? "View Day Timeline"
-                : hasNextTask
-                  ? "Start My Day"
-                  : "View Day Timeline"}
-            </Text>
-            <Ionicons
-              name="arrow-forward"
-              size={20}
-              color={theme.colors.onPrimary}
-            />
+            <Animated.View style={[styles.primaryButton, ctaAnimatedStyle]}>
+              <Text style={styles.primaryButtonText}>
+                {hasActiveTask
+                  ? "View Day Timeline"
+                  : hasNextTask
+                    ? "Start My Day"
+                    : "View Day Timeline"}
+              </Text>
+              <Ionicons
+                name="arrow-forward"
+                size={20}
+                color={theme.colors.onPrimary}
+              />
+            </Animated.View>
           </Pressable>
         </View>
       </View>
