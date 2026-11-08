@@ -1,6 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import Animated, {
+  FadeIn,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+  Easing,
+} from "react-native-reanimated";
 import { themeTokens } from "../../constants/themeTokens";
 import { Theme } from "../../styles/shared";
 
@@ -10,6 +19,72 @@ export interface PomodoroCycleCardProps {
   theme: Theme;
   isDarkMode: boolean;
 }
+
+const PomoPill = React.memo(function PomoPill({
+  s,
+  isSessionDone,
+  isSessionActive,
+  theme,
+  styles,
+}: {
+  s: number;
+  isSessionDone: boolean;
+  isSessionActive: boolean;
+  theme: Theme;
+  styles: ReturnType<typeof getStyles>;
+}) {
+  const pulseOpacity = useSharedValue(1);
+
+  useEffect(() => {
+    if (isSessionActive) {
+      pulseOpacity.value = withRepeat(
+        withSequence(
+          withTiming(0.65, { duration: 1200, easing: Easing.inOut(Easing.sin) }),
+          withTiming(1, { duration: 1200, easing: Easing.inOut(Easing.sin) })
+        ),
+        -1,
+        true
+      );
+    } else {
+      pulseOpacity.value = 1;
+    }
+  }, [isSessionActive, pulseOpacity]);
+
+  const activeAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: isSessionActive ? pulseOpacity.value : 1,
+  }));
+
+  return (
+    <Animated.View
+      style={[
+        styles.pomoDotPill,
+        isSessionDone && styles.pomoDotPillDone,
+        isSessionActive && styles.pomoDotPillActive,
+        isSessionActive && activeAnimatedStyle,
+      ]}
+    >
+      {isSessionDone ? (
+        <Animated.View entering={FadeIn.duration(180)}>
+          <Ionicons
+            name="checkmark"
+            size={14}
+            color={theme.colors.onPrimary}
+          />
+        </Animated.View>
+      ) : isSessionActive ? (
+        <Animated.View entering={FadeIn.duration(160)}>
+          <Ionicons
+            name="flame"
+            size={13}
+            color={theme.colors.primaryText}
+          />
+        </Animated.View>
+      ) : (
+        <Text style={styles.pomoDotText}>{s}</Text>
+      )}
+    </Animated.View>
+  );
+});
 
 const PomodoroCycleCardComponent: React.FC<PomodoroCycleCardProps> = ({
   pomodoroSession,
@@ -36,7 +111,11 @@ const PomodoroCycleCardComponent: React.FC<PomodoroCycleCardProps> = ({
   return (
     <View style={styles.pomoCycleCard}>
       <View style={styles.pomoCycleHeader}>
-        <View style={styles.pomoCycleTitleRow}>
+        <Animated.View
+          key={`header-${pomodoroSession}-${pomodoroPhase}`}
+          entering={FadeIn.duration(180)}
+          style={styles.pomoCycleTitleRow}
+        >
           <Ionicons
             name={pomodoroPhase === "work" ? "flame" : "cafe-outline"}
             size={16}
@@ -45,8 +124,13 @@ const PomodoroCycleCardComponent: React.FC<PomodoroCycleCardProps> = ({
           <Text style={styles.pomoCycleTitle}>
             Cycle {pomodoroSession} of 4 • {phaseTitle}
           </Text>
-        </View>
-        <Text style={styles.pomoCyclePhaseTag}>{phaseDuration}</Text>
+        </Animated.View>
+        <Animated.View
+          key={`tag-${pomodoroPhase}`}
+          entering={FadeIn.duration(180)}
+        >
+          <Text style={styles.pomoCyclePhaseTag}>{phaseDuration}</Text>
+        </Animated.View>
       </View>
 
       <View style={styles.pomoDotsRow}>
@@ -58,30 +142,14 @@ const PomodoroCycleCardComponent: React.FC<PomodoroCycleCardProps> = ({
             s === pomodoroSession && pomodoroPhase === "work";
 
           return (
-            <View
+            <PomoPill
               key={s}
-              style={[
-                styles.pomoDotPill,
-                isSessionDone && styles.pomoDotPillDone,
-                isSessionActive && styles.pomoDotPillActive,
-              ]}
-            >
-              {isSessionDone ? (
-                <Ionicons
-                  name="checkmark"
-                  size={14}
-                  color={theme.colors.onPrimary}
-                />
-              ) : isSessionActive ? (
-                <Ionicons
-                  name="flame"
-                  size={13}
-                  color={theme.colors.primaryText}
-                />
-              ) : (
-                <Text style={styles.pomoDotText}>{s}</Text>
-              )}
-            </View>
+              s={s}
+              isSessionDone={isSessionDone}
+              isSessionActive={isSessionActive}
+              theme={theme}
+              styles={styles}
+            />
           );
         })}
       </View>
