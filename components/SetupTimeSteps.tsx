@@ -42,7 +42,14 @@ import { hexToRgba } from "../utils/color";
 import * as Haptics from "../utils/haptics";
 import { timeToMinutes } from "../utils/utils";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+
+const FIXED_SLOT_HEIGHT = Math.round(Math.min(210, Math.max(160, (SCREEN_HEIGHT || 844) * 0.22)));
+const DEFAULT_BOX = { w: SCREEN_WIDTH, h: SCREEN_HEIGHT || 844 };
+const DEFAULT_SLOT = {
+    y: Platform.OS === "android" ? 200 : 198,
+    h: FIXED_SLOT_HEIGHT,
+};
 
 const DAY_BG = "#FFF8F3";
 const NIGHT_BG = "#07080C";
@@ -758,8 +765,8 @@ export function StepTime({
     const fade = useSharedValue(1);
     const busy = useRef(false);
 
-    const [box, setBox] = useState({ w: SCREEN_WIDTH, h: 0 });
-    const [slot, setSlot] = useState({ y: 0, h: 0 });
+    const [box, setBox] = useState(DEFAULT_BOX);
+    const [slot, setSlot] = useState(DEFAULT_SLOT);
 
     const handleSetMode = (nextMode: Mode) => {
         shownRef.current = nextMode;
@@ -773,24 +780,24 @@ export function StepTime({
     useEffect(() => {
         if (mode === shownRef.current) {
             busy.current = false;
-            fade.value = withTiming(1, { duration: 250 });
+            fade.value = 1;
             return;
         }
 
         busy.current = true;
         const safetyTimer = setTimeout(() => {
             busy.current = false;
-        }, 2500);
+        }, 1800);
 
-        fade.value = withTiming(0, { duration: 250 }, (finished) => {
+        fade.value = withTiming(0, { duration: 180 }, (finished) => {
             if (!finished) {
                 runOnJS(handleUnlock)();
                 return;
             }
             runOnJS(handleSetMode)(mode);
             fade.value = withDelay(
-                1250,
-                withTiming(1, { duration: 700 }, () => {
+                700,
+                withTiming(1, { duration: 300 }, () => {
                     runOnJS(handleUnlock)();
                 })
             );
@@ -824,7 +831,12 @@ export function StepTime({
             style={styles.screen}
             onLayout={(e) => {
                 const { width, height } = e.nativeEvent.layout;
-                setBox((prev) => (prev.w === width && prev.h === height ? prev : { w: width, h: height }));
+                setBox((prev) => {
+                    if (Math.abs(prev.w - width) <= 2 && Math.abs(prev.h - height) <= 2) {
+                        return prev;
+                    }
+                    return { w: width, h: height };
+                });
             }}
         >
             {/* Full-page animated scene, behind everything */}
@@ -864,7 +876,12 @@ export function StepTime({
                     onLayout={(e) => {
                         if (busy.current) return;
                         const { y, height } = e.nativeEvent.layout;
-                        setSlot((prev) => (prev.y === y && prev.h === height ? prev : { y, h: height }));
+                        setSlot((prev) => {
+                            if (Math.abs(prev.y - y) <= 2 && Math.abs(prev.h - height) <= 2) {
+                                return prev;
+                            }
+                            return { y, h: height };
+                        });
                     }}
                 />
 
@@ -999,10 +1016,7 @@ const makeStyles = (theme: Theme) => {
         // Illustration (full-bleed)
         illustrationWrap: {
             width: SCREEN_WIDTH,
-            flexGrow: 1,
-            flexShrink: 0,
-            minHeight: 150,
-            maxHeight: 260,
+            height: FIXED_SLOT_HEIGHT,
             marginTop: 6,
         },
         cards: { paddingHorizontal: 20, gap: 12, marginTop: 8 },

@@ -22,6 +22,7 @@ import { FlashList } from "@shopify/flash-list";
 import Animated, {
   Easing,
   FadeIn,
+  FadeOut,
   LinearTransition,
   useAnimatedStyle,
   useSharedValue,
@@ -1005,7 +1006,7 @@ export default function TodoScreen() {
       const newTask = createNewTask(text, defaultCategory);
 
       setTasks((prev) => [newTask, ...prev]);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     },
     [activeFilter]
   );
@@ -1108,7 +1109,11 @@ export default function TodoScreen() {
 
   const renderTaskItem = useCallback(
     ({ item }: { item: Task }) => (
-      <View style={styles.taskCardWrapper}>
+      <Animated.View
+        layout={LinearTransition.duration(150).easing(Easing.out(Easing.quad))}
+        exiting={FadeOut.duration(120)}
+        style={styles.taskCardWrapper}
+      >
         <TaskItem
           task={item}
           onToggle={handleToggleTask}
@@ -1117,7 +1122,7 @@ export default function TodoScreen() {
           theme={theme}
           isDarkMode={isDarkMode}
         />
-      </View>
+      </Animated.View>
     ),
     [
       handleToggleTask,

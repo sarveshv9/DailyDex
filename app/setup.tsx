@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
     Alert,
     BackHandler,
@@ -21,6 +21,7 @@ import Animated, {
     withTiming,
     Easing,
     interpolateColor,
+    FadeIn,
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Theme } from "../styles/shared";
@@ -599,12 +600,28 @@ export default function SetupScreen() {
     const [step, setStep] = useState<0 | 1 | 2 | 3 | 4 | 5>(0);
     const [saving, setSaving] = useState(false);
     const skyProgress = useSharedValue(0);
+    const prevStepRef = useRef(0);
 
     useEffect(() => {
+        const prev = prevStepRef.current;
+        prevStepRef.current = step;
+
         if (step === 1) {
-            skyProgress.value = withTiming(0, { duration: 2800, easing: Easing.inOut(Easing.sin) });
+            if (prev === 2) {
+                // Going back from Night to Day: animate sunset back to sunrise
+                skyProgress.value = withTiming(0, { duration: 2400, easing: Easing.inOut(Easing.sin) });
+            } else {
+                // Initial or from Welcome: start instantly at morning
+                skyProgress.value = 0;
+            }
         } else if (step === 2) {
-            skyProgress.value = withTiming(1, { duration: 2800, easing: Easing.inOut(Easing.sin) });
+            if (prev === 1) {
+                // Forward from Day to Night: animate sunset
+                skyProgress.value = withTiming(1, { duration: 2800, easing: Easing.inOut(Easing.sin) });
+            } else {
+                // Returning back from habits or anywhere else: night scene is already settled
+                skyProgress.value = 1;
+            }
         }
     }, [step, skyProgress]);
 
@@ -856,15 +873,34 @@ export default function SetupScreen() {
         return { backgroundColor: theme.colors.primarySoft };
     });
 
+    const animatedProgressWidth = useSharedValue((step / 5) * 100);
+    useEffect(() => {
+        animatedProgressWidth.value = withTiming((step / 5) * 100, {
+            duration: 280,
+            easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+        });
+    }, [step, animatedProgressWidth]);
+
+    const progressFillAnimatedStyle = useAnimatedStyle(() => ({
+        width: `${animatedProgressWidth.value}%`,
+    }));
+
     return (
         <SafeAreaView
             style={[
                 styles.safeArea,
             ]}
         >
-            {(step === 1 || step === 2) && (
+            {/* Sky Background kept mounted across steps to eliminate re-render lag */}
+            <View
+                style={[
+                    StyleSheet.absoluteFill,
+                    (step !== 1 && step !== 2) && { display: "none" },
+                ]}
+                pointerEvents="none"
+            >
                 <SkyBackground progress={skyProgress} />
-            )}
+            </View>
 
             {step > 0 && (
                 <Animated.View
@@ -873,23 +909,32 @@ export default function SetupScreen() {
                         progressBarAnimatedStyle,
                     ]}
                 >
-                    <View
+                    <Animated.View
                         style={[
                             styles.progressFill,
-                            { width: `${(step / 5) * 100}%` },
+                            progressFillAnimatedStyle,
                         ]}
                     />
                 </Animated.View>
             )}
 
             {step === 0 && (
-                <StepWelcome
-                    onStart={() => setStep(1)}
-                    onSkip={handleSkipAll}
-                />
+                <View style={styles.stepContainer}>
+                    <StepWelcome
+                        onStart={() => setStep(1)}
+                        onSkip={handleSkipAll}
+                    />
+                </View>
             )}
 
-            {(step === 1 || step === 2) && (
+            {/* StepTime (morning/sleep anchors) kept mounted to eliminate blank frames and SVG remount latency */}
+            <View
+                style={[
+                    styles.stepContainer,
+                    (step !== 1 && step !== 2) && { display: "none" },
+                ]}
+                pointerEvents={step === 1 || step === 2 ? "auto" : "none"}
+            >
                 <StepTime
                     mode={step === 1 ? "day" : "night"}
                     wakeTime={wakeTime}
@@ -917,51 +962,57 @@ export default function SetupScreen() {
                     onSkip={handleSkipAll}
                     skyProgress={skyProgress}
                 />
-            )}
+            </View>
 
             {step === 3 && (
-                <StepPick
-                    phase="start"
-                    selected={selectedTasks}
-                    onToggle={toggleTask}
-                    onSetSelected={setSelectedTasks}
-                    onAddCustom={addCustomActivity}
-                    onNext={() => setStep(4)}
-                    onBack={() => setStep(2)}
-                    onSkip={handleSkipAll}
-                    customActivities={customActivities}
-                />
+                <Animated.View key="setup-step-3" entering={FadeIn.duration(200)} style={styles.stepContainer}>
+                    <StepPick
+                        phase="start"
+                        selected={selectedTasks}
+                        onToggle={toggleTask}
+                        onSetSelected={setSelectedTasks}
+                        onAddCustom={addCustomActivity}
+                        onNext={() => setStep(4)}
+                        onBack={() => setStep(2)}
+                        onSkip={handleSkipAll}
+                        customActivities={customActivities}
+                    />
+                </Animated.View>
             )}
 
             {step === 4 && (
-                <StepPick
-                    phase="refine"
-                    selected={selectedTasks}
-                    onToggle={toggleTask}
-                    onSetSelected={setSelectedTasks}
-                    onAddCustom={addCustomActivity}
-                    onNext={goToStep5}
-                    onBack={() => setStep(3)}
-                    onSkip={handleSkipAll}
-                    customActivities={customActivities}
-                />
+                <Animated.View key="setup-step-4" entering={FadeIn.duration(200)} style={styles.stepContainer}>
+                    <StepPick
+                        phase="refine"
+                        selected={selectedTasks}
+                        onToggle={toggleTask}
+                        onSetSelected={setSelectedTasks}
+                        onAddCustom={addCustomActivity}
+                        onNext={goToStep5}
+                        onBack={() => setStep(3)}
+                        onSkip={handleSkipAll}
+                        customActivities={customActivities}
+                    />
+                </Animated.View>
             )}
 
             {step === 5 && (
-                <StepTimes
-                    routines={routines}
-                    wakeTime={wakeTime}
-                    sleepTime={sleepTime}
-                    onUpdateTime={updateRoutineTime}
-                    onUpdateDesc={updateRoutineDesc}
-                    onUpdateDuration={updateRoutineDuration}
-                    onRemove={removeItem}
-                    onMakeRecurring={handleMakeRecurring}
-                    onSave={handleSave}
-                    onBack={() => setStep(4)}
-                    onSkip={handleSkipAll}
-                    saving={saving}
-                />
+                <Animated.View key="setup-step-5" entering={FadeIn.duration(200)} style={styles.stepContainer}>
+                    <StepTimes
+                        routines={routines}
+                        wakeTime={wakeTime}
+                        sleepTime={sleepTime}
+                        onUpdateTime={updateRoutineTime}
+                        onUpdateDesc={updateRoutineDesc}
+                        onUpdateDuration={updateRoutineDuration}
+                        onRemove={removeItem}
+                        onMakeRecurring={handleMakeRecurring}
+                        onSave={handleSave}
+                        onBack={() => setStep(4)}
+                        onSkip={handleSkipAll}
+                        saving={saving}
+                    />
+                </Animated.View>
             )}
 
             {/* Skip Confirmation Modal */}
@@ -1064,6 +1115,9 @@ const getStyles = (theme: Theme) =>
         safeArea: {
             flex: 1,
             backgroundColor: theme.colors.background,
+        },
+        stepContainer: {
+            flex: 1,
         },
 
         progressBar: {
