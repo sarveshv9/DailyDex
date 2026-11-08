@@ -36,6 +36,7 @@ import { TEMPLATES } from "../components/setup/stepPick/templates";
 import { ActivityTemplate } from "../components/setup/stepPick/types";
 import { ROUTINE_STORAGE_KEY, SETUP_STORAGE_KEY } from "../constants/storageKeys";
 import { themeTokens } from "../constants/themeTokens";
+import { useSetupStore } from "../stores/setupStore";
 
 const STORAGE_KEY = ROUTINE_STORAGE_KEY;
 const SETUP_KEY = SETUP_STORAGE_KEY;
@@ -663,6 +664,7 @@ export default function SetupScreen() {
         try {
             await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(items));
             await AsyncStorage.setItem(SETUP_KEY, "true");
+            useSetupStore.getState().setIsSetupComplete(true);
         } catch (e) {
             console.error("Failed to save setup data", e);
             Alert.alert("Setup Error", "Failed to save your routine. Please try again.");
@@ -936,7 +938,7 @@ export default function SetupScreen() {
                 pointerEvents={step === 1 || step === 2 ? "auto" : "none"}
             >
                 <StepTime
-                    mode={step === 1 ? "day" : "night"}
+                    mode={step >= 2 ? "night" : "day"}
                     wakeTime={wakeTime}
                     sleepTime={sleepTime}
                     onUpdateWake={setWakeTime}

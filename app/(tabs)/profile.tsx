@@ -28,6 +28,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useSettings } from "../../context/SettingsContext";
 import { useTheme } from "../../context/ThemeContext";
 import { Theme } from "../../styles/shared";
+import { useSetupStore } from "../../stores/setupStore";
 import {
   STORAGE_KEYS,
   USER_PROFILE_STORAGE_KEY,
@@ -250,6 +251,7 @@ export default function ProfileScreen() {
           TIMER_STORAGE_KEY,
         ]);
         await signOut();
+        useSetupStore.getState().setIsSetupComplete(false);
         setUser({ name: "", avatar: "", role: "", email: "", bio: "" });
         if (settings.hapticsEnabled) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         router.replace("/setup");
@@ -265,6 +267,7 @@ export default function ProfileScreen() {
           USER_PROFILE_STORAGE_KEY,
         ]);
         await signOut();
+        useSetupStore.getState().setIsSetupComplete(false);
         setUser({ name: "", avatar: "", role: "", email: "", bio: "" });
         if (settings.hapticsEnabled) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } catch (e) {

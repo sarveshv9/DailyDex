@@ -17,6 +17,7 @@ import { ROUTINE_STORAGE_KEY, SETUP_STORAGE_KEY } from "../constants/storageKeys
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useThemeStore } from "../stores/themeStore";
+import { useSetupStore } from "../stores/setupStore";
 
 // Prevent splash screen from auto-hiding until initial stores and fonts are ready (native only)
 if (Platform.OS !== "web") {
@@ -32,7 +33,8 @@ function RootLayoutNav() {
   });
 
   const [themeReady, setThemeReady] = useState(false);
-  const [isSetupComplete, setIsSetupComplete] = useState<boolean | null>(null);
+  const isSetupComplete = useSetupStore((s) => s.isSetupComplete);
+  const checkSetup = useSetupStore((s) => s.checkSetup);
   const [fallbackTimedOut, setFallbackTimedOut] = useState(false);
   const router = useRouter();
   const segments = useSegments();
@@ -94,18 +96,8 @@ function RootLayoutNav() {
         }
       })
       .catch(() => {});
-    const checkSetup = async () => {
-      try {
-        const setup = await AsyncStorage.getItem(SETUP_STORAGE_KEY);
-        const routines = await AsyncStorage.getItem(ROUTINE_STORAGE_KEY);
-        const isComplete = setup === "true" || Boolean(routines && routines !== "[]");
-        setIsSetupComplete(isComplete);
-      } catch {
-        setIsSetupComplete(false);
-      }
-    };
     checkSetup();
-  }, []);
+  }, [checkSetup]);
 
   const isAppReady =
     Platform.OS === "web"
@@ -137,7 +129,15 @@ function RootLayoutNav() {
     }
 
     if (!isSetupComplete && inTabsGroup) {
-      router.replace("/setup" as Href);
+      AsyncStorage.getItem(SETUP_STORAGE_KEY).then((setup) => {
+        if (setup === "true") {
+          useSetupStore.getState().setIsSetupComplete(true);
+        } else {
+          router.replace("/setup" as Href);
+        }
+      }).catch(() => {
+        router.replace("/setup" as Href);
+      });
     }
   }, [isAppReady, segments, isSetupComplete, router]);
 
