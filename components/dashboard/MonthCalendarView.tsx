@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useMemo, useState } from 'react';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import {
     Platform,
     Pressable,
@@ -177,7 +178,7 @@ const CalendarCellComponent: React.FC<CalendarCellProps> = ({
                 grid.cell,
                 isSelected && [grid.cellSelected, { backgroundColor: theme.colors.primarySoft, borderWidth: 1.5, borderColor: theme.colors.primary }],
                 isToday && !isSelected && [grid.cellToday, { borderColor: theme.colors.primary }],
-                pressed && !isSelected && { opacity: 0.6 },
+                pressed && !isSelected && { opacity: 0.7, transform: [{ scale: 0.94 }] },
             ]}
         >
             {/* Date Number */}
@@ -394,7 +395,11 @@ function MonthCalendarViewComponent({ currentDate, routineItems, onSelectDate, t
             </View>
 
             {/* ── Calendar Grid ── */}
-            <View style={[grid.gridContainer, { paddingHorizontal: 16 }]}>
+            <Animated.View
+                key={`grid-${year}-${month}`}
+                entering={FadeIn.duration(160)}
+                style={[grid.gridContainer, { paddingHorizontal: 16 }]}
+            >
                 {weeks.map((week, weekIdx) => (
                     <View key={weekIdx} style={grid.weekRow}>
                         {week.map((date, cellIdx) => {
@@ -422,7 +427,7 @@ function MonthCalendarViewComponent({ currentDate, routineItems, onSelectDate, t
                         })}
                     </View>
                 ))}
-            </View>
+            </Animated.View>
 
             {/* ── Thin separator ── */}
             <View style={[sep.line, { backgroundColor: theme.colors.border, marginHorizontal: 16, marginTop: 16 }]} />
@@ -432,11 +437,16 @@ function MonthCalendarViewComponent({ currentDate, routineItems, onSelectDate, t
                 onPress={handleDetailCardPress}
                 style={({ pressed }) => ({ paddingHorizontal: 16, marginTop: 16, opacity: pressed ? 0.9 : 1 })}
             >
-                <DayDetail
-                    date={selectedDate}
-                    items={selectedItems}
-                    theme={theme}
-                />
+                <Animated.View
+                    key={`detail-${selectedStr}`}
+                    entering={FadeIn.duration(140)}
+                >
+                    <DayDetail
+                        date={selectedDate}
+                        items={selectedItems}
+                        theme={theme}
+                    />
+                </Animated.View>
             </Pressable>
         </ScrollView>
     );

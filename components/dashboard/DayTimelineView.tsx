@@ -16,6 +16,7 @@ import {
     View,
 } from 'react-native';
 import { CATEGORY_COLORS } from '../../constants/categoryColors';
+import AnimatedReanimated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useTheme } from '../../context/ThemeContext';
 import { Theme } from '../../styles/shared';
 import * as Haptics from '../../utils/haptics';
@@ -1199,76 +1200,90 @@ export const DayTimelineView: React.FC<DayTimelineViewProps> = ({
                     accessibilityLabel={viewMode === 'week' ? 'Switch to month calendar' : 'Switch to week timeline'}
                     accessibilityState={{ disabled: isTaskModalOpen }}
                 >
-                    <Ionicons
-                        name={viewMode === 'week' ? 'calendar-outline' : 'calendar'}
-                        size={20}
-                        color={isTaskModalOpen ? theme.colors.textSecondary : theme.colors.primary}
-                    />
+                    <AnimatedReanimated.View
+                        key={viewMode}
+                        entering={FadeIn.duration(160)}
+                    >
+                        <Ionicons
+                            name={viewMode === 'week' ? 'calendar-outline' : 'calendar'}
+                            size={20}
+                            color={isTaskModalOpen ? theme.colors.textSecondary : theme.colors.primary}
+                        />
+                    </AnimatedReanimated.View>
                 </Pressable>
             </View>
 
             {viewMode === 'month' ? (
-                <MonthCalendarView
-                    currentDate={selectedDate || today}
-                    routineItems={routineItems}
-                    todayTrigger={todayTrigger}
-                    onSelectDate={(date) => {
-                        handleSelectDate(date);
-                        setViewMode('week');
-                    }}
-                    theme={theme}
-                />
+                <AnimatedReanimated.View
+                    key="month-mode-view"
+                    entering={FadeIn.duration(180)}
+                    exiting={FadeOut.duration(120)}
+                    style={styles.viewModeContainer}
+                >
+                    <MonthCalendarView
+                        currentDate={selectedDate || today}
+                        routineItems={routineItems}
+                        todayTrigger={todayTrigger}
+                        onSelectDate={(date) => {
+                            handleSelectDate(date);
+                            setViewMode('week');
+                        }}
+                        theme={theme}
+                    />
+                </AnimatedReanimated.View>
             ) : (
-                <>
-                    {/* ── Timeline (virtualized FlatList for multi-year calendar) ── */}
-                    <View style={styles.timelineWrapper}>
-                        <FlatList
-                            ref={flatListRef}
-                            data={pages}
-                            renderItem={renderPage}
-                            keyExtractor={(_, index) => `page-${index}`}
-                            horizontal
-                            pagingEnabled={Platform.OS !== 'web'}
-                            showsHorizontalScrollIndicator={false}
-                            initialScrollIndex={initialTargetIndex}
-                            onLayout={(e) => {
-                                const layoutW = e.nativeEvent.layout.width || SCREEN_WIDTH;
-                                if (layoutW > 0 && !hasInitialScrolled.current) {
-                                    hasInitialScrolled.current = true;
-                                    flatListRef.current?.scrollToOffset({
-                                        offset: initialTargetIndex * layoutW,
-                                        animated: false,
-                                    });
-                                }
-                            }}
-                            getItemLayout={(_, idx) => ({
-                                length: SCREEN_WIDTH,
-                                offset: SCREEN_WIDTH * idx,
-                                index: idx,
-                            })}
-                            // Performance optimizations
-                            initialNumToRender={3}
-                            windowSize={Platform.OS === 'web' ? 7 : 3}
-                            maxToRenderPerBatch={2}
-                            updateCellsBatchingPeriod={50}
-                            removeClippedSubviews={Platform.OS !== 'web'}
-                            onScrollToIndexFailed={info => {
-                                const targetOffset = info.index * SCREEN_WIDTH;
-                                setTimeout(() => {
-                                    flatListRef.current?.scrollToOffset({
-                                        offset: targetOffset,
-                                        animated: false,
-                                    });
-                                }, 60);
-                            }}
-                            onMomentumScrollEnd={handleMomentumScrollEnd}
-                            {...(Platform.OS === 'web' ? {
-                                onScroll: handleWebScrollSnap,
-                                scrollEventThrottle: 16,
-                            } : {})}
-                        />
-                    </View>
-                </>
+                <AnimatedReanimated.View
+                    key="week-mode-view"
+                    entering={FadeIn.duration(180)}
+                    exiting={FadeOut.duration(120)}
+                    style={styles.timelineWrapper}
+                >
+                    <FlatList
+                        ref={flatListRef}
+                        data={pages}
+                        renderItem={renderPage}
+                        keyExtractor={(_, index) => `page-${index}`}
+                        horizontal
+                        pagingEnabled={Platform.OS !== 'web'}
+                        showsHorizontalScrollIndicator={false}
+                        initialScrollIndex={initialTargetIndex}
+                        onLayout={(e) => {
+                            const layoutW = e.nativeEvent.layout.width || SCREEN_WIDTH;
+                            if (layoutW > 0 && !hasInitialScrolled.current) {
+                                hasInitialScrolled.current = true;
+                                flatListRef.current?.scrollToOffset({
+                                    offset: initialTargetIndex * layoutW,
+                                    animated: false,
+                                });
+                            }
+                        }}
+                        getItemLayout={(_, idx) => ({
+                            length: SCREEN_WIDTH,
+                            offset: SCREEN_WIDTH * idx,
+                            index: idx,
+                        })}
+                        // Performance optimizations
+                        initialNumToRender={3}
+                        windowSize={Platform.OS === 'web' ? 7 : 3}
+                        maxToRenderPerBatch={2}
+                        updateCellsBatchingPeriod={50}
+                        removeClippedSubviews={Platform.OS !== 'web'}
+                        onScrollToIndexFailed={info => {
+                            const targetOffset = info.index * SCREEN_WIDTH;
+                            setTimeout(() => {
+                                flatListRef.current?.scrollToOffset({
+                                    offset: targetOffset,
+                                    animated: false,
+                                });
+                            }, 60);
+                        }}
+                        onMomentumScrollEnd={handleMomentumScrollEnd}
+                        {...(Platform.OS === 'web' ? {
+                            onScroll: handleWebScrollSnap,
+                            scrollEventThrottle: 16,
+                        } : {})}
+                    />
+                </AnimatedReanimated.View>
             )}
         </View>
     );
@@ -1379,6 +1394,9 @@ const getStyles = (theme: Theme) =>
 
         /* ── Timeline layout ── */
         timelineWrapper: {
+            flex: 1,
+        },
+        viewModeContainer: {
             flex: 1,
         },
 
