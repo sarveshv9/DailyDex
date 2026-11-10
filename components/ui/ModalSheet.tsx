@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
   Modal,
@@ -11,6 +11,13 @@ import {
   View,
   ViewStyle,
 } from "react-native";
+import Animated, {
+  Easing,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import { useTheme } from "../../context/ThemeContext";
 import { useAppHaptics } from "../../hooks/useAppHaptics";
 import { themeTokens } from "../../constants/themeTokens";
@@ -45,24 +52,86 @@ export const ModalSheet: React.FC<ModalSheetProps> = ({
   const shared = useMemo(() => getSharedStyles(theme), [theme]);
   const styles = useMemo(() => getStyles(theme), [theme]);
 
+  const [prevVisible, setPrevVisible] = useState(visible);
+  const [isExiting, setIsExiting] = useState(false);
+
+  if (visible !== prevVisible) {
+    setPrevVisible(visible);
+    if (!visible && prevVisible) {
+      setIsExiting(true);
+    } else if (visible && isExiting) {
+      setIsExiting(false);
+    }
+  }
+
+  const backdropOpacity = useSharedValue(visible ? 1 : 0);
+  const sheetTranslateY = useSharedValue(visible ? 0 : 380);
+
+  useEffect(() => {
+    if (visible) {
+      backdropOpacity.value = 0;
+      sheetTranslateY.value = 380;
+      backdropOpacity.value = withTiming(1, {
+        duration: 180,
+        easing: Easing.out(Easing.quad),
+      });
+      sheetTranslateY.value = withTiming(0, {
+        duration: 220,
+        easing: Easing.bezier(0.25, 1, 0.5, 1),
+      });
+    } else if (isExiting) {
+      backdropOpacity.value = withTiming(0, {
+        duration: 150,
+        easing: Easing.in(Easing.quad),
+      });
+      sheetTranslateY.value = withTiming(
+        380,
+        {
+          duration: 180,
+          easing: Easing.bezier(0.32, 0, 0.67, 0),
+        },
+        (finished) => {
+          if (finished) {
+            runOnJS(setIsExiting)(false);
+          }
+        }
+      );
+    }
+  }, [visible, isExiting, backdropOpacity, sheetTranslateY]);
+
+  const backdropAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: backdropOpacity.value,
+  }));
+
+  const sheetAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: sheetTranslateY.value }],
+  }));
+
   const handleClose = () => {
     light();
     onClose();
   };
 
+  const showModal = visible || isExiting;
+  if (!showModal) return null;
+
   return (
     <Modal
-      visible={visible}
+      visible={showModal}
       transparent
-      animationType="slide"
-      onRequestClose={onClose}
+      animationType="none"
+      onRequestClose={handleClose}
+      statusBarTranslucent
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.container}
       >
-        <Pressable style={shared.modalBackdrop} onPress={handleClose} />
-        <View style={[styles.sheet, contentContainerStyle]}>
+        <Animated.View style={[shared.modalBackdrop, backdropAnimatedStyle]}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
+        </Animated.View>
+
+        <Animated.View style={[styles.sheet, contentContainerStyle, sheetAnimatedStyle]}>
           {showHandle && <View style={shared.modalHandle} />}
 
           {(title || showCloseButton) && (
@@ -93,7 +162,7 @@ export const ModalSheet: React.FC<ModalSheetProps> = ({
           )}
 
           {children}
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
   );

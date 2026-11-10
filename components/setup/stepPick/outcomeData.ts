@@ -2,55 +2,80 @@ import { ActivityTemplate, OutcomePack } from "./types";
 
 export const OUTCOME_PACKS: OutcomePack[] = [
     {
-        id: "calm",
-        title: "Calm",
-        promise: "Start gentle, end rested.",
+        id: "daily_essentials",
+        title: "Daily Essentials",
+        promise: "The basic daily milestones to anchor your routine.",
         habits: [
-            "Meditate",
-            "Breathing exercise",
-            "Journal",
-            "Gratitude note",
-            "Wind-down routine",
+            "Drink water",
+            "Breakfast",
+            "Lunch",
+            "Dinner",
         ],
         isHero: true,
-        badge: "Most popular",
-        icon: "flower-outline",
+        badge: "Everyday Basics",
+        icon: "restaurant-outline",
     },
     {
-        id: "focus",
-        title: "Focus",
-        promise: "Carve out space for deep, distraction-free work.",
+        id: "study",
+        title: "Study & Learning",
+        promise: "Sharpen your mind and make steady learning progress.",
+        habits: [
+            "Study",
+            "Read 20 pages",
+            "Deep work block",
+            "Review to-dos",
+        ],
+        icon: "book-outline",
+    },
+    {
+        id: "fitness",
+        title: "Exercise & Fitness",
+        promise: "Move your body, build strength, and stay active.",
+        habits: [
+            "Strength training",
+            "Run",
+            "Walk",
+            "Stretch",
+            "10k steps",
+        ],
+        icon: "barbell-outline",
+    },
+    {
+        id: "productivity",
+        title: "Work & Productivity",
+        promise: "Carve out uninterrupted time for your highest priorities.",
         habits: [
             "Plan the day",
             "Deep work block",
             "Phone-free focus",
             "Review to-dos",
         ],
-        icon: "flash-outline",
+        icon: "briefcase-outline",
     },
     {
-        id: "energy",
-        title: "Energy",
-        promise: "Fuel your body and keep your vitality high.",
+        id: "health",
+        title: "Health & Nutrition",
+        promise: "Fuel your body with proper hydration, food, and self-care.",
         habits: [
             "Drink water",
-            "Strength training",
-            "10k steps",
             "Eat a veggie",
+            "Meal Prep",
+            "Skincare",
         ],
-        icon: "barbell-outline",
+        icon: "heart-outline",
     },
     {
-        id: "balance",
-        title: "Balance",
-        promise: "Nourish your mind, health, and loved ones.",
+        id: "mindfulness",
+        title: "Mind & Recovery",
+        promise: "Unwind your thoughts, rest deeply, and reset your mind.",
         habits: [
-            "Stretch",
-            "Read 20 pages",
-            "Call a friend",
-            "Family time",
+            "Meditate",
+            "Breathing exercise",
+            "Journal",
+            "Wind-down routine",
+            "Screen Off",
         ],
-        icon: "compass-outline",
+        icon: "moon-outline",
     },
 ];
 
@@ -81,4 +106,3 @@ export function computePackCommitment(
 
     return `${habitCount} habits · ${formatMinutes(totalMinutes)}`;
 }
-

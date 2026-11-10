@@ -56,7 +56,7 @@ function StepWelcome({
 
 // ─── Step 1 & 2: Day & Night Anchor Screens are imported from ../components/SetupTimeSteps ──
 
-// ─── Step 3 & 4: Focus & Curate Habits are imported from ../components/setup/stepPick/StepPick ──
+// ─── Step 3 & 4: Starter Routines & Curate Habits are imported from ../components/setup/stepPick/StepPick ──
 
 // ─── Conflict Detection Types & Helper ────────────────────────────────────────
 interface ScheduleConflict {

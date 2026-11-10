@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import {
   Pressable,
   StyleProp,
@@ -8,10 +8,18 @@ import {
   View,
   ViewStyle,
 } from "react-native";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import { themeTokens } from "../../constants/themeTokens";
 import { useTheme } from "../../context/ThemeContext";
 import { useAppHaptics } from "../../hooks/useAppHaptics";
 import { getSharedStyles, Theme } from "../../styles/shared";
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export interface ChipProps {
   label: string;
@@ -44,6 +52,34 @@ export const Chip: React.FC<ChipProps> = ({
   const { selection } = useAppHaptics();
   const styles = useMemo(() => getStyles(theme, selected, size), [theme, selected, size]);
 
+  const scale = useSharedValue(1);
+  const activeOpacity = useSharedValue(selected ? 1 : 0);
+
+  useEffect(() => {
+    activeOpacity.value = withTiming(selected ? 1 : 0, {
+      duration: 160,
+      easing: Easing.out(Easing.quad),
+    });
+  }, [selected, activeOpacity]);
+
+  const containerAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const underlayAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: activeOpacity.value,
+  }));
+
+  const handlePressIn = () => {
+    if (disabled) return;
+    scale.value = withTiming(0.96, { duration: 100, easing: Easing.out(Easing.quad) });
+  };
+
+  const handlePressOut = () => {
+    if (disabled) return;
+    scale.value = withTiming(1, { duration: 150, easing: Easing.out(Easing.quad) });
+  };
+
   const handlePress = () => {
     if (disabled) return;
     selection();
@@ -51,16 +87,24 @@ export const Chip: React.FC<ChipProps> = ({
   };
 
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={handlePress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
       disabled={disabled}
-      style={({ pressed }) => [
+      style={[
         styles.chip,
-        pressed && !disabled && styles.pressed,
         disabled && styles.disabled,
         style,
+        containerAnimatedStyle,
       ]}
+      accessibilityRole="button"
+      accessibilityState={{ selected, disabled }}
     >
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.activeUnderlay, underlayAnimatedStyle]}
+      />
       {icon && <View style={styles.icon}>{icon}</View>}
       <Text style={[styles.text, textStyle]}>{label}</Text>
       {badgeCount !== undefined && badgeCount > 0 && (
@@ -68,7 +112,7 @@ export const Chip: React.FC<ChipProps> = ({
           <Text style={[styles.badgeText, badgeTextStyle]}>{badgeCount}</Text>
         </View>
       )}
-    </Pressable>
+    </AnimatedPressable>
   );
 };
 
@@ -82,18 +126,27 @@ const getStyles = (theme: Theme, selected: boolean, size: "sm" | "md") => {
   return StyleSheet.create({
     chip: {
       ...shared.chip,
-      ...(selected ? shared.chipActive : {}),
       paddingVertical,
       paddingHorizontal,
       minHeight: isSm ? 28 : 36,
+      overflow: "hidden",
+      position: "relative",
+      borderColor: selected ? theme.colors.primary : theme.colors.border,
+    },
+    activeUnderlay: {
+      ...StyleSheet.absoluteFill,
+      backgroundColor: theme.colors.primary,
+      borderRadius: 999,
     },
     icon: {
       marginRight: theme.spacing.xs,
+      zIndex: 1,
     },
     text: {
       fontSize,
       fontFamily: selected ? theme.fonts.bold : theme.fonts.medium,
       color: selected ? theme.colors.onPrimary : theme.colors.text,
+      zIndex: 1,
     },
     badge: {
       marginLeft: theme.spacing.xs,
@@ -110,15 +163,12 @@ const getStyles = (theme: Theme, selected: boolean, size: "sm" | "md") => {
       borderColor: selected
         ? (theme.isDarkMode ? "rgba(255, 255, 255, 0.35)" : "rgba(0, 0, 0, 0.22)")
         : theme.colors.border,
+      zIndex: 1,
     },
     badgeText: {
       fontSize: 10,
       fontFamily: theme.fonts.bold,
       color: selected ? theme.colors.onPrimary : theme.colors.text,
-    },
-    pressed: {
-      opacity: 0.8,
-      transform: [{ scale: 0.97 }],
     },
     disabled: {
       opacity: 0.4,

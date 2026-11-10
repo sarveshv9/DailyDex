@@ -94,7 +94,7 @@ export function OutcomeCard({
                 <Pressable
                     onPress={handleHeaderPress}
                     accessibilityRole="button"
-                    accessibilityLabel={`${pack.title} focus pack, ${
+                    accessibilityLabel={`${pack.title} routine pack, ${
                         isFullySelected
                             ? "fully selected"
                             : isPartiallySelected

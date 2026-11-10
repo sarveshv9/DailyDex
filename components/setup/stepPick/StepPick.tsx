@@ -187,7 +187,7 @@ export function StepPick({
         const addedCount = newMergedSelection.length - previousSelection.length;
         if (addedCount > 0) {
             showToastMessage(
-                `Added ${addedCount} habit${addedCount > 1 ? "s" : ""} from focus packs`,
+                `Added ${addedCount} habit${addedCount > 1 ? "s" : ""} from starter packs`,
                 "Undo",
                 () => {
                     if (onSetSelected) {
@@ -285,7 +285,7 @@ export function StepPick({
                     >
                         {phase === "refine"
                             ? "Step 4 of 5 · Habits"
-                            : "Step 3 of 5 · Focus"}
+                            : "Step 3 of 5 · Focus Areas"}
                     </Text>
 
                     <Pressable
@@ -318,7 +318,7 @@ export function StepPick({
                                 },
                             ]}
                         >
-                            What do you want more of?
+                            What would you like to focus on?
                         </Text>
                         <Text
                             style={[
@@ -329,7 +329,7 @@ export function StepPick({
                                 },
                             ]}
                         >
-                            {"Choose one or two. Peek inside and drop anything you don't want."}
+                            {"Pick the routine areas that matter to you. Peek inside to choose or drop habits."}
                         </Text>
                     </>
                 ) : (

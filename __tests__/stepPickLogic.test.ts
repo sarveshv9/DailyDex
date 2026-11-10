@@ -3,20 +3,23 @@ import { TEMPLATES } from "../components/setup/stepPick/templates";
 import { ActivityTemplate } from "../components/setup/stepPick/types";
 
 describe("StepPick Outcome Packs & Selection Logic", () => {
-    it("has 4 defined outcome packs with Calm as hero and most popular badge", () => {
-        expect(OUTCOME_PACKS).toHaveLength(4);
-        const calm = OUTCOME_PACKS.find((p) => p.id === "calm");
-        expect(calm).toBeDefined();
-        expect(calm?.isHero).toBe(true);
-        expect(calm?.badge).toBe("Most popular");
-        expect(calm?.promise).toBe("Start gentle, end rested.");
-        expect(calm?.habits).toEqual([
-            "Meditate",
-            "Breathing exercise",
-            "Journal",
-            "Gratitude note",
-            "Wind-down routine",
+    it("has 6 defined outcome packs with Daily Essentials as hero at the top with Everyday Basics badge", () => {
+        expect(OUTCOME_PACKS).toHaveLength(6);
+        const essentials = OUTCOME_PACKS[0];
+        expect(essentials.id).toBe("daily_essentials");
+        expect(essentials.title).toBe("Daily Essentials");
+        expect(essentials.isHero).toBe(true);
+        expect(essentials.badge).toBe("Everyday Basics");
+        expect(essentials.habits).toEqual([
+            "Drink water",
+            "Breakfast",
+            "Lunch",
+            "Dinner",
         ]);
+
+        const study = OUTCOME_PACKS.find((p) => p.id === "study");
+        expect(study).toBeDefined();
+        expect(study?.badge).toBeUndefined();
     });
 
     it("verifies all outcome pack habits exist in TEMPLATES", () => {
@@ -29,9 +32,9 @@ describe("StepPick Outcome Packs & Selection Logic", () => {
     });
 
     it("computes commitment time string accurately", () => {
-        const calm = OUTCOME_PACKS.find((p) => p.id === "calm")!;
-        const commitment = computePackCommitment(calm, TEMPLATES);
-        expect(commitment).toContain("5 habits ·");
+        const essentials = OUTCOME_PACKS.find((p) => p.id === "daily_essentials")!;
+        const commitment = computePackCommitment(essentials, TEMPLATES);
+        expect(commitment).toContain("4 habits ·");
         expect(commitment).toMatch(/~\d+ min a day|~\d+ hr/);
     });
 

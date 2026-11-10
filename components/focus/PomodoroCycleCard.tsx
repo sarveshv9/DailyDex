@@ -1,15 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useMemo } from "react";
+import React, { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import Animated, {
-  FadeIn,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withSequence,
-  withTiming,
-  Easing,
-} from "react-native-reanimated";
+import Animated, { FadeIn } from "react-native-reanimated";
 import { themeTokens } from "../../constants/themeTokens";
 import { Theme } from "../../styles/shared";
 
@@ -19,72 +11,6 @@ export interface PomodoroCycleCardProps {
   theme: Theme;
   isDarkMode: boolean;
 }
-
-const PomoPill = React.memo(function PomoPill({
-  s,
-  isSessionDone,
-  isSessionActive,
-  theme,
-  styles,
-}: {
-  s: number;
-  isSessionDone: boolean;
-  isSessionActive: boolean;
-  theme: Theme;
-  styles: ReturnType<typeof getStyles>;
-}) {
-  const pulseOpacity = useSharedValue(1);
-
-  useEffect(() => {
-    if (isSessionActive) {
-      pulseOpacity.value = withRepeat(
-        withSequence(
-          withTiming(0.65, { duration: 1200, easing: Easing.inOut(Easing.sin) }),
-          withTiming(1, { duration: 1200, easing: Easing.inOut(Easing.sin) })
-        ),
-        -1,
-        true
-      );
-    } else {
-      pulseOpacity.value = 1;
-    }
-  }, [isSessionActive, pulseOpacity]);
-
-  const activeAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: isSessionActive ? pulseOpacity.value : 1,
-  }));
-
-  return (
-    <Animated.View
-      style={[
-        styles.pomoDotPill,
-        isSessionDone && styles.pomoDotPillDone,
-        isSessionActive && styles.pomoDotPillActive,
-        isSessionActive && activeAnimatedStyle,
-      ]}
-    >
-      {isSessionDone ? (
-        <Animated.View entering={FadeIn.duration(180)}>
-          <Ionicons
-            name="checkmark"
-            size={14}
-            color={theme.colors.onPrimary}
-          />
-        </Animated.View>
-      ) : isSessionActive ? (
-        <Animated.View entering={FadeIn.duration(160)}>
-          <Ionicons
-            name="flame"
-            size={13}
-            color={theme.colors.primaryText}
-          />
-        </Animated.View>
-      ) : (
-        <Text style={styles.pomoDotText}>{s}</Text>
-      )}
-    </Animated.View>
-  );
-});
 
 const PomodoroCycleCardComponent: React.FC<PomodoroCycleCardProps> = ({
   pomodoroSession,
@@ -142,14 +68,32 @@ const PomodoroCycleCardComponent: React.FC<PomodoroCycleCardProps> = ({
             s === pomodoroSession && pomodoroPhase === "work";
 
           return (
-            <PomoPill
+            <View
               key={s}
-              s={s}
-              isSessionDone={isSessionDone}
-              isSessionActive={isSessionActive}
-              theme={theme}
-              styles={styles}
-            />
+              style={[
+                styles.pomoDotPill,
+                isSessionDone && styles.pomoDotPillDone,
+                isSessionActive && styles.pomoDotPillActive,
+              ]}
+            >
+              {isSessionDone ? (
+                <Animated.View entering={FadeIn.duration(180)}>
+                  <Ionicons
+                    name="checkmark"
+                    size={14}
+                    color={theme.colors.onPrimary}
+                  />
+                </Animated.View>
+              ) : isSessionActive ? (
+                <Ionicons
+                  name="flame"
+                  size={13}
+                  color={theme.colors.primaryText}
+                />
+              ) : (
+                <Text style={styles.pomoDotText}>{s}</Text>
+              )}
+            </View>
           );
         })}
       </View>

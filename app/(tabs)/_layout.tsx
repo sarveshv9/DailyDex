@@ -3,7 +3,6 @@ import {
   MaterialTopTabBarProps,
   TopTabs as MaterialTopTabs,
 } from 'expo-router/js-top-tabs';
-import * as Haptics from '../../utils/haptics';
 import React, { useEffect, useRef } from 'react';
 import {
   Animated,
@@ -13,14 +12,15 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   GestureHandlerRootView,
   State as GestureState,
   PanGestureHandler,
   PanGestureHandlerStateChangeEvent,
 } from 'react-native-gesture-handler';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
+import * as Haptics from '../../utils/haptics';
 
 export { MaterialTopTabs };
 
@@ -68,13 +68,58 @@ function CustomTabBar({
   // Reference to track gesture translation
   const [gestureTranslationX] = React.useState(() => new Animated.Value(0));
 
-  // Add haptic feedback when screen swipe changes tabs
+  // Scale animation for each tab for tactile touch and focus micro-bounce
+  const [tabScales] = React.useState(() =>
+    state.routes.map(() => new Animated.Value(1))
+  );
+
+  // Add haptic feedback and icon pop when active tab changes
   useEffect(() => {
     if (prevIndex.current !== state.index) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       prevIndex.current = state.index;
     }
-  }, [state.index]);
+
+    const activeScale = tabScales[state.index];
+    if (activeScale) {
+      Animated.sequence([
+        Animated.timing(activeScale, {
+          toValue: 1.15,
+          duration: 90,
+          useNativeDriver: true,
+        }),
+        Animated.spring(activeScale, {
+          toValue: 1,
+          friction: 6,
+          tension: 120,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [state.index, tabScales]);
+
+  const handlePressIn = (index: number) => {
+    const scale = tabScales[index];
+    if (scale) {
+      Animated.timing(scale, {
+        toValue: 0.9,
+        duration: 90,
+        useNativeDriver: true,
+      }).start();
+    }
+  };
+
+  const handlePressOut = (index: number) => {
+    const scale = tabScales[index];
+    if (scale) {
+      Animated.spring(scale, {
+        toValue: 1,
+        friction: 5,
+        tension: 110,
+        useNativeDriver: true,
+      }).start();
+    }
+  };
 
   const onGestureEvent = Animated.event(
     [{ nativeEvent: { translationX: gestureTranslationX } }],
@@ -146,12 +191,17 @@ function CustomTabBar({
                 key={`bg-${route.key}`}
                 style={[styles.backgroundIconContainer, { left: index * tabWidth, width: tabWidth }]}
               >
-                <View style={styles.iconWrapper}>
+                <Animated.View
+                  style={[
+                    styles.iconWrapper,
+                    { transform: [{ scale: tabScales[index] || 1 }] },
+                  ]}
+                >
                   {icon({
                     focused: false,
                     color: theme.colors.textSecondary,
                   })}
-                </View>
+                </Animated.View>
               </View>
             );
           })}
@@ -191,12 +241,17 @@ function CustomTabBar({
                     },
                   ]}
                 >
-                  <View style={styles.iconWrapper}>
+                  <Animated.View
+                    style={[
+                      styles.iconWrapper,
+                      { transform: [{ scale: tabScales[index] || 1 }] },
+                    ]}
+                  >
                     {icon({
                       focused: true,
                       color: theme.colors.onPrimary,
                     })}
-                  </View>
+                  </Animated.View>
                 </Animated.View>
               );
             })}
@@ -230,8 +285,10 @@ function CustomTabBar({
                 accessibilityRole="button"
                 accessibilityState={isFocused ? { selected: true } : {}}
                 onPress={onPress}
+                onPressIn={() => handlePressIn(index)}
+                onPressOut={() => handlePressOut(index)}
                 onLongPress={onLongPress}
-                style={({ pressed }) => [styles.tabBarButton, { opacity: pressed ? 0.7 : 1 }]}
+                style={styles.tabBarButton}
               >
                 <View style={styles.iconWrapper} />
               </Pressable>

@@ -58,7 +58,7 @@ const FocusActiveControlsComponent: React.FC<FocusActiveControlsProps> = ({
           onPress={onToggleTimer}
           accessibilityRole="button"
           accessibilityLabel={isActive ? "Pause focus timer" : "Resume focus timer"}
-          style={({ pressed }) => [
+          style={({ pressed }: { pressed: boolean }) => [
             styles.actionPillPrimary,
             !isActive && styles.actionPillResume,
             isActive && styles.actionPillPause,
@@ -98,7 +98,7 @@ const FocusActiveControlsComponent: React.FC<FocusActiveControlsProps> = ({
           accessibilityRole="button"
           accessibilityLabel="Reset timer to beginning"
           accessibilityState={{ disabled: !isResetEnabled }}
-          style={({ pressed }) => [
+          style={({ pressed }: { pressed: boolean }) => [
             styles.actionPillSecondary,
             !isResetEnabled && styles.actionPillDisabled,
             animatedResetStyle,
@@ -133,7 +133,7 @@ const FocusActiveControlsComponent: React.FC<FocusActiveControlsProps> = ({
             accessibilityLabel={
               isLastPomoPhase ? "Finish Pomodoro session" : "Skip to next phase"
             }
-            style={({ pressed }) => [
+            style={({ pressed }: { pressed: boolean }) => [
               styles.actionPillSecondary,
               isLastPomoPhase && styles.actionPillFinish,
               pressed && styles.pressedScale,
