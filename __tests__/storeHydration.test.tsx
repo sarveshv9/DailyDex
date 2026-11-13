@@ -402,7 +402,7 @@ describe("Store Hydration from Legacy Storage Shapes", () => {
       // Assert theme was NOT loaded raw from storage, but recomputed fresh
       expect((state.theme as any).staleMarker).toBeUndefined();
       expect(state.theme.colors.background).toBe("#000000"); // Seamless OLED black background
-      expect(state.theme.colors.surface).toBe("#000000"); // Seamless OLED black surface
+      expect(state.theme.colors.surface).toBe("#0A0A0D"); // Card surface from SURFACE_NEUTRALS
       expect(state.theme.colors.primary).toBeDefined();
 
       // Assert customThemes entry is normalized to { id, pokemonId, accentHex, name }
@@ -420,8 +420,8 @@ describe("Store Hydration from Legacy Storage Shapes", () => {
 
       const updatedState = useThemeStore.getState();
       expect(updatedState.isDarkMode).toBe(false);
-      expect(updatedState.theme.colors.background).toBe("#FFFFFF"); // Light background
-      expect(updatedState.theme.colors.surface).toBe("#F8F8F8"); // Light surface
+      expect(updatedState.theme.colors.background).toBe("#F8F8F8"); // Light background from SURFACE_NEUTRALS
+      expect(updatedState.theme.colors.surface).toBe("#FFFFFF"); // Light card surface from SURFACE_NEUTRALS
       expect(updatedState.theme.colors.primarySoft).toBeDefined();
       expect(updatedState.theme.colors.onPrimary).toBeDefined();
     });

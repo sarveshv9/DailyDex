@@ -12,7 +12,7 @@ import {
 import * as Haptics from '../../utils/haptics';
 import { Theme } from '../../styles/shared';
 import { RoutineItem, getRoutineItemsForDate, timeToMinutes } from '../../utils/utils';
-import { CATEGORY_COLORS, FALLBACK_CATEGORY_COLORS } from '../../constants/categoryColors';
+import { getCategoryColor, FALLBACK_CATEGORY_COLORS } from '../../constants/categoryColors';
 import { blendOpaque, scaleChroma } from '../../utils/color';
 
 interface Props {
@@ -23,7 +23,6 @@ interface Props {
     todayTrigger?: number;
 }
 
-const TASK_COLORS: Record<string, string> = CATEGORY_COLORS;
 const FALLBACK_COLORS = FALLBACK_CATEGORY_COLORS;
 
 const MONTH_NAMES = [
@@ -49,8 +48,9 @@ const fmtTime = (time?: string): string => {
     return `${hour}:${mins}${suffix}`;
 };
 
-function getTaskColor(item: RoutineItem, idx: number): string {
-    if (item.imageKey && TASK_COLORS[item.imageKey]) return TASK_COLORS[item.imageKey];
+function getTaskColor(item: RoutineItem, idx: number, isDark: boolean = true): string {
+    const color = getCategoryColor(item.imageKey, isDark);
+    if (color) return color;
     return FALLBACK_COLORS[idx % FALLBACK_COLORS.length];
 }
 
@@ -111,7 +111,7 @@ function DayDetailComponent({ date, items, theme }: DayDetailProps) {
             ) : (
                 <View style={detail.taskList}>
                     {items.map((item, i) => {
-                        const color = getTaskColor(item, i);
+                        const color = getTaskColor(item, i, theme.isDarkMode);
                         const label = item.task ?? item.imageKey?.replace(/_/g, ' ') ?? '';
                         const isDark = theme.isDarkMode;
                         const pillTint = blendOpaque(color, theme.colors.surface, isDark ? 0.20 : 0.14);
@@ -295,11 +295,11 @@ function MonthCalendarViewComponent({ currentDate, routineItems, onSelectDate, t
             if (!date) continue;
             const dateStr = fmtDateKey(date);
             const items = getRoutineItemsForDate(routineItems, date);
-            const colors = items.slice(0, 3).map((item, i) => getTaskColor(item, i));
+            const colors = items.slice(0, 3).map((item, i) => getTaskColor(item, i, theme.isDarkMode));
             map.set(dateStr, { colors, total: items.length });
         }
         return map;
-    }, [gridCells, routineItems]);
+    }, [gridCells, routineItems, theme.isDarkMode]);
 
     // Data-accurate routine item retrieval matching timeline
     const getDayItems = useCallback((date: Date): RoutineItem[] => {

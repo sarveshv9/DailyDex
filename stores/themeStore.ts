@@ -40,11 +40,13 @@ export function computeTheme(
   // 2. Preset theme from registry
   const preset = THEME_ACCENTS[themeName as keyof typeof THEME_ACCENTS];
   if (preset) {
-    return createTheme(preset.accent, mode);
+    const accent = mode === "light" && preset.lightAccent ? preset.lightAccent : preset.accent;
+    return createTheme(accent, mode);
   }
 
   // 3. Fallback gracefully (e.g. pokeball accent), never undefined
-  const fallbackAccent = THEME_ACCENTS[DEFAULT_THEME_NAME]?.accent;
+  const fallback = THEME_ACCENTS[DEFAULT_THEME_NAME];
+  const fallbackAccent = mode === "light" && fallback?.lightAccent ? fallback.lightAccent : fallback?.accent;
   return createTheme(fallbackAccent, mode);
 }
 

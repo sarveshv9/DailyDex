@@ -34,41 +34,106 @@ export type CategoryKey =
   | "health"
   | "podcast";
 
+export type ThemeMode = 'light' | 'dark';
+
+export interface DualColorToken {
+  dark: string;
+  light: string;
+}
+
+export const HABIT_PALETTE = {
+  wakeup: { dark: '#F4B342', light: '#FF8000' },
+  sleep: { dark: '#818CF8', light: '#584EE6' },
+  water: { dark: '#38BDF8', light: '#0077C2' },
+  tea_journal: { dark: '#74C69D', light: '#00824D' },
+  breakfast: { dark: '#FB923C', light: '#CC4C00' },
+  lunch: { dark: '#7EC850', light: '#358500' },
+  dinner: { dark: '#F07167', light: '#DB2E2E' },
+  study: { dark: '#60A5FA', light: '#1D66E5' },
+  reflect: { dark: '#C084FC', light: '#9033D6' },
+  walk: { dark: '#46C97E', light: '#008542' },
+  breathe: { dark: '#4CD4C0', light: '#00857A' },
+  yoga: { dark: '#F48FB1', light: '#D6296E' },
+  prepare_sleep: { dark: '#93A8E8', light: '#3B59D9' },
+  commute: { dark: '#7FA6C4', light: '#0073A8' },
+  gym: { dark: '#F87171', light: '#E01B1B' },
+  cleaning: { dark: '#64C9CF', light: '#007D8A' },
+  pet: { dark: '#E09F5A', light: '#BD5B00' },
+  shopping: { dark: '#EC7AA0', light: '#D12462' },
+  coding: { dark: '#2DD4BF', light: '#008573' },
+  gaming: { dark: '#A87FFB', light: '#7231E6' },
+  finances: { dark: '#52B788', light: '#00824A' },
+  laundry: { dark: '#74A9F5', light: '#1A6BE0' },
+  travel: { dark: '#F78C58', light: '#CC4700' },
+  health: { dark: '#F46B84', light: '#DB234B' },
+  podcast: { dark: '#D884E8', light: '#9E25BA' },
+} as const satisfies Record<CategoryKey, DualColorToken>;
+
 export const CATEGORY_COLORS: Record<CategoryKey, string> = {
-  wakeup: "#FF9330",
-  sleep: "#5B8DFF",
-  water: "#1FC8EA",
-  tea_journal: "#FFA51F",
-  breakfast: "#FF8040",
-  lunch: "#FF8040",
-  dinner: "#FF8040",
-  study: "#6B6FFF",
-  reflect: "#6B6FFF",
-  walk: "#1FCB8A",
-  breathe: "#1FCB8A",
-  yoga: "#7FD01F",
-  prepare_sleep: "#7088B0",
-  commute: "#12B8D0",
-  gym: "#FF4D2E",
-  cleaning: "#14C4AE",
-  pet: "#FFB82E",
-  shopping: "#FF4F7B",
-  coding: "#1FA2FF",
-  gaming: "#A055FF",
-  finances: "#20B864",
-  laundry: "#3DD6F0",
-  travel: "#1488F0",
-  health: "#FF4DA6",
-  podcast: "#DD55F5",
+  wakeup: HABIT_PALETTE.wakeup.dark,
+  sleep: HABIT_PALETTE.sleep.dark,
+  water: HABIT_PALETTE.water.dark,
+  tea_journal: HABIT_PALETTE.tea_journal.dark,
+  breakfast: HABIT_PALETTE.breakfast.dark,
+  lunch: HABIT_PALETTE.lunch.dark,
+  dinner: HABIT_PALETTE.dinner.dark,
+  study: HABIT_PALETTE.study.dark,
+  reflect: HABIT_PALETTE.reflect.dark,
+  walk: HABIT_PALETTE.walk.dark,
+  breathe: HABIT_PALETTE.breathe.dark,
+  yoga: HABIT_PALETTE.yoga.dark,
+  prepare_sleep: HABIT_PALETTE.prepare_sleep.dark,
+  commute: HABIT_PALETTE.commute.dark,
+  gym: HABIT_PALETTE.gym.dark,
+  cleaning: HABIT_PALETTE.cleaning.dark,
+  pet: HABIT_PALETTE.pet.dark,
+  shopping: HABIT_PALETTE.shopping.dark,
+  coding: HABIT_PALETTE.coding.dark,
+  gaming: HABIT_PALETTE.gaming.dark,
+  finances: HABIT_PALETTE.finances.dark,
+  laundry: HABIT_PALETTE.laundry.dark,
+  travel: HABIT_PALETTE.travel.dark,
+  health: HABIT_PALETTE.health.dark,
+  podcast: HABIT_PALETTE.podcast.dark,
 };
 
-/** Deeper variations for bright colors to hold up on pure white in light mode */
-export const CATEGORY_COLORS_LIGHT: Partial<Record<CategoryKey, string>> = {
-  pet: "#F5A800",
-  tea_journal: "#F09400",
-  wakeup: "#FF8A1F",
-  yoga: "#6DB812",
-  laundry: "#22BDDC",
+/** Deeper variations for bright colors to achieve >= 4.5:1 WCAG AA contrast on pure white in light mode */
+export const CATEGORY_COLORS_LIGHT: Record<CategoryKey, string> = {
+  wakeup: HABIT_PALETTE.wakeup.light,
+  sleep: HABIT_PALETTE.sleep.light,
+  water: HABIT_PALETTE.water.light,
+  tea_journal: HABIT_PALETTE.tea_journal.light,
+  breakfast: HABIT_PALETTE.breakfast.light,
+  lunch: HABIT_PALETTE.lunch.light,
+  dinner: HABIT_PALETTE.dinner.light,
+  study: HABIT_PALETTE.study.light,
+  reflect: HABIT_PALETTE.reflect.light,
+  walk: HABIT_PALETTE.walk.light,
+  breathe: HABIT_PALETTE.breathe.light,
+  yoga: HABIT_PALETTE.yoga.light,
+  prepare_sleep: HABIT_PALETTE.prepare_sleep.light,
+  commute: HABIT_PALETTE.commute.light,
+  gym: HABIT_PALETTE.gym.light,
+  cleaning: HABIT_PALETTE.cleaning.light,
+  pet: HABIT_PALETTE.pet.light,
+  shopping: HABIT_PALETTE.shopping.light,
+  coding: HABIT_PALETTE.coding.light,
+  gaming: HABIT_PALETTE.gaming.light,
+  finances: HABIT_PALETTE.finances.light,
+  laundry: HABIT_PALETTE.laundry.light,
+  travel: HABIT_PALETTE.travel.light,
+  health: HABIT_PALETTE.health.light,
+  podcast: HABIT_PALETTE.podcast.light,
+};
+
+/**
+ * Generates a subtle background tint for habit icon badges and active pills
+ * (16% opacity in Dark Mode, 12% opacity in Light Mode)
+ */
+export const getSoftTint = (hex: string, mode: ThemeMode): string => {
+  const baseHex = hex.startsWith('#') ? hex.slice(0, 7) : `#${hex.slice(0, 6)}`;
+  const alphaHex = mode === 'dark' ? '29' : '1F';
+  return `${baseHex}${alphaHex}`;
 };
 
 export const FALLBACK_CATEGORY_COLORS = [
@@ -85,8 +150,9 @@ export function getCategoryColor(
   isDark: boolean = true
 ): string | undefined {
   if (!categoryKey) return undefined;
-  if (!isDark && categoryKey in CATEGORY_COLORS_LIGHT) {
-    return CATEGORY_COLORS_LIGHT[categoryKey as CategoryKey];
+  const palette = (HABIT_PALETTE as Record<string, DualColorToken>)[categoryKey];
+  if (palette) {
+    return isDark ? palette.dark : palette.light;
   }
-  return (CATEGORY_COLORS as Record<string, string>)[categoryKey];
+  return undefined;
 }

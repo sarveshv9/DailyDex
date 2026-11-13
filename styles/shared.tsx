@@ -37,7 +37,7 @@ export type { ThemeColors, ThemeGlass };
 export const lightThemes: Record<string, Theme> = Object.fromEntries(
   Object.entries(THEME_ACCENTS).map(([key, config]) => [
     key,
-    createTheme(config.accent, "light"),
+    createTheme(config.lightAccent || config.accent, "light"),
   ])
 );
 

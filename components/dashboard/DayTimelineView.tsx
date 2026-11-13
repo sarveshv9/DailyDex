@@ -15,7 +15,7 @@ import {
     useWindowDimensions,
     View,
 } from 'react-native';
-import { CATEGORY_COLORS } from '../../constants/categoryColors';
+import { CATEGORY_COLORS, getCategoryColor } from '../../constants/categoryColors';
 import AnimatedReanimated, { FadeIn } from 'react-native-reanimated';
 import { useTheme } from '../../context/ThemeContext';
 import { Theme } from '../../styles/shared';
@@ -392,7 +392,7 @@ const TimelineColumn = memo<TimelineColumnProps>(({
                                         width: circleSize,
                                         height,
                                         borderRadius: circleSize / 2,
-                                        backgroundColor: TASK_COLORS[item.imageKey ?? ''] ?? theme.colors.border,
+                                        backgroundColor: getCategoryColor(item.imageKey, isDarkMode) ?? theme.colors.border,
                                         borderWidth: 1.5,
                                         borderColor: theme.colors.background,
                                         alignItems: 'center',
@@ -429,7 +429,7 @@ const TimelineColumn = memo<TimelineColumnProps>(({
                         <React.Fragment key={`chain-${elIdx}-${chainItems[0]?.id}`}>
                             {chainItems.map((item, cIdx) => {
                                 const pillTop = top + cIdx * stepY;
-                                const pillBg = TASK_COLORS[item.imageKey ?? ''] ?? theme.colors.border;
+                                const pillBg = getCategoryColor(item.imageKey, isDarkMode) ?? theme.colors.border;
                                 const iconColor = '#FFFFFF';
 
                                 return (
@@ -774,7 +774,7 @@ const TimelinePage = memo<{
                                     ]}
                                 >
                                     {dayBadges.map((task, bIdx) => {
-                                        const badgeColor = TASK_COLORS[task.imageKey ?? ''] ?? theme.colors.primary;
+                                        const badgeColor = getCategoryColor(task.imageKey, isDarkMode) ?? theme.colors.primary;
                                         const iconName = ICON_MAP[task.imageKey ?? ''] ?? 'ellipse-outline';
                                         return (
                                             <View

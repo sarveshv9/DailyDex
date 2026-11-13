@@ -20,6 +20,16 @@ export function normalizeHex(hex: string): string {
       .split("")
       .map((c) => c + c)
       .join("");
+  } else if (cleaned.length === 4) {
+    // 4-character hex (#RGBA) -> extract RGB
+    cleaned = cleaned
+      .slice(0, 3)
+      .split("")
+      .map((c) => c + c)
+      .join("");
+  } else if (cleaned.length === 8) {
+    // 8-character hex (#RRGGBBAA) -> extract RRGGBB
+    cleaned = cleaned.slice(0, 6);
   }
   if (cleaned.length !== 6) {
     // Fallback to black on malformed input

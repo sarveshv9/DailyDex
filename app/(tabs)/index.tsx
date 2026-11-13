@@ -17,7 +17,9 @@ import TaskModal from "../../components/dashboard/TaskModal";
 import { TodayHeader } from "../../components/dashboard/TodayHeader";
 import { FocusHeroCard } from "../../components/dashboard/FocusHeroCard";
 import { UpNextSection } from "../../components/dashboard/UpNextSection";
+import { TodayTasksSection } from "../../components/dashboard/TodayTasksSection";
 import { SetupPromptCard } from "../../components/dashboard/SetupPromptCard";
+import { Task } from "./todo";
 import { useAppTheme } from "../../stores/themeStore";
 import { useTheme } from "../../context/ThemeContext";
 import {
@@ -214,7 +216,7 @@ function HomeScreen() {
   const [isReady, setIsReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [routines, setRoutines] = useState<RoutineItem[]>([]);
-  const [todoTasks, setTodoTasks] = useState<any[]>([]);
+  const [todoTasks, setTodoTasks] = useState<Task[]>([]);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [selectedTask, setSelectedTask] = useState<RoutineItem | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
@@ -428,6 +430,88 @@ function HomeScreen() {
       }
     },
     [routines, persistRoutines]
+  );
+
+  const handleToggleTodoTask = useCallback(
+    async (id: string) => {
+      let isNowCompleted = false;
+      const updated = todoTasks.map((t) => {
+        if (t.id === id) {
+          isNowCompleted = !t.completed;
+          return { ...t, completed: isNowCompleted };
+        }
+        return t;
+      });
+
+      if (isNowCompleted) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+
+      setTodoTasks(updated);
+      try {
+        await AsyncStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(updated));
+      } catch (err) {
+        console.error("Failed to save updated todo tasks", err);
+      }
+
+      try {
+        if (isNowCompleted) {
+          const newStats = await addTaskCompleted();
+          setUserStats(newStats);
+        } else {
+          const newStats = await removeTaskCompleted(1);
+          setUserStats(newStats);
+        }
+      } catch (err) {
+        console.error("Failed to update task stats", err);
+      }
+    },
+    [todoTasks]
+  );
+
+  const handleQuickAddTodo = useCallback(
+    async (text: string) => {
+      const newTask: Task = {
+        id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+        text,
+        completed: false,
+        createdAt: new Date().toISOString(),
+        category: "today",
+      };
+
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      const updated = [newTask, ...todoTasks];
+      setTodoTasks(updated);
+
+      try {
+        await AsyncStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(updated));
+      } catch (err) {
+        console.error("Failed to save new todo task", err);
+      }
+    },
+    [todoTasks]
+  );
+
+  const handleOpenTasks = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push("/(tabs)/todo" as any);
+  }, [router]);
+
+  const handleOpenFocusForTodo = useCallback(
+    (task: Task) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      router.push({
+        pathname: "/focus" as any,
+        params: {
+          taskId: task.id,
+          taskName: task.text,
+          duration: 25 * 60,
+        },
+      });
+    },
+    [router]
   );
 
   const handleSaveTask = useCallback(
@@ -658,6 +742,17 @@ function HomeScreen() {
           onSelectTask={handlePressUpcoming}
           onOpenRoutineTimeline={handleOpenTimeline}
           onToggleComplete={handleToggleRoutineComplete}
+          theme={theme}
+          isDarkMode={isDarkMode}
+        />
+
+        {/* ======= TODAY'S INTENTIONS / TODOS ======= */}
+        <TodayTasksSection
+          tasks={todoTasks}
+          onToggleTask={handleToggleTodoTask}
+          onAddTask={handleQuickAddTodo}
+          onOpenTasks={handleOpenTasks}
+          onOpenFocusForTask={handleOpenFocusForTodo}
           theme={theme}
           isDarkMode={isDarkMode}
         />

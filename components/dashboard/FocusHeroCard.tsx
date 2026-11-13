@@ -183,10 +183,10 @@ const FocusHeroCardComponent: React.FC<FocusHeroCardProps> = ({
             </View>
           </View>
 
-          {/* Main CTA Button: Default redirect to timeline */}
+          {/* Main Action Button */}
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="View day timeline"
+            accessibilityLabel="View daily flow"
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             onPress={onOpenTimeline}
             onPressIn={handleCtaPressIn}
@@ -195,14 +195,14 @@ const FocusHeroCardComponent: React.FC<FocusHeroCardProps> = ({
             <Animated.View style={[styles.primaryButton, ctaAnimatedStyle]}>
               <Text style={styles.primaryButtonText}>
                 {hasActiveTask
-                  ? "View Day Timeline"
+                  ? "View Daily Flow"
                   : hasNextTask
-                    ? "Start My Day"
-                    : "View Day Timeline"}
+                    ? "View Daily Flow"
+                    : "View Routine Timeline"}
               </Text>
               <Ionicons
                 name="arrow-forward"
-                size={20}
+                size={18}
                 color={theme.colors.onPrimary}
               />
             </Animated.View>
@@ -225,13 +225,26 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       marginBottom: 24,
     },
     sectionHeaderRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
       marginBottom: 10,
     },
     sectionLabel: {
       ...shared.sectionLabel,
     },
+    headerLinkButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 2,
+    },
+    headerLinkText: {
+      fontSize: themeTokens.fonts.size.xs,
+      fontFamily: theme.fonts.medium,
+      color: theme.colors.primary,
+    },
     focusCard: {
-      borderRadius: 24,
+      borderRadius: 22,
       borderWidth: 1,
       borderColor: theme.colors.border,
       backgroundColor: theme.colors.surface,
@@ -239,8 +252,8 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       elevation: 0,
     },
     focusCardInner: {
-      padding: 22,
-      gap: 16,
+      padding: 18,
+      gap: 14,
     },
     focusTopRow: {
       flexDirection: "row",
@@ -369,27 +382,20 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       borderRadius: 999,
     },
     primaryButton: {
-      ...shared.primaryButton,
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
       gap: 8,
-      minHeight: 50,
-      paddingVertical: 10,
-      borderRadius: 999,
-      ...Platform.select({
-        ios: {
-          shadowColor: "#000000",
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.15,
-          shadowRadius: 4,
-        },
-        android: { elevation: 0 },
-      }),
+      height: 44,
+      borderRadius: 14,
+      backgroundColor: theme.colors.primary,
+      marginTop: 4,
     },
     primaryButtonText: {
-      ...shared.primaryButtonText,
-      fontSize: themeTokens.fonts.size.sm,
+      color: theme.colors.onPrimary,
+      fontSize: 14,
+      fontFamily: theme.fonts.bold,
+      textAlign: "center",
     },
   });
 };

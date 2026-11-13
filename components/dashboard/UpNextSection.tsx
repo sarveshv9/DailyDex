@@ -213,7 +213,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
   return StyleSheet.create({
     sectionContainer: {
       paddingHorizontal: 20,
-      marginBottom: 32,
+      marginBottom: 24,
     },
     sectionHeaderRow: {
       marginBottom: 10,
@@ -222,7 +222,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       ...shared.sectionLabel,
     },
     upNextList: {
-      gap: 10,
+      gap: 8,
     },
     upNextCard: {
       flexDirection: "row",
@@ -230,12 +230,13 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       backgroundColor: theme.colors.surface,
       borderWidth: 1,
       borderColor: theme.colors.border,
-      borderRadius: 20,
-      padding: 14,
+      borderRadius: 16,
+      paddingVertical: 11,
+      paddingHorizontal: 14,
       gap: 12,
     },
     upNextCardCompleted: {
-      opacity: 0.65,
+      opacity: 0.6,
     },
     checkCircle: {
       width: 22,
@@ -256,9 +257,9 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       opacity: 0.6,
     },
     upNextIconSquircle: {
-      width: 44,
-      height: 44,
-      borderRadius: 14,
+      width: 40,
+      height: 40,
+      borderRadius: 13,
       backgroundColor: tileBg,
       alignItems: "center",
       justifyContent: "center",
@@ -266,10 +267,10 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     upNextInfo: {
       flex: 1,
       justifyContent: "center",
-      gap: 3,
+      gap: 2,
     },
     upNextTaskName: {
-      fontSize: themeTokens.fonts.size.md,
+      fontSize: 14,
       fontFamily: theme.fonts.medium,
       color: theme.colors.text,
     },
@@ -282,30 +283,25 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       flexDirection: "row",
       alignItems: "center",
       gap: 3,
-      paddingHorizontal: 6,
-      paddingVertical: 2,
-      borderRadius: 8,
-      backgroundColor: theme.colors.surfaceMuted,
     },
     upNextDurationText: {
-      fontSize: themeTokens.fonts.size.xs,
-      fontFamily: theme.fonts.medium,
+      fontSize: 12,
+      fontFamily: theme.fonts.regular,
       color: theme.colors.textSecondary,
-      fontVariant: ["tabular-nums"],
     },
     timeBadge: {
       flexDirection: "row",
       alignItems: "center",
       gap: 4,
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      borderRadius: 12,
-      backgroundColor: theme.colors.primarySoft,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+      backgroundColor: theme.colors.surfaceMuted,
     },
     timeBadgeText: {
-      fontSize: themeTokens.fonts.size.xs,
-      fontFamily: theme.fonts.bold,
-      color: theme.colors.primaryText,
+      fontSize: 12,
+      fontFamily: theme.fonts.medium,
+      color: theme.colors.textSecondary,
       fontVariant: ["tabular-nums"],
     },
     emptyCardContainer: {

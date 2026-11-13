@@ -87,6 +87,23 @@ export interface GeneratedTheme {
   };
 }
 
+export const SURFACE_NEUTRALS = {
+  dark: {
+    baseBackground: '#000000',
+    cardSurface: '#0A0A0D',
+    cardBorder: '#1C1C24',
+    primaryText: '#F4F4F6',
+    secondaryText: '#9898A6',
+  },
+  light: {
+    baseBackground: '#F8F8F8',
+    cardSurface: '#FFFFFF',
+    cardBorder: '#EBEBEF',
+    primaryText: '#121217',
+    secondaryText: '#6B6B76',
+  },
+} as const;
+
 // Global memoization cache: `${accentHex}|${mode}` -> GeneratedTheme
 const themeCache = new Map<string, GeneratedTheme>();
 
@@ -106,13 +123,14 @@ export function createTheme(
   const isDark = mode === "dark";
 
   // 1. NEUTRALS: Independent of theme per mode (OLED Black seamless dark theme)
-  const background = isDark ? themeTokens.colors.black : themeTokens.colors.white;
-  const surface = isDark ? themeTokens.colors.black : themeTokens.colors.gray[50];
+  const neutrals = isDark ? SURFACE_NEUTRALS.dark : SURFACE_NEUTRALS.light;
+  const background = neutrals.baseBackground;
+  const surface = neutrals.cardSurface;
   const surfaceMuted = isDark ? "#0A0A0D" : themeTokens.colors.gray[200];
-  const border = isDark ? "#1C1C22" : themeTokens.colors.gray[300];
-  const divider = isDark ? "#16161B" : themeTokens.colors.gray[200];
-  const text = isDark ? "#FFFFFF" : themeTokens.colors.gray[900];
-  const textSecondary = isDark ? "#8E8E98" : themeTokens.colors.gray[600];
+  const border = neutrals.cardBorder;
+  const divider = isDark ? "#16161B" : "#EEEEEE";
+  const text = neutrals.primaryText;
+  const textSecondary = neutrals.secondaryText;
   const scrim = isDark ? "rgba(0, 0, 0, 0.75)" : "rgba(0, 0, 0, 0.45)";
 
   const danger = isDark ? themeTokens.colors.danger : themeTokens.colors.dangerDark;
