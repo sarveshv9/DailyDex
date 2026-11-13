@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo } from "react";
 import {
+  Insets,
   Pressable,
   StyleProp,
   StyleSheet,
@@ -33,6 +34,7 @@ export interface ChipProps {
   textStyle?: StyleProp<TextStyle>;
   badgeStyle?: StyleProp<ViewStyle>;
   badgeTextStyle?: StyleProp<TextStyle>;
+  hitSlop?: Insets;
 }
 
 export const Chip: React.FC<ChipProps> = ({
@@ -47,10 +49,17 @@ export const Chip: React.FC<ChipProps> = ({
   textStyle,
   badgeStyle,
   badgeTextStyle,
+  hitSlop,
 }) => {
   const { theme } = useTheme();
   const { selection } = useAppHaptics();
   const styles = useMemo(() => getStyles(theme, selected, size), [theme, selected, size]);
+
+  const resolvedHitSlop =
+    hitSlop ??
+    (size === "sm"
+      ? { top: 8, bottom: 8, left: 6, right: 6 }
+      : { top: 4, bottom: 4, left: 4, right: 4 });
 
   const scale = useSharedValue(1);
   const activeOpacity = useSharedValue(selected ? 1 : 0);
@@ -92,6 +101,7 @@ export const Chip: React.FC<ChipProps> = ({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       disabled={disabled}
+      hitSlop={resolvedHitSlop}
       style={[
         styles.chip,
         disabled && styles.disabled,
@@ -154,7 +164,7 @@ const getStyles = (theme: Theme, selected: boolean, size: "sm" | "md") => {
         ? (theme.isDarkMode ? "rgba(255, 255, 255, 0.25)" : "rgba(0, 0, 0, 0.16)")
         : theme.colors.surfaceMuted,
       borderRadius: themeTokens.borderRadius.full,
-      paddingHorizontal: 7,
+      paddingHorizontal: theme.spacing.sm,
       paddingVertical: 2,
       minWidth: 20,
       alignItems: "center",

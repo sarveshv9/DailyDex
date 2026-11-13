@@ -28,7 +28,12 @@ import {
 } from "../../constants/storageKeys";
 import * as Haptics from "../../utils/haptics";
 import { scheduleRoutineNotifications } from "../../utils/notifications";
-import { loadStats, UserStats } from "../../utils/stats";
+import {
+  loadStats,
+  addTaskCompleted,
+  removeTaskCompleted,
+  UserStats,
+} from "../../utils/stats";
 import {
   getDateString,
   getRoutineIcon,
@@ -396,6 +401,35 @@ function HomeScreen() {
     []
   );
 
+  const handleToggleRoutineComplete = useCallback(
+    async (targetItem: RoutineItem) => {
+      const isNowCompleted = !targetItem.completed;
+      if (isNowCompleted) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+
+      const updated = routines.map((item) =>
+        item.id === targetItem.id ? { ...item, completed: isNowCompleted } : item
+      );
+      await persistRoutines(updated);
+
+      try {
+        if (isNowCompleted) {
+          const newStats = await addTaskCompleted();
+          setUserStats(newStats);
+        } else {
+          const newStats = await removeTaskCompleted(1);
+          setUserStats(newStats);
+        }
+      } catch (err) {
+        console.error("Failed to update task stats", err);
+      }
+    },
+    [routines, persistRoutines]
+  );
+
   const handleSaveTask = useCallback(
     (updatedTask: RoutineItem) => {
       const originalTask = routines.find((item) => item.id === updatedTask.id);
@@ -613,6 +647,7 @@ function HomeScreen() {
           hasNextTask={Boolean(scheduleStatus.nextTask)}
           onOpenFocus={handleOpenFocus}
           onOpenTimeline={handleOpenTimeline}
+          onToggleComplete={handleToggleRoutineComplete}
           theme={theme}
           isDarkMode={isDarkMode}
         />
@@ -622,6 +657,7 @@ function HomeScreen() {
           tasks={nextTasks}
           onSelectTask={handlePressUpcoming}
           onOpenRoutineTimeline={handleOpenTimeline}
+          onToggleComplete={handleToggleRoutineComplete}
           theme={theme}
           isDarkMode={isDarkMode}
         />

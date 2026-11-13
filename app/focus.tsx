@@ -57,6 +57,7 @@ export default function FocusScreen() {
   const stopTimer = useTimerStore((s) => s.stopTimer);
   const resetTimer = useTimerStore((s) => s.resetTimer);
   const advancePomodoroPhase = useTimerStore((s) => s.advancePomodoroPhase);
+  const startNextPomodoroPhase = useTimerStore((s) => s.startNextPomodoroPhase);
 
   // Audio / Sound lifecycle
   const { selectedSong, setSelectedSong, isPlaying } = useAudio();
@@ -270,6 +271,10 @@ export default function FocusScreen() {
             durationMinutes={Math.round(
               (duration || selectedDuration) / 60
             )}
+            pomodoroMode={pomodoroMode}
+            pomodoroPhase={pomodoroPhase}
+            pomodoroSession={pomodoroSession}
+            onStartNextPomoPhase={startNextPomodoroPhase}
             onComplete={handleComplete}
             onRestart={handleRestart}
             theme={theme}

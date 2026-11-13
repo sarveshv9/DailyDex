@@ -54,22 +54,18 @@ export interface TimerState {
   resetTimer: () => void;
   startPomodoro: (id: string, name: string) => void;
   advancePomodoroPhase: () => void;
+  startNextPomodoroPhase: () => void;
   initialize: () => Promise<void>;
   _handleTimerCompletion: () => void;
 }
 
 let completionTimeout: ReturnType<typeof setTimeout> | null = null;
-let pomodoroAdvanceTimeout: ReturnType<typeof setTimeout> | null = null;
 let appStateSubscription: { remove: () => void } | null = null;
 
 function clearScheduledTimeouts() {
   if (completionTimeout) {
     clearTimeout(completionTimeout);
     completionTimeout = null;
-  }
-  if (pomodoroAdvanceTimeout) {
-    clearTimeout(pomodoroAdvanceTimeout);
-    pomodoroAdvanceTimeout = null;
   }
 }
 
@@ -428,6 +424,31 @@ export const useTimerStore = create<TimerState>((set, get) => ({
     persistToStorage({ ...get(), ...nextState });
   },
 
+  startNextPomodoroPhase: () => {
+    clearScheduledTimeouts();
+    const { pomodoroPhase } = get();
+    const nextDuration = POMODORO_DURATIONS[pomodoroPhase];
+    const targetEnd = Date.now() + nextDuration * 1000;
+
+    const runningState = {
+      duration: nextDuration,
+      targetEndTime: targetEnd,
+      pausedTimeRemaining: null,
+      isCompleted: false,
+      isActive: true,
+    };
+
+    set(runningState);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    const alertTitle = pomodoroPhase === "work" ? "Break Over" : "Break Finished";
+    const alertBody = pomodoroPhase === "work" ? "Ready for your next focused session?" : "Break has ended.";
+    scheduleFocusTimerAlarm(alertTitle, alertBody, nextDuration);
+
+    scheduleCompletion(targetEnd, () => get()._handleTimerCompletion());
+    persistToStorage({ ...get(), ...runningState });
+  },
+
   _handleTimerCompletion: () => {
     clearScheduledTimeouts();
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -475,44 +496,19 @@ export const useTimerStore = create<TimerState>((set, get) => ({
         nextSession = pomodoroSession + 1;
       }
 
-      set({
+      const nextDuration = POMODORO_DURATIONS[nextPhase];
+      const completedPomoState = {
+        duration: nextDuration,
         isActive: false,
         isCompleted: true,
         targetEndTime: null,
         pausedTimeRemaining: 0,
         pomodoroPhase: nextPhase,
         pomodoroSession: nextSession,
-      });
+      };
 
-      const nextDuration = POMODORO_DURATIONS[nextPhase];
-
-      // Auto-cascade to next phase after 1.5s delay (exact preserved quirk)
-      pomodoroAdvanceTimeout = setTimeout(() => {
-        const targetEnd = Date.now() + nextDuration * 1000;
-        const advancedState = {
-          duration: nextDuration,
-          targetEndTime: targetEnd,
-          pausedTimeRemaining: null,
-          isCompleted: false,
-          isActive: true,
-        };
-        set(advancedState);
-
-        const alertTitle = nextPhase === "work" ? "Break Over" : "Break Finished";
-        const alertBody = nextPhase === "work" ? "Ready for your next focused session?" : "Break has ended.";
-        scheduleFocusTimerAlarm(alertTitle, alertBody, nextDuration);
-
-        scheduleCompletion(targetEnd, () => get()._handleTimerCompletion());
-        persistToStorage({ ...get(), ...advancedState });
-      }, 1500);
-
-      persistToStorage({
-        ...get(),
-        isActive: false,
-        isCompleted: true,
-        targetEndTime: null,
-        pausedTimeRemaining: 0,
-      });
+      set(completedPomoState);
+      persistToStorage({ ...get(), ...completedPomoState });
     } else {
       // Free session stats
       if (duration > 0) {

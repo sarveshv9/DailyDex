@@ -6,7 +6,8 @@ import {
   StyleSheet,
   ViewStyle,
 } from "react-native";
-import * as Haptics from "../../utils/haptics";
+import { useTheme } from "../../context/ThemeContext";
+import { useAppHaptics } from "../../hooks/useAppHaptics";
 
 export interface AppSwitchProps {
   value: boolean;
@@ -31,6 +32,8 @@ export const AppSwitch: React.FC<AppSwitchProps> = ({
   style,
   accessibilityLabel,
 }) => {
+  const { theme } = useTheme();
+  const { selection } = useAppHaptics();
   const [animatedValue] = useState(() => new Animated.Value(value ? 1 : 0));
 
   useEffect(() => {
@@ -44,12 +47,13 @@ export const AppSwitch: React.FC<AppSwitchProps> = ({
 
   const handlePress = () => {
     if (disabled) return;
-    Haptics.selectionAsync();
+    selection();
     onValueChange(!value);
   };
 
-  const offTrack = trackColor?.false ?? "#D4D4D8";
-  const onTrack = trackColor?.true ?? "#000000";
+  const offTrack =
+    trackColor?.false ?? (theme.isDarkMode ? "#3F3F46" : "#D4D4D8");
+  const onTrack = trackColor?.true ?? theme.colors.primary;
 
   const backgroundColor = animatedValue.interpolate({
     inputRange: [0, 1],
@@ -69,7 +73,11 @@ export const AppSwitch: React.FC<AppSwitchProps> = ({
       accessibilityState={{ checked: value, disabled }}
       accessibilityLabel={accessibilityLabel}
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      style={[styles.trackContainer, style]}
+      style={[
+        styles.trackContainer,
+        disabled && styles.disabled,
+        style,
+      ]}
     >
       <Animated.View style={[styles.trackBackground, { backgroundColor }]}>
         <Animated.View
@@ -91,6 +99,9 @@ const styles = StyleSheet.create({
     width: 48,
     height: 28,
     justifyContent: "center",
+  },
+  disabled: {
+    opacity: 0.45,
   },
   trackBackground: {
     width: 48,

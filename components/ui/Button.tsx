@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import {
   ActivityIndicator,
+  Insets,
   Platform,
   Pressable,
   StyleProp,
@@ -39,6 +40,7 @@ export interface ButtonProps {
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
   fullWidth?: boolean;
+  hitSlop?: Insets;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -55,6 +57,7 @@ export const Button: React.FC<ButtonProps> = ({
   style,
   textStyle,
   fullWidth = false,
+  hitSlop,
 }) => {
   const { theme } = useTheme();
   const { light, medium, heavy, selection } = useAppHaptics();
@@ -94,12 +97,17 @@ export const Button: React.FC<ButtonProps> = ({
   const displayContent = title ?? children;
   const isTextContent = typeof displayContent === "string";
 
+  const resolvedHitSlop =
+    hitSlop ??
+    (size === "sm" ? { top: 8, bottom: 8, left: 8, right: 8 } : undefined);
+
   return (
     <Pressable
       onPress={handlePress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       disabled={disabled || loading}
+      hitSlop={resolvedHitSlop}
       style={fullWidth ? styles.fullWidth : undefined}
       accessibilityRole="button"
       accessibilityState={{ disabled: disabled || loading }}
@@ -113,32 +121,35 @@ export const Button: React.FC<ButtonProps> = ({
           animatedStyle,
         ]}
       >
-        {loading ? (
-          <ActivityIndicator
-            size="small"
-            color={
-              variant === "primary"
-                ? theme.colors.onPrimary
-                : variant === "destructive"
-                ? theme.colors.danger
-                : theme.colors.primaryText
-            }
-          />
-        ) : (
-          <View style={styles.content}>
-            {icon && iconPosition === "left" && (
-              <View style={styles.leftIcon}>{icon}</View>
-            )}
-            {isTextContent ? (
-              <Text style={[styles.text, disabled && styles.disabledText, textStyle]}>
-                {displayContent}
-              </Text>
-            ) : (
-              displayContent
-            )}
-            {icon && iconPosition === "right" && (
-              <View style={styles.rightIcon}>{icon}</View>
-            )}
+        <View style={[styles.content, loading && styles.contentHidden]}>
+          {icon && iconPosition === "left" && (
+            <View style={styles.leftIcon}>{icon}</View>
+          )}
+          {isTextContent ? (
+            <Text
+              style={[styles.text, disabled && styles.disabledText, textStyle]}
+            >
+              {displayContent}
+            </Text>
+          ) : (
+            displayContent
+          )}
+          {icon && iconPosition === "right" && (
+            <View style={styles.rightIcon}>{icon}</View>
+          )}
+        </View>
+        {loading && (
+          <View style={styles.loadingOverlay} pointerEvents="none">
+            <ActivityIndicator
+              size="small"
+              color={
+                variant === "primary"
+                  ? theme.colors.onPrimary
+                  : variant === "destructive"
+                  ? theme.colors.danger
+                  : theme.colors.primaryText
+              }
+            />
           </View>
         )}
       </Animated.View>
@@ -197,6 +208,14 @@ const getStyles = (theme: Theme, variant: ButtonVariant, size: ButtonSize) => {
     },
     content: {
       flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    contentHidden: {
+      opacity: 0,
+    },
+    loadingOverlay: {
+      ...StyleSheet.absoluteFill,
       alignItems: "center",
       justifyContent: "center",
     },

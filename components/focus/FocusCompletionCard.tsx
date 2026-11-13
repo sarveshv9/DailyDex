@@ -10,6 +10,10 @@ export interface FocusCompletionCardProps {
   durationMinutes: number;
   onComplete: () => void;
   onRestart: () => void;
+  pomodoroMode?: boolean;
+  pomodoroPhase?: "work" | "shortBreak" | "longBreak";
+  pomodoroSession?: number;
+  onStartNextPomoPhase?: () => void;
   theme: Theme;
   isDarkMode: boolean;
 }
@@ -18,10 +22,83 @@ const FocusCompletionCardComponent: React.FC<FocusCompletionCardProps> = ({
   durationMinutes,
   onComplete,
   onRestart,
+  pomodoroMode = false,
+  pomodoroPhase,
+  pomodoroSession = 1,
+  onStartNextPomoPhase,
   theme,
   isDarkMode,
 }) => {
   const styles = useMemo(() => getStyles(theme, isDarkMode), [theme, isDarkMode]);
+
+  const isPomoInCycle = Boolean(
+    pomodoroMode &&
+    onStartNextPomoPhase &&
+    (pomodoroPhase === "shortBreak" ||
+      pomodoroPhase === "longBreak" ||
+      (pomodoroPhase === "work" && pomodoroSession > 1))
+  );
+
+  const isRestPhase = pomodoroPhase === "shortBreak" || pomodoroPhase === "longBreak";
+
+  // Dynamic content based on session type
+  let iconName: keyof typeof Ionicons.glyphMap = "checkmark-circle";
+  let title = "Session Accomplished";
+  let message =
+    "Take a calming breath. Your mindful presence and dedicated focus have nurtured clarity.";
+  let primaryButtonText = "Complete & Return to Tasks";
+  let primaryButtonIcon: keyof typeof Ionicons.glyphMap =
+    "checkmark-done-circle-outline";
+  let primaryButtonAction = onComplete;
+  let secondaryButtonText = "Start Another Session";
+  let secondaryButtonIcon: keyof typeof Ionicons.glyphMap = "refresh-outline";
+  let secondaryButtonAction = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onRestart();
+  };
+
+  if (isPomoInCycle) {
+    if (pomodoroPhase === "shortBreak") {
+      iconName = "cafe-outline";
+      title = "Focus Sprint Complete";
+      message = "Great work! Step away, stretch, and take a 5-minute breather.";
+      primaryButtonText = "Start 5m Rest";
+      primaryButtonIcon = "cafe-outline";
+      primaryButtonAction = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        onStartNextPomoPhase?.();
+      };
+      secondaryButtonText = "End Session Early";
+      secondaryButtonIcon = "close-circle-outline";
+      secondaryButtonAction = onComplete;
+    } else if (pomodoroPhase === "longBreak") {
+      iconName = "cafe-outline";
+      title = "4 Sprints Accomplished";
+      message = "Incredible focus! You've earned a restorative 15-minute rest.";
+      primaryButtonText = "Start 15m Long Rest";
+      primaryButtonIcon = "cafe-outline";
+      primaryButtonAction = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        onStartNextPomoPhase?.();
+      };
+      secondaryButtonText = "Finish Session";
+      secondaryButtonIcon = "checkmark-circle-outline";
+      secondaryButtonAction = onComplete;
+    } else if (pomodoroPhase === "work") {
+      iconName = "flame-outline";
+      title = "Rest Period Complete";
+      message = `Whenever you're ready, dive into Cycle ${pomodoroSession} of 4.`;
+      primaryButtonText = "Start Focus Sprint (25m)";
+      primaryButtonIcon = "play";
+      primaryButtonAction = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        onStartNextPomoPhase?.();
+      };
+      secondaryButtonText = "End Session Early";
+      secondaryButtonIcon = "close-circle-outline";
+      secondaryButtonAction = onComplete;
+    }
+  }
 
   return (
     <Animated.View
@@ -34,16 +111,13 @@ const FocusCompletionCardComponent: React.FC<FocusCompletionCardProps> = ({
           style={styles.completionIconCircle}
         >
           <Ionicons
-            name="checkmark-circle"
+            name={iconName}
             size={36}
             color={theme.colors.primaryText}
           />
         </Animated.View>
-        <Text style={styles.completionTitle}>Session Accomplished</Text>
-        <Text style={styles.completionMessage}>
-          Take a calming breath. Your mindful presence and dedicated focus have
-          nurtured clarity.
-        </Text>
+        <Text style={styles.completionTitle}>{title}</Text>
+        <Text style={styles.completionMessage}>{message}</Text>
 
         <View style={styles.completionPill}>
           <Ionicons
@@ -59,45 +133,38 @@ const FocusCompletionCardComponent: React.FC<FocusCompletionCardProps> = ({
 
       {/* Primary Action Button */}
       <Pressable
-        onPress={onComplete}
+        onPress={primaryButtonAction}
         accessibilityRole="button"
-        accessibilityLabel="Complete and return to tasks"
+        accessibilityLabel={primaryButtonText}
         style={({ pressed }) => [
           styles.primaryActionButton,
           pressed && styles.pressedScale,
         ]}
       >
         <Ionicons
-          name="checkmark-done-circle-outline"
+          name={primaryButtonIcon}
           size={22}
           color={theme.colors.onPrimary}
         />
-        <Text style={styles.primaryActionButtonText}>
-          Complete & Return to Tasks
-        </Text>
+        <Text style={styles.primaryActionButtonText}>{primaryButtonText}</Text>
       </Pressable>
 
-      {/* Secondary Button to Start Another Session */}
+      {/* Secondary Action Button */}
       <Pressable
-        onPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          onRestart();
-        }}
+        onPress={secondaryButtonAction}
         accessibilityRole="button"
-        accessibilityLabel="Start another focus session"
+        accessibilityLabel={secondaryButtonText}
         style={({ pressed }) => [
           styles.secondaryActionButton,
           pressed && styles.pressedScale,
         ]}
       >
         <Ionicons
-          name="refresh-outline"
+          name={secondaryButtonIcon}
           size={18}
           color={theme.colors.primaryText}
         />
-        <Text style={styles.secondaryActionButtonText}>
-          Start Another Session
-        </Text>
+        <Text style={styles.secondaryActionButtonText}>{secondaryButtonText}</Text>
       </Pressable>
     </Animated.View>
   );

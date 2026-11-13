@@ -36,11 +36,18 @@ const formatTaskTime = (timeStr: string): string => {
 export interface UpNextRowProps {
   task: RoutineItem;
   onPress: (task: RoutineItem) => void;
+  onToggleComplete?: (task: RoutineItem) => void;
   theme: Theme;
   isDarkMode: boolean;
 }
 
-const UpNextRowComponent = ({ task, onPress, theme, isDarkMode }: UpNextRowProps) => {
+const UpNextRowComponent = ({
+  task,
+  onPress,
+  onToggleComplete,
+  theme,
+  isDarkMode,
+}: UpNextRowProps) => {
   const styles = useMemo(() => getStyles(theme, isDarkMode), [theme, isDarkMode]);
   const handlePress = useCallback(() => onPress(task), [onPress, task]);
 
@@ -48,6 +55,7 @@ const UpNextRowComponent = ({ task, onPress, theme, isDarkMode }: UpNextRowProps
     <Pressable
       style={({ pressed }) => [
         styles.upNextCard,
+        task.completed && styles.upNextCardCompleted,
         pressed && { opacity: 0.82, transform: [{ scale: 0.985 }] },
       ]}
       onPress={handlePress}
@@ -56,6 +64,24 @@ const UpNextRowComponent = ({ task, onPress, theme, isDarkMode }: UpNextRowProps
         task.duration ? `, ${task.duration} minutes` : ""
       }`}
     >
+      {onToggleComplete ? (
+        <Pressable
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          onPress={() => onToggleComplete(task)}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: !!task.completed }}
+          accessibilityLabel={task.completed ? "Mark incomplete" : "Mark complete"}
+          style={[
+            styles.checkCircle,
+            task.completed && styles.checkCircleCompleted,
+          ]}
+        >
+          {task.completed ? (
+            <Ionicons name="checkmark" size={13} color={theme.colors.onPrimary} />
+          ) : null}
+        </Pressable>
+      ) : null}
+
       <View style={styles.upNextIconSquircle}>
         <Ionicons
           name={toOutline(getRoutineIcon(task.imageKey))}
@@ -64,7 +90,13 @@ const UpNextRowComponent = ({ task, onPress, theme, isDarkMode }: UpNextRowProps
         />
       </View>
       <View style={styles.upNextInfo}>
-        <Text style={styles.upNextTaskName} numberOfLines={1}>
+        <Text
+          style={[
+            styles.upNextTaskName,
+            task.completed && styles.taskCompletedText,
+          ]}
+          numberOfLines={1}
+        >
           {task.task}
         </Text>
         {task.duration ? (
@@ -95,6 +127,7 @@ export interface UpNextSectionProps {
   tasks: RoutineItem[];
   onSelectTask: (task: RoutineItem) => void;
   onOpenRoutineTimeline: () => void;
+  onToggleComplete?: (task: RoutineItem) => void;
   theme: Theme;
   isDarkMode: boolean;
 }
@@ -103,6 +136,7 @@ const UpNextSectionComponent: React.FC<UpNextSectionProps> = ({
   tasks,
   onSelectTask,
   onOpenRoutineTimeline,
+  onToggleComplete,
   theme,
   isDarkMode,
 }) => {
@@ -127,6 +161,7 @@ const UpNextSectionComponent: React.FC<UpNextSectionProps> = ({
               <UpNextRow
                 task={task}
                 onPress={onSelectTask}
+                onToggleComplete={onToggleComplete}
                 theme={theme}
                 isDarkMode={isDarkMode}
               />
@@ -198,6 +233,27 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       borderRadius: 20,
       padding: 14,
       gap: 12,
+    },
+    upNextCardCompleted: {
+      opacity: 0.65,
+    },
+    checkCircle: {
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      borderWidth: 2,
+      borderColor: theme.colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "transparent",
+    },
+    checkCircleCompleted: {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
+    },
+    taskCompletedText: {
+      textDecorationLine: "line-through",
+      opacity: 0.6,
     },
     upNextIconSquircle: {
       width: 44,

@@ -25,6 +25,7 @@ export interface FocusHeroCardProps {
   hasNextTask: boolean;
   onOpenFocus: () => void;
   onOpenTimeline: () => void;
+  onToggleComplete?: (item: RoutineItem) => void;
   theme: Theme;
   isDarkMode: boolean;
 }
@@ -39,6 +40,7 @@ const FocusHeroCardComponent: React.FC<FocusHeroCardProps> = ({
   hasNextTask,
   onOpenFocus,
   onOpenTimeline,
+  onToggleComplete,
   theme,
   isDarkMode,
 }) => {
@@ -74,8 +76,27 @@ const FocusHeroCardComponent: React.FC<FocusHeroCardProps> = ({
 
       <View style={styles.focusCard}>
         <View style={styles.focusCardInner}>
-          {/* Top: Icon + Name + Description + Duration + Focus Timer Button */}
+          {/* Top: Checkbox + Icon + Name + Description + Duration + Focus Timer Button */}
           <View style={styles.focusTopRow}>
+            {currentTaskItem && onToggleComplete ? (
+              <Pressable
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                onPress={() => onToggleComplete(currentTaskItem)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: !!currentTaskItem.completed }}
+                accessibilityLabel={
+                  currentTaskItem.completed ? "Mark habit incomplete" : "Mark habit complete"
+                }
+                style={[
+                  styles.checkCircle,
+                  currentTaskItem.completed && styles.checkCircleCompleted,
+                ]}
+              >
+                {currentTaskItem.completed ? (
+                  <Ionicons name="checkmark" size={15} color={theme.colors.onPrimary} />
+                ) : null}
+              </Pressable>
+            ) : null}
             <View style={styles.focusIconSquircle}>
               <Ionicons
                 name={taskIcon}
@@ -85,7 +106,10 @@ const FocusHeroCardComponent: React.FC<FocusHeroCardProps> = ({
             </View>
             <View style={styles.focusTextCol}>
               <Text
-                style={styles.focusTaskName}
+                style={[
+                  styles.focusTaskName,
+                  currentTaskItem?.completed && styles.taskCompletedText,
+                ]}
                 numberOfLines={1}
                 accessibilityRole="header"
               >
@@ -221,7 +245,25 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     focusTopRow: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 14,
+      gap: 12,
+    },
+    checkCircle: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      borderWidth: 2,
+      borderColor: theme.colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "transparent",
+    },
+    checkCircleCompleted: {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
+    },
+    taskCompletedText: {
+      textDecorationLine: "line-through",
+      opacity: 0.6,
     },
     focusIconSquircle: {
       width: 50,

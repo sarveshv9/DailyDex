@@ -149,7 +149,7 @@ describe("Zustand Timer Store", () => {
     expect(completedState.targetEndTime).toBeNull();
   });
 
-  it("preserves pomodoro auto-cascade to break phase after 1.5s delay", () => {
+  it("completes pomodoro phase and waits for user confirmation before starting break", () => {
     const now = 1000000;
     jest.setSystemTime(now);
 
@@ -162,12 +162,18 @@ describe("Zustand Timer Store", () => {
     // Complete the work session (25 minutes = 1500s)
     jest.advanceTimersByTime(1500 * 1000);
 
-    // Completed state immediately shows completed
+    // Completed state immediately shows completed and targets next phase
     expect(useTimerStore.getState().isCompleted).toBe(true);
+    expect(useTimerStore.getState().isActive).toBe(false);
     expect(useTimerStore.getState().pomodoroPhase).toBe("shortBreak");
 
-    // After 1.5s delay, auto-advances into the break phase
-    jest.advanceTimersByTime(1500);
+    // Does NOT auto-advance after time passes (respects user pace)
+    jest.advanceTimersByTime(5000);
+    expect(useTimerStore.getState().isActive).toBe(false);
+    expect(useTimerStore.getState().isCompleted).toBe(true);
+
+    // Explicitly starts break when user confirms
+    useTimerStore.getState().startNextPomodoroPhase();
 
     const breakState = useTimerStore.getState();
     expect(breakState.isActive).toBe(true);
