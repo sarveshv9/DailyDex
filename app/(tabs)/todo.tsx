@@ -307,7 +307,7 @@ const TaskItemComponent = ({
             textStyle={styles.activeTimerText}
             fallback={
               <Pressable
-                style={styles.iconActionButton}
+                style={styles.timerActionButton}
                 onPress={(e) => {
                   e.stopPropagation();
                   handleOpenFocus();
@@ -776,11 +776,13 @@ const TodoHeaderComponent = ({
 
   return (
     <View style={styles.heroHeader}>
-      {/* Eyebrow, Title & Action */}
+      {/* Title & Action */}
       <View style={styles.headerTitleRow}>
         <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle}>Tasks Hub</Text>
-          <Text style={styles.headerEyebrow}>{dateFormatted}</Text>
+          <Text style={styles.headerSubtitle}>
+            {dateFormatted} • {tasksCount} {tasksCount === 1 ? "task" : "tasks"}
+          </Text>
         </View>
 
         {completedCount > 0 && (
@@ -824,8 +826,8 @@ const TodoHeaderComponent = ({
       {/* Quick-Add Inline Input */}
       <View style={styles.quickAddBar}>
         <Ionicons
-          name="add-circle-outline"
-          size={22}
+          name="add"
+          size={20}
           color={theme.colors.primary}
           style={{ marginLeft: 2 }}
         />
@@ -834,8 +836,8 @@ const TodoHeaderComponent = ({
           style={styles.quickAddInput}
           placeholder={
             activeFilter === "later"
-              ? "Quick-add task for Later..."
-              : "Quick-add task for Today..."
+              ? "Add a task for Later..."
+              : "Add an intention for Today..."
           }
           placeholderTextColor={theme.colors.textSecondary}
           value={quickInputText}
@@ -1150,13 +1152,11 @@ export default function TodoScreen() {
 
   // Greeting & Date formatting
   const now = new Date();
-  const dateFormatted = now
-    .toLocaleDateString("en-US", {
-      weekday: "long",
-      month: "short",
-      day: "numeric",
-    })
-    .toUpperCase();
+  const dateFormatted = now.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  });
 
   const renderHeader = useCallback(
     () => (
@@ -1293,19 +1293,18 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       justifyContent: "space-between",
       marginBottom: 16,
     },
-    headerEyebrow: {
-      fontFamily: theme.fonts.bold,
-      fontSize: themeTokens.fonts.size.xs,
-      letterSpacing: 1.5,
+    headerSubtitle: {
+      fontFamily: theme.fonts.medium,
+      fontSize: 14,
       color: theme.colors.textSecondary,
       marginTop: 2,
     },
     headerTitle: {
       fontFamily: theme.fonts.bold,
-      fontSize: themeTokens.fonts.size.display,
+      fontSize: 28,
       lineHeight: 34,
       color: theme.colors.text,
-      letterSpacing: -0.6,
+      letterSpacing: -0.5,
     },
     clearDoneBtn: {
       flexDirection: "row",
@@ -1377,17 +1376,17 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     quickAddBar: {
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: theme.colors.surface,
+      backgroundColor: isDarkMode ? theme.colors.surfaceMuted : "#E8EFF9",
       borderWidth: 0,
-      borderRadius: 22,
-      paddingHorizontal: 14,
-      height: 52,
+      borderRadius: 24,
+      paddingHorizontal: 16,
+      height: 48,
       gap: 10,
     },
     quickAddInput: {
       flex: 1,
-      fontFamily: theme.fonts.regular,
-      fontSize: themeTokens.fonts.size.sm,
+      fontFamily: theme.fonts.medium,
+      fontSize: 14,
       color: theme.colors.text,
       paddingVertical: 0,
     },
@@ -1499,9 +1498,9 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     categoryTag: {
       flexDirection: "row",
       alignItems: "center",
-      paddingHorizontal: 7,
-      paddingVertical: 2,
-      borderRadius: 8,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 999,
     },
     categoryTagToday: {
       backgroundColor: activeTint,
@@ -1511,8 +1510,8 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     },
     categoryTagText: {
       fontFamily: theme.fonts.bold,
-      fontSize: themeTokens.fonts.size.xs,
-      letterSpacing: 0.3,
+      fontSize: 11,
+      letterSpacing: 0.2,
     },
 
     taskActionsRow: {
@@ -1528,6 +1527,14 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: neutralFill,
+    },
+    timerActionButton: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "#E0F0FE",
     },
     activeTimerBadge: {
       flexDirection: "row",

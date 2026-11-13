@@ -141,7 +141,6 @@ const getStyles = (theme: Theme, selected: boolean, size: "sm" | "md") => {
       minHeight: isSm ? 28 : 36,
       overflow: "hidden",
       position: "relative",
-      borderColor: selected ? theme.colors.primary : theme.colors.border,
     },
     activeUnderlay: {
       ...StyleSheet.absoluteFill,
@@ -162,17 +161,14 @@ const getStyles = (theme: Theme, selected: boolean, size: "sm" | "md") => {
       marginLeft: theme.spacing.xs,
       backgroundColor: selected
         ? (theme.isDarkMode ? "rgba(255, 255, 255, 0.25)" : "rgba(0, 0, 0, 0.16)")
-        : theme.colors.surfaceMuted,
+        : (theme.isDarkMode ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.06)"),
       borderRadius: themeTokens.borderRadius.full,
       paddingHorizontal: theme.spacing.sm,
       paddingVertical: 2,
       minWidth: 20,
       alignItems: "center",
       justifyContent: "center",
-      borderWidth: 1,
-      borderColor: selected
-        ? (theme.isDarkMode ? "rgba(255, 255, 255, 0.35)" : "rgba(0, 0, 0, 0.22)")
-        : theme.colors.border,
+      borderWidth: 0,
       zIndex: 1,
     },
     badgeText: {

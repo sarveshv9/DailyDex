@@ -229,8 +229,8 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     primaryActionButton: {
       ...shared.primaryButton,
       width: "100%",
-      height: 56,
-      borderRadius: themeTokens.borderRadius.xl,
+      height: 52,
+      borderRadius: 999,
       paddingVertical: 0,
       paddingHorizontal: 0,
       flexDirection: "row",
@@ -252,8 +252,8 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     secondaryActionButton: {
       ...shared.secondaryButton,
       width: "100%",
-      height: 56,
-      borderRadius: themeTokens.borderRadius.xl,
+      height: 52,
+      borderRadius: 999,
       paddingVertical: 0,
       paddingHorizontal: 0,
       flexDirection: "row",

@@ -1325,8 +1325,7 @@ const getStyles = (theme: Theme) =>
             backgroundColor: `${theme.colors.text}08`,
             alignItems: 'center',
             justifyContent: 'center',
-            borderWidth: 1,
-            borderColor: `${theme.colors.text}10`,
+            borderWidth: 0,
         },
         headerDateBlock: {
             flex: 1,
@@ -1384,8 +1383,7 @@ const getStyles = (theme: Theme) =>
             alignItems: 'center',
             justifyContent: 'center',
             marginLeft: 4,
-            borderWidth: 1,
-            borderColor: `${theme.colors.text}10`,
+            borderWidth: 0,
         },
 
         /* ── Timeline layout ── */
@@ -1453,8 +1451,7 @@ const getStyles = (theme: Theme) =>
             justifyContent: 'center',
         },
         dateBadgeToday: {
-            borderWidth: 1.5,
-            borderColor: theme.colors.border,
+            borderWidth: 0,
             backgroundColor: theme.colors.primarySoft,
         },
         dateNum: {
@@ -1534,8 +1531,7 @@ const getStyles = (theme: Theme) =>
             paddingVertical: 12,
             backgroundColor: theme.colors.surface,
             borderRadius: 20,
-            borderWidth: 1,
-            borderColor: theme.colors.border,
+            borderWidth: 0,
             overflow: 'hidden',
             ...Platform.select({
                 ios: {
@@ -1562,7 +1558,7 @@ const getStyles = (theme: Theme) =>
             borderRadius: 21,
             alignItems: 'center',
             justifyContent: 'center',
-            borderWidth: 1.5,
+            borderWidth: 0,
             marginRight: 13,
         },
         peekText: { flex: 1 },

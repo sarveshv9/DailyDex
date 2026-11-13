@@ -407,8 +407,7 @@ const getStyles = (theme: Theme) => {
         borderRadius: theme.borderRadius.lg,
         paddingHorizontal: theme.spacing.md,
         marginBottom: theme.spacing.lg,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
+        borderWidth: 0,
     },
     toggleRow: {
         ...shared.toggleRow,
@@ -435,8 +434,7 @@ const getStyles = (theme: Theme) => {
         backgroundColor: theme.colors.surfaceMuted,
         borderRadius: theme.borderRadius.lg,
         paddingHorizontal: theme.spacing.md,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
+        borderWidth: 0,
     },
     themeRow: {
         flexDirection: "row",
@@ -488,8 +486,7 @@ const getStyles = (theme: Theme) => {
         padding: theme.spacing.lg,
         backgroundColor: theme.colors.surface,
         borderRadius: 24,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
+        borderWidth: 0,
     },
     customFormHeader: {
         flexDirection: "row",
@@ -509,7 +506,7 @@ const getStyles = (theme: Theme) => {
         borderRadius: 20,
         padding: theme.spacing.md,
         marginBottom: theme.spacing.lg,
-        borderWidth: 1,
+        borderWidth: 0,
     },
     previewAvatar: {
         width: 60, height: 60, borderRadius: 16,
@@ -533,8 +530,7 @@ const getStyles = (theme: Theme) => {
         paddingHorizontal: 6,
         paddingVertical: 2,
         borderRadius: 6,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
+        borderWidth: 0,
     },
     adjustedBadgeText: {
         fontSize: 10,
@@ -553,8 +549,7 @@ const getStyles = (theme: Theme) => {
         alignItems: "center",
         backgroundColor: theme.colors.surfaceMuted,
         borderRadius: 16,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
+        borderWidth: 0,
         paddingHorizontal: theme.spacing.md,
         gap: theme.spacing.sm,
     },
@@ -567,8 +562,7 @@ const getStyles = (theme: Theme) => {
     input: {
         backgroundColor: theme.colors.surfaceMuted,
         borderRadius: 16,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
+        borderWidth: 0,
         paddingHorizontal: theme.spacing.md,
         paddingVertical: theme.spacing.sm,
         color: theme.colors.text,
