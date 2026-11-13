@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  Dimensions,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -11,6 +12,7 @@ import {
   View,
   ViewStyle,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
   Easing,
   runOnJS,
@@ -22,6 +24,8 @@ import { useTheme } from "../../context/ThemeContext";
 import { useAppHaptics } from "../../hooks/useAppHaptics";
 import { themeTokens } from "../../constants/themeTokens";
 import { getSharedStyles, Theme } from "../../styles/shared";
+
+const SCREEN_HEIGHT = Dimensions.get("window").height || 800;
 
 export interface ModalSheetProps {
   visible: boolean;
@@ -48,9 +52,10 @@ export const ModalSheet: React.FC<ModalSheetProps> = ({
 }) => {
   const { theme: contextTheme } = useTheme();
   const theme = customTheme ?? contextTheme;
+  const insets = useSafeAreaInsets();
   const { light } = useAppHaptics();
   const shared = useMemo(() => getSharedStyles(theme), [theme]);
-  const styles = useMemo(() => getStyles(theme), [theme]);
+  const styles = useMemo(() => getStyles(theme, insets.bottom), [theme, insets.bottom]);
 
   const [prevVisible, setPrevVisible] = useState(visible);
   const [isExiting, setIsExiting] = useState(false);
@@ -65,12 +70,12 @@ export const ModalSheet: React.FC<ModalSheetProps> = ({
   }
 
   const backdropOpacity = useSharedValue(visible ? 1 : 0);
-  const sheetTranslateY = useSharedValue(visible ? 0 : 380);
+  const sheetTranslateY = useSharedValue(visible ? 0 : SCREEN_HEIGHT);
 
   useEffect(() => {
     if (visible) {
       backdropOpacity.value = 0;
-      sheetTranslateY.value = 380;
+      sheetTranslateY.value = SCREEN_HEIGHT;
       backdropOpacity.value = withTiming(1, {
         duration: 180,
         easing: Easing.out(Easing.quad),
@@ -85,7 +90,7 @@ export const ModalSheet: React.FC<ModalSheetProps> = ({
         easing: Easing.in(Easing.quad),
       });
       sheetTranslateY.value = withTiming(
-        380,
+        SCREEN_HEIGHT,
         {
           duration: 180,
           easing: Easing.bezier(0.32, 0, 0.67, 0),
@@ -168,7 +173,7 @@ export const ModalSheet: React.FC<ModalSheetProps> = ({
   );
 };
 
-const getStyles = (theme: Theme) => {
+const getStyles = (theme: Theme, bottomInset: number = 0) => {
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -179,7 +184,7 @@ const getStyles = (theme: Theme) => {
       borderTopLeftRadius: theme.borderRadius.lg + 8,
       borderTopRightRadius: theme.borderRadius.lg + 8,
       paddingHorizontal: theme.spacing.lg,
-      paddingBottom: Platform.OS === "ios" ? themeTokens.spacing.xxl : theme.spacing.lg,
+      paddingBottom: Math.max(bottomInset, Platform.OS === "ios" ? theme.spacing.xl : theme.spacing.lg),
       paddingTop: theme.spacing.sm,
       maxHeight: "90%",
       borderTopWidth: 1,
