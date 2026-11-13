@@ -95,8 +95,7 @@ const getStyles = (theme: Theme, variant: CardVariant, padding: CardPadding) => 
     return StyleSheet.create({
       card: {
         backgroundColor: theme.colors.surface,
-        borderColor: theme.colors.border,
-        borderWidth: 1,
+        borderWidth: 0,
         borderRadius: theme.borderRadius.lg,
         padding: paddingValue,
         elevation: 0,
@@ -109,21 +108,20 @@ const getStyles = (theme: Theme, variant: CardVariant, padding: CardPadding) => 
   }
 
   let backgroundColor = theme.colors.surface;
-  let borderColor = theme.colors.border;
-  let borderWidth = 1;
+  let borderWidth = 0;
   let shadowStyle = {
     ...Platform.select({
       ios: {
         shadowColor: "#000000",
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
+        shadowOpacity: 0.05,
         shadowRadius: 8,
       },
       android: {
         elevation: 2,
       },
       web: {
-        boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.08)",
+        boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.05)",
       },
     }),
   };
@@ -131,7 +129,6 @@ const getStyles = (theme: Theme, variant: CardVariant, padding: CardPadding) => 
   return StyleSheet.create({
     card: {
       backgroundColor,
-      borderColor,
       borderWidth,
       borderRadius: theme.borderRadius.lg,
       padding: paddingValue,

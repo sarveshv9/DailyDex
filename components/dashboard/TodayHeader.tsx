@@ -22,13 +22,11 @@ const getGreetingDetails = (hour: number): GreetingDetails => {
 };
 
 const formatDate = (date: Date): string =>
-  date
-    .toLocaleDateString("en-US", {
-      weekday: "long",
-      month: "short",
-      day: "numeric",
-    })
-    .toUpperCase();
+  date.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  });
 
 const formatTime = (date: Date): string =>
   date.toLocaleTimeString("en-US", {
@@ -54,7 +52,6 @@ const TodayHeaderComponent: React.FC<TodayHeaderProps> = ({
   theme,
   isDarkMode,
 }) => {
-
   const greetingInfo = useMemo(
     () => getGreetingDetails(currentTime.getHours()),
     [currentTime]
@@ -72,13 +69,13 @@ const TodayHeaderComponent: React.FC<TodayHeaderProps> = ({
             <Text style={styles.greeting}>{greetingInfo.text}</Text>
             <Ionicons
               name={greetingInfo.icon}
-              size={20}
-              color={theme.colors.textSecondary}
+              size={24}
+              color={theme.colors.text}
             />
           </View>
           <View style={styles.dateRow}>
             <Text style={styles.dateText}>{formattedDate}</Text>
-            <View style={styles.timeDot} />
+            <Text style={styles.dotSeparator}>•</Text>
             <Text style={styles.timeText}>{formattedTime}</Text>
           </View>
         </View>
@@ -93,17 +90,17 @@ const TodayHeaderComponent: React.FC<TodayHeaderProps> = ({
           <View style={styles.progressRingWrapper}>
             <ProgressRing
               progress={dailyProgressFraction}
-              size={52}
-              strokeWidth={4.5}
+              size={48}
+              strokeWidth={3.5}
               color={theme.colors.primary}
-              trackColor={theme.colors.border}
+              trackColor={isDarkMode ? "rgba(255, 255, 255, 0.08)" : "#E2E8F0"}
             >
               <Text style={styles.progressCount}>{todayTasksDone}</Text>
             </ProgressRing>
             <Text style={styles.progressLabel}>
               {totalIntentions > 0
                 ? `${todayTasksDone}/${totalIntentions}`
-                : "Today"}
+                : "0/0"}
             </Text>
           </View>
         </View>
@@ -118,7 +115,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
   StyleSheet.create({
     heroBanner: {
       paddingHorizontal: 20,
-      paddingTop: 8,
+      paddingTop: 10,
       paddingBottom: 16,
     },
     heroTopRow: {
@@ -137,10 +134,10 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
       marginBottom: 4,
     },
     greeting: {
-      fontSize: themeTokens.fonts.size.xxl,
+      fontSize: 28,
       fontFamily: theme.fonts.bold,
       color: theme.colors.text,
-      letterSpacing: -0.4,
+      letterSpacing: -0.5,
     },
     dateRow: {
       flexDirection: "row",
@@ -148,20 +145,17 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
       gap: 6,
     },
     dateText: {
-      fontSize: themeTokens.fonts.size.xs,
+      fontSize: 14,
       fontFamily: theme.fonts.medium,
       color: theme.colors.textSecondary,
-      letterSpacing: 0.8,
     },
-    timeDot: {
-      width: 3,
-      height: 3,
-      borderRadius: 1.5,
-      backgroundColor: theme.colors.textSecondary,
-      opacity: 0.5,
+    dotSeparator: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+      marginHorizontal: 1,
     },
     timeText: {
-      fontSize: themeTokens.fonts.size.xs,
+      fontSize: 14,
       fontFamily: theme.fonts.medium,
       color: theme.colors.textSecondary,
       fontVariant: ["tabular-nums"],
@@ -171,16 +165,16 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
     },
     progressRingWrapper: {
       alignItems: "center",
-      gap: 4,
+      gap: 3,
     },
     progressCount: {
-      fontSize: themeTokens.fonts.size.md,
+      fontSize: 17,
       fontFamily: theme.fonts.bold,
       color: theme.colors.text,
       fontVariant: ["tabular-nums"],
     },
     progressLabel: {
-      fontSize: themeTokens.fonts.size.xs,
+      fontSize: 12,
       fontFamily: theme.fonts.medium,
       color: theme.colors.textSecondary,
     },

@@ -108,8 +108,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
     pomoCycleCard: {
       width: "100%",
       borderRadius: themeTokens.borderRadius.lg,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderWidth: 0,
       backgroundColor: theme.colors.surface,
       overflow: "hidden",
       paddingHorizontal: themeTokens.spacing.lg,
@@ -150,20 +149,17 @@ const getStyles = (theme: Theme, isDarkMode: boolean) =>
       flex: 1,
       height: 32,
       borderRadius: themeTokens.borderRadius.md,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderWidth: 0,
       backgroundColor: theme.colors.surfaceMuted,
       alignItems: "center",
       justifyContent: "center",
     },
     pomoDotPillDone: {
       backgroundColor: theme.colors.primary,
-      borderColor: theme.colors.primary,
     },
     pomoDotPillActive: {
       backgroundColor: theme.colors.primarySoft,
-      borderColor: theme.colors.primary,
-      borderWidth: 1.5,
+      borderWidth: 0,
     },
     pomoDotText: {
       fontFamily: theme.fonts.bold,

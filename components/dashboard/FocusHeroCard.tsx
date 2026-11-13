@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import React, { useMemo } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, {
@@ -8,8 +9,7 @@ import Animated, {
   withTiming,
   Easing,
 } from "react-native-reanimated";
-import { themeTokens } from "../../constants/themeTokens";
-import { Theme, getSharedStyles } from "../../styles/shared";
+import { Theme } from "../../styles/shared";
 import { RoutineItem } from "../../utils/utils";
 import { ActiveTimerBadge } from "../common/ActiveTimerBadge";
 
@@ -65,18 +65,23 @@ const FocusHeroCardComponent: React.FC<FocusHeroCardProps> = ({
     ctaOpacity.value = withTiming(1, { duration: 160, easing: Easing.out(Easing.quad) });
   };
 
+  const gradientColors: [string, string] = useMemo(() => {
+    return [theme.colors.primarySoft, theme.colors.surface];
+  }, [theme.colors.primarySoft, theme.colors.surface]);
+
   return (
     <Animated.View
       entering={FadeInDown.duration(600).delay(80)}
       style={styles.sectionContainer}
     >
-      <View style={styles.sectionHeaderRow}>
-        <Text style={styles.sectionLabel}>Current Focus</Text>
-      </View>
-
       <View style={styles.focusCard}>
-        <View style={styles.focusCardInner}>
-          {/* Top: Checkbox + Icon + Name + Description + Duration + Focus Timer Button */}
+        <LinearGradient
+          colors={gradientColors}
+          start={{ x: 0.1, y: 0 }}
+          end={{ x: 0.2, y: 0.95 }}
+          style={styles.focusCardInner}
+        >
+          {/* Top: Checkbox + Icon + Name + Description + Duration / Focus Timer */}
           <View style={styles.focusTopRow}>
             {currentTaskItem && onToggleComplete ? (
               <Pressable
@@ -93,17 +98,19 @@ const FocusHeroCardComponent: React.FC<FocusHeroCardProps> = ({
                 ]}
               >
                 {currentTaskItem.completed ? (
-                  <Ionicons name="checkmark" size={15} color={theme.colors.onPrimary} />
+                  <Ionicons name="checkmark" size={14} color={theme.colors.onPrimary} />
                 ) : null}
               </Pressable>
             ) : null}
+
             <View style={styles.focusIconSquircle}>
               <Ionicons
                 name={taskIcon}
-                size={26}
-                color={theme.colors.primaryText}
+                size={28}
+                color={isDarkMode ? "#FFFFFF" : theme.colors.primary}
               />
             </View>
+
             <View style={styles.focusTextCol}>
               <Text
                 style={[
@@ -116,19 +123,22 @@ const FocusHeroCardComponent: React.FC<FocusHeroCardProps> = ({
                 {currentTaskText}
               </Text>
               {currentTaskDesc ? (
-                <Text style={styles.focusDescription} numberOfLines={1}>
-                  {currentTaskDesc}
-                </Text>
+                <View style={styles.focusDescRow}>
+                  <Ionicons
+                    name="time-outline"
+                    size={14}
+                    color={theme.colors.textSecondary}
+                  />
+                  <Text style={styles.focusDescription} numberOfLines={1}>
+                    {currentTaskDesc}
+                  </Text>
+                </View>
               ) : null}
             </View>
+
             <View style={styles.focusTopActions}>
               {currentTaskItem?.duration ? (
                 <View style={styles.durationBadge}>
-                  <Ionicons
-                    name="time-outline"
-                    size={13}
-                    color={theme.colors.textSecondary}
-                  />
                   <Text style={styles.durationBadgeText}>
                     {currentTaskItem.duration}m
                   </Text>
@@ -152,7 +162,7 @@ const FocusHeroCardComponent: React.FC<FocusHeroCardProps> = ({
                       <Ionicons
                         name="timer-outline"
                         size={18}
-                        color={theme.colors.primaryText}
+                        color={theme.colors.primary}
                       />
                     </Pressable>
                   }
@@ -161,29 +171,31 @@ const FocusHeroCardComponent: React.FC<FocusHeroCardProps> = ({
             </View>
           </View>
 
-          {/* Progress Bar & Indicators */}
-          <View
-            style={styles.progressSection}
-            accessible={true}
-            accessibilityRole="progressbar"
-            accessibilityLabel={`Progress: ${progressPercent} percent`}
-            accessibilityValue={{ min: 0, max: 100, now: progressPercent }}
-          >
-            <View style={styles.progressLabelRow}>
-              <Text style={styles.progressLabelText}>Progress</Text>
-              <Text style={styles.progressPercent}>{progressPercent}%</Text>
+          {/* Dynamic Active Task Progress Indicator */}
+          {hasActiveTask && (
+            <View
+              style={styles.progressSection}
+              accessible={true}
+              accessibilityRole="progressbar"
+              accessibilityLabel={`Progress: ${progressPercent} percent`}
+              accessibilityValue={{ min: 0, max: 100, now: progressPercent }}
+            >
+              <View style={styles.progressLabelRow}>
+                <Text style={styles.progressLabelText}>Progress</Text>
+                <Text style={styles.progressPercent}>{progressPercent}%</Text>
+              </View>
+              <View style={styles.progressBarTrack}>
+                <View
+                  style={[
+                    styles.progressBarFill,
+                    { width: `${progressPercent}%` },
+                  ]}
+                />
+              </View>
             </View>
-            <View style={styles.progressBarTrack}>
-              <View
-                style={[
-                  styles.progressBarFill,
-                  { width: `${progressPercent}%` },
-                ]}
-              />
-            </View>
-          </View>
+          )}
 
-          {/* Main Action Button */}
+          {/* Main Action Pill Button */}
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="View daily flow"
@@ -207,7 +219,7 @@ const FocusHeroCardComponent: React.FC<FocusHeroCardProps> = ({
               />
             </Animated.View>
           </Pressable>
-        </View>
+        </LinearGradient>
       </View>
     </Animated.View>
   );
@@ -216,44 +228,34 @@ const FocusHeroCardComponent: React.FC<FocusHeroCardProps> = ({
 export const FocusHeroCard = React.memo(FocusHeroCardComponent);
 
 const getStyles = (theme: Theme, isDarkMode: boolean) => {
-  const shared = getSharedStyles(theme);
-  const tileBg = theme.colors.primarySoft;
-
   return StyleSheet.create({
     sectionContainer: {
       paddingHorizontal: 20,
       marginBottom: 24,
     },
-    sectionHeaderRow: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: 10,
-    },
-    sectionLabel: {
-      ...shared.sectionLabel,
-    },
-    headerLinkButton: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 2,
-    },
-    headerLinkText: {
-      fontSize: themeTokens.fonts.size.xs,
-      fontFamily: theme.fonts.medium,
-      color: theme.colors.primary,
-    },
     focusCard: {
-      borderRadius: 22,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderRadius: 28,
+      borderWidth: 0,
       backgroundColor: theme.colors.surface,
       overflow: "hidden",
-      elevation: 0,
+      ...Platform.select({
+        ios: {
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: isDarkMode ? 0.3 : 0.05,
+          shadowRadius: 12,
+        },
+        android: { elevation: 2 },
+        web: {
+          boxShadow: isDarkMode
+            ? "0 4px 16px rgba(0, 0, 0, 0.3)"
+            : "0 4px 16px rgba(0, 0, 0, 0.04)",
+        },
+      }),
     },
     focusCardInner: {
-      padding: 18,
-      gap: 14,
+      padding: 20,
+      gap: 16,
     },
     focusTopRow: {
       flexDirection: "row",
@@ -261,11 +263,11 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       gap: 12,
     },
     checkCircle: {
-      width: 24,
-      height: 24,
-      borderRadius: 12,
-      borderWidth: 2,
-      borderColor: theme.colors.border,
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      borderWidth: 1.5,
+      borderColor: isDarkMode ? "rgba(255, 255, 255, 0.25)" : "#CBD5E1",
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: "transparent",
@@ -279,26 +281,41 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       opacity: 0.6,
     },
     focusIconSquircle: {
-      width: 50,
-      height: 50,
-      borderRadius: 18,
-      backgroundColor: tileBg,
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      backgroundColor: isDarkMode ? "rgba(255, 255, 255, 0.12)" : "rgba(255, 255, 255, 0.8)",
       alignItems: "center",
       justifyContent: "center",
+      ...Platform.select({
+        ios: {
+          shadowColor: theme.colors.primary,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.12,
+          shadowRadius: 6,
+        },
+        android: { elevation: 1 },
+        web: { boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)" },
+      }),
     },
     focusTextCol: {
       flex: 1,
       justifyContent: "center",
-      gap: 2,
+      gap: 3,
     },
     focusTaskName: {
-      fontSize: themeTokens.fonts.size.lg,
+      fontSize: 17,
       fontFamily: theme.fonts.bold,
       color: theme.colors.text,
       letterSpacing: -0.3,
     },
+    focusDescRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+    },
     focusDescription: {
-      fontSize: themeTokens.fonts.size.xs,
+      fontSize: 13,
       fontFamily: theme.fonts.regular,
       color: theme.colors.textSecondary,
     },
@@ -308,20 +325,25 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       gap: 8,
     },
     durationBadge: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 4,
-      paddingHorizontal: 9,
-      paddingVertical: 4,
-      borderRadius: 12,
-      backgroundColor: theme.colors.surfaceMuted,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+      paddingHorizontal: 11,
+      paddingVertical: 5,
+      borderRadius: 14,
+      backgroundColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "#FFFFFF",
+      borderWidth: 0,
+      ...Platform.select({
+        ios: {
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.03,
+          shadowRadius: 4,
+        },
+        android: { elevation: 1 },
+      }),
     },
     durationBadgeText: {
-      fontSize: themeTokens.fonts.size.xs,
-      fontFamily: theme.fonts.medium,
-      color: theme.colors.textSecondary,
+      fontSize: 12,
+      fontFamily: theme.fonts.bold,
+      color: theme.colors.text,
       fontVariant: ["tabular-nums"],
     },
     activeTimerBadge: {
@@ -330,13 +352,12 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       gap: 4,
       paddingHorizontal: 10,
       paddingVertical: 5,
-      borderRadius: 12,
+      borderRadius: 14,
       backgroundColor: theme.colors.primarySoft,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderWidth: 0,
     },
     activeTimerText: {
-      fontSize: themeTokens.fonts.size.xs,
+      fontSize: 12,
       fontFamily: theme.fonts.bold,
       color: theme.colors.primaryText,
       fontVariant: ["tabular-nums"],
@@ -345,12 +366,13 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       width: 32,
       height: 32,
       borderRadius: 16,
-      backgroundColor: tileBg,
+      backgroundColor: isDarkMode ? "rgba(255, 255, 255, 0.1)" : "#FFFFFF",
       alignItems: "center",
       justifyContent: "center",
+      borderWidth: 0,
     },
     progressSection: {
-      gap: 8,
+      gap: 6,
     },
     progressLabelRow: {
       flexDirection: "row",
@@ -358,22 +380,20 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       alignItems: "center",
     },
     progressLabelText: {
-      fontSize: themeTokens.fonts.size.xs,
+      fontSize: 12,
       fontFamily: theme.fonts.medium,
       color: theme.colors.textSecondary,
     },
     progressPercent: {
-      fontSize: themeTokens.fonts.size.xs,
+      fontSize: 12,
       fontFamily: theme.fonts.bold,
       color: theme.colors.primaryText,
       fontVariant: ["tabular-nums"],
     },
     progressBarTrack: {
-      height: 8,
+      height: 6,
       borderRadius: 999,
-      backgroundColor: theme.colors.surfaceMuted,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+      backgroundColor: isDarkMode ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.06)",
       overflow: "hidden",
     },
     progressBarFill: {
@@ -386,14 +406,23 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       alignItems: "center",
       justifyContent: "center",
       gap: 8,
-      height: 44,
-      borderRadius: 14,
+      height: 50,
+      borderRadius: 999,
       backgroundColor: theme.colors.primary,
-      marginTop: 4,
+      ...Platform.select({
+        ios: {
+          shadowColor: theme.colors.primary,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.25,
+          shadowRadius: 10,
+        },
+        android: { elevation: 3 },
+        web: { boxShadow: "0 4px 14px rgba(0, 0, 0, 0.12)" },
+      }),
     },
     primaryButtonText: {
       color: theme.colors.onPrimary,
-      fontSize: 14,
+      fontSize: 15,
       fontFamily: theme.fonts.bold,
       textAlign: "center",
     },

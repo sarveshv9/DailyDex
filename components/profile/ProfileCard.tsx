@@ -218,8 +218,7 @@ const getStyles = (theme: Theme, isDark: boolean) => {
   return StyleSheet.create({
     cardContainer: {
       backgroundColor: theme.colors.surface,
-      borderColor: theme.colors.border,
-      borderWidth: 1,
+      borderWidth: 0,
       borderRadius: 24,
       overflow: "hidden",
       paddingHorizontal: theme.spacing.lg,
@@ -237,8 +236,7 @@ const getStyles = (theme: Theme, isDark: boolean) => {
       height: 38,
       borderRadius: 19,
       backgroundColor: theme.colors.primarySoft,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderWidth: 0,
       alignItems: "center",
       justifyContent: "center",
       zIndex: 10,
@@ -332,8 +330,7 @@ const getStyles = (theme: Theme, isDark: boolean) => {
       paddingVertical: 8,
       borderRadius: 999,
       backgroundColor: theme.colors.primarySoft,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderWidth: 0,
     },
     promptButtonText: {
       fontFamily: theme.fonts.bold,

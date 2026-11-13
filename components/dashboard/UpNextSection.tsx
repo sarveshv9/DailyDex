@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useMemo } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { Theme, getSharedStyles } from "../../styles/shared";
 import { themeTokens } from "../../constants/themeTokens";
@@ -148,7 +148,7 @@ const UpNextSectionComponent: React.FC<UpNextSectionProps> = ({
       style={styles.sectionContainer}
     >
       <View style={styles.sectionHeaderRow}>
-        <Text style={styles.sectionLabel}>Up Next</Text>
+        <Text style={styles.sectionLabel}>UP NEXT</Text>
       </View>
 
       {tasks.length > 0 ? (
@@ -222,18 +222,27 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       ...shared.sectionLabel,
     },
     upNextList: {
-      gap: 8,
+      gap: 10,
     },
     upNextCard: {
       flexDirection: "row",
       alignItems: "center",
       backgroundColor: theme.colors.surface,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      borderRadius: 16,
-      paddingVertical: 11,
-      paddingHorizontal: 14,
+      borderWidth: 0,
+      borderRadius: 24,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
       gap: 12,
+      ...Platform.select({
+        ios: {
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: isDarkMode ? 0 : 0.03,
+          shadowRadius: 8,
+        },
+        android: { elevation: 2 },
+        web: { boxShadow: isDarkMode ? "none" : "0 2px 8px rgba(0, 0, 0, 0.03)" },
+      }),
     },
     upNextCardCompleted: {
       opacity: 0.6,
@@ -242,8 +251,8 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       width: 22,
       height: 22,
       borderRadius: 11,
-      borderWidth: 2,
-      borderColor: theme.colors.border,
+      borderWidth: 1.5,
+      borderColor: isDarkMode ? "rgba(255, 255, 255, 0.25)" : "#CBD5E1",
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: "transparent",
@@ -257,9 +266,9 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       opacity: 0.6,
     },
     upNextIconSquircle: {
-      width: 40,
-      height: 40,
-      borderRadius: 13,
+      width: 44,
+      height: 44,
+      borderRadius: 14,
       backgroundColor: tileBg,
       alignItems: "center",
       justifyContent: "center",
@@ -270,8 +279,8 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       gap: 2,
     },
     upNextTaskName: {
-      fontSize: 14,
-      fontFamily: theme.fonts.medium,
+      fontSize: 15,
+      fontFamily: theme.fonts.bold,
       color: theme.colors.text,
     },
     upNextMetaRow: {
@@ -285,29 +294,28 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       gap: 3,
     },
     upNextDurationText: {
-      fontSize: 12,
+      fontSize: 13,
       fontFamily: theme.fonts.regular,
       color: theme.colors.textSecondary,
     },
     timeBadge: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 4,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 8,
+      gap: 5,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 16,
       backgroundColor: theme.colors.surfaceMuted,
     },
     timeBadgeText: {
       fontSize: 12,
-      fontFamily: theme.fonts.medium,
-      color: theme.colors.textSecondary,
+      fontFamily: theme.fonts.bold,
+      color: theme.colors.text,
       fontVariant: ["tabular-nums"],
     },
     emptyCardContainer: {
       borderRadius: 20,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderWidth: 0,
       backgroundColor: theme.colors.surface,
       overflow: "hidden",
       elevation: 0,
@@ -345,8 +353,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       paddingVertical: 10,
       borderRadius: 14,
       backgroundColor: theme.colors.primarySoft,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderWidth: 0,
       marginTop: 4,
     },
     emptyActionText: {

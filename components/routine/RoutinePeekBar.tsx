@@ -118,8 +118,7 @@ const RoutinePeekBarComponent: React.FC<RoutinePeekBarProps> = ({
                     styles.collapsedBadge,
                     {
                       backgroundColor: badgeTint,
-                      borderWidth: 1,
-                      borderColor: theme.colors.border,
+                      borderWidth: 0,
                       flexDirection: "row",
                       alignItems: "center",
                       gap: 4,
@@ -199,8 +198,7 @@ const getStyles = (theme: Theme) =>
       flexDirection: "row",
       height: 68,
       borderRadius: themeTokens.borderRadius.full,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderWidth: 0,
       backgroundColor: theme.colors.surface,
       overflow: "hidden",
       elevation: 0,
@@ -218,7 +216,7 @@ const getStyles = (theme: Theme) =>
       borderRadius: 21,
       alignItems: "center",
       justifyContent: "center",
-      borderWidth: 1.5,
+      borderWidth: 0,
       marginRight: themeTokens.spacing.sm + 4,
     },
     collapsedTextWrapper: {
@@ -263,7 +261,6 @@ const getStyles = (theme: Theme) =>
       alignItems: "center",
       justifyContent: "center",
       marginLeft: themeTokens.spacing.sm,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderWidth: 0,
     },
   });

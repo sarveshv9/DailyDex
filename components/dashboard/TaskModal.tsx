@@ -183,8 +183,7 @@ const TaskModalInner: React.FC<TaskModalInnerProps> = React.memo(({
                   styles.heroIconRing,
                   {
                     backgroundColor: taskTint,
-                    borderColor: theme.colors.border,
-                    borderWidth: 1.5,
+                    borderWidth: 0,
                   },
                 ]}
                 onPress={() => {
@@ -459,7 +458,7 @@ const TaskModalInner: React.FC<TaskModalInnerProps> = React.memo(({
                     <Text style={styles.cardTitle}>Subtasks</Text>
                   </View>
                   {subtasksList.length > 0 && (
-                    <View style={[styles.counterPill, { backgroundColor: taskTint, borderWidth: 1, borderColor: theme.colors.border }]}>
+                    <View style={[styles.counterPill, { backgroundColor: taskTint, borderWidth: 0 }]}>
                       <Text style={[styles.counterPillText, { color: theme.colors.text }]}>
                         {completedSubtasksCount}/{subtasksList.length}
                       </Text>
@@ -747,8 +746,7 @@ const getStyles = (theme: Theme) => {
       height: SCREEN_HEIGHT * 0.88,
       maxHeight: SCREEN_HEIGHT * 0.94,
       overflow: "hidden",
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderWidth: 0,
       backgroundColor: theme.colors.surface,
       ...Platform.select({
         ios: {
@@ -874,8 +872,7 @@ const getStyles = (theme: Theme) => {
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: theme.colors.surfaceMuted,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderWidth: 0,
       paddingVertical: 7,
       paddingHorizontal: 4,
       borderRadius: 13,
@@ -883,7 +880,6 @@ const getStyles = (theme: Theme) => {
     },
     controlPillActive: {
       backgroundColor: theme.colors.primary,
-      borderColor: theme.colors.primary,
     },
     controlPillText: {
       fontSize: 11.5,
@@ -965,8 +961,7 @@ const getStyles = (theme: Theme) => {
       width: 36,
       height: 36,
       borderRadius: 18,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderWidth: 0,
       alignItems: "center",
       justifyContent: "center",
     },
@@ -985,8 +980,7 @@ const getStyles = (theme: Theme) => {
       paddingHorizontal: 12,
       borderRadius: 14,
       backgroundColor: theme.colors.surfaceMuted,
-      borderWidth: 1,
-      borderColor: "transparent",
+      borderWidth: 0,
     },
     repeatPresetText: {
       fontSize: 12,
@@ -1006,8 +1000,7 @@ const getStyles = (theme: Theme) => {
     card: {
       backgroundColor: theme.colors.surface,
       borderRadius: 20,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderWidth: 0,
       padding: 14,
     },
     cardHeaderRow: {
@@ -1099,7 +1092,7 @@ const getStyles = (theme: Theme) => {
       justifyContent: "center",
       paddingVertical: 13,
       paddingHorizontal: 16,
-      borderRadius: 22,
+      borderRadius: 999,
     },
     chainText: {
       fontSize: 14,
@@ -1112,7 +1105,7 @@ const getStyles = (theme: Theme) => {
       paddingVertical: 13,
       paddingHorizontal: 16,
       backgroundColor: theme.colors.dangerSoft,
-      borderRadius: 22,
+      borderRadius: 999,
     },
     deleteText: {
       color: theme.colors.danger,
@@ -1135,8 +1128,7 @@ const getStyles = (theme: Theme) => {
       borderRadius: 24,
       padding: 18,
       maxHeight: SCREEN_HEIGHT * 0.65,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderWidth: 0,
       ...Platform.select({
         ios: {
           shadowColor: "#000",

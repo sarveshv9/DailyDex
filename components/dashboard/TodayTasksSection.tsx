@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useState, useCallback, useRef } from "react";
 import {
   Keyboard,
   Platform,
@@ -35,6 +35,7 @@ const TodayTasksSectionComponent: React.FC<TodayTasksSectionProps> = ({
 }) => {
   const styles = useMemo(() => getStyles(theme, isDarkMode), [theme, isDarkMode]);
   const [newText, setNewText] = useState("");
+  const [isFocused, setIsFocused] = useState(false);
 
   const todayTasks = useMemo(() => {
     return tasks.filter((t) => t.category === "today");
@@ -58,6 +59,7 @@ const TodayTasksSectionComponent: React.FC<TodayTasksSectionProps> = ({
     if (!trimmed) return;
     onAddTask(trimmed);
     setNewText("");
+    setIsFocused(false);
     Keyboard.dismiss();
   }, [newText, onAddTask]);
 
@@ -68,7 +70,7 @@ const TodayTasksSectionComponent: React.FC<TodayTasksSectionProps> = ({
     >
       <View style={styles.sectionHeaderRow}>
         <View style={styles.headerTitleGroup}>
-          <Text style={styles.sectionLabel}>Today's Intentions</Text>
+          <Text style={styles.sectionLabel}>TODAY'S INTENTIONS</Text>
           {todayTasks.length > 0 && (
             <View style={styles.counterBadge}>
               <Text style={styles.counterBadgeText}>
@@ -85,12 +87,7 @@ const TodayTasksSectionComponent: React.FC<TodayTasksSectionProps> = ({
           accessibilityLabel="View all tasks"
           style={({ pressed }) => [styles.viewAllButton, pressed && { opacity: 0.7 }]}
         >
-          <Text style={styles.viewAllText}>Tasks</Text>
-          <Ionicons
-            name="chevron-forward"
-            size={14}
-            color={theme.colors.primary}
-          />
+          <Text style={styles.viewAllText}>See all →</Text>
         </Pressable>
       </View>
 
@@ -189,18 +186,28 @@ const TodayTasksSectionComponent: React.FC<TodayTasksSectionProps> = ({
 
         {/* Quick Add Bar */}
         <View style={styles.quickAddRow}>
-          <Ionicons
-            name="add"
-            size={20}
-            color={newText.length > 0 ? theme.colors.primary : theme.colors.textSecondary}
-          />
+          {(isFocused || newText.length > 0) && (
+            <Ionicons
+              name="add"
+              size={18}
+              color={theme.colors.primary}
+              style={{ marginRight: 6 }}
+            />
+          )}
           <TextInput
             testID="today-tasks-quick-add-input"
-            style={styles.quickAddInput}
-            placeholder="Add an intention for today..."
+            style={[
+              styles.quickAddInput,
+              { textAlign: isFocused || newText.length > 0 ? "left" : "center" },
+            ]}
+            placeholder={
+              isFocused ? "Type an intention..." : "+ Add an intention for today..."
+            }
             placeholderTextColor={theme.colors.textSecondary}
             value={newText}
             onChangeText={setNewText}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
             onSubmitEditing={handleSubmit}
             returnKeyType="done"
             maxLength={140}
@@ -254,14 +261,14 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     },
     counterBadge: {
       paddingHorizontal: 8,
-      paddingVertical: 2,
-      borderRadius: 10,
+      paddingVertical: 3,
+      borderRadius: 12,
       backgroundColor: theme.colors.primarySoft,
     },
     counterBadgeText: {
-      fontSize: 11,
+      fontSize: 12,
       fontFamily: theme.fonts.bold,
-      color: theme.colors.primaryText,
+      color: theme.colors.primary,
       fontVariant: ["tabular-nums"],
     },
     viewAllButton: {
@@ -270,29 +277,29 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       gap: 2,
     },
     viewAllText: {
-      fontSize: themeTokens.fonts.size.xs,
-      fontFamily: theme.fonts.medium,
+      fontSize: 13,
+      fontFamily: theme.fonts.bold,
       color: theme.colors.primary,
     },
     contentContainer: {
       gap: 0,
     },
     tasksList: {
-      paddingHorizontal: 2,
+      paddingHorizontal: 0,
     },
     taskRow: {
       flexDirection: "row",
       alignItems: "center",
       paddingVertical: 10,
-      paddingHorizontal: 2,
-      gap: 12,
+      paddingHorizontal: 8,
+      gap: 14,
     },
     checkCircle: {
       width: 22,
       height: 22,
       borderRadius: 11,
-      borderWidth: 2,
-      borderColor: theme.colors.border,
+      borderWidth: 1.5,
+      borderColor: isDarkMode ? "rgba(255, 255, 255, 0.25)" : "#CBD5E1",
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: "transparent",
@@ -303,10 +310,10 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     },
     taskText: {
       flex: 1,
-      fontSize: 14,
-      fontFamily: theme.fonts.medium,
+      fontSize: 15,
+      fontFamily: theme.fonts.bold,
       color: theme.colors.text,
-      lineHeight: 20,
+      lineHeight: 22,
     },
     taskCompletedText: {
       textDecorationLine: "line-through",
@@ -314,26 +321,23 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       opacity: 0.6,
     },
     timerButton: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: theme.colors.primarySoft,
+      backgroundColor: isDarkMode ? "rgba(255, 255, 255, 0.1)" : "#E0F0FE",
     },
     divider: {
       height: 1,
-      backgroundColor: theme.colors.divider,
-      marginLeft: 34,
+      backgroundColor: "transparent",
     },
     moreRow: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
       paddingVertical: 10,
-      paddingLeft: 34,
-      borderTopWidth: 1,
-      borderTopColor: theme.colors.divider,
+      paddingLeft: 36,
     },
     moreText: {
       fontSize: themeTokens.fonts.size.xs,
@@ -341,8 +345,8 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       color: theme.colors.textSecondary,
     },
     emptyContainer: {
-      paddingVertical: 8,
-      paddingHorizontal: 2,
+      paddingVertical: 12,
+      paddingHorizontal: 8,
     },
     emptyTitle: {
       fontSize: 13,
@@ -357,17 +361,18 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     quickAddRow: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 10,
-      paddingHorizontal: 2,
-      paddingVertical: 10,
-      borderTopWidth: 1,
-      borderTopColor: theme.colors.divider,
-      backgroundColor: "transparent",
+      justifyContent: "center",
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: isDarkMode ? theme.colors.surfaceMuted : "#E8EFF9",
+      paddingHorizontal: 16,
+      marginTop: 8,
+      borderWidth: 0,
     },
     quickAddInput: {
       flex: 1,
       fontSize: 14,
-      fontFamily: theme.fonts.regular,
+      fontFamily: theme.fonts.medium,
       color: theme.colors.text,
       padding: 0,
       ...Platform.select({
@@ -375,12 +380,13 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       }),
     },
     quickAddSubmit: {
-      width: 24,
-      height: 24,
-      borderRadius: 12,
+      width: 26,
+      height: 26,
+      borderRadius: 13,
       backgroundColor: theme.colors.primary,
       alignItems: "center",
       justifyContent: "center",
+      marginLeft: 8,
     },
   });
 };

@@ -217,15 +217,13 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       flex: 1,
       height: 48,
       borderRadius: themeTokens.borderRadius.lg,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderWidth: 0,
       backgroundColor: theme.colors.surfaceMuted,
       alignItems: "center",
       justifyContent: "center",
     },
     durationPillActive: {
       backgroundColor: theme.colors.primary,
-      borderColor: theme.colors.primary,
       ...Platform.select({
         ios: {
           shadowColor: "#000",
@@ -246,8 +244,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     },
     pomodoroExplainerCard: {
       backgroundColor: theme.colors.surface,
-      borderColor: theme.colors.border,
-      borderWidth: 1,
+      borderWidth: 0,
       borderRadius: theme.borderRadius.lg,
       width: "100%",
       overflow: "hidden",

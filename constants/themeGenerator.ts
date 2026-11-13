@@ -90,17 +90,17 @@ export interface GeneratedTheme {
 export const SURFACE_NEUTRALS = {
   dark: {
     baseBackground: '#000000',
-    cardSurface: '#0A0A0D',
-    cardBorder: '#1C1C24',
-    primaryText: '#F4F4F6',
-    secondaryText: '#9898A6',
+    cardSurface: '#121212',
+    cardBorder: 'rgba(255, 255, 255, 0.08)',
+    primaryText: '#FFFFFF',
+    secondaryText: '#9E9E9E',
   },
   light: {
-    baseBackground: '#F8F8F8',
+    baseBackground: '#F0F4FA',
     cardSurface: '#FFFFFF',
-    cardBorder: '#EBEBEF',
-    primaryText: '#121217',
-    secondaryText: '#6B6B76',
+    cardBorder: 'rgba(0, 0, 0, 0.04)',
+    primaryText: '#0F172A',
+    secondaryText: '#64748B',
   },
 } as const;
 
@@ -126,9 +126,9 @@ export function createTheme(
   const neutrals = isDark ? SURFACE_NEUTRALS.dark : SURFACE_NEUTRALS.light;
   const background = neutrals.baseBackground;
   const surface = neutrals.cardSurface;
-  const surfaceMuted = isDark ? "#0A0A0D" : themeTokens.colors.gray[200];
+  const surfaceMuted = isDark ? "#1E1E1E" : "#F1F5F9";
   const border = neutrals.cardBorder;
-  const divider = isDark ? "#16161B" : "#EEEEEE";
+  const divider = isDark ? "rgba(255, 255, 255, 0.08)" : "#E2E8F0";
   const text = neutrals.primaryText;
   const textSecondary = neutrals.secondaryText;
   const scrim = isDark ? "rgba(0, 0, 0, 0.75)" : "rgba(0, 0, 0, 0.45)";

@@ -431,7 +431,7 @@ const getStyles = (theme: Theme) => {
     settingsCard: {
       borderRadius: 24,
       overflow: "hidden",
-      borderWidth: 1,
+      borderWidth: 0,
       ...Platform.select({
         ios: {
           shadowColor: "#000",

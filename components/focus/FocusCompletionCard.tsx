@@ -183,8 +183,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     },
     completionCard: {
       backgroundColor: theme.colors.surface,
-      borderColor: theme.colors.border,
-      borderWidth: 1,
+      borderWidth: 0,
       width: "100%",
       borderRadius: themeTokens.borderRadius.xl,
       overflow: "hidden",
@@ -198,8 +197,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       height: 64,
       borderRadius: 32,
       backgroundColor: theme.colors.primarySoft,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderWidth: 0,
       marginBottom: themeTokens.spacing.md,
     },
     completionTitle: {

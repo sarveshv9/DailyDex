@@ -1315,8 +1315,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       paddingVertical: 6,
       borderRadius: 999,
       backgroundColor: activeTint,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderWidth: 0,
       marginTop: 2,
     },
     clearDoneBtnText: {
@@ -1341,12 +1340,10 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       paddingHorizontal: 12,
       borderRadius: 16,
       backgroundColor: theme.colors.surfaceMuted,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderWidth: 0,
     },
     filterTabButtonActive: {
       backgroundColor: activeTint,
-      borderColor: theme.colors.primary,
     },
     filterTabLabel: {
       fontFamily: theme.fonts.medium,
@@ -1362,8 +1359,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       paddingVertical: 1,
       borderRadius: 10,
       backgroundColor: theme.colors.surfaceMuted,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderWidth: 0,
     },
     filterTabBadgeActive: {
       backgroundColor: theme.colors.primary,
@@ -1382,8 +1378,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       flexDirection: "row",
       alignItems: "center",
       backgroundColor: theme.colors.surface,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderWidth: 0,
       borderRadius: 22,
       paddingHorizontal: 14,
       height: 52,
@@ -1427,12 +1422,20 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       flexDirection: "row",
       alignItems: "center",
       backgroundColor: theme.colors.surface,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      borderRadius: 20,
-      paddingVertical: 12,
-      paddingHorizontal: 14,
-      elevation: 0,
+      borderWidth: 0,
+      borderRadius: 24,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      ...Platform.select({
+        ios: {
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: isDarkMode ? 0 : 0.03,
+          shadowRadius: 8,
+        },
+        android: { elevation: 2 },
+        web: { boxShadow: isDarkMode ? "none" : "0 2px 8px rgba(0, 0, 0, 0.03)" },
+      }),
     },
     checkboxTouchTarget: {
       padding: 4,
@@ -1441,11 +1444,11 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     checkbox: {
       width: 22,
       height: 22,
-      borderRadius: 7,
-      borderWidth: 1.6,
+      borderRadius: 11,
+      borderWidth: 1.5,
       borderColor: isDarkMode
         ? "rgba(255,255,255,0.28)"
-        : "rgba(0,0,0,0.22)",
+        : "#CBD5E1",
       backgroundColor: "transparent",
       alignItems: "center",
       justifyContent: "center",
@@ -1531,8 +1534,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       alignItems: "center",
       gap: 5,
       backgroundColor: activeTint,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderWidth: 0,
       paddingHorizontal: 8,
       paddingVertical: 5,
       borderRadius: 14,
@@ -1617,9 +1619,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       backgroundColor: theme.colors.surface,
       borderTopLeftRadius: 32,
       borderTopRightRadius: 32,
-      borderWidth: 1,
-      borderBottomWidth: 0,
-      borderColor: theme.colors.border,
+      borderWidth: 0,
       paddingHorizontal: 22,
       paddingTop: 12,
       paddingBottom: Platform.OS === "ios" ? 36 : 24,
@@ -1671,8 +1671,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     },
 
     modalInputWrapper: {
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderWidth: 0,
       backgroundColor: theme.colors.surfaceMuted,
       borderRadius: 18,
       padding: 14,
@@ -1707,13 +1706,11 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       gap: 8,
       paddingVertical: 12,
       borderRadius: 16,
-      borderWidth: 1.5,
-      borderColor: theme.colors.border,
+      borderWidth: 0,
       backgroundColor: theme.colors.surfaceMuted,
     },
     modalCategoryChipActive: {
       backgroundColor: activeTint,
-      borderColor: theme.colors.primary,
     },
     modalCategoryChipText: {
       fontFamily: theme.fonts.medium,
@@ -1725,10 +1722,10 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       color: theme.colors.primary,
     },
 
-    /* Standardized 56px height, 22px border radius button */
+    /* Pill button matching Zen aesthetic */
     modalSaveButton: {
-      height: 56,
-      borderRadius: 22,
+      height: 52,
+      borderRadius: 999,
       backgroundColor: theme.colors.primary,
       flexDirection: "row",
       alignItems: "center",
@@ -1737,11 +1734,11 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       ...Platform.select({
         ios: {
           shadowColor: theme.colors.primary,
-          shadowOffset: { width: 0, height: 5 },
-          shadowOpacity: isDarkMode ? 0.45 : 0.35,
-          shadowRadius: 14,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: isDarkMode ? 0.35 : 0.25,
+          shadowRadius: 10,
         },
-        android: { elevation: 0 },
+        android: { elevation: 2 },
       }),
     },
     modalInputClearBtn: {
@@ -1764,8 +1761,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       marginTop: 12,
       borderRadius: 20,
       backgroundColor: isDarkMode ? "rgba(255, 77, 79, 0.12)" : "rgba(255, 77, 79, 0.08)",
-      borderWidth: 1,
-      borderColor: isDarkMode ? "rgba(255, 77, 79, 0.25)" : "rgba(255, 77, 79, 0.18)",
+      borderWidth: 0,
     },
     modalDeleteButtonText: {
       fontFamily: theme.fonts.bold,
@@ -1785,8 +1781,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
       maxWidth: 360,
       borderRadius: 26,
       backgroundColor: theme.colors.surface,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderWidth: 0,
       padding: 22,
       alignItems: "center",
       ...Platform.select({
@@ -1837,8 +1832,7 @@ const getStyles = (theme: Theme, isDarkMode: boolean) => {
     },
     confirmCancelBtn: {
       backgroundColor: neutralFill,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
+      borderWidth: 0,
     },
     confirmCancelText: {
       fontFamily: theme.fonts.bold,
